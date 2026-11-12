@@ -1,5 +1,6 @@
 // VALIDATION
 import { z } from 'zod'
+import { FeatureOriginSchema } from '#lib/fieldResearch/model.js'
 // CONTRACTS
 import { ListQueryParamsSchema } from '#lib/db/zod/schema/api.js'
 // TYPES
@@ -11,6 +12,8 @@ const locales = z.object({ en: tri, zhHans: tri, zhHant: tri }).strict()
 /** Shared wire contract for local previews, authoritative rows and exact counts. */
 export const FeatureIndexFiltersSchema = z
   .object({
+    origin: FeatureOriginSchema.or(z.literal('unknown')).nullable().optional(),
+    originId: z.string().min(1).max(100).nullable().optional(),
     isPublished: tri,
     isArchived: tri,
     isPendingReview: tri,

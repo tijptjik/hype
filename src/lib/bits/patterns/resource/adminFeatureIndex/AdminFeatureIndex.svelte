@@ -14,6 +14,8 @@ import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
 import { updateFeatureBulkState } from '#lib/api/feature.remote.js'
 import { getFeatureIndexPage } from '#lib/api/featureIndex.remote.js'
+import { getResearchSessions } from '#lib/api/fieldResearch.remote.js'
+import { featureOriginLabels } from '#lib/fieldResearch/model.js'
 import type { FeatureIndexQuery } from '#lib/features/indexQuery.js'
 import { refreshRemoteQuery, readFreshRemoteQuery } from '#lib/remote/index.js'
 // SERVICES
@@ -26,6 +28,7 @@ import {
   createSortable,
   createSortables,
   createToggleFilter,
+  createSelectFilter,
   createTranslationFilter,
 } from '#lib/client/services/filters.js'
 // BITS PATTERNS
@@ -102,9 +105,42 @@ const featureIndexCardKeyMap: KeyMap = {
   badges: [],
 }
 
-const filters = {
+// CONTEXT
+const adminCtx = getAdminCtx()
+
+let researchSessionOptions = $state<{ value: string; label: string }[]>([])
+const filters = $derived({
   resource: FirstClassResource.feature,
   sections: [
+    {
+      key: 'origin',
+      title: 'Created via',
+      icon: FeatureIcon,
+      filters: [
+        createSelectFilter('origin', {
+          label: 'Origin',
+          placeholder: 'Any origin',
+          allowDeselect: true,
+          options: [
+            ...Object.entries(featureOriginLabels).map(([value, label]) => ({
+              value,
+              label,
+            })),
+            { value: 'unknown', label: 'Unknown' },
+          ],
+        }),
+        ...(adminCtx.view.filters.viewFilters.feature.origin === 'field_research'
+          ? [
+              createSelectFilter('originId', {
+                label: 'Session',
+                placeholder: 'Any session',
+                allowDeselect: true,
+                options: researchSessionOptions,
+              }),
+            ]
+          : []),
+      ],
+    },
     {
       key: 'status',
       title: m.filters__status(),
@@ -276,7 +312,7 @@ const filters = {
       transformOffset: -10,
     }),
   ],
-} satisfies ResourceControlBarConfig
+} satisfies ResourceControlBarConfig)
 
 const sortables = createSortables([
   createSortable('modifiedAt', m.sort__updated()),
@@ -287,7 +323,14 @@ const sortables = createSortables([
 ])
 
 // CONTEXT
-const adminCtx = getAdminCtx()
+
+// Session filters only apply to field research; clear retained selections on origin changes.
+$effect(() => {
+  const featureFilters = adminCtx.view.filters.viewFilters.feature
+  if (featureFilters.origin !== 'field_research' && featureFilters.originId) {
+    adminCtx.view.filters.viewFilters.feature = { ...featureFilters, originId: null }
+  }
+})
 const root = getRootCTX()
 const headerCtrl = getHeaderCtrl()
 adminCtx.setFacet(false, false, FirstClassResource.feature)
@@ -914,6 +957,22 @@ async function applyFeatureBulkEdit(): Promise<void> {
 }
 
 onMount(() => {
+  {
+    // Session choices use the same project-management scope as the research index.
+    void (async () => {
+      let before: string | undefined
+      const options: { value: string; label: string }[] = []
+      for (;;) {
+        const sessions = await refreshRemoteQuery(getResearchSessions({ before }))
+        options.push(
+          ...sessions.map(session => ({ value: session.id, label: session.name })),
+        )
+        if (sessions.length < 50) break
+        before = sessions[sessions.length - 1].id
+      }
+      researchSessionOptions = options
+    })().catch(() => {})
+  }
   const worker = new Worker(
     new URL('../../../../workers/featureTextSearchWorker.ts', import.meta.url),
     {
@@ -1120,6 +1179,14 @@ $effect(() => {
     return
   }
   // A changed account or prism cannot preview rows retained by the previous owner.
+  // Provenance is server-owned and absent from optimistic cache rows; await its filtered page.
+  if (
+    adminCtx.view.filters.viewFilters.feature.origin ||
+    adminCtx.view.filters.viewFilters.feature.originId
+  ) {
+    entities = []
+    return
+  }
   const retained =
     remoteOwnerSignature === ownerSignature
       ? (remoteMatchedEntities ?? (locationScope || brandId ? [] : optimisticEntities))

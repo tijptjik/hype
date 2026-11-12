@@ -5,7 +5,7 @@ import { toast } from 'svelte-sonner'
 import { researchErrorMessage } from '#lib/fieldResearch/presentation.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 import SaveIcon from 'virtual:icons/lucide/save'
-import { beforeNavigate } from '$app/navigation'
+import { beforeNavigate, goto } from '$app/navigation'
 // API
 import {
   getResearchDestinations,
@@ -417,9 +417,15 @@ $effect(() => {
                   disabled: !editable || !stacks.some(stack => !stack.featureId),
                   onClick: () =>
                     action(async () => {
-                      const result = await saveResearchFeatures(currentSessionVersion())
-                      await refresh()
+                      const version = currentSessionVersion()
+                      const result = await saveResearchFeatures(version)
                       toast.success(`${result.created} unpublished Features created.`)
+                      await goto(
+                        `/admin/features?${new URLSearchParams({
+                          origin: 'field_research',
+                          originId: version.sessionId,
+                        })}`,
+                      )
                     }),
                 },
               ]

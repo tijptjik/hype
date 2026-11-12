@@ -29,6 +29,18 @@ export const featureIndexStatusKeys = [
  */
 export function featureIndexFilterConditions(filters: FeatureIndexFilters = {}): SQL[] {
   const result: SQL[] = []
+  if (filters.origin === 'unknown')
+    result.push(
+      sql`NOT EXISTS(SELECT 1 FROM featureOrigin fo WHERE fo.featureId=${feature.id})`,
+    )
+  else if (filters.origin)
+    result.push(
+      sql`EXISTS(SELECT 1 FROM featureOrigin fo WHERE fo.featureId=${feature.id} AND fo.origin=${filters.origin})`,
+    )
+  if (filters.origin === 'field_research' && filters.originId)
+    result.push(
+      sql`EXISTS(SELECT 1 FROM featureOrigin fo WHERE fo.featureId=${feature.id} AND fo.originId=${filters.originId} AND fo.origin='field_research')`,
+    )
   const require = (state: boolean | null | undefined, predicate: SQL): void => {
     if (state != null) result.push(state ? predicate : not(predicate))
   }

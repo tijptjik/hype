@@ -10,6 +10,13 @@ export type FilterTriState = boolean | null
 type LocalisedFilterTriState = Record<LocaleKey, FilterTriState>
 
 export type FeatureViewFilters = {
+  origin?:
+    | 'app_contribution'
+    | 'admin_contribution'
+    | 'field_research'
+    | 'unknown'
+    | null
+  originId?: string | null
   // Status related
   isPublished: FilterTriState
   isPendingReview: FilterTriState

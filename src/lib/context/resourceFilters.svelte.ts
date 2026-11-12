@@ -1833,7 +1833,7 @@ export class ResourceFilters {
 }
 
 /** @returns Fresh admin filter defaults, including independent locale objects. */
-function createDefaultViewFilters(): ViewFilters {
+export function createDefaultViewFilters(): ViewFilters {
   return {
     organisation: {
       // Status related
@@ -1950,6 +1950,8 @@ function createDefaultViewFilters(): ViewFilters {
       },
     },
     feature: {
+      origin: null,
+      originId: null,
       // Status related
       isPublished: null,
       isPendingReview: null,

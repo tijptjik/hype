@@ -161,6 +161,44 @@ describe('authoritative feature index', () => {
     ).toBe(false)
   })
 
+  it('filters provenance and its generic reference before pagination and exact counts', async () => {
+    const { sqlite, db, add } = setup()
+    sqlite.exec(
+      'CREATE TABLE featureOrigin(featureId TEXT PRIMARY KEY,origin TEXT,originId TEXT)',
+    )
+    for (const id of ['a', 'b', 'c', 'unknown']) add(id)
+    sqlite.exec(
+      "INSERT INTO featureOrigin VALUES('a','field_research','outing'),('b','field_research','other'),('c','admin_contribution',NULL)",
+    )
+    const result = await queryFeatureIndex(
+      db,
+      {
+        ...input,
+        filters: { origin: 'field_research', originId: 'outing' },
+        pagination: { limit: 1, offset: 0 },
+      },
+      scope,
+      hub,
+      'en',
+    )
+    expect(result).toMatchObject({ data: [{ id: 'a' }], totalCount: 1, hasMore: false })
+    const unknown = await queryFeatureIndex(
+      db,
+      { ...input, filters: { origin: 'unknown' } },
+      scope,
+      hub,
+      'en',
+    )
+    expect(unknown).toMatchObject({ data: [{ id: 'unknown' }], totalCount: 1 })
+    const admin = await queryFeatureIndex(
+      db,
+      { ...input, filters: { origin: 'admin_contribution', originId: 'outing' } },
+      scope,
+      hub,
+      'en',
+    )
+    expect(admin).toMatchObject({ data: [{ id: 'c' }], totalCount: 1 })
+  })
   it('filters Location rows and counts before pagination, without stale Feature-only count caches', async () => {
     const { sqlite, db, add, statements } = setup()
     sqlite.exec(`
