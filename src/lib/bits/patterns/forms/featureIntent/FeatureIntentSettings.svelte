@@ -1,6 +1,19 @@
 <script lang="ts">
 // SVELTE
-import { untrack } from 'svelte'
+import { untrack, setContext, tick } from 'svelte'
+import {
+  registerTranslationReview,
+  generateTranslationReview,
+  completeTranslationReview,
+  type TranslationReviewSection,
+} from '#lib/forms/translationReview.js'
+import {
+  translationReviewGroupKey,
+  type TranslationReviewGroup,
+  type TranslationReviewGroupMember,
+} from '#lib/forms/translationReviewGroup.js'
+import type { TranslationSourceMode } from '#lib/forms/translationSource.js'
+import TranslationReviewDialog from '../translationReview/TranslationReviewDialog.svelte'
 // DRAG AND DROP
 import { draggable, droppable, type DragDropState } from '@thisux/sveltednd'
 import { getDropIndex } from '#lib/client/services/dragDrop.js'
@@ -36,6 +49,7 @@ import { TARGET_CONTEXTS } from '#lib/features/locationPolicy.js'
 // DOMAIN
 import {
   DEFAULT_FEATURE_TYPES,
+  featureTypeLabelValue,
   FEATURE_LOCATION_KINDS,
   featureTypeLabel,
   type FeatureType,
@@ -44,6 +58,7 @@ import {
 // BITS COMPONENTS
 import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
 // TYPES
+import type { LocaleSelection } from '#lib/bits/custom/localeControls/localeControls.types.js'
 import type {
   FeatureIntentScope,
   FeatureIntentPolicy,
@@ -57,7 +72,13 @@ let {
   onDraftChange,
   disabled = false,
   loadingOnly = false,
+  onReveal,
+  multilingual = $bindable(false),
+  localeSelection = $bindable<LocaleSelection | null>(null),
 }: {
+  onReveal?: () => void
+  multilingual?: boolean
+  localeSelection?: LocaleSelection | null
   scopeType: FeatureIntentScope['type']
   scopeId: string
   draft?: string
@@ -82,9 +103,10 @@ let baselineInherits = true
 let lastEmitted: string | undefined
 let loadError = $state(false)
 let reload = $state(0)
-let multilingual = $state(false)
-let selectedLocales = $state<string[]>(['en', 'zh-Hant', 'zh-Hans'])
-let visibleLocales = $state<string[]>(['en', 'zh-Hant', 'zh-Hans'])
+const selectedLocales = $derived(
+  localeSelection?.selectedLocales ?? ['en', 'zh-Hant', 'zh-Hans'],
+)
+const visibleLocales = $derived(localeSelection?.visibleLocales ?? selectedLocales)
 const localeOptions = $derived(contentLocaleOptions(getLocaleKey()))
 const shownLocales = $derived(
   displayedLocales({ selectedLocales, visibleLocales }, multilingual),
@@ -92,6 +114,7 @@ const shownLocales = $derived(
 const contentLocales = $derived(
   normalizeContentLocales(
     catalogue.flatMap(type => [
+      ...selectedLocales.filter(locale => featureTypeLabelValue(type, locale).trim()),
       ...Object.keys(type.labels ?? {}),
       ...((namingRules[type.id] ?? type.nameRule)?.conditions ?? []).flatMap(
         condition => Object.keys(condition.locales),
@@ -138,8 +161,10 @@ $effect(() => {
         ]),
       )
       const extra = stored.filter(locale => !selectedLocales.includes(locale))
-      selectedLocales = [...selectedLocales, ...extra]
-      visibleLocales = [...visibleLocales, ...extra]
+      localeSelection = {
+        selectedLocales: [...selectedLocales, ...extra],
+        visibleLocales: [...visibleLocales, ...extra],
+      }
       inherits = value.definition === null
       baselineInherits = inherits
       baselineCatalogue = structuredClone($state.snapshot(catalogue))
@@ -311,6 +336,103 @@ function removeType(): void {
   removeKey = null
   confirmRemove = false
 }
+
+let reviewAnchor = $state<HTMLElement>()
+let reviewOpen = $state(false)
+let reviewStarted = $state(false)
+let reviewExpanded = $state<string[]>([])
+let reviewBusy = $state(false)
+let reviewCompleted = $state(0)
+let reviewTotal = $state(0)
+let sourceFallback = $state(false)
+let reviewMembers = $state<
+  (TranslationReviewGroupMember & { registrationId: symbol })[]
+>([])
+const reviewGroup: TranslationReviewGroup = {
+  open: () => reviewSection.open(),
+  register(member) {
+    const registrationId = Symbol()
+    reviewMembers = [...reviewMembers, { ...member, registrationId }]
+    return () => {
+      reviewMembers = reviewMembers.filter(
+        entry => entry.registrationId !== registrationId,
+      )
+    }
+  },
+}
+setContext(translationReviewGroupKey, reviewGroup)
+/** Identify empty active display-name locales, including pending suggestions.
+ * @param type Data Model section. @returns Whether its title should indicate review is needed.
+ */
+function typeMissingTranslations(type: FeatureType): boolean {
+  return selectedLocales.some(locale => !featureTypeLabelValue(type, locale).trim())
+}
+const reviewSection: TranslationReviewSection = {
+  generate: mode => generateReview(mode),
+  close: () => {
+    reviewOpen = false
+  },
+  outstandingKeys: () =>
+    reviewMembers.flatMap(member => member.outstandingKeys?.() ?? []),
+  missingKeys: () => reviewMembers.flatMap(member => member.missingKeys?.() ?? []),
+  fingerprint: () => JSON.stringify(reviewMembers.map(member => member.fingerprint())),
+  missing: () => editable && reviewMembers.some(member => member.missing()),
+  acceptFilled: () => {
+    for (const member of reviewMembers) member.acceptFilled?.()
+  },
+  open: () => {
+    reviewOpen = true
+    reviewStarted = true
+    reviewExpanded = catalogue.filter(typeMissingTranslations).map(typeKey)
+    multilingual = true
+    localeSelection = { selectedLocales, visibleLocales: [...selectedLocales] }
+    const first = catalogue.find(type =>
+      selectedLocales.some(locale => !featureTypeLabelValue(type, locale).trim()),
+    )
+    if (first) openTypeKey = typeKey(first)
+    onReveal?.()
+    for (const member of reviewMembers) member.open()
+    void tick().then(() => reviewAnchor?.scrollIntoView?.({ block: 'start' }))
+  },
+}
+$effect(() => {
+  const form = reviewAnchor?.closest('form')
+  if (form && editable)
+    return registerTranslationReview(form, reviewSection, reviewAnchor)
+})
+/** Generate suggestions across this tab, including collapsed type editors.
+ * @param mode Requested source preference. @returns Completion of generation.
+ */
+async function generateReview(mode: TranslationSourceMode): Promise<void> {
+  reviewExpanded = catalogue.filter(typeMissingTranslations).map(typeKey)
+  reviewBusy = true
+  reviewCompleted = 0
+  sourceFallback = false
+  reviewTotal = reviewMembers.reduce(
+    (count, member) => count + (member.remaining?.() ?? 0),
+    0,
+  )
+  try {
+    for (const member of reviewMembers)
+      await member.generate(mode, fallback => {
+        sourceFallback ||= fallback === true
+        if (!fallback) reviewCompleted += 1
+      })
+  } finally {
+    reviewBusy = false
+  }
+}
+/** Resolve this tab before continuing the owning form's save sequence.
+ * @param accept Whether to retain suggestions. @returns Completion after the draft updates.
+ */
+async function finishReview(accept: boolean): Promise<void> {
+  for (const member of reviewMembers) await member.finish(accept)
+  await tick()
+  if (accept && reviewMembers.some(member => member.missing())) return
+  reviewOpen = false
+  const form = reviewAnchor?.closest('form')
+  if (form) completeTranslationReview(form, reviewSection)
+}
 </script>
 
 <svelte:window
@@ -319,6 +441,7 @@ function removeType(): void {
   }}
 />
 <section
+  bind:this={reviewAnchor}
   class="flex min-w-0 flex-col"
   data-feature-type-settings
   aria-busy={!policy && !loadError}
@@ -371,23 +494,12 @@ function removeType(): void {
           class="min-w-0 grow basis-1/2 sm:grow-0 sm:basis-auto"
           onExpandedChange={expanded => (multilingual = expanded)}
           onChange={change => {
-            selectedLocales = change.selectedLocales
-            visibleLocales = change.visibleLocales
+            localeSelection = change
           }}
         />
       {/snippet}
       {#snippet afterControls()}
-        <div class="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            aria-label="Remove Type"
-            aria-pressed={removeMode}
-            disabled={!editable}
-            onclick={() => (removeMode = !removeMode)}
-            class="text-muted-foreground hover:bg-muted focus-visible:outline-primary inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs focus-visible:outline-2 disabled:opacity-50"
-          >
-            <Trash class="size-4" /><span data-control-label>Remove Type</span>
-          </button>
+        <div class="border-border ms-3 flex shrink-0 items-center gap-2 border-s ps-4">
           <span class="text-sm font-medium whitespace-nowrap">
             {scopeType === 'layer'
               ? 'Project Defaults'
@@ -413,6 +525,16 @@ function removeType(): void {
           <label for={customSwitchId} class="text-sm font-medium whitespace-nowrap"
             >Custom</label
           >
+          <button
+            type="button"
+            aria-label="Remove Type"
+            aria-pressed={removeMode}
+            disabled={!editable}
+            onclick={() => (removeMode = !removeMode)}
+            class="text-muted-foreground enabled:hover:bg-muted focus-visible:outline-primary inline-flex size-10 shrink-0 items-center justify-center rounded-md focus-visible:outline-2 disabled:opacity-50"
+          >
+            <Trash class="size-5" />
+          </button>
         </div>
       {/snippet}
     </SectionHeader>
@@ -514,8 +636,15 @@ function removeType(): void {
             canRemove={catalogue.length > 1}
             canMoveUp={index > 0}
             canMoveDown={index < catalogue.length - 1}
-            expanded={openTypeKey === undefined ? index === 0 : openTypeKey === key}
-            onExpandedChange={expanded => (openTypeKey = expanded ? key : null)}
+            missingTranslations={reviewStarted && typeMissingTranslations(type)}
+            expanded={reviewExpanded.includes(key) ||
+              (openTypeKey === undefined ? index === 0 : openTypeKey === key)}
+            onExpandedChange={expanded => {
+              reviewExpanded = expanded
+                ? reviewExpanded
+                : reviewExpanded.filter(item => item !== key)
+              openTypeKey = expanded ? key : null
+            }}
             onMove={direction => moveType(index, index + direction)}
             onRemove={() => {
               removeKey = key
@@ -526,6 +655,8 @@ function removeType(): void {
               bind:type={catalogue[index]}
               {scopeType}
               {scopeId}
+              {reviewGroup}
+              reviewLocales={selectedLocales}
               locales={shownLocales}
               {multilingual}
               namingDisabled={disabled || !policy || inherits}
@@ -546,6 +677,22 @@ function removeType(): void {
     </div>
   {/if}
 </section>
+{#if reviewOpen}
+  <TranslationReviewDialog
+    form={reviewAnchor?.closest('form')}
+    busy={reviewBusy}
+    completed={reviewCompleted}
+    total={reviewTotal}
+    {sourceFallback}
+    pending={reviewMembers.some(member => member.pending())}
+    allReady={reviewMembers.every(member => !member.missing() || member.ready?.())}
+    onGenerate={mode =>
+      void generateTranslationReview(reviewAnchor?.closest('form'), mode)}
+    onAccept={() => void finishReview(true)}
+    onSkip={() => void finishReview(false)}
+    onClose={() => (reviewOpen = false)}
+  />
+{/if}
 <DestructiveDialog bind:open={confirmRemove} onConfirm={removeType}>
   {#snippet title()}
     Remove type?

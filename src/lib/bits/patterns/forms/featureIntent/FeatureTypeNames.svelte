@@ -1,5 +1,16 @@
 <script lang="ts">
+import { featureTypeLabelValue } from '#lib/features/intents.js'
 // SVELTE
+import { getContext, untrack } from 'svelte'
+import {
+  translationReviewGroupKey,
+  type TranslationReviewGroup,
+} from '#lib/forms/translationReviewGroup.js'
+import {
+  translationSource,
+  type TranslationSourceMode,
+} from '#lib/forms/translationSource.js'
+import TranslationSuggestion from '../translationReview/TranslationSuggestion.svelte'
 import { slide } from 'svelte/transition'
 import { prefersReducedMotion } from 'svelte/motion'
 import { cubicInOut } from 'svelte/easing'
@@ -18,16 +29,23 @@ import type { FeatureType } from '#lib/features/intents.js'
 let {
   type = $bindable(),
   locales,
+  reviewLocales = locales,
+  reviewGroup = getContext<TranslationReviewGroup | undefined>(
+    translationReviewGroupKey,
+  ),
   multilingual,
   disabled = false,
   onEnglishChange,
 }: {
   type: FeatureType
   locales: string[]
+  reviewLocales?: string[]
+  reviewGroup?: TranslationReviewGroup
   multilingual: boolean
   disabled?: boolean
   onEnglishChange?: (before: string, after: string) => void
 } = $props()
+let reviewElement: HTMLDivElement
 let busy = $state<string | undefined>()
 let error = $state('')
 let beforeEdit = ''
@@ -47,7 +65,7 @@ const sources = $derived(
  * @param locale Content language. @returns Current draft text.
  */
 function value(locale: string): string {
-  return type.labels?.[locale] ?? (locale === 'en' ? type.label : '')
+  return featureTypeLabelValue(type, locale)
 }
 /** Update only the selected locale, retaining hidden translations.
  * @param locale Content language. @param text Draft name. @returns Nothing.
@@ -89,8 +107,111 @@ async function translate(source: string): Promise<void> {
     busy = undefined
   }
 }
+
+let reviewing = $state(false)
+let proposals = $state<
+  Record<string, { text: string; source: string; sourceText: string }>
+>({})
+const missing = $derived(
+  disabled ||
+    !Object.keys({ en: type.label, ...type.labels }).some(locale =>
+      value(locale).trim(),
+    )
+    ? []
+    : reviewLocales.filter(locale => !value(locale).trim()),
+)
+/** Check that a suggestion still matches its source and empty target.
+ * @param locale Target language. @returns Whether the suggestion may be accepted.
+ */
+function current(locale: string): boolean {
+  const proposal = proposals[locale]
+  return (
+    !!proposal?.text.trim() &&
+    !value(locale).trim() &&
+    value(proposal.source) === proposal.sourceText
+  )
+}
+/** Accept a current suggestion into the existing type draft.
+ * @param locale Target language. @returns Nothing.
+ */
+function accept(locale: string): void {
+  if (!current(locale)) return
+  update(locale, proposals[locale].text)
+  delete proposals[locale]
+}
+/** Generate reviewable names without overwriting existing or concurrently edited values.
+ * @param mode Source preference. @param progress Completion or fallback notice callback.
+ * @returns Completion of sequential translations.
+ */
+async function generate(
+  mode: TranslationSourceMode = 'nearest',
+  progress?: (fallback?: boolean) => void,
+): Promise<void> {
+  if (disabled || busy) return
+  reviewElement?.scrollIntoView?.({ block: 'center' })
+  error = ''
+  const draft = type
+  try {
+    for (const target of [...missing].filter(locale => !current(locale))) {
+      const source = translationSource(
+        target,
+        Object.keys({ en: type.label, ...type.labels }).filter(locale =>
+          value(locale).trim(),
+        ),
+        mode,
+      )
+      if (!source) continue
+      busy = source
+      if (mode === 'english' && !source.startsWith('en')) progress?.(true)
+      const text = value(source)
+      const result = await translateContentField({ source, target, text })
+      if (
+        draft === type &&
+        !disabled &&
+        value(source) === text &&
+        !value(target).trim() &&
+        result.status === 'translated'
+      )
+        proposals[target] = { text: result.text, source, sourceText: text }
+      else if (result.status !== 'translated') error = result.message
+      progress?.()
+    }
+  } catch {
+    error = 'Unable to translate display names. Please try again.'
+  } finally {
+    busy = undefined
+  }
+}
+$effect(() => {
+  if (!reviewGroup || disabled) return
+  return untrack(() =>
+    reviewGroup.register({
+      outstandingKeys: () => missing.map(locale => `${type.id}:label:${locale}`),
+      missing: () => missing.length > 0,
+      missingKeys: () =>
+        missing
+          .filter(locale => !current(locale))
+          .map(locale => `${type.id}:label:${locale}`),
+      fingerprint: () =>
+        JSON.stringify([type.id, type.labels, type.label, reviewLocales]),
+      open: () => {
+        reviewing = true
+      },
+      remaining: () => missing.filter(locale => !current(locale)).length,
+      generate,
+      ready: () => missing.every(current),
+      pending: () => missing.some(current),
+      acceptFilled: () => {
+        for (const locale of [...missing]) accept(locale)
+      },
+      finish: async accepted => {
+        if (accepted) for (const locale of [...missing]) accept(locale)
+      },
+    }),
+  )
+})
 </script>
-<div class="grid min-w-0" data-type-names>
+<div bind:this={reviewElement} class="grid min-w-0" data-type-names>
   <Label text="Display name" />
   <FormI18nSourceBar
     visible={multilingual && !disabled && sources.length > 0}
@@ -112,25 +233,44 @@ async function translate(source: string): Promise<void> {
           easing: cubicInOut,
         }}
       >
-        <FormI18nInlineRow
-          value={value(locale)}
-          label={multilingual ? `Display name ${locale}` : 'Display name'}
-          prefix={multilingual ? shortLocaleLabel(locale) : ''}
-          editable={!disabled}
-          showVerification={false}
-          required={false}
-          issues={undefined}
-          attrs={{
-            lang: locale,
-            dir: 'auto',
-            maxlength: 80,
-            oninput: (event: Event) =>
-              update(locale, (event.currentTarget as HTMLInputElement).value),
-          }}
-          onStart={() => (beforeEdit = value(locale))}
-          onCancel={() => update(locale, beforeEdit)}
-          onClear={() => update(locale, '')}
-        />
+        <div
+          data-missing-translation={(reviewing && !value(locale).trim()) || undefined}
+        >
+          {#if current(locale)}
+            <TranslationSuggestion
+              value={proposals[locale]?.text ?? ''}
+              label={`Display name ${locale}`}
+              prefix={multilingual ? shortLocaleLabel(locale) : ''}
+              onChange={text => {
+                if (proposals[locale]) proposals[locale].text = text
+              }}
+              onAccept={() => accept(locale)}
+              onReject={() => {
+                delete proposals[locale]
+              }}
+            />
+          {:else}
+            <FormI18nInlineRow
+              value={value(locale)}
+              label={multilingual ? `Display name ${locale}` : 'Display name'}
+              prefix={multilingual ? shortLocaleLabel(locale) : ''}
+              editable={!disabled}
+              showVerification={false}
+              required={false}
+              issues={undefined}
+              attrs={{
+                lang: locale,
+                dir: 'auto',
+                maxlength: 80,
+                oninput: (event: Event) =>
+                  update(locale, (event.currentTarget as HTMLInputElement).value),
+              }}
+              onStart={() => (beforeEdit = value(locale))}
+              onCancel={() => update(locale, beforeEdit)}
+              onClear={() => update(locale, '')}
+            />
+          {/if}
+        </div>
       </div>
     {/each}
   </div>

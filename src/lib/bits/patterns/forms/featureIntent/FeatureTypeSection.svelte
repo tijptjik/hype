@@ -15,6 +15,7 @@ import type { FeatureType } from '#lib/features/intents.js'
 
 let {
   title,
+  missingTranslations = false,
   enabled = true,
   onEnabledChange,
   kind = 'object',
@@ -32,6 +33,7 @@ let {
   enabled?: boolean
   onEnabledChange?: (enabled: boolean) => void
   title: string
+  missingTranslations?: boolean
   kind?: FeatureType['kind']
   children: Snippet
   disabled?: boolean
@@ -70,7 +72,11 @@ function reorderKey(event: KeyboardEvent): void {
 }
 </script>
 
-<article class="bits-project-field-card" data-feature-type-section>
+<article
+  class="bits-project-field-card"
+  data-feature-type-section
+  data-missing-translations={missingTranslations || undefined}
+>
   <header
     style:grid-template-columns={`${sideWidth}px minmax(0, 1fr) ${sideWidth}px`}
     class="bits-project-field-card__header bits-form__i18n-card border-border/40! bg-primary/3! grid! items-center gap-2 rounded-none! border-0! border-b! px-3! py-2!"
@@ -103,7 +109,9 @@ function reorderKey(event: KeyboardEvent): void {
         onclick={() => onExpandedChange?.(!expanded)}
       >
         <h3
-          class="bits-project-field-card__title min-w-0 leading-snug! break-words whitespace-normal"
+          class="bits-project-field-card__title min-w-0 leading-snug! break-words whitespace-normal {missingTranslations
+            ? 'text-red-600/75!'
+            : ''}"
         >
           {title || 'New feature type'}
         </h3>

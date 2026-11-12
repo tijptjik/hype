@@ -29,6 +29,8 @@ let {
   scopeType,
   scopeId,
   locales,
+  reviewLocales = locales,
+  reviewGroup,
   multilingual,
   disabled = false,
   namingDisabled = disabled,
@@ -42,6 +44,8 @@ let {
   scopeType: FeatureIntentScope['type']
   scopeId: string
   locales: string[]
+  reviewLocales?: string[]
+  reviewGroup?: import('#lib/forms/translationReviewGroup.js').TranslationReviewGroup
   multilingual: boolean
   disabled?: boolean
   namingDisabled?: boolean
@@ -163,6 +167,8 @@ function updateEnglishName(before: string, after: string): void {
     <FeatureTypeNames
       bind:type
       {locales}
+      {reviewLocales}
+      {reviewGroup}
       {multilingual}
       {disabled}
       onEnglishChange={updateEnglishName}

@@ -1984,6 +1984,10 @@ $effect(() => {
             >
           {/if}
           <FeatureIntentSettings
+            bind:multilingual={multilingualExpanded}
+            bind:localeSelection={contentLocaleSelection}
+            onReveal={() =>
+              navigateOnAdmin(adminCtx, FirstClassResource.hub, hubRef, 'location')}
             draft={formCtx.form.fields.value().data?.featureIntentSettings as
               | string
               | undefined}

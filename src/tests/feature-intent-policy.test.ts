@@ -12,6 +12,7 @@ import {
   DEFAULT_FEATURE_TYPES,
   FeatureTypesSchema,
   featureTypeLabel,
+  featureTypeLabelValue,
   requireFeatureType,
   resolveFeatureTypes,
 } from '#lib/features/intents.js'
@@ -894,4 +895,18 @@ it('rejects forged template assignments outside the prerequisite project and fen
   )
   f.sqlite.exec("DELETE FROM property WHERE id='caption'")
   expect(await executeRevisionBatch(f.db, sql`1`, stale)).toBeNull()
+})
+
+it('recognizes standard translations in defaults and legacy types without replacing authored values', () => {
+  const standard = DEFAULT_FEATURE_TYPES[0]
+  expect(featureTypeLabelValue(standard, 'zhHant')).toBe('物件')
+  const legacy = { ...standard, labels: undefined }
+  expect(featureTypeLabelValue(legacy, 'zh-Hans')).toBe('对象')
+  expect(featureTypeLabelValue({ ...legacy, label: 'Sculpture' }, 'zh-Hant')).toBe('')
+  expect(
+    featureTypeLabelValue({ ...legacy, labels: { 'zh-Hant': '' } }, 'zh-Hant'),
+  ).toBe('')
+  expect(
+    featureTypeLabelValue({ ...legacy, labels: { 'zh-Hant': '自訂名稱' } }, 'zh-Hant'),
+  ).toBe('自訂名稱')
 })

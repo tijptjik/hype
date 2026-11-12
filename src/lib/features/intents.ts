@@ -107,19 +107,39 @@ export const FeatureTypesSchema = z
   )
 export type FeatureType = z.infer<typeof FeatureTypeSchema>
 
+const builtinTypeLabels: Record<string, Record<string, string>> = {
+  object: { en: 'Object', 'zh-Hant': '物件', 'zh-Hans': '对象' },
+  place: { en: 'Place', 'zh-Hant': '地點', 'zh-Hans': '地点' },
+  area: { en: 'Area', 'zh-Hant': '區域', 'zh-Hans': '区域' },
+  route: { en: 'Route', 'zh-Hant': '路線', 'zh-Hans': '路线' },
+}
+
+/** Read an exact display-name locale, including standard names in legacy default definitions.
+ * @param type Authored type. @param locale Requested content locale.
+ * @returns Exact text; custom labels and deliberately empty overrides never borrow standard names.
+ */
+export function featureTypeLabelValue(type: FeatureType, locale: string): string {
+  const tag = canonicalContentTag(locale)
+  if (Object.hasOwn(type.labels ?? {}, tag)) return type.labels?.[tag] ?? ''
+  if (tag === 'en') return type.label
+  const standard = builtinTypeLabels[type.id]
+  return standard?.en === type.label ? (standard[tag] ?? '') : ''
+}
+
 /** Resolve the authored display name without changing the stable type identifier.
  * @param type Configured type, including legacy single-name definitions.
  * @param locale Requested content or interface language.
  * @returns Translated label, falling back to the existing base label for missing or empty translations.
  */
 export function featureTypeLabel(type: FeatureType, locale: string): string {
-  return type.labels?.[canonicalContentTag(locale)]?.trim() || type.label
+  return featureTypeLabelValue(type, locale).trim() || type.label
 }
 export const DEFAULT_FEATURE_TYPES: FeatureType[] = [
   {
     id: 'object',
     enabled: true,
     label: 'Object',
+    labels: { ...builtinTypeLabels.object },
     kind: 'object',
     targetContexts: ['building_part', 'building', 'premises', 'address'],
     relation: 'locatedAt',
@@ -132,6 +152,7 @@ export const DEFAULT_FEATURE_TYPES: FeatureType[] = [
     id: 'place',
     enabled: true,
     label: 'Place',
+    labels: { ...builtinTypeLabels.place },
     kind: 'place',
     targetContexts: [
       'building_part',
@@ -151,6 +172,7 @@ export const DEFAULT_FEATURE_TYPES: FeatureType[] = [
     id: 'area',
     enabled: false,
     label: 'Area',
+    labels: { ...builtinTypeLabels.area },
     kind: 'area',
     targetContexts: ['premises', 'address'],
     relation: 'locatedAt',
@@ -163,6 +185,7 @@ export const DEFAULT_FEATURE_TYPES: FeatureType[] = [
     id: 'route',
     enabled: false,
     label: 'Route',
+    labels: { ...builtinTypeLabels.route },
     kind: 'route',
     targetContexts: ['street', 'premises', 'address'],
     relation: 'locatedAt',
