@@ -48,7 +48,7 @@ let {
   <div class="relative flex flex-row items-center">
     {#if showMenu && !isCollapsed}
       <div
-        class="bg-base-200 absolute z-30 flex h-16 items-center gap-2 whitespace-nowrap"
+        class="bg-base-200 absolute z-30 flex h-10 items-center gap-2 rounded-full whitespace-nowrap"
         bind:this={menuElement}
       >
         {#if menuContent}
