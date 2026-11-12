@@ -1,0 +1,30 @@
+{
+  "mode": "applied locally",
+  "donors": 311,
+  "verifiedNames": 933,
+  "excludedRecords": 17,
+  "futurePolicy": {
+    "scope": "Donors layer",
+    "type": "place",
+    "templateId": "2966d49c-fa7d-4902-97c9-9e7b94f9c75a",
+    "version": 2
+  },
+  "projectScopeEnforced": true,
+  "backup": "/home/io/code/hype/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/d3080fe932e72db09a66987b4bc33e3301f57365daef263894a0551146999c8f.sqlite.before-donor-naming-20261112T153839163052Z",
+  "sourcePreserved": true,
+  "unrelatedContentPreserved": true,
+  "idempotent": true,
+  "staleGuardRollback": true,
+  "foreignKeys": "passed",
+  "integrity": "passed",
+  "browserVerification": {
+    "passed": true,
+    "job": "job-OxF2iCeoQA",
+    "route": "/admin/templates"
+  },
+  "identityCorrection": {
+    "applied": true,
+    "displayedNamesUnchanged": true,
+    "migration": "migrations/pending/breadline-donor-naming/reconcile-template.sql"
+  }
+}

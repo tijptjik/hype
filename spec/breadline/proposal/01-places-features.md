@@ -3855,3 +3855,43 @@ profile/index navigation, keyboard selection, locale controls and code redirects
 Remaining acceptance work includes unresolved donor decisions, accepted Brand ID
 propagation into existing Features, actual save-toast assertions, and repairing any
 remaining missing development logo objects. Deployment is deferred.
+
+### Shared naming templates and prerequisite scope (12 November 2026, Refs #194)
+
+The reviewed donor naming proposal lives in
+`migrations/pending/breadline-donor-naming/README.md`. It composes localized brand,
+outlet format and branch with standalone-name fallback, then access hints and explicit
+paid-area status. Store discriminators use access hints, not exit identifiers; estate
+blocks stay in the branch. The existing project-owned `mtrPaidArea` prerequisite makes
+the template Breadline-project scoped. The shared `join` component retains either
+present value without a dangling separator. The approved migration is applied locally.
+It versions the Donors layer Place naming default so future donors inherit the template;
+other layers are unchanged. The reviewed corrections select Domain Mall in English and
+海港城 in Chinese. Access hints and paid status share a single parenthesis, such as
+`(D - Paid)`.
+
+The Model naming panel selects shared immutable display templates or creates one using
+that same expression editor. Feature name and properties, and linked Location name and
+attributes, are available inputs; neither name is mandatory. Existing rule fragments can
+be copied into a reusable template. Creating a template publishes its definition;
+accepting the rule and saving the parent form separately adopts its pinned version. The
+inline editor and template catalogue edit those same definitions by publishing a new
+version, subject to the existing catalogue editing authority.
+
+Availability follows the prerequisites in every language and every expression branch.
+Built-in fields impose no project restriction. Inherited catalogue properties retain
+their Hub or Organisation availability. Any project-owned property restricts use to that
+project, including templates created from a Layer. Missing prerequisites are rejected.
+Internal fields retain their existing eligibility for deliberate naming configuration;
+they do not bypass ownership or project restrictions. The server enforces these
+constraints when publishing, listing selectable templates, saving policies and
+materializing accepted Feature names; transactional checks repeat the prerequisite test
+with the write. Catalogue management can inspect project-specific templates without
+offering them as Organisation defaults.
+
+Regression coverage includes dependency scope, forged assignments, stale dependency
+rollback, inherited policies, name-free rendering and parent-form isolation in the
+display-template, feature-intent-policy and feature-naming-form suites. The managed
+Chrome check `tests/e2e/templates/naming-template.spec.ts` exercises desktop publication
+and reopening, plus the shared editor at desktop and narrow widths. The admin shell
+retains its existing 1200px minimum-width guard.

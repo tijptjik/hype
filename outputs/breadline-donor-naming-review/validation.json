@@ -1,0 +1,29 @@
+{
+  "mode": "dry-run; live data unchanged",
+  "donors": 311,
+  "localizedNames": 933,
+  "changedNames": 508,
+  "excludedRecords": 16,
+  "csvRows": 949,
+  "duplicateGeneratedNames": 0,
+  "verification": [
+    "all generated names match database projection",
+    "unrelated accepted content preserved",
+    "source revisions preserved",
+    "foreign keys and integrity pass",
+    "idempotent replay",
+    "mismatched prerequisite rollback"
+  ],
+  "focusedTests": {
+    "passed": 7,
+    "job": "job-9vcG1wRtB9",
+    "scope": "revised donor naming rules"
+  },
+  "browser": {
+    "passed": 1,
+    "widths": [1440, 390],
+    "scope": "authenticated shared editor fixture interaction",
+    "job": "job-iwgxNd9RCp"
+  },
+  "unresolvedReviewRecords": 0
+}
