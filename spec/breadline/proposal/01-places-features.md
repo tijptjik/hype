@@ -5,6 +5,33 @@ map/results divider refits the visible discovery markers after the layout settle
 explicit pin editing retains its camera. Interaction evidence is exercised by
 `scripts/visual-checks/discovery-resize-check.ts` through remote Chrome.
 
+Profile curation (12 November 2026, Refs #194, parent #180): Brands exposes an inline
+reset-to-inheritance action. Establishment Communications contains Phone, Websites and
+Socials independently of configured Feature properties; each has its own Community /
+Internal assignment. `locationProfileEdit` carries a typed patch and the original
+association revision through the main Feature Save. Phone edits also update any existing
+universal phone property atomically. Mobility access is community-only and uses that
+same Save and ordinary shared-curation revision, field pin and propagation paths.
+Location record editing likewise stages mobility and communications with its normal
+Save. New mobility writes do not append `locationAccessibility` rows; retained
+observations remain read-only fallback/history. Placement evidence lives in the shared
+correction entry so relocation and tenancy changes still flag stale venue reports.
+Coverage: `feature-location-form-correction.test.ts`,
+`location-accessibility.services.test.ts`, `location-accessibility.remote.test.ts`, and
+`scripts/visual-checks/linked-fields-check.ts`.
+
+Linked-field editing (12 November 2026, Refs #194, parent #180): the Feature Location
+editor exposes a Linked fields mode beside Multilingual. Community (Hype mark with a
+heart) and Internal (lock) independently filter fields; inline icon buttons stage each
+assignment through the existing `locationFieldModes` save contract. Internal means an
+organisation-owned value, not a privacy setting. Filtering never unmounts draft inputs.
+Manual Locations cannot select Community. The supported assignment groups remain Names,
+Phone, Brands and the atomic Address; individual address parts share that Address
+assignment. The existing universal Phone and Brand editors are available for linked
+establishments. Accessibility controls are hidden for address-only Locations without
+clearing retained values. Browser coverage:
+`scripts/visual-checks/linked-fields-check.ts`.
+
 Coordinate ownership (11 November 2026, Refs #194, parent #180): Feature geometry owns
 the user marker. Address coordinates retain the provider address point; reverse lookup
 must not substitute the requested pin. Location materialization, adoption and reset read
@@ -15,6 +42,47 @@ historical revisions are not rewritten. Canonical relocation clears the former a
 point rather than assigning the new marker to it.
 
 # Locations, Feature inheritance and SaanSeoi Addresses
+
+Draft review entry and canonical contacts (11 November 2026, Refs #194): the selected
+Location/establishment name itself links to `/admin/locations/new` when no persisted
+identity is available. Its click handler captures the owning Feature checkpoint before
+navigation; existing identities retain their record links. The canonical Place adapter
+accepts nullable publisher websites/socials and social URL arrays, retaining original
+source evidence and distinct same-site accounts while validating public HTTP(S) URLs.
+The exact Bakeology source lookup was verified read-only against local Atlas;
+authenticated association persistence remains a separate acceptance check.
+
+Draft Location review (11 November 2026, Refs #194, parent #180): a new Feature can open
+`/admin/locations/new` before either record exists. The admin-layout handoff retains the
+Feature form, setup stage, search progress and Location edits across navigation.
+Returning applies reviewed names and address values; Feature Save uses those values in
+the existing creation/link pipeline. Location Save creates or imports the identity
+first, retains it for retries, and returns to the unsaved Feature, whose Save links that
+identity. Provider baselines remain immutable; reviewed changes use Organisation
+corrections with revision checks. Independent provider import requires Organisation
+management; completion from a saved Feature retains the existing Feature authorization
+path. Account changes, reset and successful Feature creation clear the handoff. This
+handoff is in-memory; refreshing the Location review page does not restore it. Tests
+cover creation, correction retries and authorization; the isolated browser fixture
+checks the rendered editor. Authenticated admin checks against a private local database
+snapshot verified both save orders, repeated draft navigation, Feature edits and
+consecutive independent Location saves with refreshed revision tokens. The repeatable
+real-API flow is `scripts/visual-checks/location-save-e2e.ts`; it requires an isolated
+admin-persona server and an explicit private-state flag. The import payload whitelists
+source identifiers, excluding draft naming metadata rejected by strict API validation.
+Checkpoints retain Feature type, target context and the saved Location identity. Address
+corrections without provider coordinates retain the pinned Location point rather than
+using a Feature marker. Explicit complete address labels are retained separately from
+structured content and restored into the editor across shared, Organisation and draft
+Location saves. Post-save Feature refresh fetches the committed revision and settles the
+form write token before another edit can begin. The real-API browser check passed both
+save orders with two consecutive saves per Feature and Location, including reload
+verification. Type-picker loading and retry preserve the selected definition; resolved
+options alone may invalidate an unavailable type. Older checkpoints recover their type
+from the retained field ID before submission, and failed submissions retain the draft.
+The browser check includes an older checkpoint and one deliberately failed transport
+request followed by a successful real save. These checks do not establish production
+acceptance.
 
 Feature setup presentation and navigation (Refs #194, parent #180): the map picker uses
 one card with a compact progress header, organisation thumbnails with layer-icon
@@ -41,6 +109,23 @@ bindings remain separate. Source/system refreshes retain Project review policy a
 queue behavior. Pending staff corrections can replay only against their exact shared
 head and source revision. Regression coverage:
 `src/tests/location-staff-propagation.test.ts`.
+
+Location discovery setup (11 November 2026, Refs #194, parent #180): the search-stage
+progress bar labels its completed choices as Layer, Feature kind and Location kind,
+including automatically determined choices. Establishment discovery starts with only
+establishments enabled. “Can’t find what you’re looking for?” opens a centered guide
+that offers building search, then address search, as starting points for the intended
+custom establishment. Custom creation remains available at each fallback stage; choosing
+a starting point does not change the intended Location kind. The setup bar's measured
+height contributes to the search panel offset so the map resize handle stays on the map
+boundary. The local-result truncation notice is omitted from this flow. Legacy saved
+discovery states migrate their old all-provider defaults; new explicit provider choices
+survive restoration. Activating a result keeps its scroll position, and group headings
+remain outside row highlights. An exact establishment choice skips further specificity
+review and offers only the existing-location action. The footer continuation has 32px
+additional bottom clearance and moves to the viewport center at the end of a fully
+loaded result list. Place defaults inherit the chosen Location name; legacy generated
+Plus Code titles are repaired when a named Location is available.
 
 Breadline field reset seed (Refs #194, parent #180): migration
 `0223_breadline_mtr_paid_area.sql` preserves the project-owned `mtrPaidArea` internal
@@ -135,7 +220,19 @@ reduced-motion support. Hidden kinds and selected/grouped views do not request p
 Empty kinds have no count/footer; the shared empty state appears only when all requested
 kinds have finished with no results and no remaining continuation. Failures keep
 existing rows and offer retry; changed query/publication cursors require Search again.
-Nearby Map pin discovery retains its bounded contract.
+Nearby Map pin discovery with empty text retains its bounded contract.
+
+Nearby text discovery (11 November 2026, Refs #194, parent #180): typing in Map pin mode
+refreshes providers after 300 ms and immediately invalidates older responses. Places and
+Addresses send the selected circle to SaanSeoi using `nearLat`, `nearLng` and
+`maxDistance`; distance constraints apply before result pages and bind cursor identity.
+Buildings search the published name catalogue and resolve matching details with bounded
+concurrency before excluding buildings outside the radius. Clear returns to bounded
+nearby discovery; changing the radius refreshes the query. These Hype and SaanSeoi API
+changes must ship together. Coverage includes matches beyond the original result cap,
+changed-circle cursors, stale responses and headless Chromium/Firefox search/clear
+interaction at 390 px in `nearby-text-search-check.ts`. That browser check uses mocked
+providers and does not establish authenticated admin or production acceptance.
 
 Text Places discovery uses SaanSeoi's `paginate=true` and opaque `meta.nextCursor`
 contract, with name/brand hits before contextual hits across pages and HTTP 410 for
@@ -380,27 +477,6 @@ Establishment addresses retain building and unit guidance. Complete address evid
 explicit custom display text remain intact; omission is component-based and never a
 substring deletion from a name or freeform address.
 
-### Location resource navigation (Refs #194)
-
-The Location record follows resource header navigation (Refs #194): **Profile** contains
-record details, Address and Divisions; **Relationships** contains physical membership,
-operating locations, address choices and lineage. The header's **Features** marker opens
-a read-only standard Feature index. Its icon-only relationship selector defaults to
-**Associated features**, with **Features placed here** and **Past accepted placements**
-as alternatives; tooltips explain the three sets. These icons sit in the top-right
-resource header immediately left of the filter toggle, without a separate relationship
-bar. The community curation lock control sits beside Edit in the resource header and
-remains SuperAdmin-only. Standard Feature search, filters, sorting and rows operate
-within the selected relationship set on the server, including counts and pagination.
-Private Location access and ordinary Feature authorization both apply. Relationship
-counts bypass Feature-only revision caches so relationship changes cannot leave stale
-totals. Profile and Relationships share the record editor and map; the Features view
-owns its independent list controls.
-
-Validation: `src/tests/feature-index-query.test.ts`,
-`src/tests/feature-index.remote.test.ts` and
-`scripts/visual-checks/location-resource-navigation-check.ts`.
-
 ### Shared address presentation and editing (Refs #194)
 
 The Feature association review presents the original Address on the left and the
@@ -574,6 +650,29 @@ and adoption flow. Focused acceptance coverage lives in
 `address-division-editor.test.ts`, `address-division-context.test.ts`,
 `address-divisions-ui.test.ts` and the structured editor write case in
 `location-services.test.ts`.
+
+The Location record follows resource header navigation (Refs #194): **Profile** contains
+record details, Address and Divisions; **Relationships** contains physical membership,
+operating locations, address choices and lineage. The header's **Features** marker opens
+a read-only standard Feature index. Its icon-only relationship selector defaults to
+**Associated features**, with **Features placed here** and **Past accepted placements**
+as alternatives; tooltips explain the three sets. These icons sit in the top-right
+resource header immediately left of the filter toggle, without a separate relationship
+bar. The community curation lock control sits beside Edit in the resource header and
+remains SuperAdmin-only. Standard Feature search, filters, sorting and rows operate
+within the selected relationship set on the server, including counts and pagination.
+Private Location access and ordinary Feature authorization both apply. Relationship
+counts bypass Feature-only revision caches so relationship changes cannot leave stale
+totals. Profile and Relationships share the record editor and map; the Features view
+owns its independent list controls. Known operating or building status appears after the
+record type without a Lifecycle label; unknown status is omitted and `open` displays as
+**Open**. Status remains editable in Profile. The multilingual control precedes the
+coordinate widget. These presentation changes retain Location facts, relationship
+history and Feature adoption semantics (Refs #194). Branch, Format and brand names use
+the shared inline locale rows and follow the Profile's selected/visible languages and
+multilingual expansion. Editing one language retains hidden translations and additional
+source languages. Location kind, class, brand source and status selects use neutral
+surfaces, with the same field and section hierarchy as the Address editor.
 
 HYPE owns the permanent `location.id`. New Locations have opaque 12-character IDs using
 HYPE's NanoID alphabet. Manual creation uses `nanoid(12)`; repeatable Breadline imports,
@@ -3309,6 +3408,52 @@ destination changes. Pending reviews must not accept shared evidence that change
 assessment. These requirements supersede earlier blanket Organisation-only correction
 routing in this document.
 
+### Name editor search and authored labels (10 November 2026)
+
+Building and street name inputs query `/api/address-names` with a family, language and
+name fragment. Empty inputs do not load inventories. The server retains the public
+catalogue index and returns at most 30 records with their published names and release
+references. Inputs debounce requests, abort obsolete searches, discard late responses
+and retain at most 100 recent result pages for one minute. Catalogue availability does
+not gate opening, typing, cancellation, clearing or accepting an authored name.
+
+An explicit catalogue selection retains the existing multilingual/source workflow. **Use
+as a custom name** applies an override only to the edited language; it does not create
+or replace a Location association, claim a new source identity or fill other languages.
+Missing language rows remain editable. Group Clear removes all language values for that
+name, while Reset restores the source baseline and appears only when changed. Individual
+language rows have no clear-X action. Clearing or resetting a building also invalidates
+pending building-detail resolution.
+
+Mounting the address form no longer preloads name inventories or scans the street
+catalogue to fill translations reactively. Explicit source parsing and building-detail
+workflows retain their existing catalogue helpers; this change moves interactive name
+suggestions, not every source-ingestion operation, to server search. The first server
+search can still pay the cost of loading/indexing the public export; warm searches reuse
+that index. Production resource limits and deployment remain unverified.
+
+Validation is in `address-name-api.test.ts`, `address-name-focus.test.ts`,
+`address-editor-controls.test.ts`, `location-association-picker.test.ts` and
+`scripts/visual-checks/name-editor-search-check.ts`. Browser checks cover the full
+address form fixture, real local API suggestions, delayed replies, custom names, group
+clear and reset. They do not establish the latency of the user's authenticated Feature
+route: the browser access host was unavailable, so that live performance trace remains
+open.
+
+Local verification: the focused suites passed 95 of 96 tests; the retained-display
+viewer test still fails outside the changed name-control path. Svelte checking reported
+11 existing test-code errors and no diagnostics in the new search endpoint/client or
+name components. Headless Chromium/Firefox measured edit entry at 69/111 ms, picker
+opening at 32/50 ms, custom acceptance at 35/63 ms and group clear at 40/60 ms, with
+zero catalogue-export requests. A warm local building search returned 398 bytes in about
+4 ms; the first measured search took about 0.8 seconds. Results and screenshots are
+written under `output/playwright/name-editor-search-*`. Narrow full-form inspection
+still exposes address-column clipping outside the name-control changes.
+
+Tracking note: the existing #194 and #213 references above currently resolve to
+migration-importer and routing issues respectively; they are not evidence of completion
+of this editor work. No unrelated issue or acceptance checkbox was changed.
+
 Current Location directory/search projections apply Hype corrections and scoped
 Organisation overrides before search, lifecycle filtering, nearby bounds and pagination.
 Accepted Feature list projections instead use immutable shared revision pins, including
@@ -3383,12 +3528,13 @@ Alt+Up/Down; saving persists catalogue order. Remove Type enables removal mode, 
 confirmation before removing a draft type and protection for the last type. Escape exits
 removal mode. Existing features retain their accepted type identities. The body groups
 settings, localized naming and location-target switches in the same shared field styles.
-The multilingual toolbar reveals display-name translations and conditional naming text
-for the selected languages, including additional catalogue languages. Hiding languages
-does not remove their content. Optional canonical-locale `labels` persist inside the
-versioned type definition and inherit with it; the existing `label` remains the fallback
-for legacy definitions and missing translations. New-feature type choices and
-configuration headings resolve the label in the current interface language.
+The multilingual toolbar reveals display-name translations for the selected languages,
+including additional catalogue languages. The expanded naming editor has its own
+language selector. Hiding languages does not remove their content. Optional
+canonical-locale `labels` persist inside the versioned type definition and inherit with
+it; the existing `label` remains the fallback for legacy definitions and missing
+translations. New-feature type choices and configuration headings resolve the label in
+the current interface language.
 
 Matching rules are shared application behavior. Building parts can use establishment
 search results as physical-space evidence, but establishments cannot be selected as
@@ -3713,6 +3859,32 @@ replacement Location. Explicit “Create” actions retain the local-authoring p
 Regression coverage lives in `draft-feature-location-search.test.ts` and
 `location-association-picker.test.ts`.
 
+### Building-first part authoring (11 November 2026)
+
+Refs #241 (parent #186). The building-part picker now suggests published buildings
+before offering local creation. It joins the release-pinned point index to detail shards
+within 100 metres and compares canonical Address IDs or complete street and number
+evidence. If there is no address match, it displays all building points within 50
+metres, including unnamed buildings. These are point-distance limits, not footprint
+intersection guarantees; an exact match outside the 100-metre discovery window remains
+unverified. A global address lookup needs a source-side index: downloading the current
+52 MB address export for every picker is not an acceptable fallback.
+
+A unique address match is suggested without writing. Ambiguous and nearby candidates
+remain explicit choices, shared between the building card and map markers. “Link to
+building” uses the existing authorized building importer to obtain a reusable Location;
+local creation is a secondary footer action. Lookup failure remains visible and can be
+retried rather than being reported as a complete no-match.
+
+Optional enclosing-part cards sit between the building and final part. Each explicit
+creation keeps the owning building and points to the preceding saved part. An unsaved
+card blocks final acceptance; changing the building clears the draft chain without
+deleting already-created Locations. Stale saves cannot attach an old chain to a newly
+selected building. Source matching tests cover exact-address preference, unnamed
+50-metre candidates, incomplete evidence and failures. Browser fixtures exercise map
+selection callbacks and hierarchy transport with mocked persistence; they do not prove
+an authenticated production write or live MapLibre interaction.
+
 ## Source-specific Location changes
 
 See
@@ -3737,6 +3909,21 @@ prepared accepted facts as its transaction. See
 for supported paths, validation and pending inherited assignments. Migrations 0234 and
 0235 are prepared only; rollout and deployed verification are deferred by request.
 
+## Authored languages and automatic translations
+
+Content language resolution and explicit translation acceptance follow
+[User language fallbacks](../../../docs/User-Language-Fallbacks.md). Existing i18n rows
+retain automatic candidates separately from authored fields, with source identity,
+provider provenance and independent editor acceptance. Cache-only rows and cache writes
+do not enter editorial revision snapshots. Accepted provenance follows the existing
+Feature and catalog authorization and revision transactions.
+
+The active multilingual languages define missing translations. Saving reviews the
+existing Profile, Policies and Fields tabs in sequence; generation displays editable
+proposals in the existing controls, and only explicit acceptance fills authored values.
+Readers default to published-language fallback. Opted-in readers can use a current
+requested-language automatic value, with a robot control revealing its original.
+
 Template follow-up: Hub → Project → Layer naming rules can reference immutable central
 versions, and staff creation, accepted creation contributions and split identities
 materialize generated names atomically. See `feature-display-template.test.ts` and
@@ -3752,21 +3939,6 @@ accepted versions. Migration 0236 preserves current policies and immutable revis
 is applied locally only. The authenticated Organisation-default browser check covers
 save, reload and reset in Chromium and Firefox. Community template adoption and bulk
 regeneration remain separate work; this does not add Layer-level Location policies.
-
-## Authored languages and automatic translations
-
-Content language resolution and explicit translation acceptance follow
-[User language fallbacks](../../../docs/User-Language-Fallbacks.md). Existing i18n rows
-retain automatic candidates separately from authored fields, with source identity,
-provider provenance and independent editor acceptance. Cache-only rows and cache writes
-do not enter editorial revision snapshots. Accepted provenance follows the existing
-Feature and catalog authorization and revision transactions.
-
-The active multilingual languages define missing translations. Saving reviews the
-existing Profile, Policies and Fields tabs in sequence; generation displays editable
-proposals in the existing controls, and only explicit acceptance fills authored values.
-Readers default to published-language fallback. Opted-in readers can use a current
-requested-language automatic value, with a robot control revealing its original.
 
 Explicit template regeneration (Refs #178) now lists accepted Organisation consumers in
 bounded pages and regenerates each inspected Feature through the existing revision
@@ -3800,6 +3972,25 @@ Location adapters expose locale maps. The global translatable Branch property us
 existing `propertyI18n` and `featurePropertyI18n` tables; automatic binding to the
 accepted Location Branch is a separate integration.
 
+### Feature sync policy inspection and linked sections
+
+The saved Feature Location toolbar exposes **Sync policy** as a read-only inspection
+control. Feature read authorization permits seeing the effective Project policy,
+Organisation fallback or default rules without granting policy-management rights. The
+panel shows Community and SaanSeoi rules independently, including empty-value and
+newly-resolved-address exceptions. Manual links remain explicitly unsynced.
+
+The current placement processor reads source-specific Project/Organisation relocation
+rules. A configured Layer relocation setting is shown separately as not applied by this
+processor; the inspector must not present it as effective consent.
+
+Community/Internal controls apply to Name, Brands, Address and Communications sections.
+Communications changes phone numbers, websites and socials together. Existing mixed
+assignments are retained until explicitly changed, with a mixed-state indicator;
+choosing it first consolidates to Internal. These are value-source choices, not privacy
+settings. Community uses the regular Hype logo. Storage retains field-specific
+assignment keys for compatibility, while the editor groups them at the section boundary.
+
 ### Pre-release translation storage correction (Refs #194)
 
 Migration 0241 replaces the intermediate duplicated JSON/query projection with one
@@ -3824,43 +4015,98 @@ The reproducible local rebuild and approved media recovery workflow is documente
 retains export hashes and stage receipts, verifies exact recovery evidence, and backs up
 the previous local database before installation. Production remains read-only.
 
-### Optional corporate group hierarchy (Refs #178)
+### Reviewed donor catalogue migration (Refs #194)
 
-A brand or group's optional `groupId` references a group catalogue record. Groups can
-have one parent group, or none. Migration `0245_catalogue_group_hierarchy.sql` adds the
-indexed self-referencing foreign key to `identityCatalogue`, backfills existing
-memberships, and projects each published revision's link into that column. Immutable
-revisions retain historical membership. Database triggers reject missing or wrong-kind
-parents, self-links and indirect cycles within the publication transaction. Search can
-exclude a group's subtree before limiting results. An optional inline parent and its
-member are published atomically; failed or stale saves leave no orphan group. Ancestor
-membership does not automatically propagate to Location curation.
+`/admin/catalogue` edits localized brand/group names and logos. Breadline import seeds
+brand catalogue records and community links; the importer reads curated catalogue names
+before consulting retained legacy classifier labels. Public donor branding uses the
+accepted Location projection, never the retired organisation classifier.
 
-`src/tests/identity-catalogue.test.ts` covers nested saves, clearing, retained history,
-migration backfill, invalid parents, cycle rejection and stale-save rollback.
+The editable, repeatable source of donor decisions is
+`migrations/pending/breadline-donor-identity/curate.sql`. It remains outside automatic
+migration rollout while outlet formats are reviewed. It seeds missing catalogue records,
+appends documented group and explicit format curations, and retires the unused
+organisation brand field with Organisation, Project, Layer and property-catalogue
+revision capture. Original provider evidence and prior revision snapshots are retained.
+Field locks and human curations take precedence. Community changes enter the existing
+policy/review flow; the migration does not force Feature acceptance.
 
-### Catalogue profile and donor identity migration (Refs #194)
+Preview against an explicitly selected local database (the original is read-only):
 
-The catalogue uses `/admin/catalog/brand/[code]` and `/admin/catalog/group/[code]`.
-Codes are unique within each kind; existing ID links redirect when a code exists.
-Profile editing uses localized names, taxonomy categories, group membership, image
-upload and success notifications. The read-only Features tab filters by accepted
-Location Brand ID, including organisation choices; pending community updates do not
-enter the index.
+```sh
+dev-check python scripts/breadline/curate-donor-identities.py \
+  --database PATH_TO_LOCAL_SQLITE --report .local/donor-identity-review.json
+```
 
-The repeatable donor identity specification remains in
-`migrations/pending/breadline-donor-identity/curate.sql`. Its local runner defaults to a
-preview on a copy and requires `--apply` for mutation. It is deliberately not part of
-automatic migration rollout while donor decisions are being reviewed.
-`catalogue:logos:sync:dev` repairs missing development PNG objects with byte-level
-verification, without changing catalogue IDs or writing to production.
+The preview applies the SQL twice to a private copy and checks replay, foreign keys and
+integrity. Add `--apply` only to install the reviewed decisions locally with a backup.
+Do not amend a deployed migration: finalize this draft before promotion; later decisions
+require a new version. During review, bump a decision's version when changing its value.
+A repeat never overwrites a later human edit.
 
-Verification: catalogue service tests cover code lookup, disambiguation, taxonomy
-validation and atomic group creation. `donor-catalogue-check.ts` covers authenticated
-profile/index navigation, keyboard selection, locale controls and code redirects.
-Remaining acceptance work includes unresolved donor decisions, accepted Brand ID
-propagation into existing Features, actual save-toast assertions, and repairing any
-remaining missing development logo objects. Deployment is deferred.
+The 2026-11-12 local rebuilt Donors cohort has 311 donors, all linked to Locations and
+14 catalogue brands; `unresolved` means no SaanSeoi match, not no Feature association.
+The first draft supplies 297 group links and 55 explicitly named formats. Unknown group
+relationships remain unset. All 35 AROME donor titles omit the Bakery/Café distinction;
+these require outlet verification. Wooloomooloo's family-brand naming remains a review
+choice. Sources and decision values live in the SQL rather than a second mapping file.
+
+### Catalogue index and brand disambiguation
+
+Each saved brand has Details and Features header tabs. Features reuses the standard
+scoped index, including search, filters, sorting, pagination and normal Feature access
+checks. Its predicate compares the accepted Location `brandId`, including applicable
+Organisation overrides and field-specific community acceptance pins. Pending community
+changes, textual brand-name matches and unassociated legacy classifiers do not qualify.
+Counts use the same authorized predicate and avoid Feature-only count caches because
+Location acceptance can change independently.
+
+`/admin/catalogue` uses separate Brands and Groups tabs, header search and standard
+resource rows. Opening an entry retains its stable catalogue ID in the URL. Names use
+the shared locale prefixes and Multilingual control; switching visible locales does not
+delete translations.
+
+Catalogue detail forms place Multilingual directly before Edit in the page header. Names
+and Identity share equal space beside the narrower brand image column. Group search
+supports an inline creation row with the same locale-prefixed name editors. The new
+group remains a draft until Save; its identity, translations and the brand link are
+committed in one revision batch. Cancel and revision conflicts leave no orphan group.
+
+The immutable catalogue content supports an optional readable `code`, unique among
+current records of the same kind. Names are not unique identifiers. Search matches codes
+as well as localized names. Brand `categories` is an array of exact keys from the
+existing place taxonomy; it does not invent a separate brand classification. These
+non-translatable values live once in revision content. Translated names remain solely in
+`identityCatalogueI18n`.
+
+Catalogue logos are uploaded assets. A community brand revision includes its logo in the
+accepted Location brand snapshot, preserving consumer review policies. Breadline
+rendering prefers that accepted logo, with bundled artwork as fallback. The repeatable
+managed command below attaches the existing 14 SVG treatments through the authenticated
+catalogue PNG upload flow. It preserves existing logos, fills missing codes, and writes
+per-entry upload receipts to runner artifacts. Run it against the intended local admin
+server after importing the brands; assets belong to that server's stage and are not
+deployed by this command.
+
+An agent server launched with `HYPE_LOCAL_R2=1` stores uploads in isolated local R2. The
+normal `hype.localhost` server uses the remote `hype-assets-dev` bucket. Shared local
+database URLs do not copy the corresponding image objects between these stores. Use the
+development-only repair command to copy missing PNGs under their original IDs:
+
+```sh
+bun run catalogue:logos:sync:dev --database PATH_TO_LOCAL_SQLITE --report .local/catalogue-dev-logo-sync.json
+bun run catalogue:logos:sync:dev --database PATH_TO_LOCAL_SQLITE --report .local/catalogue-dev-logo-sync.json --apply
+```
+
+It previews by default, refuses different existing bytes, and verifies
+SHA-256-equivalent content through `hype.localhost` after each upload. It never rewrites
+database records or uploads into production. Verify public image decoding against port
+5175 using `catalogue-public-logo-check.ts`, separately from authenticated UI checks on
+port 4173.
+
+```sh
+dev-remote --port 4173 chrome bun scripts/visual-checks/install-breadline-catalogue-logos.ts
+```
 
 ### Shared naming templates and prerequisite scope (12 November 2026, Refs #194)
 
@@ -3901,3 +4147,91 @@ display-template, feature-intent-policy and feature-naming-form suites. The mana
 Chrome check `tests/e2e/templates/naming-template.spec.ts` exercises desktop publication
 and reopening, plus the shared editor at desktop and narrow widths. The admin shell
 retains its existing 1200px minimum-width guard.
+
+The Entity Catalog uses the shared header facets for Brands/Groups and the standard New
+action beside its title. Its detail form is one section with Brand, Identity, and Names
+columns. Names use `FormI18nInlineRow`; taxonomy and group searches use the Bits
+combobox keyboard model (arrows, Enter, Escape).
+
+A brand or group's optional `groupId` references a group catalogue record. Groups can
+therefore have one parent group, or no parent. Migration
+`0245_catalogue_group_hierarchy.sql` adds the indexed self-referencing foreign key on
+`identityCatalogue`, backfills existing memberships, and projects each published
+revision's link into that column. Immutable revisions retain historical membership.
+Database triggers reject missing or wrong-kind parents, self-links and indirect cycles
+inside the publication transaction; the parent picker excludes the current group's
+subtree before limiting search results. Parent links can be selected, created inline,
+changed or cleared without changing group identity. Ancestor membership does not
+automatically propagate to Location curation. Selecting a brand proposes its group in
+the same community curation revision unless the edit supplies an explicit group choice.
+Normal field locks and consumer policies still apply. The reviewed donor migration also
+seeds these catalogue relationships without replacing authored links; its
+`--catalogue-only` mode leaves donor location fields and pending format decisions
+untouched.
+
+Hierarchy verification: `src/tests/identity-catalogue.test.ts` covers nested saves,
+clearing, immutable history, migration backfill, invalid parents, cycles and stale-save
+rollback (15 tests passed, managed job `job-OLTSPfT16o`).
+`scripts/visual-checks/group-hierarchy-check.ts` verifies authenticated parent
+selection, self-exclusion, clearing and reload without publishing fictional corporate
+links (managed Chrome job `job-57aMIq2JeR`). The existing narrow admin guard remains.
+
+`catalogue-marker-images-check.ts` compares every catalogue PNG against its Breadline
+marker SVG as decoded browser pixels, checks visible image content, and records the
+asset URLs. An HTTP success alone does not establish that an image is visibly rendered
+or matches the marker artwork.
+
+### Catalogue profile and donor identity migration (Refs #194)
+
+The catalogue uses `/admin/catalog/brand/[code]` and `/admin/catalog/group/[code]`.
+Codes are unique within each kind; existing ID links redirect when a code exists.
+Profile editing uses localized names, taxonomy categories, group membership, image
+upload and success notifications. The read-only Features tab filters by accepted
+Location Brand ID, including organisation choices; pending community updates do not
+enter the index.
+
+The repeatable donor identity specification remains in
+`migrations/pending/breadline-donor-identity/curate.sql`. Its local runner defaults to a
+preview on a copy and requires `--apply` for mutation. It is deliberately not part of
+automatic migration rollout while donor decisions are being reviewed.
+`catalogue:logos:sync:dev` repairs missing development PNG objects with byte-level
+verification, without changing catalogue IDs or writing to production.
+
+Verification: catalogue service tests cover code lookup, disambiguation, taxonomy
+validation and atomic group creation. `donor-catalogue-check.ts` covers authenticated
+profile/index navigation, keyboard selection, locale controls and code redirects.
+Remaining acceptance work includes unresolved donor decisions, accepted Brand ID
+propagation into existing Features, actual save-toast assertions, and repairing any
+remaining missing development logo objects. Deployment is deferred.
+
+### Brand Location discovery (Refs #194)
+
+Brand profiles expose Locations beside the read-only Features header action, before
+search. Locations uses the existing three-state filter control: Hype (not added / all /
+added), Upstream (community only / all / backed), and Linked Features (unlinked / all /
+linked). The initial Hype state is not added; source searches require an explicit Search
+SaanSeoi action. Organisation-scoped usage checks include only that organisation's
+linked Features.
+
+Catalogue revision content optionally stores `discovery.terms` and `discovery.category`.
+These search preferences are independent of classification `categories` and translated
+catalogue names. Discovery category filtering uses the existing taxonomy and applies to
+the upstream search. Local catalogue matches and source candidates retain independent
+bounded continuations; an empty filtered source page may still have a next page.
+Coverage means branches found, never an exhaustive branch census. No discovery request
+writes a Location or Feature.
+
+The current source search contract supports names and taxonomy, not an exact upstream
+brand-identifier filter. Results are labelled Name match unless the source identity
+already has the selected curated Brand ID in Hype. A text match never assigns a brand.
+Add Location re-fetches exact canonical evidence, rejects release drift, and uses the
+existing idempotent ingestion and retired-identity safeguards. Link existing Location
+captures the existing identity review; acceptance and any merge remain explicit. These
+canonical identity actions retain the administrator permission boundary. Feature
+creation remains separate. No migration rollout or deployment is required for the
+optional revision-content preferences.
+
+Focused verification lives in `brand-locations.remote.test.ts`,
+`brand-location-directory.test.ts`, and the catalogue persistence test;
+`brand-locations-check.ts` verifies authenticated header placement and filter
+interactions.
