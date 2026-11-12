@@ -56,8 +56,10 @@ const showTaskActions = $derived(
 const showFormActions = $derived(formActions.isVisible ?? false)
 // Labelled controls reserve crossfade space; compact forms use only their actual action width.
 // Share-capable resources retain the search/control slot across their destinations.
+// Custom form controls size to their contents so they cannot overflow into the avatar.
 const reserveFormActionWidth = $derived(
-  showFacets &&
+  !formActions.content &&
+    showFacets &&
     Boolean(
       formActions.primaryAction ||
         formActions.saveAction ||
@@ -137,6 +139,7 @@ const rootClass = $derived(
       <HeaderPrimitive.New
         isCreatable={showNew}
         label={newAction.label}
+        disabled={newAction.disabled}
         hideLabel={!showButtonText}
         onCreate={newAction.onCreate}
       />

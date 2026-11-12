@@ -132,6 +132,19 @@ export class HeaderCtrl {
     this.state.controlsMode = mode
   }
 
+  /** Set the standard New button's action for a standalone resource index.
+   * @param create Route-owned creation action, or null for the normal resource flow.
+   * @param options Optional label and disabled state for the standard header button.
+   * @returns Nothing.
+   */
+  setCreateAction(
+    create: (() => void) | null,
+    options: { label?: string; disabled?: boolean } = {},
+  ): void {
+    this.state.meta.create = create
+    this.state.meta.createOptions = create ? options : undefined
+  }
+
   /**
    * Set edit/view mode for form-oriented pages.
    * @param isEditing - True when form fields should be editable.
@@ -354,6 +367,8 @@ export class HeaderCtrl {
    * @returns void
    */
   clearMeta(): void {
+    this.state.meta.create = null
+    this.state.meta.createOptions = undefined
     this.state.meta.title = ''
     this.state.meta.icon = null
     this.state.meta.crumbs = []
@@ -517,6 +532,7 @@ export class HeaderCtrl {
     if (
       untrack(
         () =>
+          this.state.meta.create == null &&
           this.state.meta.title === title &&
           this.state.meta.icon === icon &&
           this.state.meta.crumbs.length === 0 &&
@@ -531,6 +547,8 @@ export class HeaderCtrl {
       )
     )
       return
+    this.state.meta.create = null
+    this.state.meta.createOptions = undefined
     this.state.meta.title = title
     this.state.meta.icon = icon
     this.state.meta.crumbs = []
@@ -569,6 +587,7 @@ export class HeaderCtrl {
     if (
       untrack(
         () =>
+          this.state.meta.create == null &&
           this.state.meta.title === title &&
           this.state.meta.icon === icon &&
           isSameFacetItems(this.state.meta.facets, nextFacets) &&
@@ -584,6 +603,8 @@ export class HeaderCtrl {
     )
       return
 
+    this.state.meta.create = null
+    this.state.meta.createOptions = undefined
     this.state.meta.title = title
     this.state.meta.icon = icon
     this.state.meta.crumbs = []
@@ -705,6 +726,7 @@ function isSameFacetItems(left: HeaderFacetItem[], right: HeaderFacetItem[]): bo
       item?.ref === next?.ref &&
       item?.label === next?.label &&
       item?.icon === next?.icon &&
+      item?.hideLabel === next?.hideLabel &&
       item?.hasIssues === next?.hasIssues &&
       item?.disabled === next?.disabled
     )

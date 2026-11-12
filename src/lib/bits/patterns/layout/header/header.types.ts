@@ -70,6 +70,7 @@ export interface HeaderTitleConfig {
 }
 
 export interface HeaderNewConfig {
+  disabled?: boolean
   isCreatable?: boolean
   onCreate?: () => void
   label?: string
@@ -85,6 +86,7 @@ export interface HeaderFilterConfig {
 }
 
 export interface HeaderFacetItem {
+  hideLabel?: boolean
   ref: string
   label: string
   icon?: Component | null

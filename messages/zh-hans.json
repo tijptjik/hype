@@ -1,4 +1,6 @@
 {
+  "catalogue_brand_saved": "品牌已保存",
+  "catalogue_group_saved": "集团已保存",
   "address_multilingual_description": "编辑时显示所有已选语言的地址字段。",
   "content_multilingual_description": "编辑时显示所有已选语言的名称和描述。",
   "translation_prompt_once_description": "启用后保存过的记录，不再询问已保存版本中缺少的翻译。新清除的内容和新增语言仍会提示。",

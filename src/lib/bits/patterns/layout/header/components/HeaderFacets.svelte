@@ -72,7 +72,7 @@ $effect(() => {
           isActive,
           hasIssues: facet.hasIssues === true,
           color,
-          hideLabel,
+          hideLabel: hideLabel || facet.hideLabel,
           className: facet.class,
         })}
         <li
@@ -87,14 +87,14 @@ $effect(() => {
               text={facet.label}
               attrs={{
                 'aria-current': isActive ? 'page' : undefined,
-                'data-tooltip': hideLabel ? facet.label : undefined,
+                'data-tooltip': hideLabel || facet.hideLabel ? facet.label : undefined,
               }}
               {color}
               style="ghost"
               class={`${facetButtonClass} w-max whitespace-nowrap`}
               labelClasses={HEADER_BUTTON_LABEL_CLASSES}
               iconComponent={facet.icon}
-              {hideLabel}
+              hideLabel={hideLabel || facet.hideLabel}
               disabled={facet.disabled === true}
               onClick={() => onFacetChange?.(facet.ref)}
             />

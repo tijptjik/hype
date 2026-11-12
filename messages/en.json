@@ -1,4 +1,6 @@
 {
+  "catalogue_brand_saved": "Brand saved",
+  "catalogue_group_saved": "Group saved",
   "address_multilingual_description": "Keep address fields in all selected languages visible while editing.",
   "content_multilingual_description": "Keep names and descriptions in all selected languages visible while editing.",
   "translation_prompt_once_description": "After a record has been saved with this option enabled, do not ask again about translations already missing in its saved version. Newly cleared values and added languages still prompt.",

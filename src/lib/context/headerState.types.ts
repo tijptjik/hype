@@ -28,6 +28,7 @@ export interface HeaderVisibilityOverrides {
 }
 
 export type HeaderFacetItem = {
+  hideLabel?: boolean
   ref: string
   label: string
   icon: Component | null
@@ -37,6 +38,8 @@ export type HeaderFacetItem = {
 }
 
 type HeaderMetaState = {
+  create?: (() => void) | null
+  createOptions?: { label?: string; disabled?: boolean }
   title: string
   icon: Component | null
   crumbs: HeaderCrumb[]

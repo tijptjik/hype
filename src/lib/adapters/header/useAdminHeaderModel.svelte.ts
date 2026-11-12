@@ -638,6 +638,10 @@ export function useAdminHeaderModel(
 
   // Navigate to the create flow for the current resource type.
   function handleCreate(): void {
+    if (headerCtrl.state.meta.create) {
+      headerCtrl.state.meta.create()
+      return
+    }
     const resourceType = adminCtx.activeResourceType
     if (!resourceType) return
     navigateOnAdmin(adminCtx, resourceType, NEW_REF, 'core')
@@ -1150,6 +1154,8 @@ export function useAdminHeaderModel(
     newAction: {
       isCreatable: resolvedVisibility.showNew,
       onCreate: handleCreate,
+      label: headerCtrl.state.meta.createOptions?.label,
+      disabled: headerCtrl.state.meta.createOptions?.disabled,
     },
     filter: {
       isFilterable: resolvedVisibility.showFilter,

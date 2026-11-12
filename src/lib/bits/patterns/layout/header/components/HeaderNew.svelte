@@ -17,6 +17,7 @@ let {
   isCreatable = false,
   label = 'New',
   hideLabel = false,
+  disabled = false,
   onCreate,
 }: HeaderNewProps = $props()
 </script>
@@ -38,6 +39,7 @@ let {
       labelClasses={HEADER_BUTTON_LABEL_CLASSES}
       class={getHeaderActionClasses(HEADER_NEW_BUTTON_CLASSES, hideLabel)}
       {hideLabel}
+      {disabled}
       onClick={() => onCreate?.()}
     />
   </div>

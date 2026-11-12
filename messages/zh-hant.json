@@ -1,4 +1,6 @@
 {
+  "catalogue_brand_saved": "品牌已儲存",
+  "catalogue_group_saved": "集團已儲存",
   "address_multilingual_description": "編輯時顯示所有已選語言的地址欄位。",
   "content_multilingual_description": "編輯時顯示所有已選語言的名稱和描述。",
   "translation_prompt_once_description": "啟用後儲存過的記錄，不再詢問已儲存版本中缺少的翻譯。新清除的內容和新增語言仍會提示。",
