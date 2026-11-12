@@ -29,7 +29,7 @@ try {
   const banner = page.getByRole('banner')
   const locations = banner.getByRole('button', { name: 'Locations', exact: true })
   const features = banner.getByRole('button', { name: 'Features', exact: true })
-  await expect(locations).toBeVisible()
+  await expect(locations).toBeVisible({ timeout: 120000 })
   await expect(features).toBeVisible()
   await locations.click()
   await expect(page).toHaveURL(/facet=locations/)

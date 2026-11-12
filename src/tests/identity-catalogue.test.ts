@@ -606,6 +606,7 @@ it('saves intentionally untranslated catalogue names without filling them from a
     actorId: 'editor',
     guard: sql`1`,
   })
+  if (!saved) throw new Error('Expected catalogue save to succeed')
   const record = await readIdentityCatalogue(f.db, saved.id)
   expect(record?.i18n.en.name).toBe('Kitchen')
   expect(record?.i18n['zh-Hant'].name).toBe('')

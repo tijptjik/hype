@@ -1603,7 +1603,7 @@ $effect(() => {
             </div>
           </FormSurface>
         {:else if isCapabilitiesFacet}
-          <OrganisationCapabilities.Skeleton />
+          <OrganisationCapabilitiesSkeleton />
         {:else if !isCoreFacet}
           <ResourceFormSkeleton
             resource="organisation"
