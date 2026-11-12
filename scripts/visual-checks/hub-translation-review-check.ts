@@ -15,7 +15,11 @@ for (const type of [chromium]) {
   try {
     for (const width of [390, 1440]) {
       const page = await browser.newPage({ viewport: { width, height: 1000 } })
-      page.on('pageerror', error => console.error(error.message))
+      const pageErrors: string[] = []
+      page.on('pageerror', error => {
+        pageErrors.push(error.stack ?? error.message)
+        console.error(error.stack ?? error.message)
+      })
       const baseURL = process.env.PLAYWRIGHT_BASE_URL!
       const adminResponse = await page.goto(new URL('/admin', baseURL).href, {
         waitUntil: 'domcontentloaded',
@@ -213,6 +217,7 @@ for (const type of [chromium]) {
         width,
         'explicit Fields review, option rejection/acceptance and Advanced setting passed',
       )
+      if (pageErrors.length) throw Error(pageErrors.join('\n'))
       await page.close()
     }
   } finally {

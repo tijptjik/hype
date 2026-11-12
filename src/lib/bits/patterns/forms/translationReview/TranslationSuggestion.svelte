@@ -43,9 +43,12 @@ async function finish(event: FocusEvent): Promise<void> {
       event.currentTarget.contains(event.relatedTarget as Node))
   )
     return
+  // Save can remove this suggestion during the flush; retain the edited text before it does.
+  const retainedValue = value
+  const edited = retainedValue !== original
   await tick()
   editing = false
-  if (!cancelled && value.trim()) onAccept(value !== original)
+  if (!cancelled && retainedValue.trim()) onAccept(edited)
 }
 </script>
 <div
