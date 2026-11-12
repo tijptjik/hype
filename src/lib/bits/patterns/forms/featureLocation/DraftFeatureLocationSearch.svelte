@@ -1,7 +1,6 @@
 <script lang="ts">
 // SVELTE
 import { onDestroy, tick, untrack, type Snippet } from 'svelte'
-import { flip } from 'svelte/animate'
 import { prefersReducedMotion } from 'svelte/motion'
 // COMPONENTS
 import { locationSyncMode } from '#lib/locations/associationSync.js'
@@ -2334,6 +2333,20 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
         {/if}
         {#each visibleRows as result, index (result.id)}
           {@const labels = resultLabels(result)}
+          {#if preferredKind &&
+            (index === 0 ||
+              (visibleRows[index - 1].kind === preferredKind) !==
+                (result.kind === preferredKind) ||
+              (visibleRows[index - 1].kind === 'establishment') !==
+                (result.kind === 'establishment'))}
+            <p class="text-muted-foreground w-full pt-4 pb-2 text-sm font-medium">
+              {result.kind === preferredKind
+                ? m.location_matching()
+                : result.kind === 'establishment' && preferredKind === 'building_part'
+                  ? m.location_space_via_establishment()
+                  : m.location_starting_evidence()}
+            </p>
+          {/if}
           <div
             data-search-result={result.id}
             data-highlighted={highlightedResult === result.id}
@@ -2342,24 +2355,8 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
               if (!event.currentTarget.contains(event.relatedTarget as Node | null))
                 focusedResult = null
             }}
-            class="border-border/50 data-[highlighted=true]:bg-primary/10 relative flex flex-wrap items-center gap-3 rounded-md border-b transition-colors last:border-0"
-            animate:flip={{ duration: prefersReducedMotion.current ? 0 : 180 }}
+            class="border-border/50 data-[highlighted=true]:bg-primary/10 relative flex items-center gap-3 rounded-md border-b transition-colors last:border-0"
           >
-            {#if preferredKind &&
-              (index === 0 ||
-                (visibleRows[index - 1].kind === preferredKind) !==
-                  (result.kind === preferredKind) ||
-                (visibleRows[index - 1].kind === 'establishment') !==
-                  (result.kind === 'establishment'))}
-              <p class="text-muted-foreground w-full pt-4 pb-2 text-sm font-medium">
-                {result.kind === preferredKind
-                  ? m.location_matching()
-                  : result.kind === 'establishment' && preferredKind === 'building_part'
-                    ? m.location_space_via_establishment()
-                    : m.location_starting_evidence()}
-              </p>
-            {/if}
-
             <button
               type="button"
               class="group flex min-h-20 min-w-0 flex-1 basis-64 items-center gap-3 rounded-md px-3 py-6 text-left outline-none"
@@ -2451,21 +2448,6 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                   >
                 {/if}
               </span>
-              {#if result.identity || result.source}
-                <span
-                  data-result-source={result.identity ? 'hype' : 'saanseoi'}
-                  title={result.identity
-                    ? m.feature_search_source_hype()
-                    : m.feature_search_source_saanseoi()}
-                  aria-hidden="true"
-                  class={[
-                    'text-muted-foreground block size-5 shrink-0 bg-current [mask-position:center] [mask-repeat:no-repeat]',
-                    result.identity
-                      ? "[mask-image:url('/logos/hype-mark.svg')] [mask-size:160%]"
-                      : "[mask-image:url('/logos/saanseoi.svg')] [mask-size:contain]",
-                  ]}
-                ></span>
-              {/if}
             </button>
             {#if selected?.id === result.id &&
               (currentGroup ||
@@ -2473,7 +2455,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                   group => group.representative.id === result.id && group.expandable,
                 ))}
               <div
-                class="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2 px-3 py-3"
+                class="ml-auto flex max-w-1/2 shrink-0 flex-wrap items-center justify-end gap-2 py-3"
                 data-result-actions={result.id}
               >
                 <button
@@ -2519,14 +2501,29 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                 {/if}
               </div>
             {/if}
-            {#if visibleRows[index + 1]?.kind !== result.kind}
-              {@render pagination(
-                result.kind === 'establishment' || result.kind === 'address'
-                  ? result.kind
-                  : 'building',
-              )}
+            {#if result.identity || result.source}
+              <span
+                data-result-source={result.identity ? 'hype' : 'saanseoi'}
+                title={result.identity
+                  ? m.feature_search_source_hype()
+                  : m.feature_search_source_saanseoi()}
+                aria-hidden="true"
+                class={[
+                  'text-muted-foreground/55 mr-3 ml-2 block size-5 shrink-0 bg-current [mask-position:center] [mask-repeat:no-repeat]',
+                  result.identity
+                    ? "[mask-image:url('/logos/hype-mark.svg')] [mask-size:160%]"
+                    : "[mask-image:url('/logos/saanseoi.svg')] [mask-size:contain]",
+                ]}
+              ></span>
             {/if}
           </div>
+          {#if visibleRows[index + 1]?.kind !== result.kind}
+            {@render pagination(
+              result.kind === 'establishment' || result.kind === 'address'
+                ? result.kind
+                : 'building',
+            )}
+          {/if}
         {/each}
         {#each searchKinds as kind}
           {#if !visibleRows.some(row => row.kind === kind)}
