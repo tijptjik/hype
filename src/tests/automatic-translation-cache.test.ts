@@ -272,3 +272,58 @@ it('publishes accepted legacy AI without marking it human-verified', async () =>
   })
   expect(resolveContentField(rows, 'name', 'en').value).toBe('Machine text')
 })
+
+it('accepts an unchanged AI source but still rejects a genuinely changed source', async () => {
+  const { db, sqlite } = database()
+  sqlite.exec("UPDATE layerI18n SET nameGen=1 WHERE locale='en'")
+  const automatic = {
+    value: 'Bonjour',
+    sourceLocale: 'en',
+    sourceText: 'Hello',
+    sourceHash: await translationSourceHash('Hello'),
+    provider: 'azure-translator',
+    model: null,
+    generatedAt: new Date().toISOString(),
+    receipt: '',
+  }
+  automatic.receipt = await signAutomaticTranslation(automatic, 'fr', 'test-secret')
+  const submitted = () => ({
+    fr: {
+      name: 'Bonjour',
+      autoTranslated: { name: automatic },
+      translationProvenance: {
+        name: {
+          ...automatic,
+          humanVerified: false,
+          acceptedValue: 'Bonjour',
+          acceptedBy: 'pending',
+          acceptedAt: new Date().toISOString(),
+        },
+      },
+    },
+  })
+  const rows = submitted()
+  await prepareAutomaticTranslationSubmission({
+    db,
+    resource: 'layer',
+    id: 'layer',
+    rows,
+    actorId: 'editor',
+    secret: 'test-secret',
+  })
+  expect(rows.fr.translationProvenance.name).toMatchObject({
+    acceptedBy: 'editor',
+    humanVerified: false,
+  })
+  sqlite.exec("UPDATE layerI18n SET name='Different text' WHERE locale='en'")
+  await expect(
+    prepareAutomaticTranslationSubmission({
+      db,
+      resource: 'layer',
+      id: 'layer',
+      rows: submitted(),
+      actorId: 'editor',
+      secret: 'test-secret',
+    }),
+  ).rejects.toMatchObject({ status: 409 })
+})

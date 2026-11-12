@@ -144,13 +144,12 @@ export async function prepareAutomaticTranslationSubmission(options: {
       const source = candidate
         ? sourceRows.get(contentFormKey(candidate.sourceLocale))
         : undefined
-      if (
-        !candidate ||
-        source?.[field] !== candidate.sourceText ||
-        source?.[`${field}Gen`] === true ||
-        source?.[`${field}Gen`] === 'true'
-      )
-        throw error(409, 'Translation source changed; generate the suggestion again')
+      // Existing AI text is a valid source; freshness depends on its text, not verification status.
+      if (!candidate || source?.[field] !== candidate.sourceText)
+        throw error(
+          409,
+          'The original text changed after translation. Translate this field again before accepting it.',
+        )
       if (typeof row[field] !== 'string' || !row[field].trim())
         throw error(400, 'Accepted translation is empty')
       provenance[field] = {
