@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import type { Snippet } from 'svelte'
 // COMPONENTS
 import FormI18nInlineRow from '../formI18nSection/components/FormI18nInlineRow.svelte'
 
@@ -11,6 +13,7 @@ type TitleFields = {
 }
 
 let {
+  preview,
   value,
   override,
   generated,
@@ -23,6 +26,7 @@ let {
   onChange,
   onEditStart,
 }: {
+  preview?: Snippet
   value: string
   override?: string
   generated: boolean
@@ -43,6 +47,7 @@ let beforeEdit: { override: string | undefined; generated: boolean } | undefined
 <input {...controls.title.as('hidden', baseName)}>
 <input {...controls.titleGen.as('hidden', generated ? 'true' : 'false')}>
 <FormI18nInlineRow
+  {preview}
   {value}
   {label}
   {prefix}

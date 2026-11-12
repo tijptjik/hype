@@ -2349,7 +2349,7 @@ const featurePresentationPolicy = $derived.by(() => {
   return resolveFeaturePresentationPolicy(flags, metadata)
 })
 const acceptedNameSource = $derived(
-  currentFeatureId && isLocationFacet
+  currentFeatureId && (isCoreFacet || isLocationFacet)
     ? getFeatureLocation({ featureId: currentFeatureId })
     : null,
 )
@@ -4912,8 +4912,36 @@ async function refreshLocationSource(): Promise<void> {
                     {@const config = featureDescriptorFieldConfigs.find(
                       config => config.key === field,
                     )}
+                    {@const titleLocationId =
+                      !isEditing &&
+                      field === 'title' &&
+                      (profileNameRule
+                        ? profileNameRule.base === 'location' &&
+                          profileNameOverrides[canonicalContentTag(locale)] ===
+                            undefined
+                        : profileNamesLocked)
+                        ? acceptedNameSource?.current?.locationId
+                        : undefined}
+                    {#snippet titlePreview(value: string)}
+                      {#if titleLocationId}
+                        <a
+                          href={`/admin/locations/${encodeURIComponent(titleLocationId)}`}
+                          class="hover:text-primary focus-visible:outline-primary rounded underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
+                          >{value}</a
+                        >
+                      {:else}
+                        {value}
+                      {/if}
+                    {/snippet}
+                    {#snippet descriptorTitlePreview(_field: string, value: string)}
+                      {@render titlePreview(value)}
+                    {/snippet}
+                    {#snippet ruleTitlePreview()}
+                      {@render titlePreview(profileValues[key]?.title ?? '')}
+                    {/snippet}
                     {#if config && field === 'title' && profileNameRule}
                       <FeatureRuleTitleField
+                        preview={titleLocationId ? ruleTitlePreview : undefined}
                         value={profileValues[key]?.title ?? ''}
                         override={profileNameOverrides[canonicalContentTag(locale)]}
                         generated={currentFeatureData.i18n[key]?.titleGen === true ||
@@ -4932,6 +4960,9 @@ async function refreshLocationSource(): Promise<void> {
                       />
                     {:else if config}
                       <FormI18nDescriptorFields
+                        renderValue={titleLocationId
+                          ? descriptorTitlePreview
+                          : undefined}
                         form={formCtx.form}
                         fields={formCtx.form.fields.data.i18n[key]}
                         locale={key}
