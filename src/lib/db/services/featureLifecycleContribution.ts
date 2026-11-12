@@ -1,5 +1,6 @@
 // DRIZZLE
 import { eq, sql } from 'drizzle-orm'
+import { featureOrigin } from '../schema/fieldResearch'
 // VALIDATION
 import { z } from 'zod'
 // SCHEMA
@@ -306,6 +307,16 @@ export async function acceptFeatureCreationProposal(
     featureId = prepared.featureId
     revisionId = prepared.revisionId
     statements = prepared.statements
+    // Acceptance preserves the app creation channel, independently of the reviewing actor.
+    statements.push(
+      db.insert(featureOrigin).values({
+        featureId,
+        origin: 'app_contribution',
+        originId: input.proposalId,
+        recordedBy: proposal.contributorId,
+        recordedAt: new Date().toISOString(),
+      }),
+    )
   }
   return (await executeRevisionBatch(db, acceptanceGuard, [
     ...statements,

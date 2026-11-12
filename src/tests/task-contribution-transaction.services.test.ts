@@ -8,13 +8,21 @@ import {
   featureProperty,
   featurePropertyI18n,
   task,
+  featureOrigin,
 } from '#lib/db/schema/index.js'
 import { FeatureInsert } from '#lib/db/zod/schema/feature.js'
 import { createFeatureTask } from '#lib/db/services/taskContribution.js'
 import { publicationSqlite } from './fixtures/publicationSqlite.js'
 import type { Database } from '#lib/types.js'
 
-const tables = [feature, featureI18n, featureProperty, featurePropertyI18n, task]
+const tables = [
+  feature,
+  featureI18n,
+  featureProperty,
+  featurePropertyI18n,
+  task,
+  featureOrigin,
+]
 
 describe('atomic contribution creation', () => {
   it.each([

@@ -37,6 +37,7 @@ export async function createFeatureTask(
   author: Pick<TaskNew, 'contributorId' | 'message'>,
 ): Promise<{ feature: FeatureDB; task: TaskDB }> {
   const plan = await prepareFeatureFormCreation(db, {
+    creationOrigin: { origin: 'app_contribution', actorId: author.contributorId! },
     ...input,
     revisionActor: { actorId: author.contributorId!, mode: 'contribution' },
   })

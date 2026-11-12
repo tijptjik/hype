@@ -732,6 +732,10 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       for (const row of Object.values(createData.i18n))
         row.title = row.displayAddress?.trim() ?? ''
     const created = await createFeatureForm(db, {
+      creationOrigin: {
+        origin: ctx.isAdminRequest ? 'admin_contribution' : 'app_contribution',
+        actorId: user.id,
+      },
       revisionActor: { actorId: user.id, mode: 'staff' },
       data: {
         ...createData,

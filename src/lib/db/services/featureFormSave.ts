@@ -4,6 +4,7 @@ import { and, eq, sql, type SQL } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 // SCHEMA
 import { feature } from '../schema/feature'
+import { featureOrigin } from '../schema/fieldResearch'
 // DOMAIN
 import {
   LocationBrandEditSchema,
@@ -77,6 +78,10 @@ export async function prepareFeatureFormCreation(
     i18n: Record<string, FeatureI18nPartial>
     properties: NewFeatureProperty[]
     revisionActor?: { actorId: string; mode: 'staff' | 'contribution' }
+    creationOrigin?: {
+      origin: 'app_contribution' | 'admin_contribution'
+      actorId: string
+    }
   },
 ): Promise<{
   id: string
@@ -128,6 +133,16 @@ export async function prepareFeatureFormCreation(
       parent,
       ...prepareFeatureFormRelations(db, id, guard, input.i18n, input.properties),
       ...revisions,
+      ...(input.creationOrigin
+        ? [
+            db.insert(featureOrigin).values({
+              featureId: id,
+              origin: input.creationOrigin.origin,
+              recordedBy: input.creationOrigin.actorId,
+              recordedAt: new Date().toISOString(),
+            }),
+          ]
+        : []),
       db
         .select()
         .from(feature)

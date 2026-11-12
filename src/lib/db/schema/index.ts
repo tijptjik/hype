@@ -65,3 +65,4 @@ export * from './displayTemplate'
 export * from './identityCatalogue'
 
 export * from './locationRevisionI18n'
+export * from './fieldResearch'

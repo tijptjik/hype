@@ -1099,6 +1099,7 @@ export const createUserContributedFeature = async (
   if (!actorId) throw error(400, 'Contributor ID is required')
   return createFeatureForm(db, {
     ...input,
+    creationOrigin: { origin: 'app_contribution', actorId },
     revisionActor: { actorId, mode: 'contribution' },
   })
 }

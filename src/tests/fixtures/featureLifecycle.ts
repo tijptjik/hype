@@ -10,6 +10,7 @@ import {
   featurePropertyI18n,
 } from '#lib/db/schema/feature.js'
 import { featureImage, image } from '#lib/db/schema/image.js'
+import { featureOrigin } from '#lib/db/schema/fieldResearch.js'
 import { featureLocation } from '#lib/db/schema/location.js'
 import { featureLocationMembership } from '#lib/db/schema/locationRelationships.js'
 import {
@@ -84,6 +85,7 @@ export function lifecycleFixture(
     featureProperty,
     featurePropertyI18n,
     featureImage,
+    featureOrigin,
     image,
     featureLocation,
     featureLocationMembership,
