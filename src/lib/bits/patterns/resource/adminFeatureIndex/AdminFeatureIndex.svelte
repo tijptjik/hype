@@ -842,61 +842,68 @@ async function applyFeatureBulkEdit(): Promise<void> {
   const accountRevision = root.account.revision
   const ownsAccount = (): boolean => root.account.revision === accountRevision
   await root.backgroundJobs
-    .run(`Features ${action.pastTense}`, ids.length, async advance => {
-      const results = await runBulkCommands(
-        toFeatureBulkChunks(ids),
-        async chunk => {
-          try {
-            return await updateFeatureBulkState(
-              chunk.map(id => ({
-                id,
-                field: action.field,
-                value: action.state,
-                meta: { isAdminRequest: true },
-              })),
+    .run(
+      `Features ${action.pastTense}`,
+      ids.length,
+      async advance => {
+        const results = await runBulkCommands(
+          toFeatureBulkChunks(ids),
+          async chunk => {
+            try {
+              return await updateFeatureBulkState(
+                chunk.map(id => ({
+                  id,
+                  field: action.field,
+                  value: action.state,
+                  meta: { isAdminRequest: true },
+                })),
+              )
+            } catch (err) {
+              return chunk.map(id => toBulkRemoteFailureResult(id, err))
+            }
+          },
+          chunkResults => {
+            advance(
+              chunkResults.length,
+              chunkResults.filter(result => !result.ok).length,
             )
-          } catch (err) {
-            return chunk.map(id => toBulkRemoteFailureResult(id, err))
-          }
-        },
-        chunkResults => {
-          advance(chunkResults.length, chunkResults.filter(result => !result.ok).length)
-          if (isCurrent()) for (const result of chunkResults) recordBulkResult(result)
-        },
-        ownsAccount,
-      )
-      if (!results || !ownsAccount()) return false
+            if (isCurrent()) for (const result of chunkResults) recordBulkResult(result)
+          },
+          ownsAccount,
+        )
+        if (!results || !ownsAccount()) return false
 
-      const errors = results.filter(result => !result.ok)
-      if (isCurrent()) patchSuccessfulBulkUpdates(results)
-      if (isCurrent())
-        bulkProgress = {
-          completed: results.length,
-          total: ids.length,
-          errors: errors.length,
-          isApplying: false,
+        const errors = results.filter(result => !result.ok)
+        if (isCurrent()) patchSuccessfulBulkUpdates(results)
+        if (isCurrent())
+          bulkProgress = {
+            completed: results.length,
+            total: ids.length,
+            errors: errors.length,
+            isApplying: false,
+          }
+
+        try {
+          await root.cacheCtx.reconcile('feature')
+        } catch {
+          if (ownsAccount())
+            toast.warning(
+              'Changes saved, but some views could not refresh. Please refresh the page.',
+            )
+        }
+        if (!ownsAccount()) return false
+        if (errors.length === 0) {
+          if (isCurrent()) setBulkMode(false)
+          return true
         }
 
-      try {
-        await root.cacheCtx.reconcile('feature')
-      } catch {
-        if (ownsAccount())
-          toast.warning(
-            'Changes saved, but some views could not refresh. Please refresh the page.',
-          )
-      }
-      if (!ownsAccount()) return false
-      if (errors.length === 0) {
-        toast.success(`${ids.length} features have been ${action.pastTense}`)
-        if (isCurrent()) setBulkMode(false)
+        showBulkErrorToasts(errors.map(errorResult => errorResult.error))
         return true
-      }
-
-      showBulkErrorToasts(errors.map(errorResult => errorResult.error))
-      return true
-    })
+      },
+      `${ids.length} features have been ${action.pastTense}`,
+    )
     .catch(() => {
-      toast.error('Bulk update could not finish. Some changes may have saved.')
+      // The retained job replaces its progress toast with the failure notice.
     })
 }
 

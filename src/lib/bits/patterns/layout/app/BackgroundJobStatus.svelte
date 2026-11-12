@@ -1,6 +1,10 @@
 <script lang="ts">
+// SVELTE
+import { untrack } from 'svelte'
 // SVELTEKIT
 import { beforeNavigate } from '$app/navigation'
+// TOASTS
+import { toast } from 'svelte-sonner'
 // TYPES
 import type { BackgroundJobs } from '#lib/context/backgroundJobs.svelte.js'
 
@@ -10,47 +14,39 @@ let { jobs }: { jobs: BackgroundJobs } = $props()
 beforeNavigate(navigation => {
   if (navigation.willUnload && jobs.busy) navigation.cancel()
 })
-</script>
 
-{#if jobs.jobs.length}
-  <div
-    class="fixed right-4 bottom-4 z-[1200] flex max-w-sm flex-col gap-2"
-    aria-live="polite"
-  >
-    {#each jobs.jobs as job (job.id)}
-      <div
-        class="bg-background text-foreground rounded-lg border p-3 shadow-lg"
-        role="status"
-      >
-        <div class="flex items-center gap-2">
-          {#if job.status === 'running'}
-            <span
-              class="size-4 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none"
-              aria-hidden="true"
-            ></span>
-          {/if}
-          <span>{job.label}: {job.completed}/{job.total}</span>
-          {#if job.status !== 'running'}
-            <button
-              type="button"
-              class="ml-2 px-2"
-              aria-label="Dismiss progress"
-              onclick={() => jobs.dismiss(job.id)}
-            >
-              ×
-            </button>
-          {/if}
-        </div>
-        {#if job.errors}
-          <p>{job.errors} failed</p>
-        {/if}
-        {#if job.status === 'stopped'}
-          <p>Stopped because account permissions changed.</p>
-        {/if}
-        {#if job.status === 'failed'}
-          <p>Could not finish. Some changes may have saved.</p>
-        {/if}
-      </div>
-    {/each}
-  </div>
-{/if}
+const renderedJobs = new Map<number, string>()
+
+// Reuse one toast per job so progress becomes its outcome in the shared notification stack.
+$effect(() => {
+  for (const job of jobs.jobs) {
+    const signature = JSON.stringify(job)
+    if (renderedJobs.get(job.id) === signature) continue
+    renderedJobs.set(job.id, signature)
+    const running = job.status === 'running'
+    const title = `${job.label}: ${job.completed}/${job.total}`
+    const options = {
+      id: `background-job-${job.id}`,
+      duration: running || job.status !== 'complete' ? Infinity : 2500,
+      dismissible: !running,
+      closeButton: !running,
+      onDismiss: () => jobs.dismiss(job.id),
+      onAutoClose: () => jobs.dismiss(job.id),
+    }
+    // Sonner reads its own reactive state; only job changes should update the toast.
+    untrack(() => {
+      if (running) toast.info(title, options)
+      else if (job.status === 'failed')
+        toast.error('Could not finish. Some changes may have saved.', options)
+      else if (job.status === 'stopped')
+        toast.warning('Stopped because account permissions changed.', options)
+      else if (job.errors)
+        toast.warning(title, { ...options, description: `${job.errors} failed` })
+      else toast.success(job.successMessage ?? title, options)
+    })
+  }
+  for (const id of renderedJobs.keys()) {
+    if (!jobs.jobs.some(job => job.id === id)) renderedJobs.delete(id)
+  }
+})
+</script>

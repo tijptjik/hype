@@ -3,6 +3,7 @@ export type BackgroundJob = {
   id: number
   label: string
   total: number
+  successMessage?: string
   completed: number
   errors: number
   status: 'running' | 'complete' | 'stopped' | 'failed'
@@ -23,15 +24,25 @@ export class BackgroundJobs {
    * @param label User-facing operation description.
    * @param total Number of captured records.
    * @param work Operation reporting completed chunks; false indicates an account-bound stop.
+   * @param successMessage Optional final toast text replacing progress.
    * @returns Completion after the job status is settled.
    */
   async run(
     label: string,
     total: number,
     work: (advance: (count: number, errors: number) => void) => Promise<boolean>,
+    successMessage?: string,
   ): Promise<void> {
     const id = ++this.sequence
-    this.jobs.push({ id, label, total, completed: 0, errors: 0, status: 'running' })
+    this.jobs.push({
+      id,
+      label,
+      total,
+      successMessage,
+      completed: 0,
+      errors: 0,
+      status: 'running',
+    })
     const job = this.jobs.find(value => value.id === id)!
     try {
       const completed = await work((count, errors) => {
