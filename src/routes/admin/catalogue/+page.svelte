@@ -451,6 +451,7 @@ function edit(record: IdentityCatalogueRecord | null): void {
           logo: record.logo,
           code: record.code,
           categories: record.categories,
+          discovery: record.discovery,
           groupId: record.groupId,
         }),
       )
@@ -507,6 +508,7 @@ async function save(): Promise<void> {
       logo: record.logo,
       code: record.code,
       categories: record.categories,
+      discovery: record.discovery,
       groupId: record.groupId,
     })
     baseline = JSON.stringify(content)
