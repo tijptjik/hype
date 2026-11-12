@@ -129,6 +129,9 @@ export async function prepareSharedLocationCorrection(
     const record = await readIdentityCatalogue(db, String(choice.value))
     if (!record || record.kind !== (field === 'brandId' ? 'brand' : 'group'))
       throw new Error('CATALOGUE_IDENTITY_UNAVAILABLE')
+    // Selecting a brand also proposes its corporate group through the same policy-governed curation.
+    if (field === 'brandId' && record.groupId && !patch.groupId)
+      patch.groupId = { mode: 'override', value: record.groupId }
     cataloguePins[field] = record
     if (field === 'brandId')
       patch.brands = {

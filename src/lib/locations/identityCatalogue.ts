@@ -2,11 +2,33 @@
 import { z } from 'zod'
 // I18N
 import { canonicalContentTag } from '#lib/i18n/contentRecords.js'
+import { placeTaxonomyPath } from './placeTaxonomy'
 import { seedCurationNames } from './curationIdentity'
 
 export const IdentityCatalogueContentSchema = z.strictObject({
   // Optional containing group for both brands and groups; revisions retain membership history.
   groupId: z.string().min(1).max(200).nullable().optional(),
+  code: z
+    .string()
+    .trim()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+    .max(100)
+    .optional(),
+  categories: z
+    .array(
+      z
+        .string()
+        .refine(
+          value => placeTaxonomyPath(value).length > 0,
+          'Choose an existing category',
+        ),
+    )
+    .max(50)
+    .refine(
+      values => new Set(values).size === values.length,
+      'Categories must be distinct',
+    )
+    .optional(),
   i18n: z
     .record(
       z.string().min(2).max(32),

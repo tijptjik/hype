@@ -49,6 +49,21 @@ export async function readIdentityCatalogue(
     : null
 }
 
+/** Resolve a current code within its catalogue kind without guessing ambiguous matches.
+ * @param db Database. @param kind Catalogue kind. @param code Exact public code.
+ * @returns The unique identity, or null when missing or ambiguous.
+ */
+export async function readIdentityCatalogueByCode(
+  db: Database,
+  kind: 'brand' | 'group',
+  code: string,
+): Promise<IdentityCatalogueRecord | null> {
+  const rows = await db.all<{ id: string }>(
+    sql`SELECT c.id FROM identityCatalogue c JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version WHERE c.kind=${kind} AND json_extract(r.content,'$.code')=${code} LIMIT 2`,
+  )
+  return rows.length === 1 ? readIdentityCatalogue(db, rows[0].id) : null
+}
+
 /** Search names in every locale without expanding an unbounded identifier list.
  * @param db Database. @param kind Brand or corporate group. @param search Typed substring.
  * @param excludeDescendantsOf Optional group whose subtree cannot be selected as its parent.
@@ -66,7 +81,7 @@ export async function searchIdentityCatalogue(
     version: number
     content: string
   }>(
-    sql`SELECT c.id,c.kind,c.version,r.content FROM identityCatalogue c JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version WHERE c.kind=${kind} AND c.id NOT IN (WITH RECURSIVE descendants(id) AS (SELECT id FROM identityCatalogue WHERE id=${excludeDescendantsOf ?? null} UNION SELECT child.id FROM identityCatalogue child JOIN descendants parent ON child.groupId=parent.id) SELECT id FROM descendants) AND (${search}='' OR EXISTS(SELECT 1 FROM identityCatalogueI18n names WHERE names.catalogueId=c.id AND names.version=c.version AND instr(lower(names.name),lower(${search}))>0)) ORDER BY json_extract(r.content,'$.i18n.en.name'),c.id LIMIT 50`,
+    sql`SELECT c.id,c.kind,c.version,r.content FROM identityCatalogue c JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version WHERE c.kind=${kind} AND c.id NOT IN (WITH RECURSIVE descendants(id) AS (SELECT id FROM identityCatalogue WHERE id=${excludeDescendantsOf ?? null} UNION SELECT child.id FROM identityCatalogue child JOIN descendants parent ON child.groupId=parent.id) SELECT id FROM descendants) AND (${search}='' OR instr(lower(coalesce(json_extract(r.content,'$.code'),c.id)),lower(${search}))>0 OR EXISTS(SELECT 1 FROM identityCatalogueI18n names WHERE names.catalogueId=c.id AND names.version=c.version AND instr(lower(names.name),lower(${search}))>0)) ORDER BY json_extract(r.content,'$.i18n.en.name'),c.id LIMIT 50`,
   )
   return rows.map(row => ({
     id: row.id,
@@ -79,7 +94,7 @@ export async function searchIdentityCatalogue(
 /** Publish a version under an authorized guard; accepted Location references remain pinned.
  * @param db Database. @param input Identity, inspected version, localized values and actor.
  * @returns Saved version, or null for a concurrent edit.
- * @remarks An optional inline parent and its membership link are committed atomically.
+ * @remarks An optional inline group and its membership link are committed atomically.
  */
 export async function saveIdentityCatalogue(
   db: Database,
@@ -122,10 +137,14 @@ export async function saveIdentityCatalogue(
     input.expectedVersion === 0
       ? sql`(${input.guard}) AND NOT EXISTS(SELECT 1 FROM identityCatalogue WHERE id=${input.id})`
       : sql`(${input.guard}) AND EXISTS(SELECT 1 FROM identityCatalogue WHERE id=${input.id} AND kind=${input.kind} AND version=${input.expectedVersion})`
+  // Reserve the code against current heads inside the same atomic revision guard.
+  const codeGuard = content.code
+    ? sql`(${guard}) AND NOT EXISTS(SELECT 1 FROM identityCatalogue c JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version WHERE c.id<>${input.id} AND c.kind=${input.kind} AND json_extract(r.content,'$.code')=${content.code})`
+    : guard
   // Creating an inline group and linking its member is one guarded commit; failed saves leave no orphan.
   const groupGuard = input.newGroup
-    ? sql`(${guard}) AND NOT EXISTS(SELECT 1 FROM identityCatalogue WHERE id=${input.newGroup.id})`
-    : guard
+    ? sql`(${codeGuard}) AND NOT EXISTS(SELECT 1 FROM identityCatalogue WHERE id=${input.newGroup.id})`
+    : codeGuard
   const result = await executeRevisionBatch(db, groupGuard, [
     ...(input.newGroup && newGroup
       ? [

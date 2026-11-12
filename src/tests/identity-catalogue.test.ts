@@ -9,6 +9,7 @@ import { sql } from 'drizzle-orm'
 import {
   ensureImportedBrand,
   readIdentityCatalogue,
+  readIdentityCatalogueByCode,
   saveIdentityCatalogue,
   searchIdentityCatalogue,
 } from '../lib/db/services/identityCatalogue'
@@ -266,6 +267,137 @@ it('searches only the selected catalogue revision while retaining old translatio
   ).toBe(0)
 })
 
+it('disambiguates identical names with unique searchable codes and taxonomy associations', async () => {
+  const f = fixture()
+  const content = {
+    ...seedIdentityCatalogue({ en: 'Same name' }),
+    code: 'same-bakery',
+    categories: ['bakery'],
+  }
+  const save = (id: string, value = content) =>
+    saveIdentityCatalogue(f.db, {
+      id,
+      kind: 'brand',
+      expectedVersion: 0,
+      content: value,
+      actorId: 'admin',
+      guard: sql`1`,
+    })
+  expect(await save('first')).not.toBeNull()
+  expect(await save('duplicate')).toBeNull()
+  expect(await save('second', { ...content, code: 'same-cafe' })).not.toBeNull()
+  expect(
+    (await searchIdentityCatalogue(f.db, 'brand', 'same-bakery')).map(row => row.id),
+  ).toEqual(['first'])
+  await expect(
+    save('invalid', { ...content, code: 'invalid', categories: ['invented-category'] }),
+  ).rejects.toThrow()
+  expect((await readIdentityCatalogue(f.db, 'first'))?.categories).toEqual(['bakery'])
+})
+
+it('proposes a brand group together with the brand and preserves an explicit group choice', async () => {
+  const f = fixture()
+  for (const id of ['group', 'other'])
+    await saveIdentityCatalogue(f.db, {
+      id,
+      kind: 'group',
+      expectedVersion: 0,
+      content: seedIdentityCatalogue({ en: id }),
+      actorId: 'editor',
+      guard: sql`1`,
+    })
+  await saveIdentityCatalogue(f.db, {
+    id: 'brand',
+    kind: 'brand',
+    expectedVersion: 0,
+    content: { ...seedIdentityCatalogue({ en: 'Brand' }), groupId: 'group' },
+    actorId: 'editor',
+    guard: sql`1`,
+  })
+  const input = {
+    locationId: 'place',
+    sourceRevisionId: 'source',
+    expectedRevision: null,
+    actorId: 'editor',
+    guard: sql`1`,
+    rights: { canEdit: true, superAdmin: false },
+  }
+  const automatic = await prepareSharedLocationCorrection(f.db, {
+    ...input,
+    patch: { brandId: { mode: 'override', value: 'brand' } },
+  })
+  expect(automatic.fields).toContain('groupId')
+  await executeRevisionBatch(f.db, automatic.guard, automatic.queries)
+  const current = await sharedLocationFacts(f.db, 'place', f.facts)
+  expect(current.facts.groupId).toBe('group')
+  const explicit = await prepareSharedLocationCorrection(f.db, {
+    ...input,
+    expectedRevision: current.revision,
+    patch: {
+      brandId: { mode: 'override', value: 'brand' },
+      groupId: { mode: 'override', value: 'other' },
+    },
+  })
+  await executeRevisionBatch(f.db, explicit.guard, explicit.queries)
+  expect((await sharedLocationFacts(f.db, 'place', f.facts)).facts.groupId).toBe(
+    'other',
+  )
+})
+
+it('creates an inline group and its brand link atomically with localized names', async () => {
+  const f = fixture()
+  const i18n = seedIdentityCatalogue({ en: 'Example Group', 'zh-hant': '集團' }).i18n
+  const record = await saveIdentityCatalogue(f.db, {
+    id: 'inline-brand',
+    kind: 'brand',
+    expectedVersion: 0,
+    content: {
+      ...seedIdentityCatalogue({ en: 'Example Brand' }),
+      groupId: 'inline-group',
+    },
+    newGroup: { id: 'inline-group', i18n },
+    actorId: 'editor',
+    guard: sql`1`,
+  })
+  expect(record?.groupId).toBe('inline-group')
+  expect(await readIdentityCatalogue(f.db, 'inline-group')).toMatchObject({
+    kind: 'group',
+    i18n,
+    version: 1,
+  })
+})
+
+it('does not leave an inline group behind when the brand revision guard fails', async () => {
+  const f = fixture()
+  const result = await saveIdentityCatalogue(f.db, {
+    id: 'missing-brand',
+    kind: 'brand',
+    expectedVersion: 4,
+    content: { ...seedIdentityCatalogue({ en: 'Brand' }), groupId: 'unused-group' },
+    newGroup: { id: 'unused-group', i18n: seedIdentityCatalogue({ en: 'Group' }).i18n },
+    actorId: 'editor',
+    guard: sql`1`,
+  })
+  expect(result).toBeNull()
+  expect(await readIdentityCatalogue(f.db, 'unused-group')).toBeNull()
+})
+
+it('rejects inline group payloads that are not the brand link being saved', async () => {
+  const f = fixture()
+  await expect(
+    saveIdentityCatalogue(f.db, {
+      id: 'brand',
+      kind: 'brand',
+      expectedVersion: 0,
+      content: { ...seedIdentityCatalogue({ en: 'Brand' }), groupId: 'other' },
+      newGroup: { id: 'new-group', i18n: seedIdentityCatalogue({ en: 'Group' }).i18n },
+      actorId: 'editor',
+      guard: sql`1`,
+    }),
+  ).rejects.toThrow('CATALOGUE_GROUP_REQUIRED')
+  expect(await readIdentityCatalogue(f.db, 'new-group')).toBeNull()
+})
+
 it('retains optional nested group membership in history and projects the current foreign key', async () => {
   const f = fixture()
   for (const [id, groupId] of [
@@ -414,4 +546,25 @@ it('backfills existing memberships without rewriting revisions', () => {
       }),
     ]),
   )
+})
+
+it('resolves exact current codes within their brand or group namespace', async () => {
+  const f = fixture()
+  for (const kind of ['brand', 'group'] as const) {
+    await saveIdentityCatalogue(f.db, {
+      id: `route-${kind}`,
+      kind,
+      expectedVersion: 0,
+      content: { ...seedIdentityCatalogue({ en: kind }), code: 'same-code' },
+      actorId: 'admin',
+      guard: sql`1`,
+    })
+  }
+  expect((await readIdentityCatalogueByCode(f.db, 'brand', 'same-code'))?.id).toBe(
+    'route-brand',
+  )
+  expect((await readIdentityCatalogueByCode(f.db, 'group', 'same-code'))?.id).toBe(
+    'route-group',
+  )
+  expect(await readIdentityCatalogueByCode(f.db, 'brand', 'same')).toBeNull()
 })

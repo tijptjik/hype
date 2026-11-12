@@ -12,6 +12,7 @@ import { IdentityCatalogueContentSchema } from '#lib/locations/identityCatalogue
 // SERVICES
 import {
   readIdentityCatalogue,
+  readIdentityCatalogueByCode,
   searchIdentityCatalogue,
   saveIdentityCatalogue,
 } from '#lib/db/services/identityCatalogue.js'
@@ -54,10 +55,19 @@ export const findIdentityCatalogue = guardedQuery(
  * @param input Identity. @returns Localized names and logo.
  */
 export const getIdentityCatalogue = guardedQuery(
-  z.strictObject({ id: z.string().min(1) }),
+  z.union([
+    z.strictObject({ id: z.string().min(1) }),
+    z.strictObject({
+      kind: z.enum(['brand', 'group']),
+      code: z.string().min(1).max(200),
+    }),
+  ]),
   async (input, ctx) => {
     if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
-    const record = await readIdentityCatalogue(ctx.db, input.id)
+    const record =
+      'id' in input
+        ? await readIdentityCatalogue(ctx.db, input.id)
+        : await readIdentityCatalogueByCode(ctx.db, input.kind, input.code)
     if (!record) error(404, 'CATALOGUE_IDENTITY_NOT_FOUND')
     return record
   },

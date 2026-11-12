@@ -12,12 +12,14 @@ let {
   onChange,
   disabled = false,
   organisationId,
+  excludeDescendantsOf,
 }: {
   kind: 'brand' | 'group'
   value: string | null
   onChange: (id: string | null) => void
   disabled?: boolean
   organisationId?: string | null
+  excludeDescendantsOf?: string
 } = $props()
 let search = $state(''),
   results = $state<IdentityCatalogueRecord[]>([]),
@@ -26,10 +28,15 @@ let selected = $state<IdentityCatalogueRecord | null>(null)
 const label = $derived(kind === 'brand' ? 'Brand' : 'Group')
 $effect(() => {
   const query = search,
-    type = kind
+    type = kind,
+    excludedGroup = excludeDescendantsOf
   let cancelled = false
   const timer = setTimeout(() => {
-    void findIdentityCatalogue({ kind: type, search: query })
+    void findIdentityCatalogue({
+      kind: type,
+      search: query,
+      excludeDescendantsOf: excludedGroup,
+    })
       .then(rows => {
         if (!cancelled) results = rows
       })
@@ -84,10 +91,16 @@ $effect(() => {
     >
       <option value="">No {kind} link</option>
       {#if selected && !results.some(row => row.id === selected?.id)}
-        <option value={selected.id}>{selected.i18n.en.name}</option>
+        <option value={selected.id}>
+          {selected.i18n.en.name}
+          · {selected.code ?? selected.id}
+        </option>
       {/if}
       {#each results as record (record.id)}
-        <option value={record.id}>{record.i18n.en.name}</option>
+        <option value={record.id}>
+          {record.i18n.en.name}
+          · {record.code ?? record.id}
+        </option>
       {/each}
     </select>
     {#if value}
