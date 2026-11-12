@@ -91,6 +91,25 @@ export async function searchIdentityCatalogue(
   }))
 }
 
+/** List current brands directly assigned to a corporate group.
+ * @param db Database. @param groupId Persisted group identity.
+ * @returns All linked brands ordered by their English fallback name.
+ */
+export async function listGroupBrands(
+  db: Database,
+  groupId: string,
+): Promise<IdentityCatalogueRecord[]> {
+  const rows = await db.all<{ id: string; version: number; content: string }>(
+    sql`SELECT c.id,c.version,r.content FROM identityCatalogue c JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version WHERE c.kind='brand' AND c.groupId=${groupId} ORDER BY json_extract(r.content,'$.i18n.en.name'),c.id`,
+  )
+  return rows.map(row => ({
+    id: row.id,
+    kind: 'brand',
+    version: row.version,
+    ...IdentityCatalogueContentSchema.parse(JSON.parse(row.content)),
+  }))
+}
+
 /** Publish a version under an authorized guard; accepted Location references remain pinned.
  * @param db Database. @param input Identity, inspected version, localized values and actor.
  * @returns Saved version, or null for a concurrent edit.

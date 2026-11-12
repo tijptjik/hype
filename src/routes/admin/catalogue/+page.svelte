@@ -26,6 +26,7 @@ import { getAdminCtx } from '#lib/context/admin.svelte.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // API
 import {
+  getGroupBrands,
   importIdentityCatalogue,
   publishIdentityCatalogueLocations,
   findIdentityCatalogue,
@@ -50,6 +51,7 @@ import { contentLocaleOptions } from '#lib/bits/patterns/forms/contentLocaleDefa
 import { placeTaxonomy, type PlaceTaxonomyNode } from '#lib/locations/placeTaxonomy.js'
 import { placeCategoryLabel } from '#lib/locations/placeSearchFilters.js'
 import { getLocaleKey, m } from '#lib/i18n.js'
+import { canonicalContentTag } from '#lib/i18n/contentRecords.js'
 // DOMAIN
 import {
   catalogueDisplayName,
@@ -117,6 +119,32 @@ function categoryKeys(nodes: PlaceTaxonomyNode[]): string[] {
 const categoryOptions = categoryKeys(placeTaxonomy)
 let records = $state<IdentityCatalogueRecord[]>([])
 let selected = $state<IdentityCatalogueRecord | null>(null)
+let groupBrands = $state<IdentityCatalogueRecord[]>([])
+let groupBrandsLoading = $state(false)
+let groupBrandsFailed = $state(false)
+$effect(() => {
+  const id = selected?.kind === 'group' ? selected.id : content?.groupId
+  const currentBrandId = selected?.kind === 'brand' ? selected.id : null
+  refresh
+  let cancelled = false
+  groupBrands = []
+  groupBrandsFailed = false
+  groupBrandsLoading = Boolean(id)
+  if (id)
+    void getGroupBrands({ groupId: id })
+      .then(rows => {
+        if (!cancelled) groupBrands = rows.filter(row => row.id !== currentBrandId)
+      })
+      .catch(() => {
+        if (!cancelled) groupBrandsFailed = true
+      })
+      .finally(() => {
+        if (!cancelled) groupBrandsLoading = false
+      })
+  return () => {
+    cancelled = true
+  }
+})
 let content = $state<IdentityCatalogueContent | null>(null)
 let busy = $state(false),
   failed = $state(false),
@@ -954,6 +982,59 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
                 </div>
               </section>
             </div>
+            {#if selected?.kind === 'group' ||
+              (selected?.kind === 'brand' && groupBrands.length > 0)}
+              <section
+                aria-label={selected?.kind === 'group' ? 'Brands' : 'Sibling brands'}
+              >
+                <SectionHeader
+                  title={selected?.kind === 'group' ? 'Brands' : 'Sibling brands'}
+                  icon={Tags}
+                />
+                <div class="px-6 py-5">
+                  {#if groupBrandsLoading}
+                    <p role="status" class="text-muted-foreground text-sm">
+                      Loading brands…
+                    </p>
+                  {:else if groupBrandsFailed}
+                    <p role="alert" class="text-destructive text-sm">
+                      Unable to load brands.
+                    </p>
+                  {:else if groupBrands.length}
+                    <div
+                      class="grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-6"
+                    >
+                      {#each groupBrands as brand (brand.id)}
+                        {@const name =
+                          brand.i18n[canonicalContentTag(getLocaleKey())]?.name ??
+                          brand.i18n.en.name}
+                        <a
+                          href={catalogueHref(brand)}
+                          class="hover:bg-muted/40 focus-visible:outline-primary flex min-w-0 flex-col items-center gap-3 rounded-lg p-2 text-center"
+                        >
+                          <span
+                            class="border-border bg-muted/30 flex size-20 items-center justify-center rounded-xl border"
+                          >
+                            {#if brand.logo}
+                              <img
+                                src={brand.logo}
+                                alt=""
+                                class="size-full object-contain p-2"
+                              >
+                            {:else}
+                              <Tags class="text-muted-foreground size-8" />
+                            {/if}
+                          </span>
+                          <span class="text-sm break-words">{name}</span>
+                        </a>
+                      {/each}
+                    </div>
+                  {:else}
+                    <p class="text-muted-foreground px-4 text-sm">No linked brands.</p>
+                  {/if}
+                </div>
+              </section>
+            {/if}
           </section>
         {:else if loadingDetail}
           <div

@@ -11,6 +11,7 @@ import { requireLocationOrganisationManager } from './services/locationOwnership
 import { IdentityCatalogueContentSchema } from '#lib/locations/identityCatalogue.js'
 // SERVICES
 import {
+  listGroupBrands,
   readIdentityCatalogue,
   readIdentityCatalogueByCode,
   searchIdentityCatalogue,
@@ -49,6 +50,16 @@ export const findIdentityCatalogue = guardedQuery(
       input.search,
       input.excludeDescendantsOf,
     )
+  },
+)
+/** Read the current brands belonging to a group profile.
+ * @param input Persisted group identity. @returns Linked localized brands.
+ */
+export const getGroupBrands = guardedQuery(
+  z.strictObject({ groupId: z.string().min(1).max(200) }),
+  async (input, ctx) => {
+    if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
+    return listGroupBrands(ctx.db, input.groupId)
   },
 )
 /** Read a current catalogue identity for its localized details page.
