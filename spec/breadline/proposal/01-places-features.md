@@ -3723,6 +3723,12 @@ boundaries explicitly. Refs #178.
 
 ### Central localized display templates (Refs #178)
 
+The catalogue also exposes the built-in Feature-name and Location-name bases as
+read-only system entries, with localized expressions and sample previews. These
+inspection entries are not persisted registry versions and cannot be assigned or
+regenerated. Signed-in users can read central definitions; publication still requires
+SuperAdmin and private Organisation catalogues retain manager authorization.
+
 The explicit Feature template path uses immutable central versions, a bounded expression
 language and an editor at `/admin/templates`. Accepted edits materialize generated names
 separately from authored bases and overrides. Community adoption renders from the same
