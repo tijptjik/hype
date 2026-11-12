@@ -126,7 +126,7 @@ it('offers translation for an explicitly empty display address', async () => {
 })
 
 it.each(['unmount', 'readonly', 'replacement'] as const)(
-  'ignores address-part translation after %s',
+  'ignores building-name translation after %s',
   async transition => {
     vi.stubGlobal('matchMedia', () => ({
       matches: true,
@@ -152,14 +152,18 @@ it.each(['unmount', 'readonly', 'replacement'] as const)(
     )
     const address = emptyFeatureAddress()
     address.overrides = {
-      en: { streetName: 'Test Road' },
-      'zh-hant': { streetName: '' },
-      'zh-hans': { streetName: '' },
+      en: { buildingName: 'Test Building' },
+      'zh-hant': { buildingName: '' },
+      'zh-hans': { buildingName: '' },
     }
     const onChange = vi.fn()
     const view = render(Fixture, { address, onChange })
+    const building = view.container.querySelector<HTMLElement>(
+      '[data-address-group="buildingName"]',
+    )
+    if (!building) throw new Error('Building fields were not rendered')
     await fireEvent.click(
-      within(screen.getByRole('group', { name: 'Name' })).getByRole('button', {
+      within(building).getByRole('button', {
         name: 'Translate from en to zh-hant',
       }),
     )
@@ -167,7 +171,7 @@ it.each(['unmount', 'readonly', 'replacement'] as const)(
     if (transition === 'unmount') view.unmount()
     else if (transition === 'readonly') await view.rerender({ isEditing: false })
     else await view.rerender({ address: structuredClone(address) })
-    finish(['Translated street'])
+    finish(['Translated building'])
     await new Promise(resolve => setTimeout(resolve, 0))
     expect(onChange).not.toHaveBeenCalled()
     vi.unstubAllGlobals()
