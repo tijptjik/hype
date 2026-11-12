@@ -391,17 +391,45 @@ function buildBreadlineFeaturePlan(
                 'SELECT locale,value FROM propertyValueI18n WHERE propertyValueId=?',
               )
               .all(optionId) as { locale: string; value: string }[]
-            const brandNames = curated
-              ? { en: curated.name, 'zh-hant': curated.name, 'zh-hans': curated.name }
-              : row.brand === 'kayser'
-                ? {
-                    en: 'Maison Kayser',
-                    'zh-hant': 'Maison Kayser',
-                    'zh-hans': 'Maison Kayser',
-                  }
-                : Object.fromEntries(
-                    translations.map(value => [value.locale, value.value]),
-                  )
+            // Catalogue names survive retirement of the organisation brand classifier.
+            const catalogueStorage = target
+              .query(
+                "SELECT 1 FROM sqlite_schema WHERE name='identityCatalogueRevisionContent'",
+              )
+              .get()
+            const catalogue = catalogueStorage
+              ? (target
+                  .query(`SELECT r.content FROM identityCatalogueSource s
+                  JOIN identityCatalogue c ON c.id=s.catalogueId
+                  JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version
+                  WHERE s.source='brand:breadlineBrand' AND s.sourceId=?`)
+                  .get(curated?.code ?? String(row.brand)) as {
+                  content: string
+                } | null)
+              : null
+            const catalogueNames = catalogue
+              ? Object.fromEntries(
+                  Object.entries(
+                    JSON.parse(catalogue.content).i18n as Record<
+                      string,
+                      { name: string }
+                    >,
+                  ).map(([locale, entry]) => [locale, entry.name]),
+                )
+              : null
+            const brandNames =
+              catalogueNames ??
+              (curated
+                ? { en: curated.name, 'zh-hant': curated.name, 'zh-hans': curated.name }
+                : row.brand === 'kayser'
+                  ? {
+                      en: 'Maison Kayser',
+                      'zh-hant': 'Maison Kayser',
+                      'zh-hans': 'Maison Kayser',
+                    }
+                  : Object.fromEntries(
+                      translations.map(value => [value.locale, value.value]),
+                    ))
             if (!Object.keys(brandNames).length)
               throw new Error(
                 `Missing reviewed brand translations for ${table}:${sourceId}; supply localized Location brand names`,
@@ -525,7 +553,7 @@ function buildBreadlineFeaturePlan(
           }),
         )
         statements.push(
-          insert('locationRevision', {
+          insert('locationRevisionContent', {
             id: revisionId,
             locationId,
             version: 1,

@@ -81,6 +81,24 @@ function fixture() {
     '0154_location_version_names.sql',
   ])
     target.exec(readFileSync(`migrations/${migration}`, 'utf8'))
+  // Exercise today's import boundary while retaining the small historical lifecycle fixture.
+  target.exec(`ALTER TABLE location RENAME COLUMN kind TO legacyKind;
+    ALTER TABLE location ADD COLUMN kind TEXT NOT NULL DEFAULT 'unknown';
+    ALTER TABLE location ADD COLUMN class TEXT;
+    ALTER TABLE location ADD COLUMN matchingType TEXT GENERATED ALWAYS AS (coalesce(class,kind)) VIRTUAL;
+    CREATE TABLE locationRevisionI18n(revisionId TEXT NOT NULL REFERENCES locationRevision(id),locale TEXT NOT NULL,name TEXT,branch TEXT,format TEXT,displayAddress TEXT,displayAddressOverride TEXT,PRIMARY KEY(revisionId,locale));
+    CREATE TRIGGER location_revision_i18n_insert AFTER INSERT ON locationRevision BEGIN SELECT 1; END;
+    CREATE VIEW featureAcceptedNamingLocation AS SELECT 1;`)
+  target.exec(
+    readFileSync('migrations/0209_shared_location_corrections.sql', 'utf8').split(
+      '-- Adopt the latest',
+    )[0],
+  )
+  target.exec(readFileSync('migrations/0237_identity_catalogue.sql', 'utf8'))
+  target.exec(readFileSync('migrations/0239_catalogue_i18n.sql', 'utf8'))
+  target.exec(
+    readFileSync('migrations/0241_authoritative_revision_translations.sql', 'utf8'),
+  )
   const generate = () =>
     planBreadlineFeatures([
       '--source',
@@ -143,7 +161,7 @@ test(
         expect(row.id).toMatch(/^[A-Za-z0-9_-]{12}$/)
       const donor = target
         .query(
-          "SELECT r.facts,p.kind,p.state,p.ownerOrganisationId,p.ssId FROM breadlineImportFeature i JOIN featureLocation f ON f.featureId=i.featureId JOIN location p ON p.id=f.locationId JOIN locationRevision r ON r.id=f.factsRevisionId WHERE i.sourceTable='donors'",
+          "SELECT r.facts,p.matchingType AS kind,p.state,p.ownerOrganisationId,p.ssId FROM breadlineImportFeature i JOIN featureLocation f ON f.featureId=i.featureId JOIN location p ON p.id=f.locationId JOIN locationRevisionContent r ON r.id=f.factsRevisionId WHERE i.sourceTable='donors'",
         )
         .get() as {
         facts: string
@@ -341,6 +359,35 @@ test(
       )
       f.target.exec("INSERT INTO feature(id,projectId) VALUES('enrolled','p')")
       expect(() => f.generate()).toThrow('revision-backed Features')
+    } finally {
+      f.target.close()
+    }
+  },
+  MIGRATED_IMPORT_TIMEOUT_MS,
+)
+
+test(
+  'imports catalogue names without legacy organisation brand options',
+  () => {
+    const f = fixture()
+    try {
+      f.target.exec(`INSERT INTO identityCatalogue VALUES ('curated-kayser','brand',1);
+      INSERT INTO identityCatalogueRevisionContent VALUES ('curated-kayser',1,
+        '{"logo":null,"i18n":{"en":{"name":"Curated Kayser"},"zh-Hant":{"name":"Curated Kayser"},"zh-Hans":{"name":"Curated Kayser"}}}', 'editor','now');
+      INSERT INTO identityCatalogueSource VALUES ('brand:breadlineBrand','kayser','curated-kayser');
+      DELETE FROM propertyValueI18n;`)
+      f.generate()
+      f.apply()
+      const row = f.target
+        .query(`SELECT r.facts FROM breadlineImportFeature i
+      JOIN featureLocation fl ON fl.featureId=i.featureId
+      JOIN locationRevisionContent r ON r.id=fl.factsRevisionId
+      WHERE i.sourceTable='donors'`)
+        .get() as { facts: string }
+      expect(readLocationFacts(row.facts).brands[0].names.en).toBe('Curated Kayser')
+      expect(
+        f.target.query("SELECT count(*) n FROM property WHERE key='brand'").get(),
+      ).toEqual({ n: 0 })
     } finally {
       f.target.close()
     }
