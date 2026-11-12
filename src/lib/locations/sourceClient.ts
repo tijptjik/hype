@@ -4,6 +4,7 @@ import {
   PlaceSearchFiltersSchema,
   hasPlaceSearchCategory,
   placeSearchFilterParams,
+  placeTextSearchFilterParams,
 } from './placeSearchFilters'
 // DOMAIN
 import { projectSaanSeoiPlace } from './saanseoi'
@@ -35,6 +36,7 @@ export const PlaceSearchInputSchema = z
     message: 'Enter search text or select a category',
   })
 const searchResultSchema = z.object({
+  preview: z.unknown().optional(),
   placeId: z.string().min(1),
   resourceReleaseId: z.string().min(1),
   locale: z.string().min(1),
@@ -233,10 +235,11 @@ export async function searchSaanSeoiPlacesPage(
   if (!query.q) return browseSaanSeoiPlacesPage(client, query)
   const url = new URL('/places/v0.1/search', client.baseUrl)
   url.search = new URLSearchParams({
-    ...placeSearchFilterParams(query.filters),
+    ...placeTextSearchFilterParams(query.filters),
     q: query.q,
     region: 'hk',
     paginate: 'true',
+    include: 'preview',
     limit: String(query.limit),
     ...(query.locale ? { locale: query.locale } : {}),
     ...(query.cursor ? { cursor: query.cursor } : {}),

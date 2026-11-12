@@ -15,7 +15,10 @@ import {
   PlaceSearchPageError,
   searchSaanSeoiPlacesPage,
 } from '#lib/locations/sourceClient.js'
-import { readSaanSeoiPlacePreview } from '#lib/locations/sourcePreview.js'
+import {
+  projectSaanSeoiPlacePreview,
+  readSaanSeoiPlacePreview,
+} from '#lib/locations/sourcePreview.js'
 import { locationSourceEndpoint } from '#lib/locations/sourceEndpoint.server.js'
 
 /** Search public Place previews before a Feature has an identity.
@@ -43,10 +46,15 @@ export const searchDraftLocations = guardedQuery(
     const candidates = page.candidates
     const settled = await Promise.allSettled(
       candidates.map(async candidate => {
-        const facts = await readSaanSeoiPlacePreview(client, {
+        const identity = {
           ssId: candidate.placeId,
           resourceReleaseId: candidate.resourceReleaseId,
-        })
+        }
+        // Search previews avoid detail fan-out; category browsing still supplies identities.
+        const facts =
+          candidate.preview === undefined
+            ? await readSaanSeoiPlacePreview(client, identity)
+            : projectSaanSeoiPlacePreview(candidate.preview, identity)
         // Discovery can match a brand even when the establishment has no source name.
         const label = candidate.nameText?.trim() || candidate.brandText?.trim()
         if (label && !facts.names[candidate.locale]?.trim())

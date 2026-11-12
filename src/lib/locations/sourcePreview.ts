@@ -70,7 +70,20 @@ export async function readSaanSeoiPlacePreview(
     signal: AbortSignal.timeout(15000),
   })
   if (!response.ok) throw new Error(`Location preview failed (${response.status})`)
-  const data = previewSchema.parse(await response.json())
+  return projectSaanSeoiPlacePreview(await response.json(), input)
+}
+
+/** Validate and project an embedded or independently fetched discovery preview.
+ * @param value Untrusted source preview payload.
+ * @param input Identity and release supplied by the matching search candidate.
+ * @returns Display facts without canonical import evidence.
+ * @remarks Embedded previews require the same identity checks as detail responses.
+ */
+export function projectSaanSeoiPlacePreview(
+  value: unknown,
+  input: { ssId: string; resourceReleaseId: string },
+): PlacePreview {
+  const data = previewSchema.parse(value)
   if (
     data.place.id !== input.ssId ||
     data.place.resourceReleaseId !== input.resourceReleaseId

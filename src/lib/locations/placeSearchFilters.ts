@@ -53,6 +53,26 @@ export function placeSearchFilterParams(
   )
 }
 
+/** Apply discovery filters before the source text search page limit.
+ * @param filters Selected classification and user-facing status controls.
+ * @returns Source filters for category ancestry and user-facing status semantics.
+ * @remarks Requires the Places search API with open_or_unknown support. Collection
+ * browsing retains its exact-category contract separately.
+ */
+export function placeTextSearchFilterParams(
+  filters?: PlaceSearchFilters,
+): Record<string, string> {
+  const accepted = PlaceSearchFiltersSchema.parse(filters ?? {})
+  const status = accepted.operatingStatus ?? 'open'
+  return {
+    ...placeSearchFilterParams(accepted),
+    ...(accepted.taxonomyCategory
+      ? { 'filter[taxonomyCategory]': accepted.taxonomyCategory }
+      : {}),
+    'filter[operatingStatus]': status === 'open' ? 'open_or_unknown' : status,
+  }
+}
+
 /** Display publisher category identifiers without inventing a different taxonomy.
  * @param value Overture category identifier.
  * @returns A readable label; the original identifier remains the submitted value.

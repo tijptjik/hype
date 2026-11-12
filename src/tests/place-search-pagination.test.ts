@@ -175,3 +175,43 @@ it('forwards the upstream text cursor with unchanged filters and rejects expired
     searchSaanSeoiPlacesPage(client(request), { ...input, cursor: 'expired' }),
   ).rejects.toBeInstanceOf(PlaceSearchPageError)
 })
+
+it('requests embedded previews and applies category and default status filters before pagination', async () => {
+  const preview = { place: { id: 'bakery' }, i18n: {} }
+  const request = vi.fn(async (url: URL) => {
+    expect(url.searchParams.get('include')).toBe('preview')
+    expect(url.searchParams.get('filter[taxonomyCategory]')).toBe('food_and_drink')
+    expect(url.searchParams.get('filter[operatingStatus]')).toBe('open_or_unknown')
+    return Response.json({
+      results: [{ ...candidate('bakery'), preview }],
+      meta: { nextCursor: 'next' },
+    })
+  })
+  const input = { q: 'sheung wan', filters: { taxonomyCategory: 'food_and_drink' } }
+  const first = await searchSaanSeoiPlacesPage(client(request), input)
+  expect(first.candidates[0]?.preview).toEqual(preview)
+  await searchSaanSeoiPlacesPage(client(request), {
+    ...input,
+    cursor: first.nextCursor ?? undefined,
+  })
+  expect(request).toHaveBeenCalledTimes(2)
+})
+
+it.each([
+  ['open', 'open_or_unknown'],
+  ['any', 'any'],
+  ['temporarily_closed', 'temporarily_closed'],
+  ['permanently_closed', 'permanently_closed'],
+] as const)(
+  'uses supported source status parameters for %s across pages',
+  async (status, expected) => {
+    const request = vi.fn(async (url: URL) => {
+      expect(url.searchParams.get('filter[operatingStatus]')).toBe(expected)
+      return Response.json({ results: [], meta: { nextCursor: null } })
+    })
+    const input = { q: 'sheung wan', filters: { operatingStatus: status } }
+    await searchSaanSeoiPlacesPage(client(request), input)
+    await searchSaanSeoiPlacesPage(client(request), { ...input, cursor: 'next' })
+    expect(request).toHaveBeenCalledTimes(2)
+  },
+)

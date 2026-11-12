@@ -29,7 +29,8 @@ vi.mock('#lib/locations/sourceClient.js', async importOriginal => ({
     nextCursor: mocks.nextCursor,
   }),
 }))
-vi.mock('#lib/locations/sourcePreview.js', () => ({
+vi.mock('#lib/locations/sourcePreview.js', async importOriginal => ({
+  ...(await importOriginal<object>()),
   readSaanSeoiPlacePreview: mocks.preview,
 }))
 vi.mock('#lib/locations/nearbySource.js', () => ({
@@ -206,4 +207,41 @@ it('returns continuation even when previews fail or all rows are filtered out', 
     expect.anything(),
     expect.objectContaining({ cursor: 'previous', limit: 20 }),
   )
+})
+
+it('returns a full embedded-preview page without any per-place detail requests', async () => {
+  const candidates = Array.from({ length: 20 }, (_, i) => ({
+    placeId: `bakery-${i}`,
+    resourceReleaseId: 'release',
+    locale: 'en',
+    nameText: `Bakery ${i}`,
+    brandText: null,
+    preview: {
+      place: {
+        id: `bakery-${i}`,
+        resourceReleaseId: 'release',
+        geometry: { type: 'Point', coordinates: [114.15, 22.28] },
+        taxonomy: { primary: 'bakery', hierarchy: ['food_and_drink', 'bakery'] },
+        operatingStatus: 'open',
+      },
+      i18n: { en: { name: `Bakery ${i}`, freeformAddress: 'Sheung Wan' } },
+    },
+  }))
+  mocks.search.mockResolvedValue(candidates)
+  mocks.nextCursor = 'next'
+  const result = await searchDraftLocations({
+    q: 'sheung wan',
+    locale: 'en',
+    filters: { taxonomyCategory: 'food_and_drink' },
+  })
+  expect(result.rows).toHaveLength(20)
+  expect(result.nextCursor).toBe('next')
+  expect(result.partial).toBe(false)
+  expect(mocks.preview).not.toHaveBeenCalled()
+  expect(result.rows[0]?.facts.location.address.fallbackDisplay?.en).toBe('Sheung Wan')
+  candidates[0].preview.place.id = 'wrong-identity'
+  const partial = await searchDraftLocations({ q: 'sheung wan' })
+  expect(partial.rows).toHaveLength(19)
+  expect(partial.partial).toBe(true)
+  expect(mocks.preview).not.toHaveBeenCalled()
 })
