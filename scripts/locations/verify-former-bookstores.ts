@@ -23,12 +23,18 @@ function verify(path: string): number {
   ) as {
     records: {
       featureId: string
+      reviewedCurrentState?: { addressMeta: unknown }
       rawAddress: string
       content: { i18n: { en: Record<string, unknown> } }
     }[]
   }
   try {
-    for (const { featureId, rawAddress, content: expectedAddress } of fixture.records) {
+    for (const {
+      featureId,
+      rawAddress,
+      content: expectedAddress,
+      reviewedCurrentState,
+    } of fixture.records) {
       const revision = db
         .query(
           'SELECT r.content FROM feature f JOIN featureRevision r ON r.id=f.currentRevisionId WHERE f.id=?',
@@ -38,12 +44,20 @@ function verify(path: string): number {
       const envelope = FeatureAddressSchema.parse(
         content.placement.addressMeta?.address,
       )
-      if (getAddressDisplay(envelope, 'en') !== rawAddress)
+      const preservesReviewedEdit =
+        reviewedCurrentState &&
+        JSON.stringify(content.placement.addressMeta) ===
+          JSON.stringify(reviewedCurrentState.addressMeta)
+      if (!preservesReviewedEdit && getAddressDisplay(envelope, 'en') !== rawAddress)
         throw new Error(`Original display lost for ${featureId}`)
       const components = getAddressLocale(envelope, 'en')
       for (const field of ['buildingName', 'streetName', 'buildingNumberExpression']) {
         const expected = expectedAddress.i18n.en[field]
-        if (expected && components[field as keyof typeof components] !== expected)
+        if (
+          !preservesReviewedEdit &&
+          expected &&
+          components[field as keyof typeof components] !== expected
+        )
           throw new Error(`Component ${field} lost for ${featureId}`)
       }
       const facts = db

@@ -15,9 +15,30 @@ def insert(db, table, values):
     db.execute(f'INSERT INTO "{table}" ({columns}) VALUES ({",".join("?" for _ in values)})', list(values.values()))
 
 
+def extend_physical_examples(db):
+    """Add physical members and a split to an existing demo without rewriting its history."""
+    building = PREFIX+"building"
+    owner = db.execute("SELECT ownerOrganisationId FROM location WHERE id=?", (building,)).fetchone()[0]
+    for suffix, title in [("mezzanine", "TEST · Harbour Mezzanine"), ("courtyard", "TEST · Harbour Courtyard")]:
+        lid = PREFIX+suffix
+        if db.execute("SELECT 1 FROM location WHERE id=?", (lid,)).fetchone():
+            continue
+        insert(db, "location", {"id":lid,"kind":"built","class":"building_part","state":"unresolved","ownerOrganisationId":owner})
+        facts = {"schemaVersion":1,"kind":"building_part","common":{"names":{"en":title},"location":{"geometry":{"type":"Point","coordinates":[114.169,22.32]}}},"details":{}}
+        encoded = json.dumps(facts)
+        insert(db,"locationRevision",{"id":lid+"-r1","locationId":lid,"version":1,"origin":"local","contentHash":hashlib.sha256(encoded.encode()).hexdigest(),"rawSource":'{"synthetic":true}',"facts":encoded})
+        insert(db,"locationMembership",{"id":lid+"-member","relationshipId":lid+"-member","childLocationId":lid,"parentLocationId":building,"membershipState":"current","provenance":'{"fixture":"relationship-review"}'})
+    rid = PREFIX+"shop-split"
+    if not db.execute("SELECT 1 FROM locationTransition WHERE id=?", (rid,)).fetchone():
+        insert(db,"locationTransition",{"id":rid,"transitionId":rid,"type":"split","basis":"real_world","effectiveFrom":"2025","effectiveFromPrecision":"year","provenance":'{"fixture":"relationship-review"}'})
+        for side,suffix in [("before","shop"),("after","bakery"),("after","florist")]:
+            insert(db,"locationTransitionParticipant",{"transitionRevisionId":rid,"locationId":PREFIX+suffix,"side":side})
+
+
 def seed(db):
     """Create independent local demo identities and varied immutable relationship histories."""
     if db.execute("SELECT 1 FROM location WHERE id=?", (PREFIX+"building",)).fetchone():
+        extend_physical_examples(db)
         return {"replayed": True, "record": PREFIX+"building"}
     owner = db.execute("SELECT id FROM organisation ORDER BY id LIMIT 1").fetchone()[0]
     names = [
@@ -70,7 +91,8 @@ def seed(db):
         for side,items in [("before",before),("after",after)]:
             for item in items:
                 insert(db,"locationTransitionParticipant",{"transitionRevisionId":rid,"locationId":PREFIX+item,"side":side})
-    return {"locations":len(names),"record":PREFIX+"building","operating_editor":PREFIX+"shop"}
+    extend_physical_examples(db)
+    return {"locations":len(names)+2,"record":PREFIX+"building","operating_editor":PREFIX+"shop"}
 
 
 if __name__ == "__main__":

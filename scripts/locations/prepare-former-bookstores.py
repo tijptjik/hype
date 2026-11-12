@@ -54,8 +54,10 @@ def generate():
                f"AND f.layerId={quoted(data['layerId'])} AND f.isIntangible=1 AND f.isDraft=0 "
                f"AND f.currentRevisionId IS NOT NULL AND NOT EXISTS(SELECT 1 FROM featureLocation fl WHERE fl.featureId=f.id))={count} THEN 1 ELSE 0 END;")
 
-    # New layer members must not be silently omitted. A five-row pilot receipt is not a layer receipt.
-    sql.append(f"INSERT INTO _former_books_guard SELECT CASE WHEN NOT ({receipt}) OR (SELECT count(*) FROM feature WHERE layerId={quoted(data['layerId'])})={count} THEN 1 ELSE 0 END;")
+    # New layer members must not be silently omitted; only explicitly reviewed exclusions are allowed.
+    # A five-row pilot receipt is not a layer receipt.
+    exclusions = ','.join(quoted(fid) for fid in data.get('excludedFeatureIds', [])) or "''"
+    sql.append(f"INSERT INTO _former_books_guard SELECT CASE WHEN NOT ({receipt}) OR (SELECT count(*) FROM feature WHERE layerId={quoted(data['layerId'])} AND id NOT IN ({exclusions}))={count} THEN 1 ELSE 0 END;")
     revision_ids = ','.join(quoted('former-bookstore:' + fid + ':feature-v1') for fid in expected_ids)
     sql.append(f"INSERT INTO _former_books_guard SELECT CASE WHEN {receipt} OR (SELECT count(*) FROM featureRevision WHERE changeSetId={quoted(migration)} AND id IN ({revision_ids}))={count} THEN 1 ELSE 0 END;")
 
@@ -64,7 +66,11 @@ def generate():
 
     def insert(table, values, condition='1'):
         columns = ','.join(values)
-        literals = ','.join(quoted(v) if not isinstance(v, int) else str(v) for v in values.values())
+        literals = ','.join(
+            f"(SELECT geometry FROM feature WHERE id={quoted(values['featureId'])})"
+            if table == 'featureLocation' and key == 'acceptedGeometry'
+            else quoted(v) if not isinstance(v, int) else str(v)
+            for key, v in values.items())
         sql.append(f'INSERT INTO {table} ({columns}) SELECT {literals} WHERE EXISTS(SELECT 1 FROM _former_books_pending) AND ({condition});')
 
     def baseline(location_id, kind, names, geometry, content, provenance, reuse=False, displays=None):
@@ -87,10 +93,15 @@ def generate():
 
     for row in data['records']:
         fid = row['featureId']
+        original = (f"json(f.geometry)=json({quoted(encoded(row['expectedGeometry']))}) "
+                    f"AND json(f.addressMeta)=json({quoted(encoded(row['expectedAddressMeta']))}) "
+                    f"AND json_extract(f.addressMeta,'$.address.legacy.i18n.en.addressProperties.rawAddress')={quoted(row['rawAddress'])}")
+        current = row.get('reviewedCurrentState')
+        preserved = (f"json(f.geometry)=json({quoted(encoded(current['geometry']))}) "
+                     f"AND json(f.addressMeta)=json({quoted(encoded(current['addressMeta']))})") if current else '0'
+        # Accept only the original evidence or the exact reviewed editor state, never arbitrary drift.
         guard(f"EXISTS(SELECT 1 FROM feature f JOIN featureRevision r ON r.id=f.currentRevisionId WHERE f.id={quoted(fid)} "
-              f"AND json(f.geometry)=json({quoted(encoded(row['expectedGeometry']))}) "
-              f"AND json(f.addressMeta)=json({quoted(encoded(row['expectedAddressMeta']))}) "
-              f"AND json_extract(f.addressMeta,'$.address.legacy.i18n.en.addressProperties.rawAddress')={quoted(row['rawAddress'])} "
+              f"AND (({original}) OR ({preserved})) "
               "AND r.sequence=f.revisionVersion AND json_extract(r.content,'$.placement.location') IS NULL "
               "AND json_extract(r.content,'$.detachedBrands') IS NULL AND json(json_extract(r.content,'$.placement.addressMeta'))=json(f.addressMeta))")
         for locale, name in row['names'].items():
@@ -140,6 +151,10 @@ def generate():
         expr = f"json_set(r.content,'$.placement.location',json({quoted(encoded(binding))}),'$.placement.addressMeta.address.source',json({quoted(encoded(address))}))"
         for locale in row['names']:
             expr = f"json_set({expr},'$.translations.\"{locale}\".address.value',{quoted(displays[locale])},'$.translations.\"{locale}\".address.generated',json('false'))"
+        # Reviewed editor content keeps its address and translations; attach only historical occupancy.
+        if current:
+            kept = f"json_set(r.content,'$.placement.location',json_set(json({quoted(encoded(binding))}),'$.acceptedGeometry',json(f.geometry)))"
+            expr = f"CASE WHEN {preserved} THEN {kept} ELSE {expr} END"
         # The changeset is inserted before any revision, then used as the successful-run receipt.
         sql.append(f"INSERT INTO revisionChangeSet(id,actorId,origin,reason,createdAt) SELECT {quoted(migration)},'migration:former-bookstores','migration','historical bookstore layer former occupancies',strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE EXISTS(SELECT 1 FROM _former_books_pending) AND NOT EXISTS(SELECT 1 FROM revisionChangeSet WHERE id={quoted(migration)});")
         new_revision = lid+':feature-v1'
@@ -149,7 +164,8 @@ def generate():
                                    'acceptedGeometry': encoded(row['expectedGeometry'])})
         sql.append(f"UPDATE feature SET addressMeta=json_extract((SELECT content FROM featureRevision WHERE id={quoted(new_revision)}),'$.placement.addressMeta'),currentRevisionId={quoted(new_revision)},revisionVersion=revisionVersion+1,modifiedAt=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id={quoted(fid)} AND id IN (SELECT featureId FROM _former_books_pending);")
         for locale in row['names']:
-            sql.append(f"UPDATE featureI18n SET displayAddress={quoted(displays[locale])},displayAddressGen=0 WHERE featureId={quoted(fid)} AND locale={quoted(locale)} AND featureId IN (SELECT featureId FROM _former_books_pending);")
+            preserve_filter = f" AND NOT EXISTS(SELECT 1 FROM feature f WHERE f.id={quoted(fid)} AND ({preserved}))" if current else ''
+            sql.append(f"UPDATE featureI18n SET displayAddress={quoted(displays[locale])},displayAddressGen=0 WHERE featureId={quoted(fid)} AND locale={quoted(locale)} AND featureId IN (SELECT featureId FROM _former_books_pending){preserve_filter};")
         sql.append(f"DELETE FROM featureRevisionWriteScope WHERE featureId={quoted(fid)} AND token={quoted(migration)};")
     sql += ['DROP TABLE _former_books_pending;', 'DROP TABLE _former_books_guard;']
     return '\n\n'.join(sql) + '\n'

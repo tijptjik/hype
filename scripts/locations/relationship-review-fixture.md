@@ -15,7 +15,7 @@ Open these records on the local application:
 - `/admin/locations/relationship-demo-shop#relationships`: operating-period editor,
   former and current premises, address ordering, and a merge event.
 
-All 13 Locations are named with a **TEST** prefix. Their asserted history is fictional.
+All 15 Locations are named with a **TEST** prefix. Their asserted history is fictional.
 The fixtures include superseded assertions so version history differs from the current
 view. Browser validation may append additional synthetic events within this namespace.
 
@@ -26,3 +26,14 @@ record. Operating-period dates accept a year, month, or complete date.
 
 Validation: `dev-check bun scripts/visual-checks/location-relationship-review-check.ts`
 against the dedicated local admin server (default port 4176).
+
+Physical membership is modeled on Harbour House, with East and West Wings, a mezzanine,
+a courtyard, and current/former complex membership. Harbour Coffee is an establishment;
+its Physical membership section links to the current host rather than inventing a
+physical membership for the business. Its lineage includes both a merge and a split.
+
+Address ordering reuses the Project Layers ResourceCard rows, Svelte DND actions and
+insertion-edge helper. Drag the grip, then save the complete order. The main record pane
+scrolls below the map and toolbar. Scoped hiding excludes one assertion for that
+organisation; withdrawing a shared assertion affects its shared current view. Both
+retain immutable version history.

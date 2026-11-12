@@ -1,6 +1,6 @@
 {
   "migration": "0207_former_bookstore_occupancy",
-  "scope": "Every feature in history:RfWMLs_jW6QJ (Permanently Closed), 42 records at preparation; exact cohort guarded at apply time.",
+  "scope": "42 reviewed former bookstores; explicitly exclude Wah Koon Building (XVcVi4bs_Lg4). Reject any other unreviewed layer member.",
   "projectId": "-z26MuNRTJwi",
   "organisationId": "kXCT_5XMH1Nj",
   "layerId": "history:RfWMLs_jW6QJ",
@@ -645,6 +645,204 @@
             }
           }
         }
+      },
+      "reviewedCurrentState": {
+        "geometry": {
+          "type": "Point",
+          "coordinates": [114.15206336538758, 22.33999575]
+        },
+        "addressMeta": {
+          "address": {
+            "version": 1,
+            "association": {
+              "originKind": "building",
+              "kind": "building",
+              "mode": "linked",
+              "lookup": "matched",
+              "checkedAt": "2026-11-09T18:01:53.545Z",
+              "names": {
+                "en": "Por Mee Factory Building",
+                "zh-hant": "百美工業大廈",
+                "zh-hans": "百美工业大厦"
+              },
+              "targetId": "building:2561176a-556c-4eea-a1a3-e22e98fecc9d:ss-3867b7a1-18fc-5892-94b5-43e579733b28:3420b404-aec0-54ce-b92a-1ac273196f9d",
+              "originalSource": {
+                "status": "unresolved",
+                "authored": {
+                  "scope": "unknown",
+                  "i18n": {
+                    "en": {
+                      "formattedAddress": "",
+                      "buildingName": "Por Mee Factory Building",
+                      "buildingNumberExpression": "500",
+                      "buildingNumberFrom": "500",
+                      "buildingNumberTo": null,
+                      "buildingNumberConnector": null,
+                      "streetName": "Castle Peak Road"
+                    },
+                    "zh-hant": {
+                      "formattedAddress": "",
+                      "buildingName": "百美工業大廈",
+                      "buildingNumberExpression": "500",
+                      "buildingNumberFrom": "500",
+                      "buildingNumberTo": null,
+                      "buildingNumberConnector": null,
+                      "streetName": "青山道"
+                    },
+                    "zh-hans": {
+                      "formattedAddress": "青山道500号百美工业大厦",
+                      "buildingName": "百美工业大厦"
+                    }
+                  },
+                  "unit": null,
+                  "unitI18n": {}
+                },
+                "address2dId": null,
+                "address3dId": null,
+                "address3dUnitId": null,
+                "snapshotId": null,
+                "rawSource": {},
+                "fallbackDisplay": {}
+              },
+              "matchedSource": {
+                "status": "unresolved",
+                "authored": {
+                  "scope": "unknown",
+                  "i18n": {
+                    "en": {
+                      "formattedAddress": "",
+                      "buildingName": "Por Mee Factory Building",
+                      "buildingNumberExpression": "500",
+                      "buildingNumberFrom": "500",
+                      "buildingNumberTo": null,
+                      "buildingNumberConnector": null,
+                      "streetName": "Castle Peak Road"
+                    },
+                    "zh-hant": {
+                      "formattedAddress": "",
+                      "buildingName": "百美工業大廈",
+                      "buildingNumberExpression": "500",
+                      "buildingNumberFrom": "500",
+                      "buildingNumberTo": null,
+                      "buildingNumberConnector": null,
+                      "streetName": "青山道"
+                    },
+                    "zh-hans": {
+                      "formattedAddress": "青山道500号百美工业大厦",
+                      "buildingName": "百美工业大厦"
+                    }
+                  },
+                  "unit": null,
+                  "unitI18n": {}
+                },
+                "address2dId": null,
+                "address3dId": null,
+                "address3dUnitId": null,
+                "snapshotId": null,
+                "rawSource": {},
+                "fallbackDisplay": {}
+              },
+              "content": {
+                "scope": "unknown",
+                "i18n": {
+                  "en": {
+                    "formattedAddress": "",
+                    "buildingName": "Por Mee Factory Building",
+                    "buildingNumberExpression": "500",
+                    "buildingNumberFrom": "500",
+                    "buildingNumberTo": null,
+                    "buildingNumberConnector": null,
+                    "streetName": "Castle Peak Road"
+                  },
+                  "zh-hant": {
+                    "formattedAddress": "",
+                    "buildingName": "百美工業大廈",
+                    "buildingNumberExpression": "500",
+                    "buildingNumberFrom": "500",
+                    "buildingNumberTo": null,
+                    "buildingNumberConnector": null,
+                    "streetName": "青山道"
+                  },
+                  "zh-hans": {
+                    "formattedAddress": "",
+                    "buildingName": "百美工业大厦"
+                  }
+                },
+                "unit": null,
+                "unitI18n": {}
+              },
+              "choices": {
+                "street": "location",
+                "number": "location",
+                "premises": "location",
+                "phase": "location",
+                "building": "location",
+                "block": "location",
+                "floor": "location",
+                "unit": "location",
+                "access": "location"
+              }
+            },
+            "source": {
+              "status": "unresolved",
+              "authored": {
+                "scope": "unknown",
+                "i18n": {
+                  "en": {
+                    "formattedAddress": "",
+                    "buildingName": "Por Mee Factory Building",
+                    "buildingNumberExpression": "500",
+                    "buildingNumberFrom": "500",
+                    "buildingNumberTo": null,
+                    "buildingNumberConnector": null,
+                    "streetName": "Castle Peak Road"
+                  },
+                  "zh-hant": {
+                    "formattedAddress": "",
+                    "buildingName": "百美工業大廈",
+                    "buildingNumberExpression": "500",
+                    "buildingNumberFrom": "500",
+                    "buildingNumberTo": null,
+                    "buildingNumberConnector": null,
+                    "streetName": "青山道"
+                  },
+                  "zh-hans": {
+                    "formattedAddress": "青山道500号百美工业大厦",
+                    "buildingName": "百美工业大厦"
+                  }
+                },
+                "unit": null,
+                "unitI18n": {}
+              },
+              "address2dId": null,
+              "address3dId": null,
+              "address3dUnitId": null,
+              "snapshotId": null,
+              "rawSource": {},
+              "fallbackDisplay": {}
+            },
+            "coordinates": [114.15206336538758, 22.33999575],
+            "matchStatus": "unresolved",
+            "overrides": {
+              "zh-hans": {
+                "streetName": "青山道"
+              },
+              "en": {},
+              "zh-hant": {}
+            },
+            "accessHints": {}
+          },
+          "geoAddressCode": "3371122325T20050430",
+          "distanceFromPoint": "12480263",
+          "longitude": "114.15205",
+          "latitude": "22.34",
+          "confidenceForwardGeocoder": "64.29",
+          "addressForwardGeocoder": "hkgov_als",
+          "addressForwardGen": "true",
+          "rawLatitude": "22.34004",
+          "rawLongitude": "114.15208"
+        },
+        "reason": "Preserve user-reviewed Clockwork Cat editor changes when installing historical occupancy; original fixture remains historical evidence."
       }
     },
     {
@@ -10172,5 +10370,6 @@
         "recordCount": 1455
       }
     ]
-  }
+  },
+  "excludedFeatureIds": ["XVcVi4bs_Lg4"]
 }

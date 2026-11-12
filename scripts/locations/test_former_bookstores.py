@@ -46,11 +46,22 @@ def main():
     count = len(targets)
     matched = sum(row['building'] is not None for row in rows)
     layer = json.loads(FIXTURE.read_text())['layerId']
-    assert {r[0] for r in db.execute('SELECT id FROM feature WHERE layerId=?', (layer,))} == targets, 'Fixture omits layer members'
+    assert {r[0] for r in db.execute('SELECT id FROM feature WHERE layerId=?', (layer,))} - set(json.loads(FIXTURE.read_text()).get('excludedFeatureIds', [])) == targets, 'Fixture omits layer members'
     old_features = {r[0]: r for r in db.execute('SELECT * FROM feature')}
     old_revisions = list(db.execute('SELECT * FROM featureRevision'))
     old_other = {table: list(db.execute(f'SELECT * FROM {table}')) for table in ['image','featureProperty','featurePropertyI18n','layer','project']}
+    preserved = {}
+    for fixture_row in rows:
+        state = fixture_row.get('reviewedCurrentState')
+        fid = fixture_row['featureId']
+        current = db.execute('SELECT geometry,addressMeta FROM feature WHERE id=?', (fid,)).fetchone()
+        if state and json.loads(current[1]) == state['addressMeta']:
+            preserved[fid] = (current, list(db.execute('SELECT * FROM featureI18n WHERE featureId=? ORDER BY locale', (fid,))))
     apply(db)
+    for fid, (placement, translations) in preserved.items():
+        assert db.execute('SELECT geometry,addressMeta FROM feature WHERE id=?', (fid,)).fetchone() == placement
+        assert list(db.execute('SELECT * FROM featureI18n WHERE featureId=? ORDER BY locale', (fid,))) == translations
+        assert json.loads(db.execute('SELECT acceptedGeometry FROM featureLocation WHERE featureId=?', (fid,)).fetchone()[0]) == json.loads(placement[0])
     assert not list(db.execute('PRAGMA foreign_key_check'))
     assert db.execute('PRAGMA integrity_check').fetchone()[0] == 'ok'
     assert db.execute("SELECT count(*) FROM location WHERE id LIKE 'former-bookstore:%'").fetchone()[0] == count
