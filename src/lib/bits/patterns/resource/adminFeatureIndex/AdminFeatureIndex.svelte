@@ -114,7 +114,7 @@ const filters = $derived({
   sections: [
     {
       key: 'origin',
-      title: 'Created via',
+      title: 'Origin',
       icon: FeatureIcon,
       filters: [
         createSelectFilter('origin', {
