@@ -35,6 +35,7 @@ import SearchIcon from 'virtual:icons/lucide/search'
 import ClearIcon from 'virtual:icons/lucide/x'
 import WarningIcon from 'virtual:icons/lucide/triangle-alert'
 import FilterIcon from 'virtual:icons/lucide/list-filter'
+import LoaderIcon from 'virtual:icons/lucide/loader-circle'
 // API
 import { searchTargetLocations } from '#lib/api/locationAssociation.remote.js'
 import { getSharedLocationIdBySource } from '#lib/api/locationDirectory.remote.js'
@@ -2128,14 +2129,16 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
       : kind === 'building'
         ? buildingPaging
         : addressPaging}
-  {@const busy = kind === 'address' ? addressLoadingMore : moreLoading[kind]}
+  {@const busy =
+    (kind === 'establishment' && pendingKinds.has(kind)) ||
+    (kind === 'address' ? addressLoadingMore : moreLoading[kind])}
   {@const pageError = kind === 'address' ? addressPageError : moreErrors[kind]}
   {@const addressCount =
     kind === 'address' ? rows.filter(row => row.kind === 'address').length : 0}
   {#if enabled &&
-    paging &&
+    (paging || (kind === 'establishment' && busy && rows.length > 0)) &&
     !currentGroup &&
-    (busy || pageError || paging.nextCursor || addressCount > 0)}
+    (busy || pageError || paging?.nextCursor || addressCount > 0)}
     <div
       role="status"
       data-pagination-kind={kind}
@@ -2147,7 +2150,18 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
       aria-live="polite"
       aria-label={locationKindLabel(kind)}
     >
-      {#if busy}
+      {#if busy && kind === 'establishment'}
+        <div
+          class="flex min-h-20 w-full items-center gap-3 px-3 py-6 text-sm"
+          aria-busy="true"
+        >
+          <LoaderIcon
+            class="size-5 shrink-0 motion-safe:animate-spin"
+            aria-hidden="true"
+          />
+          <span>{m.feature_search_fetching_saanseoi()}</span>
+        </div>
+      {:else if busy}
         <div
           role="status"
           aria-label={m.resource_loading()}
@@ -2349,6 +2363,11 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
             <button
               type="button"
               class="group flex min-h-20 min-w-0 flex-1 basis-64 items-center gap-3 rounded-md px-3 py-6 text-left outline-none"
+              aria-description={result.identity
+                ? m.feature_search_source_hype()
+                : result.source
+                  ? m.feature_search_source_saanseoi()
+                  : undefined}
               data-result-id={result.id}
               data-result-number={index + 1}
               data-result-kind={result.kind}
@@ -2432,6 +2451,21 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                   >
                 {/if}
               </span>
+              {#if result.identity || result.source}
+                <span
+                  data-result-source={result.identity ? 'hype' : 'saanseoi'}
+                  title={result.identity
+                    ? m.feature_search_source_hype()
+                    : m.feature_search_source_saanseoi()}
+                  aria-hidden="true"
+                  class={[
+                    'text-muted-foreground block size-5 shrink-0 bg-current [mask-position:center] [mask-repeat:no-repeat]',
+                    result.identity
+                      ? "[mask-image:url('/logos/hype-mark.svg')] [mask-size:160%]"
+                      : "[mask-image:url('/logos/saanseoi.svg')] [mask-size:contain]",
+                  ]}
+                ></span>
+              {/if}
             </button>
             {#if selected?.id === result.id &&
               (currentGroup ||

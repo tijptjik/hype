@@ -2348,5 +2348,8 @@
   "display_templates_apply": "Use this version and regenerate",
   "display_templates_legacy": "Legacy naming rule",
   "display_templates_pinned": "Accepted template · v{version}",
-  "display_templates_new_features": "New Features use this version. Existing Features keep their accepted version."
+  "display_templates_new_features": "New Features use this version. Existing Features keep their accepted version.",
+  "feature_search_fetching_saanseoi": "Fetching additional records from SaanSeoi",
+  "feature_search_source_hype": "Hype Location",
+  "feature_search_source_saanseoi": "SaanSeoi candidate"
 }

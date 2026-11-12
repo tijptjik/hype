@@ -1,3 +1,10 @@
+Discovery result sources and map resizing (Refs #194, parent #180): existing Hype
+Locations and external SaanSeoi candidates display their respective source marks.
+Pending Place discovery names SaanSeoi beneath the available results. Resizing the
+map/results divider refits the visible discovery markers after the layout settles;
+explicit pin editing retains its camera. Interaction evidence is exercised by
+`scripts/visual-checks/discovery-resize-check.ts` through remote Chrome.
+
 Coordinate ownership (11 November 2026, Refs #194, parent #180): Feature geometry owns
 the user marker. Address coordinates retain the provider address point; reverse lookup
 must not substitute the requested pin. Location materialization, adoption and reset read

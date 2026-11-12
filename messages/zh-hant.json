@@ -2348,5 +2348,8 @@
   "display_templates_apply": "使用此版本並重新產生",
   "display_templates_legacy": "原有命名規則",
   "display_templates_pinned": "已採用範本 · v{version}",
-  "display_templates_new_features": "新地圖項目使用此版本；現有項目保留已採用的版本。"
+  "display_templates_new_features": "新地圖項目使用此版本；現有項目保留已採用的版本。",
+  "feature_search_fetching_saanseoi": "正在從 SaanSeoi 載入更多記錄",
+  "feature_search_source_hype": "Hype 地點",
+  "feature_search_source_saanseoi": "SaanSeoi 候選地點"
 }

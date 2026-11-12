@@ -443,7 +443,8 @@ $effect(() => {
   }
   fitComparisonBounds(true)
   const resized = (): void => fitComparisonBounds()
-  if (isSubset) target.on('resize', resized)
+  // Discovery markers must stay in view after the map/results divider changes height.
+  target.on('resize', resized)
   return () => {
     target.off('resize', resized)
   }
