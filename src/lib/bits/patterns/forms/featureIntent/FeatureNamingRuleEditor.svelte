@@ -32,9 +32,8 @@ let {
 let draftRule = $state<FeatureNameRule>(
   untrack(() => structuredClone($state.snapshot(override ?? inheritedRule))),
 )
-const parent = $derived(
-  scopeType === 'layer' ? 'project' : scopeType === 'project' ? 'hub' : 'application',
-)
+let editingTemplate = $state(false)
+let isOverriding = $state(untrack(() => override !== undefined))
 </script>
 <section
   {id}
@@ -52,12 +51,12 @@ const parent = $derived(
     </div>
     <div class="flex flex-wrap items-center gap-3">
       <p class="text-sm">
-        {disabled && !override ? `Using ${parent} default` : 'Custom rules'}
+        {isOverriding ? 'Custom rules' : 'Using inherited default'}
       </p>
       {#if !disabled}
         <button
           type="button"
-          aria-label={`Reset to ${parent} default`}
+          aria-label="Reset to inherited default"
           onclick={() => onAccept(undefined)}
           class="text-muted-foreground hover:text-foreground focus-visible:outline-primary rounded px-2 py-1 text-sm underline underline-offset-2 focus-visible:outline-2"
         >
@@ -72,7 +71,17 @@ const parent = $derived(
     {locales}
     rule={draftRule}
     {disabled}
-    onChange={rule => (draftRule = rule)}
+    {inheritedRule}
+    inheriting={!isOverriding}
+    onUseDefault={() => {
+      draftRule = structuredClone($state.snapshot(inheritedRule))
+      isOverriding = false
+    }}
+    onChange={rule => {
+      draftRule = rule
+      isOverriding = true
+    }}
+    onEditingChange={editing => (editingTemplate = editing)}
   />
   <footer
     class="border-border/50 mt-3 flex flex-wrap items-center justify-end gap-3 border-t pt-3"
@@ -82,7 +91,11 @@ const parent = $derived(
       {#if !disabled}
         <Button
           text="Accept naming rule"
-          onClick={() => onAccept(structuredClone($state.snapshot(draftRule)))}
+          disabled={editingTemplate}
+          onClick={() =>
+            onAccept(
+              isOverriding ? structuredClone($state.snapshot(draftRule)) : undefined,
+            )}
         />
       {/if}
     </div>

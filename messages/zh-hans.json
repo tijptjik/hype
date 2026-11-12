@@ -2348,6 +2348,7 @@
   "translation_show_original": "AI 翻译：显示原文",
   "translation_reading_language": "阅读语言",
   "translation_fallback_help": "如所选语言没有内容，会按顺序显示中文、英文或其他可用语言。",
+  "display_templates_system": "系统 · 只读",
   "display_templates_title": "显示模板",
   "display_templates_new": "新增模板",
   "display_templates_name": "名称",

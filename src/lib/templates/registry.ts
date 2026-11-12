@@ -53,7 +53,9 @@ export const DisplayTemplateDefinitionSchema = z
             'website',
           ].includes(path)
           const featurePath =
-            path === 'feature.name' || /^properties\.[A-Za-z0-9_-]+$/.test(path)
+            path === 'feature.name' ||
+            path === 'accessHint' ||
+            /^properties\.[A-Za-z0-9_-]+$/.test(path)
           if (!locationPath && !(definition.target === 'feature' && featurePath))
             throw new Error(`Unsupported ${definition.target} property: ${path}`)
         }

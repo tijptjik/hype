@@ -40,6 +40,9 @@ export function featureTemplateTitles(
   return Object.fromEntries(
     Object.entries(content.translations).map(([locale, translation]) => {
       const base = featureRevisionBaseName(content, locale)
+      const address = content.placement.addressMeta?.address as
+        | { accessHints?: Record<string, string | null> }
+        | undefined
       const values: Record<string, TemplateScalar> = {
         'source.name': localized(location?.names, locale) ?? base,
         'location.name': localized(location?.names, locale),
@@ -49,6 +52,7 @@ export function featureTemplateTitles(
         'format.name': localized(location?.format, locale),
         branch: localized(location?.branch, locale),
         address: translation.address.value,
+        accessHint: localized(address?.accessHints, locale),
         phoneNumber: location?.phoneNumber?.[0],
         website: location?.websites?.[0],
       }

@@ -4,6 +4,7 @@ import {
   getOrganisationTemplateDefaults,
   setOrganisationTemplateDefault,
 } from '#lib/api/displayTemplates.remote.js'
+import { getFeatureNamingTemplates } from '#lib/api/featureIntents.remote.js'
 // COMPONENTS
 import { Button } from '#lib/bits/core/index.js'
 // DOMAIN
@@ -20,6 +21,7 @@ let {
   organisationId: string
   templates: DisplayTemplateRecord[]
 } = $props()
+let availableTemplates = $state<DisplayTemplateRecord[]>([])
 let policy = $state<FeatureIntentPolicy | null>(null)
 let selected = $state<Record<string, string>>({})
 let busy = $state(false)
@@ -27,12 +29,17 @@ let failed = $state(false)
 let refresh = $state(0)
 $effect(() => {
   refresh
+  templates
   const owner = organisationId
   let cancelled = false
   policy = null
   failed = false
-  void getOrganisationTemplateDefaults({ organisationId: owner })
-    .then(value => {
+  void Promise.all([
+    getOrganisationTemplateDefaults({ organisationId: owner }),
+    getFeatureNamingTemplates({ type: 'organisation', id: owner }),
+  ])
+    .then(([value, available]) => {
+      availableTemplates = available
       if (cancelled) return
       policy = value
       selected = Object.fromEntries(
@@ -56,7 +63,7 @@ async function save(featureType: string): Promise<void> {
   if (!policy || busy) return
   busy = true
   failed = false
-  const template = templates.find(
+  const template = availableTemplates.find(
     value => `${value.id}:${value.version}` === selected[featureType],
   )
   try {
@@ -109,14 +116,14 @@ async function save(featureType: string): Promise<void> {
         >
           <option value="">Inherit Hub default</option>
           {#if pinned &&
-            !templates.some(
+            !availableTemplates.some(
               item => item.id === pinned.id && item.version === pinned.version,
             )}
             <option value={`${pinned.id}:${pinned.version}`} disabled>
               Accepted version {pinned.version}
             </option>
           {/if}
-          {#each templates as template (template.id)}
+          {#each availableTemplates as template (template.id)}
             <option value={`${template.id}:${template.version}`}>
               {template.name}
               · v{template.version}

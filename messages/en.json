@@ -2348,6 +2348,7 @@
   "translation_show_original": "AI-translated: show original",
   "translation_reading_language": "Reading language",
   "translation_fallback_help": "Missing values use Chinese and English fallbacks, then another available language.",
+  "display_templates_system": "System · Read only",
   "display_templates_title": "Display templates",
   "display_templates_new": "New template",
   "display_templates_name": "Name",

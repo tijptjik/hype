@@ -9,10 +9,15 @@ export type TemplateExpression =
   | { kind: 'literal'; value: string }
   | { kind: 'property'; path: string }
   | { kind: 'fallback'; left: TemplateExpression; right: TemplateExpression }
-  | { kind: 'call'; name: 'pair' | 'optional' | 'cases'; args: TemplateExpression[] }
+  | {
+      kind: 'call'
+      name: 'pair' | 'join' | 'optional' | 'cases'
+      args: TemplateExpression[]
+    }
 export type DisplayTemplate = {
   parts: (string | TemplateExpression)[]
   dependencies: string[]
+  components: { start: number; end: number; expression: TemplateExpression }[]
 }
 const MAX_SOURCE = 4096
 const MAX_NODES = 256
@@ -31,6 +36,7 @@ export function parseDisplayTemplate(source: string): DisplayTemplate {
   let nodes = 0
   const dependencies = new Set<string>()
   const parts: DisplayTemplate['parts'] = []
+  const components: DisplayTemplate['components'] = []
   const fail = (message: string): never => {
     throw new Error(`${message} at character ${position + 1}`)
   }
@@ -67,7 +73,7 @@ export function parseDisplayTemplate(source: string): DisplayTemplate {
       dependencies.add(name)
       return { kind: 'property', path: name }
     }
-    if (name !== 'pair' && name !== 'optional' && name !== 'cases')
+    if (name !== 'pair' && name !== 'join' && name !== 'optional' && name !== 'cases')
       return fail('Unknown function')
     position++
     const args: TemplateExpression[] = []
@@ -99,12 +105,14 @@ export function parseDisplayTemplate(source: string): DisplayTemplate {
     }
     if (start > position) parts.push(source.slice(position, start))
     position = start + 2
-    parts.push(expression(0))
+    const node = expression(0)
+    parts.push(node)
     whitespace()
     if (source.slice(position, position + 2) !== '}}') fail('Expected closing tag')
     position += 2
+    components.push({ start, end: position, expression: node })
   }
-  return { parts, dependencies: [...dependencies].sort() }
+  return { parts, dependencies: [...dependencies].sort(), components }
 }
 
 /** Distinguish absence from false and zero.
@@ -118,6 +126,7 @@ function present(value: TemplateScalar): boolean {
  * @param source Validated source text. @param values Flat scalar properties, without live database access.
  * @returns Plain text; callers must render as text, never HTML.
  * @remarks pair requires both sides; optional adds prefix/suffix only when present;
+ * join keeps either present side and inserts its separator only between two values;
  * cases distinguishes false from missing and treats other present values as true.
  */
 export function renderDisplayTemplate(source: string, values: TemplateValues): string {
@@ -136,8 +145,12 @@ export function renderDisplayTemplate(source: string, values: TemplateValues): s
         const first = evaluate(node.args[0])
         if (node.name === 'cases')
           return evaluate(node.args[!present(first) ? 3 : first === false ? 2 : 1])
-        if (!present(first)) return undefined
         const second = evaluate(node.args[1])
+        if (node.name === 'join')
+          return [first, second]
+            .filter(present)
+            .join(String(evaluate(node.args[2]) ?? ''))
+        if (!present(first)) return undefined
         if (node.name === 'pair')
           return present(second)
             ? `${first}${evaluate(node.args[2]) ?? ''}${second}`
