@@ -44,7 +44,7 @@ it('allows signed-in central reads without granting central publishing', async (
       definition: {
         name: 'Name',
         code: 'name',
-        target: 'feature',
+        target: 'feature' as const,
         locales: { en: '{{ feature.name }}' },
       },
     }),
@@ -73,7 +73,7 @@ it('lets only a superadmin publish a central template using a project prerequisi
     definition: {
       name: 'Breadline Donor',
       code: 'breadline-donor',
-      target: 'feature',
+      target: 'feature' as const,
       locales: { en: '{{ cases(properties.paid, "Paid", "", "") }}' },
     },
   }

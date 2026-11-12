@@ -1,4 +1,6 @@
 <script lang="ts">
+const sourceDescriptionId = $props.id()
+
 // SVELTE
 import { onDestroy, tick, untrack, type Snippet } from 'svelte'
 import { prefersReducedMotion } from 'svelte/motion'
@@ -1713,6 +1715,13 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
     event.preventDefault()
 }
 </script>
+
+<span id={`${sourceDescriptionId}-hype`} class="sr-only"
+  >{m.feature_search_source_hype()}</span
+>
+<span id={`${sourceDescriptionId}-saanseoi`} class="sr-only"
+  >{m.feature_search_source_saanseoi()}</span
+>
 {#snippet filterPanel()}
   <PlaceSearchFiltersPanel
     value={filters}
@@ -2202,7 +2211,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
             ? m.feature_search_address_restart()
             : m.feature_search_address_retry()}
         </button>
-      {:else if paging.nextCursor && !busy}
+      {:else if paging?.nextCursor && !busy}
         <button
           type="button"
           class="text-primary hover:bg-muted focus-visible:outline-primary rounded-md px-3 py-2 focus-visible:outline-2"
@@ -2360,10 +2369,10 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
             <button
               type="button"
               class="group flex min-h-20 min-w-0 flex-1 basis-64 items-center gap-3 rounded-md px-3 py-6 text-left outline-none"
-              aria-description={result.identity
-                ? m.feature_search_source_hype()
+              aria-describedby={result.identity
+                ? `${sourceDescriptionId}-hype`
                 : result.source
-                  ? m.feature_search_source_saanseoi()
+                  ? `${sourceDescriptionId}-saanseoi`
                   : undefined}
               data-result-id={result.id}
               data-result-number={index + 1}
