@@ -12,6 +12,10 @@ import {
 // SERVICES
 import { readLocationResetSources } from './locationReset'
 import { prepareRevisionCheck } from './revisionBatch'
+import {
+  displayTemplateDependencyGuard,
+  isDisplayTemplateAvailable,
+} from './displayTemplateScope'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { BatchItem } from 'drizzle-orm/batch'
@@ -56,6 +60,11 @@ export async function prepareFeatureDisplayTemplate(
   )
   if (!row) throw new Error('TEMPLATE_UNAVAILABLE_FOR_FEATURE')
   const definition = DisplayTemplateDefinitionSchema.parse(JSON.parse(row.definition))
+  if (
+    definition.target !== 'feature' ||
+    !(await isDisplayTemplateAvailable(db, definition, row))
+  )
+    throw new Error('TEMPLATE_PROPERTIES_UNAVAILABLE')
   const association = input.content.placement.location
   const sources =
     association && !input.acceptedLocation
@@ -75,6 +84,7 @@ export async function prepareFeatureDisplayTemplate(
   const titles = featureTemplateTitles(input.content, definition, location)
   // Scope and output writes are enclosed by the caller's accepted-revision concurrency fence.
   return [
+    prepareRevisionCheck(db, displayTemplateDependencyGuard(definition, row)),
     prepareRevisionCheck(
       db,
       sql`EXISTS(SELECT 1 FROM feature WHERE id=${input.featureId} AND organisationId=${row.organisationId} AND projectId=${row.projectId})`,

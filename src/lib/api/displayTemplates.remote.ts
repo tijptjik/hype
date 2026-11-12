@@ -23,7 +23,10 @@ import type { GuardedBaseContext } from './guarded.types'
 // 1. Catalogue scope authorization
 // 2. Registry queries and versioned writes
 
-const scope = z.strictObject({ organisationId: z.string().min(1).nullable() })
+const scope = z.strictObject({
+  organisationId: z.string().min(1).nullable(),
+  projectId: z.string().min(1).nullable().optional(),
+})
 
 /** Resolve editing scope from persisted Organisation authority.
  * @param ctx Authenticated context. @param organisationId Private owner or community scope.
@@ -47,12 +50,25 @@ async function authorizeTemplateScope(
   return sql`1`
 }
 
-/** Read templates available for authorized registry administration.
+/** Read central templates and an authorized Organisation catalogue.
  * @param input Organisation or community scope. @returns Current immutable versions.
  */
 export const getDisplayTemplates = guardedQuery(scope, async (input, ctx) => {
-  await authorizeTemplateScope(ctx, input.organisationId)
-  return listDisplayTemplates(ctx.db, input.organisationId)
+  if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
+  // Central definitions are inspectable without granting publication authority.
+  if (input.organisationId !== null)
+    await authorizeTemplateScope(ctx, input.organisationId)
+  if (
+    input.projectId &&
+    !(await ctx.db.get(
+      sql`SELECT id FROM project WHERE id=${input.projectId} AND (organisationId IS ${input.organisationId} OR ${input.organisationId === null && ctx.user.superAdmin ? 1 : 0}=1)`,
+    ))
+  )
+    error(400, 'INVALID_TEMPLATE_SCOPE')
+  return listDisplayTemplates(ctx.db, input.organisationId, {
+    projectId: input.projectId,
+    catalogue: true,
+  })
 })
 
 /** Publish a new central version without changing consumers' accepted versions.
@@ -66,9 +82,17 @@ export const publishDisplayTemplate = guardedCommand(
   }),
   async (input, ctx) => {
     const guard = await authorizeTemplateScope(ctx, input.organisationId)
+    if (
+      input.projectId &&
+      !(await ctx.db.get(
+        sql`SELECT id FROM project WHERE id=${input.projectId} AND (organisationId IS ${input.organisationId} OR ${input.organisationId === null && ctx.user.superAdmin ? 1 : 0}=1)`,
+      ))
+    )
+      error(400, 'INVALID_TEMPLATE_SCOPE')
     const saved = await saveDisplayTemplate(ctx.db, {
       ...input,
       actorId: ctx.user.id,
+      context: { projectId: input.projectId },
       guard,
     })
     if (!saved) error(409, 'TEMPLATE_VERSION_CHANGED')
@@ -102,7 +126,11 @@ export const getFeatureDisplayTemplate = guardedQuery(
       revisionId: current.revisionId,
       version: current.version,
       reference: current.content.profile.nameTemplate?.rule.registry ?? null,
-      templates: await listDisplayTemplates(ctx.db, row.organisationId),
+      templates: (
+        await listDisplayTemplates(ctx.db, row.organisationId, {
+          projectId: current.state.projectId,
+        })
+      ).filter(template => template.target === 'feature'),
     }
   },
 )

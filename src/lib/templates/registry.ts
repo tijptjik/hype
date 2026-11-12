@@ -71,6 +71,8 @@ export type DisplayTemplateReference = { id: string; version: number }
 export type DisplayTemplateRecord = DisplayTemplateDefinition &
   DisplayTemplateReference & {
     organisationId: string | null
+    projectId?: string | null
+    canEdit?: boolean
   }
 
 /** Render the requested locale without inventing a translation from another language.

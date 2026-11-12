@@ -820,3 +820,78 @@ it('preserves existing policies and immutable revisions when adding Organisation
   )
   expect(f.sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
 })
+
+it('rejects forged template assignments outside the prerequisite project and fences removed properties', async () => {
+  const f = fixture()
+  f.sqlite.exec(readFileSync('migrations/0234_display_template_registry.sql', 'utf8'))
+  f.sqlite.exec(`CREATE TABLE property(id TEXT,scope TEXT,projectId TEXT,organisationId TEXT,hubId TEXT,audience TEXT);
+    CREATE TABLE organisationProperty(organisationId TEXT,propertyId TEXT);
+    CREATE TABLE hubProperty(hubId TEXT,propertyId TEXT);
+    INSERT INTO property VALUES('caption','project','project',NULL,NULL,'public');
+    INSERT INTO project VALUES('other','org');
+    BEGIN; INSERT INTO displayTemplate VALUES('scoped','org','scoped',1);`)
+  f.sqlite.prepare('INSERT INTO displayTemplateRevision VALUES(?,1,?,?,?)').run(
+    'scoped',
+    JSON.stringify({
+      name: 'Scoped',
+      code: 'scoped',
+      target: 'feature',
+      locales: { en: '{{ properties.caption }}' },
+    }),
+    'editor',
+    new Date().toISOString(),
+  )
+  f.sqlite.exec('COMMIT')
+  const namingRules = {
+    [DEFAULT_FEATURE_TYPES[0].id]: {
+      base: 'feature' as const,
+      conditions: [],
+      registry: { id: 'scoped', version: 1 },
+    },
+  }
+  for (const scope of [
+    { type: 'organisation' as const, id: 'org' },
+    { type: 'project' as const, id: 'other' },
+  ]) {
+    const current = await readFeatureIntentPolicy(f.db, scope)
+    await expect(
+      prepareFeatureIntentPolicySave(f.db, {
+        scope,
+        actorId: 'editor',
+        version: current.version,
+        fingerprint: current.fingerprint,
+        definition: null,
+        namingRules,
+      }),
+    ).rejects.toThrow('unavailable')
+  }
+  const scope = { type: 'layer' as const, id: 'layer' }
+  const current = await readFeatureIntentPolicy(f.db, scope)
+  const statements = required(
+    await prepareFeatureIntentPolicySave(f.db, {
+      scope,
+      actorId: 'editor',
+      version: current.version,
+      fingerprint: current.fingerprint,
+      definition: null,
+      namingRules,
+    }),
+  )
+  expect(await executeRevisionBatch(f.db, sql`1`, statements)).not.toBeNull()
+  await expect(prepareFeatureNameDependencyChecks(f.db, 'project', [])).rejects.toThrow(
+    'requires a property',
+  )
+  const next = await readFeatureIntentPolicy(f.db, scope)
+  const stale = required(
+    await prepareFeatureIntentPolicySave(f.db, {
+      scope,
+      actorId: 'editor',
+      version: next.version,
+      fingerprint: next.fingerprint,
+      definition: null,
+      namingRules,
+    }),
+  )
+  f.sqlite.exec("DELETE FROM property WHERE id='caption'")
+  expect(await executeRevisionBatch(f.db, sql`1`, stale)).toBeNull()
+})

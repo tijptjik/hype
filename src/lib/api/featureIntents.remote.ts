@@ -5,7 +5,7 @@ import { z } from 'zod'
 // DRIZZLE
 import { sql, type SQL } from 'drizzle-orm'
 // REMOTE
-import { guardedQuery } from './server/guarded'
+import { guardedCommand, guardedQuery } from './server/guarded'
 // AUTHORIZATION
 import {
   authorizeHubUpdateForSubmission,
@@ -19,6 +19,8 @@ import {
   readFeatureIntentPolicy,
   type FeatureIntentScope,
 } from '#lib/db/services/featureIntentPolicy.js'
+import { DisplayTemplateDefinitionSchema } from '#lib/templates/registry.js'
+import { saveDisplayTemplate } from '#lib/db/services/displayTemplate.js'
 import { readFeatureNameExamples } from '#lib/db/services/featureNameExamples.js'
 // DOMAIN
 import {
@@ -143,7 +145,27 @@ export const getFeatureNameProperties = guardedQuery(
               )
             )?.projectId
           : null
-    if (!projectId) return []
+    if (!projectId) {
+      const { listOrganisationScopedProperties, listHubScopedProperties } =
+        await import('#lib/db/services/property.js')
+      const fields =
+        scope.type === 'organisation'
+          ? await listOrganisationScopedProperties(ctx.db, scope.id)
+          : await listHubScopedProperties(ctx.db, scope.id)
+      return fields
+        .filter(
+          field => isFeatureNameBooleanField(field) || isFeatureNameTextField(field),
+        )
+        .map(field => ({
+          id: field.id,
+          label: field.key,
+          component: field.component,
+          examples: {},
+          test: isFeatureNameBooleanField(field)
+            ? ('boolean' as const)
+            : ('hasValue' as const),
+        }))
+    }
     const { listResolvedProjectProperties } = await import(
       '#lib/db/services/property.js'
     )
@@ -204,6 +226,83 @@ export const getFeatureNamingTemplates = guardedQuery(
                 : sql`SELECT p.organisationId FROM layer l JOIN project p ON p.id=l.projectId WHERE l.id=${scope.id}`,
             )
     const { listDisplayTemplates } = await import('#lib/db/services/displayTemplate.js')
-    return listDisplayTemplates(ctx.db, owner?.organisationId ?? null)
+    const project =
+      scope.type === 'project'
+        ? scope.id
+        : scope.type === 'layer'
+          ? (
+              await ctx.db.get<{ projectId: string }>(
+                sql`SELECT projectId FROM layer WHERE id=${scope.id}`,
+              )
+            )?.projectId
+          : null
+    let canEdit = ctx.user.superAdmin
+    if (!canEdit && owner?.organisationId) {
+      try {
+        await requireLocationOrganisationManager(ctx, owner.organisationId)
+        canEdit = true
+      } catch {
+        // Policy editors may select or copy a shared template without editing its identity.
+        canEdit = false
+      }
+    }
+    return (
+      await listDisplayTemplates(ctx.db, owner?.organisationId ?? null, {
+        projectId: project,
+        hubId: scope.type === 'hub' ? scope.id : null,
+      })
+    )
+      .filter(template => template.target === 'feature')
+      .map(template => ({
+        ...template,
+        canEdit: canEdit && template.organisationId === (owner?.organisationId ?? null),
+      }))
+  },
+)
+
+/** Publish a reusable naming template from an authorized policy editor.
+ * @param input Policy context and immutable definition. @returns Saved reference.
+ * @remarks Publication never updates other consumers. Organisation ownership remains unchanged.
+ */
+export const publishFeatureNamingTemplate = guardedCommand(
+  z.strictObject({
+    scope: scopeSchema,
+    id: z.string().min(1),
+    expectedVersion: z.number().int().min(0),
+    definition: DisplayTemplateDefinitionSchema,
+  }),
+  async (input, ctx) => {
+    const guard = await authorizeSettings(ctx, input.scope)
+    const scope = input.scope
+    const owner =
+      scope.type === 'project' || scope.type === 'layer'
+        ? await ctx.db.get<{ organisationId: string; projectId: string }>(
+            scope.type === 'project'
+              ? sql`SELECT organisationId,id projectId FROM project WHERE id=${scope.id}`
+              : sql`SELECT p.organisationId,p.id projectId FROM layer l JOIN project p ON p.id=l.projectId WHERE l.id=${scope.id}`,
+          )
+        : {
+            organisationId: scope.type === 'organisation' ? scope.id : null,
+            projectId: null,
+          }
+    if (!owner || input.definition.target !== 'feature')
+      error(400, 'INVALID_TEMPLATE_SCOPE')
+    if (input.expectedVersion > 0 && owner.organisationId)
+      await requireLocationOrganisationManager(ctx, owner.organisationId)
+    // Community publication remains restricted to its existing registry authority.
+    if (owner.organisationId === null && !ctx.user.superAdmin)
+      error(403, 'INSUFFICIENT_ROLE')
+    const result = await saveDisplayTemplate(ctx.db, {
+      ...input,
+      organisationId: owner.organisationId,
+      actorId: ctx.user.id,
+      guard,
+      context: {
+        projectId: owner.projectId,
+        hubId: scope.type === 'hub' ? scope.id : null,
+      },
+    })
+    if (!result) error(409, 'TEMPLATE_VERSION_CHANGED')
+    return result
   },
 )

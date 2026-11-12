@@ -24,6 +24,13 @@ function fixture() {
     `PRAGMA foreign_keys=ON; CREATE TABLE organisation(id TEXT PRIMARY KEY); INSERT INTO organisation VALUES('a'),('b'); CREATE TABLE user(id TEXT PRIMARY KEY); INSERT INTO user VALUES('editor');`,
   )
   f.sqlite.exec(readFileSync('migrations/0234_display_template_registry.sql', 'utf8'))
+  f.sqlite.exec(`ALTER TABLE organisation ADD COLUMN hubId TEXT;
+    CREATE TABLE hub(id TEXT,code TEXT);
+    CREATE TABLE property(id TEXT,scope TEXT,projectId TEXT,organisationId TEXT,hubId TEXT,audience TEXT);
+    CREATE TABLE organisationProperty(organisationId TEXT,propertyId TEXT);
+    CREATE TABLE hubProperty(hubId TEXT,propertyId TEXT);
+    INSERT INTO property VALUES('caption','project','project-a',NULL,NULL,'public');`)
+
   return { ...f, db: f.db as unknown as Database }
 }
 const definition = {
@@ -153,4 +160,37 @@ describe('central template versions', () => {
       ),
     ).toBe('原名')
   })
+})
+
+it('publishes and lists project templates only where every dependency is available', async () => {
+  const f = fixture()
+  const scoped = {
+    ...input,
+    organisationId: 'a',
+    definition: {
+      ...definition,
+      target: 'feature' as const,
+      locales: { en: '{{ properties.caption }}' },
+    },
+  }
+  await expect(saveDisplayTemplate(f.db, scoped)).rejects.toThrow(
+    'TEMPLATE_PROPERTIES_UNAVAILABLE',
+  )
+  await expect(
+    saveDisplayTemplate(f.db, { ...scoped, context: { projectId: 'project-b' } }),
+  ).rejects.toThrow('TEMPLATE_PROPERTIES_UNAVAILABLE')
+  await expect(
+    saveDisplayTemplate(f.db, { ...scoped, context: { projectId: 'project-a' } }),
+  ).resolves.toEqual({ id: 'template', version: 1 })
+  expect(await listDisplayTemplates(f.db, 'a')).toEqual([])
+  expect(await listDisplayTemplates(f.db, 'a', { projectId: 'project-b' })).toEqual([])
+  expect(await listDisplayTemplates(f.db, 'b', { projectId: 'project-a' })).toEqual([])
+  expect(await listDisplayTemplates(f.db, 'a', { projectId: 'project-a' })).toEqual([
+    expect.objectContaining({ id: 'template', projectId: 'project-a' }),
+  ])
+  expect(await listDisplayTemplates(f.db, 'a', { catalogue: true })).toEqual([
+    expect.objectContaining({ id: 'template', projectId: 'project-a' }),
+  ])
+  f.sqlite.exec("DELETE FROM property WHERE id='caption'")
+  expect(await listDisplayTemplates(f.db, 'a', { projectId: 'project-a' })).toEqual([])
 })

@@ -12,6 +12,7 @@ import {
   featureIntentPolicyRevision,
 } from '../schema/featureIntentPolicy'
 // DOMAIN
+import { DisplayTemplateDefinitionSchema } from '#lib/templates/registry.js'
 import { expandLocationMatchingTypes } from '#lib/locations/taxonomy.js'
 import {
   DEFAULT_FEATURE_TYPES,
@@ -23,6 +24,11 @@ import {
   type FeatureNamingRules,
 } from '#lib/features/intents.js'
 // SERVICES
+import {
+  displayTemplateDependencyGuard,
+  displayTemplateDependencies,
+  isDisplayTemplateAvailable,
+} from './displayTemplateScope'
 import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch'
 import type { BatchItem } from 'drizzle-orm/batch'
 import {
@@ -370,6 +376,38 @@ export async function prepareFeatureIntentPolicySave(
       throw new FeatureIntentPolicyError(
         'The selected template version is unavailable in this scope.',
       )
+    const definitionRow = await db.get<{ definition: string }>(
+      sql`SELECT definition FROM displayTemplateRevision WHERE templateId=${reference.id} AND version=${reference.version}`,
+    )
+    if (!definitionRow)
+      throw new FeatureIntentPolicyError(
+        'The selected template version is unavailable.',
+      )
+    const definition = DisplayTemplateDefinitionSchema.parse(
+      JSON.parse(definitionRow.definition),
+    )
+    const context =
+      input.scope.type === 'project' || input.scope.type === 'layer'
+        ? await db.get<{ organisationId: string; projectId: string }>(
+            input.scope.type === 'project'
+              ? sql`SELECT organisationId,id projectId FROM project WHERE id=${input.scope.id}`
+              : sql`SELECT p.organisationId,p.id projectId FROM layer l JOIN project p ON p.id=l.projectId WHERE l.id=${input.scope.id}`,
+          )
+        : {
+            organisationId: input.scope.type === 'organisation' ? input.scope.id : null,
+            hubId: input.scope.type === 'hub' ? input.scope.id : null,
+          }
+    if (
+      !context ||
+      definition.target !== 'feature' ||
+      !(await isDisplayTemplateAvailable(db, definition, context))
+    )
+      throw new FeatureIntentPolicyError(
+        'The selected template requires properties unavailable in this scope.',
+      )
+    templateChecks.push(
+      prepareRevisionCheck(db, displayTemplateDependencyGuard(definition, context)),
+    )
     templateChecks.push(prepareRevisionCheck(db, guard))
   }
   const values = {
@@ -457,6 +495,7 @@ export async function prepareFeatureNameDependencyChecks(
   const current = await readFeatureIntentPolicy(db, { type: 'project', id: projectId })
   const proposed = projectTypes ?? current.types
   assertNameDependencies(proposed, properties)
+  const referencedTypes = [...proposed]
   const lineage = [...current.lineage]
   // A project field may also be referenced by a layer's independent naming override.
   const layers = await db.all<{ id: string }>(
@@ -472,16 +511,32 @@ export async function prepareFeatureNameDependencyChecks(
           ? resolveFeatureTypes(proposed, null, definition as string[])
           : (definition as FeatureType[])
     const rules = policy.namingRules ?? {}
-    assertNameDependencies(
-      catalogue.map(type => ({
-        ...type,
-        nameRule:
-          (Object.hasOwn(rules, type.id) ? rules[type.id] : undefined) ??
-          proposed.find(parent => parent.id === type.id)?.nameRule,
-      })),
-      properties,
-    )
+    const layerTypes = catalogue.map(type => ({
+      ...type,
+      nameRule:
+        (Object.hasOwn(rules, type.id) ? rules[type.id] : undefined) ??
+        proposed.find(parent => parent.id === type.id)?.nameRule,
+    }))
+    assertNameDependencies(layerTypes, properties)
+    referencedTypes.push(...layerTypes)
     lineage.push(...policy.lineage)
+  }
+  // Submitted catalogues must retain prerequisites of central templates as well as inline rules.
+  for (const type of referencedTypes) {
+    const reference = type.nameRule?.registry
+    if (!reference) continue
+    const row = await db.get<{ definition: string }>(
+      sql`SELECT definition FROM displayTemplateRevision WHERE templateId=${reference.id} AND version=${reference.version}`,
+    )
+    if (!row)
+      throw new FeatureIntentPolicyError('The selected naming template is unavailable.')
+    const dependencies = displayTemplateDependencies(
+      DisplayTemplateDefinitionSchema.parse(JSON.parse(row.definition)),
+    )
+    if (dependencies.some(id => !properties.some(property => property.id === id)))
+      throw new FeatureIntentPolicyError(
+        'A naming template still requires a property removed from this project.',
+      )
   }
   const unique = new Map(
     lineage.map(entry => [`${entry.scope.type}:${entry.scope.id}`, entry]),
