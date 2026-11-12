@@ -24,7 +24,13 @@ let {
   onSearch,
 }: {
   label: string
-  items: { value: string; label: string; keywords?: string; image?: string }[]
+  items: {
+    value: string
+    label: string
+    keywords?: string
+    image?: string
+    href?: string
+  }[]
   value?: string
   disabled?: boolean
   resetOnSelect?: boolean
@@ -66,12 +72,26 @@ const canCreate = $derived(Boolean(onCreate && query.trim() && matches.length ==
     in:fade={{ duration: prefersReducedMotion.current ? 0 : 140 }}
     class="group flex min-h-12 min-w-0 items-center gap-3 px-4 py-2"
   >
-    {#if selectedItem?.image}
-      <img src={selectedItem.image} alt="" class="size-7 object-contain">
+    {#if selectedItem?.href}
+      <a
+        href={selectedItem.href}
+        class="hover:text-primary focus-visible:outline-primary flex min-w-0 flex-1 items-center gap-3 rounded-md"
+      >
+        {#if selectedItem.image}
+          <img src={selectedItem.image} alt="" class="size-7 object-contain">
+        {:else}
+          <Building class="text-muted-foreground size-5 shrink-0" />
+        {/if}
+        <span class="min-w-0 text-sm">{selectedItem.label}</span>
+      </a>
     {:else}
-      <Building class="text-muted-foreground size-5 shrink-0" />
+      {#if selectedItem?.image}
+        <img src={selectedItem.image} alt="" class="size-7 object-contain">
+      {:else}
+        <Building class="text-muted-foreground size-5 shrink-0" />
+      {/if}
+      <span class="min-w-0 flex-1 text-sm">{selectedItem?.label ?? value}</span>
     {/if}
-    <span class="min-w-0 flex-1 text-sm">{selectedItem?.label ?? value}</span>
     <button
       type="button"
       aria-label="Clear group"

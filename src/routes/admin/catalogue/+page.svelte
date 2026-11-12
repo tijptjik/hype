@@ -799,6 +799,7 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
                             label: catalogueDisplayName(group),
                             keywords: group.code,
                             image: group.logo ?? undefined,
+                            href: catalogueHref(group),
                           }))}
                           disabled={busy}
                           onSearch={value => (groupSearch = value)}
@@ -873,18 +874,24 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
                       {@const group = groups.find(
                         group => group.id === content?.groupId,
                       )}
-                      <div class="flex items-center gap-3 px-4 py-2">
-                        {#if group?.logo}
-                          <img src={group.logo} alt="" class="size-7 object-contain">
-                        {:else}
-                          <Building class="text-muted-foreground size-5 shrink-0" />
-                        {/if}
-                        <span class="text-sm"
-                          >{group
-                            ? catalogueDisplayName(group)
-                            : content.groupId || 'None'}</span
+                      {#if group}
+                        <a
+                          href={catalogueHref(group)}
+                          class="hover:text-primary focus-visible:outline-primary flex items-center gap-3 rounded-md px-4 py-2"
                         >
-                      </div>
+                          {#if group.logo}
+                            <img src={group.logo} alt="" class="size-7 object-contain">
+                          {:else}
+                            <Building class="text-muted-foreground size-5 shrink-0" />
+                          {/if}
+                          <span class="text-sm">{catalogueDisplayName(group)}</span>
+                        </a>
+                      {:else}
+                        <div class="flex items-center gap-3 px-4 py-2">
+                          <Building class="text-muted-foreground size-5 shrink-0" />
+                          <span class="text-sm">{content.groupId || 'None'}</span>
+                        </div>
+                      {/if}
                     {/if}
                   </div>
                   {#if kind === 'brand'}
