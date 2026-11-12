@@ -31,18 +31,17 @@ def audit(path):
                 raise RuntimeError(owner + ' lacks its required translation table')
             if owner in inventory:
                 inventory[owner]['translations'] = translation
-        invalid = db.execute("SELECT count(*) FROM locationRevision WHERE json_type(facts,'$.i18n') IS NOT 'object' OR json_type(facts,'$.common.names') IS NOT NULL OR json_type(facts,'$.details.branch') IS NOT NULL OR json_type(facts,'$.details.format') IS NOT NULL OR json_type(facts,'$.common.location.address.fallbackDisplay') IS NOT NULL OR json_type(facts,'$.common.location.address.displayOverrides') IS NOT NULL").fetchone()[0]
-        if invalid:
-            raise RuntimeError(str(invalid) + ' Location revisions have a noncanonical translation shape')
-        mismatch = db.execute("SELECT count(*) FROM locationRevision r,json_each(r.facts,'$.i18n') t LEFT JOIN locationRevisionI18n i ON i.revisionId=r.id AND i.locale=t.key WHERE i.revisionId IS NULL OR i.name IS NOT json_extract(t.value,'$.name') OR i.branch IS NOT json_extract(t.value,'$.branch') OR i.format IS NOT json_extract(t.value,'$.format') OR i.displayAddress IS NOT json_extract(t.value,'$.displayAddress') OR i.displayAddressOverride IS NOT json_extract(t.value,'$.displayAddressOverride')").fetchone()[0]
-        extra = db.execute("SELECT count(*) FROM locationRevisionI18n i JOIN locationRevision r ON r.id=i.revisionId WHERE NOT EXISTS(SELECT 1 FROM json_each(r.facts,'$.i18n') t WHERE t.key=i.locale)").fetchone()[0]
-        if mismatch or extra:
-            raise RuntimeError('Location translation projection differs from revision content')
-        catalogue = db.execute("SELECT count(*) FROM identityCatalogue c JOIN identityCatalogueRevision r ON r.catalogueId=c.id AND r.version=c.version,json_each(r.content,'$.i18n') t LEFT JOIN identityCatalogueI18n i ON i.catalogueId=c.id AND i.locale=t.key WHERE i.catalogueId IS NULL OR i.name IS NOT json_extract(t.value,'$.name')").fetchone()[0]
-        catalogue_extra = db.execute("SELECT count(*) FROM identityCatalogueI18n i JOIN identityCatalogue c ON c.id=i.catalogueId JOIN identityCatalogueRevision r ON r.catalogueId=c.id AND r.version=c.version WHERE NOT EXISTS(SELECT 1 FROM json_each(r.content,'$.i18n') t WHERE t.key=i.locale)").fetchone()[0]
-        if catalogue or catalogue_extra:
-            raise RuntimeError('Catalogue translation projection differs from selected content')
-        return {'tablesInspected': len(tables), 'translationTables': [t for t in tables if t.endswith('I18n')], 'locationRevisions': db.execute('SELECT count(*) FROM locationRevision').fetchone()[0], 'locationTranslations': db.execute('SELECT count(*) FROM locationRevisionI18n').fetchone()[0], 'canonicalLocationContent': True, 'projectionMatches': True, 'inventory': inventory}
+        invalid = db.execute("SELECT count(*) FROM locationRevision WHERE json_type(facts,'$.i18n') IS NOT NULL OR json_type(facts,'$.common.names') IS NOT NULL OR json_type(facts,'$.details.branch') IS NOT NULL OR json_type(facts,'$.details.format') IS NOT NULL").fetchone()[0]
+        catalogue = db.execute("SELECT count(*) FROM identityCatalogueRevision WHERE json_type(content,'$.i18n') IS NOT NULL").fetchone()[0]
+        if invalid or catalogue:
+            raise RuntimeError('Translated values duplicated in revision JSON')
+        if db.execute('SELECT count(*) FROM locationRevisionWriteScope').fetchone()[0] or db.execute('SELECT count(*) FROM identityCatalogueWriteScope').fetchone()[0]:
+            raise RuntimeError('Incomplete revision write scope')
+        if db.execute('PRAGMA foreign_key_check').fetchone():
+            raise RuntimeError('Translation or revision foreign-key violation')
+        if db.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
+            raise RuntimeError('Database integrity failure')
+        return {'tablesInspected': len(tables), 'translationTables': [t for t in tables if t.endswith('I18n')], 'locationRevisions': db.execute('SELECT count(*) FROM locationRevision').fetchone()[0], 'locationTranslations': db.execute('SELECT count(*) FROM locationRevisionI18n').fetchone()[0], 'canonicalLocationContent': True, 'singleTranslationStore': True, 'inventory': inventory}
     finally:
         db.close()
 

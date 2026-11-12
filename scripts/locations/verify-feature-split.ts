@@ -81,12 +81,19 @@ function main(): void {
       if (changed || added.n !== plans.length)
         throw new Error(`Unexpected migration changes: ${table}`)
     }
+    const revisionTable = db
+      .query(
+        "SELECT 1 FROM sqlite_schema WHERE name='locationRevisionContent' AND type='view'",
+      )
+      .get()
+      ? 'locationRevisionContent'
+      : 'locationRevision'
     const query =
       db.query(`SELECT fp.locationId,fp.factsRevisionId,fp.locationRevisionId,fp.acceptedOverrides AS overrides,
       p.ownerOrganisationId,p.state,p.ssId,r.facts,r.origin,
       (SELECT count(*) FROM featureLocationHistory h WHERE h.featureId=fp.featureId) AS historyCount
       FROM featureLocation fp JOIN location p ON p.id=fp.locationId
-      JOIN locationRevision r ON r.id=fp.factsRevisionId AND r.locationId=fp.locationId
+      JOIN ${revisionTable} r ON r.id=fp.factsRevisionId AND r.locationId=fp.locationId
       WHERE fp.featureId=?`)
     for (const plan of plans) {
       const row = query.get(plan.featureId) as {

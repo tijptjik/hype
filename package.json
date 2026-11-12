@@ -29,6 +29,7 @@
     "db:dump:cf:preview": "bun run scripts/dev/export-d1.ts preview",
     "db:dump:cf:prod": "bun run scripts/dev/export-d1.ts prod",
     "db:prepare:local": "bun run db:rebuild:local --apply",
+    "db:rebuild:guided": "bun run scripts/dev/rebuild-guided.ts",
     "db:rebuild:local": "bun --env-file=.dev.vars run scripts/dev/rebuild.ts",
     "breadline:db:inspect": "bun --env-file=.dev.vars run scripts/breadline/inspect-source.ts",
     "breadline:db:sync": "bun --env-file=.dev.vars run scripts/breadline/sync-source.ts",

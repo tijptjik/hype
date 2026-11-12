@@ -13,6 +13,7 @@ import { resolve } from 'node:path'
 import { Database } from 'bun:sqlite'
 // REBUILD
 import { prepareLocalRevisions } from './prepare-local-revisions'
+import { recoverRebuildMedia } from './recover-rebuild-media'
 import { backfillPreparedMessaging } from '../messaging/rebuild-stage'
 import { restoreD1Export } from './restore-d1-export'
 import { convertExistingLocations } from './convert-locations'
@@ -77,9 +78,16 @@ async function main(): Promise<void> {
   let messagingOrganisation: string | undefined
   let identityReview: string | undefined
   let resume: string | undefined
+  let recoveryManifest: string | undefined
   const args = process.argv.slice(2)
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--apply') apply = true
+    if (
+      args[i] === '--recovery-manifest' &&
+      args[i + 1] &&
+      !args[i + 1].startsWith('--')
+    )
+      recoveryManifest = resolve(args[++i])
+    else if (args[i] === '--apply') apply = true
     else if (args[i] === '--no-mocks') mocks = false
     else if (args[i] === '--resume' && args[i + 1] && !args[i + 1].startsWith('--'))
       resume = resolve(args[++i])
@@ -99,7 +107,7 @@ async function main(): Promise<void> {
       identityReview = resolve(args[++i])
     else
       throw new Error(
-        'Usage: rebuild.ts [--apply] [--resume prepared-directory] [--inputs retained-export-directory] [--no-mocks] [--identity-review private-review.json] [--messaging-organisation CODE]',
+        'Usage: rebuild.ts [--apply] [--resume prepared-directory] [--inputs retained-export-directory] [--no-mocks] [--recovery-manifest private-manifest.json] [--identity-review private-review.json] [--messaging-organisation CODE]',
       )
   }
   if (
@@ -517,8 +525,15 @@ async function main(): Promise<void> {
     }
     step = 'revision-baselines'
     console.info('Initializing verified revision baselines…')
-    if (!receipt.revisions)
+    if (!receipt.revisions) {
+      if (recoveryManifest)
+        receipt.mediaRecoveryCohorts = await recoverRebuildMedia(
+          dbPath,
+          directory,
+          recoveryManifest,
+        )
       receipt.revisions = await prepareLocalRevisions(dbPath, directory)
+    }
     step = 'dependent-migrations'
     await operation('migrate', resolve(directory, 'dependent-migrations.json'))
     step = 'translation-schema-audit'
@@ -572,6 +587,8 @@ async function main(): Promise<void> {
   } catch (error) {
     receipt.status = 'failed'
     receipt.failedStep = step
+    receipt.error = error instanceof Error ? error.message : String(error)
+    console.error(`Rebuild receipt: ${resolve(directory, 'receipt.json')}`)
     throw error
   } finally {
     writeFileSync(

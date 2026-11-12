@@ -60,16 +60,28 @@ def rows(db: sqlite3.Connection, query: str, values: tuple = ()) -> list[dict]:
 
 
 def predicate(row: dict) -> str:
-    """Fence every captured column, including NULLs and exact JSON text."""
-    return " AND ".join(
-        f"{identifier(key)} IS {literal(value)}" for key, value in row.items()
-    )
+    """Fence every captured column; assembled facts compare JSON values, raw evidence stays byte-exact."""
+    checks = []
+    for key, value in row.items():
+        if key == 'facts' and value is not None:
+            # Read views reconstruct object keys in a stable but different order from authored input.
+            left = f"SELECT fullkey,type,atom FROM json_tree({identifier(key)})"
+            right = f"SELECT fullkey,type,atom FROM json_tree({literal(value)})"
+            checks.append(f"NOT EXISTS({left} EXCEPT {right}) AND NOT EXISTS({right} EXCEPT {left})")
+        else:
+            checks.append(f"{identifier(key)} IS {literal(value)}")
+    return " AND ".join(checks)
 
 
 def snapshot(db: sqlite3.Connection, table: str, where: str) -> dict:
     """Capture a complete unordered relational subset for SQL stale-data fences."""
     values = rows(db, f"SELECT * FROM {identifier(table)} WHERE {where}")
     return {"table": table, "where": where, "rows": sorted(values, key=canonical)}
+
+
+def revision_table(db):
+    """Select the atomic content boundary only after its migration is installed."""
+    return 'locationRevisionContent' if db.execute("SELECT 1 FROM sqlite_schema WHERE name='locationRevisionContent' AND type='view'").fetchone() else 'locationRevision'
 
 
 def reconcile(db: sqlite3.Connection) -> dict:
@@ -80,7 +92,7 @@ def reconcile(db: sqlite3.Connection) -> dict:
         "associations": db.execute("SELECT count(*) FROM featureLocation").fetchone()[
             0
         ],
-        "revisions": db.execute("SELECT count(*) FROM locationRevision").fetchone()[0],
+        "revisions": db.execute(f"SELECT count(*) FROM {revision_table(db)}").fetchone()[0],
         "refreshItems": db.execute(
             "SELECT count(*) FROM locationRefreshItem"
         ).fetchone()[0],
@@ -248,7 +260,7 @@ def plan(db: sqlite3.Connection, actor: str) -> dict:
         location = rows(db, "SELECT * FROM location WHERE id=?", (location_id,))[0]
         heads = rows(
             db,
-            "SELECT * FROM locationRevision WHERE locationId=? ORDER BY version DESC LIMIT 1",
+            f"SELECT * FROM {revision_table(db)} WHERE locationId=? ORDER BY version DESC LIMIT 1",
             (location_id,),
         )
         baseline = heads[0] if heads else None
@@ -264,7 +276,7 @@ def plan(db: sqlite3.Connection, actor: str) -> dict:
         ]
         source_revisions = rows(
             db,
-            "SELECT id,ssId,origin FROM locationRevision WHERE locationId=? AND (origin='saanseoi' OR ssId IS NOT NULL)",
+            f"SELECT id,ssId,origin FROM {revision_table(db)} WHERE locationId=? AND (origin='saanseoi' OR ssId IS NOT NULL)",
             (location_id,),
         )
         after = next(iter(wanted)) if len(wanted) == 1 else None
@@ -414,6 +426,7 @@ def plan(db: sqlite3.Connection, actor: str) -> dict:
             },
         },
     }
+    result["revisionTable"] = revision_table(db)
     result["planId"] = digest(result)
     return result
 
@@ -498,6 +511,9 @@ def statements(document: dict, rollback: bool = False) -> list[str]:
         """Reject a stale assertion before authoring any type changes."""
         return f"INSERT INTO _location_kind_seed_guard SELECT CASE WHEN {expression} THEN 1 ELSE 0 END"
 
+    revision_target = document.get("revisionTable", "locationRevision")
+    if revision_target not in ("locationRevision", "locationRevisionContent"):
+        raise ValueError("Unknown revision storage")
     output = ["CREATE TABLE _location_kind_seed_guard(ok INTEGER NOT NULL CHECK(ok=1))"]
     for fence in document["fences"]:
         table, where = identifier(fence["table"]), fence["where"]
@@ -514,9 +530,9 @@ def statements(document: dict, rollback: bool = False) -> list[str]:
         baseline = decision["expectedBaseline"]
         target = f"locationId={literal(old['id'])}"
         original_head = (
-            f"EXISTS(SELECT 1 FROM locationRevision WHERE {predicate(baseline)} AND version=(SELECT max(version) FROM locationRevision WHERE {target}))"
+            f"EXISTS(SELECT 1 FROM {revision_target} WHERE {predicate(baseline)} AND version=(SELECT max(version) FROM {revision_target} WHERE {target}))"
             if baseline
-            else f"NOT EXISTS(SELECT 1 FROM locationRevision WHERE {target})"
+            else f"NOT EXISTS(SELECT 1 FROM {revision_target} WHERE {target})"
         )
         if decision["decision"] != "supported":
             output.append(
@@ -541,20 +557,20 @@ def statements(document: dict, rollback: bool = False) -> list[str]:
         predecessor = forward if rollback else baseline
         initial = (
             f"EXISTS(SELECT 1 FROM location WHERE {predicate(before)}) AND "
-            f"EXISTS(SELECT 1 FROM locationRevision WHERE {predicate(predecessor)} AND version=(SELECT max(version) FROM locationRevision WHERE {target})) AND "
-            f"NOT EXISTS(SELECT 1 FROM locationRevision WHERE id={literal(revision['id'])})"
+            f"EXISTS(SELECT 1 FROM {revision_target} WHERE {predicate(predecessor)} AND version=(SELECT max(version) FROM {revision_target} WHERE {target})) AND "
+            f"NOT EXISTS(SELECT 1 FROM {revision_target} WHERE id={literal(revision['id'])})"
         )
         applied = (
             f"EXISTS(SELECT 1 FROM location WHERE {predicate(after)}) AND "
-            f"EXISTS(SELECT 1 FROM locationRevision WHERE {predicate(revision)} AND version=(SELECT max(version) FROM locationRevision WHERE {target}))"
+            f"EXISTS(SELECT 1 FROM {revision_target} WHERE {predicate(revision)} AND version=(SELECT max(version) FROM {revision_target} WHERE {target}))"
         )
         output.append(check(f"({initial}) OR ({applied})"))
         columns = ",".join(identifier(key) for key in revision)
         values = ",".join(literal(value) for value in revision.values())
         changes.extend(
             [
-                f"INSERT INTO locationRevision({columns}) SELECT {values} WHERE {initial}",
-                f"UPDATE location SET {assignments} WHERE {predicate(before)} AND EXISTS(SELECT 1 FROM locationRevision WHERE {predicate(revision)})",
+                f"INSERT INTO {revision_target}({columns}) SELECT {values} WHERE {initial}",
+                f"UPDATE location SET {assignments} WHERE {predicate(before)} AND EXISTS(SELECT 1 FROM {revision_target} WHERE {predicate(revision)})",
                 check(applied),
             ]
         )

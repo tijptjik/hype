@@ -61,6 +61,8 @@ def local_migration_sql(db, name, sql):
         sql = re.sub(r"INSERT INTO location \(id,kind,ownerOrganisationId,state\) SELECT ('(?:''|[^'])*'),'establishment',", r"INSERT INTO location (id,kind,class,ownerOrganisationId,state) SELECT \1,'operational','establishment',", sql)
         sql = sql.replace("l.kind='building'", "l.kind='built' AND l.class='building'")
         sql = sql.replace("l.kind='establishment'", "l.kind='operational' AND l.class='establishment'")
+        if db is not None and db.execute("SELECT 1 FROM sqlite_schema WHERE name='locationRevisionContent'").fetchone():
+            sql = re.sub(r'\b(INTO|FROM|JOIN) locationRevision\b', r'\1 locationRevisionContent', sql)
         return sql
     if name != '0169_audit_column_order.sql':
         return sql
