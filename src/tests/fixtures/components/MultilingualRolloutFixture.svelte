@@ -1,10 +1,12 @@
 <script lang="ts">
 import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
+import LocationLocaleField from '#lib/bits/patterns/forms/localLocationAddress/LocationLocaleField.svelte'
 import DraftLocationNameFields from '#lib/bits/patterns/forms/featureLocation/DraftLocationNameFields.svelte'
 import FormI18nCapabilities from '#lib/bits/patterns/forms/formI18nSection/components/FormI18nCapabilities.svelte'
 setResponsiveCtx()
 let names = $state<Record<string, string>>({ en: 'Community kitchen', 'zh-Hant': '' })
 let labels = $state<Record<string, string>>({ en: 'Manage bakeries', 'zh-Hant': '' })
+let branch = $state<Record<string, string>>({ en: 'Central', 'zh-Hant': '' })
 let saved = $state(0)
 const locales = ['en', 'zh-Hant']
 const fields = {
@@ -30,6 +32,7 @@ const fields = {
   data-saved={saved}
   data-names={JSON.stringify(names)}
   data-labels={JSON.stringify(labels)}
+  data-branch={JSON.stringify(branch)}
 >
   <form
     onsubmit={event => {
@@ -51,6 +54,18 @@ const fields = {
         }}
         onChange={next => {
           names = next
+        }}
+      />
+      <LocationLocaleField
+        label="Branch"
+        value={branch}
+        localeState={{
+          selectedLocales: locales,
+          visibleLocales: ['en'],
+          expanded: false,
+        }}
+        onChange={value => {
+          branch = value
         }}
       />
     </section>

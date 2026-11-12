@@ -1,4 +1,9 @@
 <script lang="ts">
+// SHARED CONTENT LOCALES
+import type { LocaleSelection } from '#lib/bits/custom/localeControls/localeControls.types.js'
+let multilingualExpanded = $state(false)
+let contentLocaleSelection = $state<LocaleSelection | null>(null)
+
 import { translationPromptAttributes } from '#lib/forms/translationReview.js'
 import FeatureIntentSettings from '#lib/bits/patterns/forms/featureIntent/FeatureIntentSettings.svelte'
 // LOADING PRESENTATION
@@ -73,7 +78,6 @@ import {
   prepareSubmitPayloadMeta,
   revalidateAfterSubmitAttempt,
   removeUserRoleSelection,
-  resolveOptimisticHeaderFacets,
   resolveOptimisticHeaderStatus,
   resolveFacetTabsWithIssues,
   syncAdminFacetFromHash,
@@ -2709,11 +2713,8 @@ $effect(() => {
         optimisticProjectData?.code,
       m.deft_mealy_ant_vent(),
     )
-  const displayFacets = resolveOptimisticHeaderFacets(
-    isHeaderTransitionSettled,
-    resolvedFacetTabsWithIssues,
-    optimisticHeaderState,
-  )
+  // Destination tabs are known before entity data settles.
+  const displayFacets = resolvedFacetTabsWithIssues
   const facetKey = Array.isArray(displayFacets)
     ? displayFacets
         .map(facet => `${facet.ref}:${facet.hasIssues === true ? '1' : '0'}`)
@@ -2985,6 +2986,8 @@ $effect(() => {
       <FormSurface>
         <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         <FormI18nDescriptorProfile
+          bind:expanded={multilingualExpanded}
+          bind:localeSelection={contentLocaleSelection}
           onReveal={() =>
             navigateOnAdmin(adminCtx, FirstClassResource.project, projectRef, 'core')}
           form={formCtx.form}
@@ -3232,6 +3235,8 @@ $effect(() => {
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
         <!-- Empty fields fill the facet; populated fields retain trailing scroll clearance. -->
         <FormFieldsSection
+          bind:localeSelection={contentLocaleSelection}
+          bind:multilingual={multilingualExpanded}
           onReveal={() =>
             navigateOnAdmin(adminCtx, FirstClassResource.project, projectRef, 'fields')}
           class="shrink-0"
@@ -3320,6 +3325,8 @@ $effect(() => {
             >
           {/if}
           <FeatureIntentSettings
+            bind:multilingual={multilingualExpanded}
+            bind:localeSelection={contentLocaleSelection}
             draft={formCtx.form.fields.value().data?.featureIntentSettings as
               | string
               | undefined}

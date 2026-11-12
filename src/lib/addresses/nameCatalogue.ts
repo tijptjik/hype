@@ -4,6 +4,7 @@ import { createPlaceAddressMatcher, parseAddressContent } from '@saanseoi/addres
 import { z } from 'zod'
 // SOURCES
 import { loadSaanseoiNames, loadBuildingNames } from '#lib/sources/saanseoi.js'
+import { SOURCE_TTL_MS } from '#lib/sources/cache.js'
 // ADDRESS
 import { ADDRESS_LOCALES, getAddressLocale, setAddressOverride } from './featureAddress'
 import { prepareLocalLocationAddress } from './locationDraft'
@@ -21,11 +22,33 @@ export const AddressNameSchema = z.object({
   divisionCodes: z.array(z.string()),
 })
 export type AddressName = z.infer<typeof AddressNameSchema>
+// Retain the adapted vocabulary too: locale pickers share one immutable inventory.
+const catalogues = new Map<
+  'streets' | 'buildings',
+  { expiresAt: number; pending: Promise<AddressName[]> }
+>()
 /** Load provider names through the shared daily dataset cache.
  * @param family Controlled vocabulary to retrieve.
  * @returns Named records only; absent translations are never fabricated.
  */
-export async function loadAddressNames(
+export function loadAddressNames(
+  family: 'streets' | 'buildings',
+): Promise<AddressName[]> {
+  const cached = catalogues.get(family)
+  if (cached && cached.expiresAt > Date.now()) return cached.pending
+  const pending = adaptAddressNames(family).catch(error => {
+    if (catalogues.get(family)?.pending === pending) catalogues.delete(family)
+    throw error
+  })
+  catalogues.set(family, { expiresAt: Date.now() + SOURCE_TTL_MS, pending })
+  return pending
+}
+
+/** Adapt one source inventory for all mounted locale pickers.
+ * @param family Controlled vocabulary to retrieve.
+ * @returns Named records; callers replace the inventory rather than mutating it.
+ */
+async function adaptAddressNames(
   family: 'streets' | 'buildings',
 ): Promise<AddressName[]> {
   const bundle = family === 'buildings' ? await loadBuildingNames() : null

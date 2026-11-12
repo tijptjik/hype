@@ -53,13 +53,15 @@ export async function prepareFeatureLocationAssociationCapture(
       if ((current?.version ?? null) !== association.expectedRevision)
         throw new Error('Accepted Feature association changed')
       const sameIdentity = current?.locationId === association.locationId
-      // Policy patches use SQLite's exact JSON merge semantics, matching the actual write.
+      // Initial inserts retain explicit nulls; updates use SQLite JSON merge semantics.
       const policy = association.acceptancePolicy
-        ? JSON.parse(
-            (await db.get<{ value: string }>(sql`SELECT json_patch(
-            ${JSON.stringify(current?.acceptancePolicy ?? {})},${JSON.stringify(association.acceptancePolicy)}) AS value`))!
-              .value,
-          )
+        ? association.expectedRevision === null
+          ? association.acceptancePolicy
+          : JSON.parse(
+              (await db.get<{ value: string }>(sql`SELECT json_patch(
+            ${JSON.stringify(sameIdentity ? (current?.acceptancePolicy ?? {}) : {})},${JSON.stringify(association.acceptancePolicy)}) AS value`))!
+                .value,
+            )
         : sameIdentity
           ? current.acceptancePolicy
           : null

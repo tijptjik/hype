@@ -120,7 +120,7 @@ function select(next: string): void {
             value={option.value}
             disabled={disabled || busy}
             textValue={option.label}
-            class="data-highlighted:bg-base-200 grid cursor-pointer grid-cols-[22px_minmax(0,1fr)_16px] items-center gap-3 rounded-lg px-3 py-2.5 outline-none data-disabled:cursor-not-allowed data-disabled:opacity-45"
+            class="data-highlighted:bg-base-content/6 grid cursor-pointer grid-cols-[22px_minmax(0,1fr)_16px] items-center gap-3 rounded-lg px-3 py-2.5 outline-none data-disabled:cursor-not-allowed data-disabled:opacity-45"
           >
             <option.icon class="size-[22px]" aria-hidden="true" />
             <span class="min-w-0">

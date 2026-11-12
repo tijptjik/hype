@@ -1,3 +1,5 @@
+// I18N
+import { resolveContentField } from '#lib/i18n/automatic.js'
 // TYPES
 import type { IdentityCatalogueRecord } from './identityCatalogue'
 
@@ -23,7 +25,8 @@ export function catalogueLogoFallbacks(record: IdentityCatalogueRecord): string[
  * @param record Catalogue identity. @returns Concise English display name.
  */
 export function catalogueDisplayName(record: IdentityCatalogueRecord): string {
-  const name = record.i18n.en.name
+  const name =
+    resolveContentField(record.i18n, 'name', 'en').value ?? record.code ?? record.id
   return record.kind === 'group'
     ? name.replace(/(?:,?\s+(?:Co\.?\s*,?\s*)?(?:Limited|Ltd\.?))$/i, '')
     : name

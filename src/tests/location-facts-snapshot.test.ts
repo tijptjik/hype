@@ -408,3 +408,19 @@ it('stores localized identity and address labels under locale-first i18n', () =>
   })
   expect(readLocationFacts(snapshot)).toEqual(input)
 })
+
+it('retains the accepted catalogue logo through the Location facts codec', () => {
+  const logo = '/api/identity-catalogue/logos/abc-123'
+  const input = {
+    ...facts,
+    brands: [
+      {
+        identifiers: { catalogueId: 'brand', catalogueVersion: '2' },
+        names: { en: 'Brand' },
+        logo,
+      },
+    ],
+  }
+  const snapshot = createLocationFactsSnapshot(input, 'establishment')
+  expect(readLocationFacts(snapshot).brands).toEqual(input.brands)
+})

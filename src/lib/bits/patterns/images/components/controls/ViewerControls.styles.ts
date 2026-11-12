@@ -27,7 +27,7 @@ export const VIEWER_CONTROLS_BUTTON_CLASSES = cx(
 )
 
 export const VIEWER_CONTROLS_TOGGLE_DISABLED_CLASSES = cx(
-  'cursor-not-allowed',
+  'cursor-default',
   'opacity-45',
   TRANSITION_CLASSES,
 )

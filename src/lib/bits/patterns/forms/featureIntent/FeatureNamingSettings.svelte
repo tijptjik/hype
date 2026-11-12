@@ -9,6 +9,7 @@ import {
 } from '#lib/api/featureIntents.remote.js'
 // COMPONENTS
 import DisplayTemplateEditor from '../displayTemplate/DisplayTemplateEditor.svelte'
+import { typeInputAppearance, typeSelectAppearance } from './featureTypeEditor.styles'
 import { Button } from '#lib/bits/core/index.js'
 import { TextInput, SelectField } from '#lib/bits/custom/form/index.js'
 // DOMAIN
@@ -186,6 +187,8 @@ async function save(): Promise<void> {
 
 <div class="grid min-w-0 gap-4" aria-busy={loading || busy}>
   <SelectField
+    {...typeSelectAppearance}
+    contentClass="z-[1010]!"
     label="Naming template"
     triggerAttrs={{ 'aria-label': 'Naming template' }}
     value={inheriting
@@ -232,11 +235,14 @@ async function save(): Promise<void> {
       creating = false
     }}
   />
-  <p class="text-muted-foreground text-sm">
-    Templates can use feature name and properties, and linked location name and
-    attributes. Neither name is required. Templates using project properties are only
-    available in that project.
-  </p>
+  <details class="text-muted-foreground text-xs">
+    <summary class="cursor-pointer">Template scope and naming inputs</summary>
+    <p class="mt-2">
+      Names are optional. Templates using project properties are only available in that
+      project. Use a Feature template here, even when all its inputs come from the
+      linked Location.
+    </p>
+  </details>
   {#if failed}
     <p role="alert" class="text-destructive text-sm">{failed}</p>
     <Button
@@ -247,40 +253,47 @@ async function save(): Promise<void> {
     />
   {/if}
   {#if !disabled && !creating}
-    {#if selected?.canEdit}
+    <div class="flex flex-wrap gap-2">
+      {#if selected?.canEdit}
+        <Button
+          type="button"
+          text="Edit template"
+          style="outline"
+          disabled={loading || busy}
+          onClick={() => create(true)}
+        />
+      {/if}
       <Button
         type="button"
-        text="Edit template"
+        text={selected ? 'Create a template from this one' : 'Create template'}
         style="outline"
         disabled={loading || busy}
-        onClick={() => create(true)}
+        onClick={() => create()}
       />
-    {/if}
-    <Button
-      type="button"
-      text={selected ? 'Create a template from this one' : 'Create template'}
-      style="outline"
-      disabled={loading || busy}
-      onClick={() => create()}
-    />
+    </div>
   {/if}
   {#if creating}
-    <TextInput
-      id={`${uid}-name`}
-      name=""
-      label="Template name"
-      value={name}
-      onValueChange={value => (name = value)}
-      disabled={busy}
-    />
-    <SelectField
-      label="Language"
-      triggerAttrs={{ 'aria-label': 'Language' }}
-      value={locale}
-      items={Object.keys(expressions).map(tag => ({ value: tag, label: tag }))}
-      onValueChange={value => (locale = value)}
-      disabled={busy}
-    />
+    <div class="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_9rem]">
+      <TextInput
+        {...typeInputAppearance}
+        id={`${uid}-name`}
+        name=""
+        label="Template name"
+        value={name}
+        onValueChange={value => (name = value)}
+        disabled={busy}
+      />
+      <SelectField
+        {...typeSelectAppearance}
+        contentClass="z-[1010]!"
+        label="Language"
+        triggerAttrs={{ 'aria-label': 'Language' }}
+        value={locale}
+        items={Object.keys(expressions).map(tag => ({ value: tag, label: tag }))}
+        onValueChange={value => (locale = value)}
+        disabled={busy}
+      />
+    </div>
     <DisplayTemplateEditor
       value={expressions[locale] ?? ''}
       onChange={value => (expressions = { ...expressions, [locale]: value })}
@@ -288,9 +301,9 @@ async function save(): Promise<void> {
       {locale}
       disabled={busy}
     />
-    <p class="text-muted-foreground text-sm">
-      Saving publishes a reusable template version in the template editor. Accept the
-      naming rule to use it here; other assignments keep their accepted versions.
+    <p class="text-muted-foreground text-xs">
+      Save the template, then accept it here. Existing assignments keep their accepted
+      version.
     </p>
     <div class="flex flex-wrap gap-2">
       <Button

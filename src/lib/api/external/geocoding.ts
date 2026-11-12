@@ -95,6 +95,8 @@ export type GeocodeInput = { lng: number; lat: number } | { address: string }
 export type GeocodeOptions = {
   /** Cancel obsolete interactive lookups without removing the request timeout. */
   signal?: AbortSignal
+  /** Circle constraint for forward text search, applied before pagination. */
+  near?: { coordinates: [number, number]; radius: number }
   maxDistance?: number
   limit?: number
   /** Discovery markers use each Address's actual geometry, not the Feature pin. */
@@ -310,6 +312,12 @@ async function requestGeocodeCandidates(
     ...(options.footprint && 'lng' in validated
       ? { footprint: JSON.stringify(options.footprint) }
       : {}),
+    ...(options.near
+      ? {
+          nearLng: String(options.near.coordinates[0]),
+          nearLat: String(options.near.coordinates[1]),
+        }
+      : {}),
     ...(options.paginate ? { paginate: 'true', locatedOnly: 'true' } : {}),
     ...(options.cursor ? { cursor: options.cursor } : {}),
     ...(options.releaseSet ? { releaseSet: options.releaseSet } : {}),
@@ -329,7 +337,7 @@ async function requestGeocodeCandidates(
         .finite()
         .min(0)
         .max(50000)
-        .parse(options.maxDistance ?? 500),
+        .parse(options.near?.radius ?? options.maxDistance ?? 500),
     ),
   }).toString()
   const headers: Record<string, string> = { Accept: 'application/vnd.api+json' }

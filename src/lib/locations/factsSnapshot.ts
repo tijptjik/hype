@@ -68,6 +68,11 @@ export const LocationFactsSnapshotSchema = z.discriminatedUnion('kind', [
         brands: z.array(
           z.strictObject({
             identifiers: z.record(z.string(), z.string()),
+            logo: z
+              .string()
+              .regex(/^\/api\/identity-catalogue\/logos\/[a-f0-9-]+$/)
+              .nullable()
+              .optional(),
             i18n: z.record(z.string(), z.strictObject({ name: z.string() })),
           }),
         ),
@@ -123,6 +128,7 @@ export function createLocationFactsSnapshot(
   if (kind === 'establishment') {
     details.brands = facts.brands.map(brand => ({
       identifiers: brand.identifiers,
+      ...(brand.logo !== undefined ? { logo: brand.logo } : {}),
       i18n: Object.fromEntries(
         Object.entries(brand.names).map(([locale, name]) => [locale, { name }]),
       ),
@@ -197,6 +203,7 @@ export function readLocationFacts(value: unknown): LocationFacts {
             ...snapshot.details,
             brands: snapshot.details.brands.map(brand => ({
               identifiers: brand.identifiers,
+              ...(brand.logo !== undefined ? { logo: brand.logo } : {}),
               names: Object.fromEntries(
                 Object.entries(brand.i18n).map(([locale, row]) => [locale, row.name]),
               ),
@@ -334,6 +341,7 @@ export function prepareLocationFactsForWrite(
               ...snapshot.details,
               brands: snapshot.details.brands.map(brand => ({
                 identifiers: brand.identifiers,
+                ...(brand.logo !== undefined ? { logo: brand.logo } : {}),
                 names: Object.fromEntries(
                   Object.entries(brand.i18n).map(([locale, row]) => [locale, row.name]),
                 ),

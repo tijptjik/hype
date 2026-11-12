@@ -48,7 +48,7 @@ const resolvedContentClass = $derived(
 )
 const resolvedItemClass = $derived(
   cx(
-    'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-base-content outline-none transition hover:bg-base-200 focus-visible:bg-base-200 data-[highlighted]:bg-base-200 data-[disabled]:pointer-events-none data-[disabled]:opacity-35',
+    'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-base-content outline-none transition hover:bg-base-content/6 focus-visible:bg-base-content/6 data-[highlighted]:bg-base-content/6 data-[disabled]:pointer-events-none data-[disabled]:opacity-35',
     itemClass,
   ),
 )

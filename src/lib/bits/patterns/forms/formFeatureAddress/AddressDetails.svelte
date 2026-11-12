@@ -4,10 +4,16 @@ import { MultilingualReview } from '#lib/forms/multilingualReview.svelte.js'
 import MultilingualReviewPanel from '../translationReview/MultilingualReviewPanel.svelte'
 import TranslationSuggestion from '../translationReview/TranslationSuggestion.svelte'
 
+// LINKED FIELD CONTROLS
+import LinkedFieldsToolbar from '../linkedFields/LinkedFieldsToolbar.svelte'
+import LinkedFieldToggle from '../linkedFields/LinkedFieldToggle.svelte'
+import { getLinkedFields } from '../linkedFields/linkedFields.svelte.js'
+const linkedFields = getLinkedFields()
+
 // ADDRESS LOCALES
 import { addressLocaleLabel } from './addressLocaleLabel.js'
 // SVELTE
-import { onMount, onDestroy, tick, type Snippet } from 'svelte'
+import { onDestroy, tick, type Snippet } from 'svelte'
 import { slide, type SlideParams, type TransitionConfig } from 'svelte/transition'
 import { flip } from 'svelte/animate'
 import { cubicInOut } from 'svelte/easing'
@@ -43,11 +49,7 @@ import {
   type PhaseEditorType,
 } from '#lib/addresses/phaseEditor.js'
 import { parseStreetNumber, streetNumberIssue } from '#lib/addresses/streetNumber.js'
-import {
-  completeStreetNames,
-  loadAddressNames,
-  setAddressName,
-} from '#lib/addresses/nameCatalogue.js'
+import { loadAddressNames, setAddressName } from '#lib/addresses/nameCatalogue.js'
 import { normalizeNameSearch } from '#lib/addresses/nameSearch.js'
 import AddressDisplayField from './AddressDisplayField.svelte'
 import { ADDRESS_BLOCK_TYPES } from '@saanseoi/address/content'
@@ -308,19 +310,24 @@ const hasAccessibility = $derived(
   ),
 )
 const accessibilityVisible = $derived(
-  !accessibilityDismissed &&
+  locationKind !== 'address' &&
+    !accessibilityDismissed &&
     Boolean(
       (accessibilityLocationId &&
         ((isEditing && accessibilityAdded) || hasAccessibility)) ||
-        (isEditing && onAccessibilityDraftChange && accessibilityDraft !== undefined),
+        (isEditing &&
+          onAccessibilityDraftChange &&
+          (accessibilityAdded || accessibilityDraft !== undefined)),
     ),
 )
 const canAddAccessibility = $derived(
-  Boolean(
-    isEditing &&
-      (accessibilityLocationId || onAccessibilityDraftChange) &&
-      !accessibilityVisible,
-  ),
+  locationKind !== 'address' &&
+    Boolean(
+      isEditing &&
+        ((accessibilityLocationId && accessibilityRequest?.current !== null) ||
+          onAccessibilityDraftChange) &&
+        !accessibilityVisible,
+    ),
 )
 // Adding a part changes only this editor; navigating to another Location cannot carry an unsaved panel across.
 $effect(() => {
@@ -821,7 +828,7 @@ const availableFields = $derived(
   EDITABLE_ADDRESS_FIELDS.filter(
     field =>
       (!hideDisplayAddress || field !== 'formattedAddress') &&
-      (showAccessHints || field !== 'accessHint') &&
+      ((showAccessHints && locationKind !== 'address') || field !== 'accessHint') &&
       (show3dAddressOptions ||
         !['floorExpression', 'unitExpression', 'unitPortion'].includes(field)),
   ),
@@ -830,9 +837,6 @@ const visibleFields = $derived(
   availableFields.filter(
     field =>
       field === 'formattedAddress' ||
-      (field === 'buildingName' &&
-        Boolean(identityFields) &&
-        locationKind === 'establishment') ||
       addedFields.includes(field) ||
       Object.keys(address.overrides).some(
         tag => !addressLocaleKey(tag) && Boolean(additionalLocaleValue(tag, field)),
@@ -1071,21 +1075,17 @@ const visibleGroups = $derived(
     }))
     .filter(group => group.fields.length),
 )
-let streetCatalogue = $state<AddressName[]>([])
-$effect(() => {
-  if (!isEditing || !streetCatalogue.length) return
-  const completed = completeStreetNames(address, streetCatalogue)
-  if (completed !== address) onChange(completed)
-})
-// Warm both vocabularies when the address page loads, even before optional fields are enabled.
-onMount(() => {
-  for (const family of ['streets', 'buildings'] as const)
-    void loadAddressNames(family)
-      .then(rows => {
-        if (translationActive && family === 'streets') streetCatalogue = rows
-      })
-      .catch(error => console.error(`Could not preload ${family} names`, error))
-})
+/** Invalidate pending building-detail responses before an authored name edit.
+ * @returns Nothing; no Location association is changed.
+ */
+function cancelBuildingNameResolution(): void {
+  buildingRequest++
+  buildingLoading = false
+  buildingFailed = false
+  buildingSelection = null
+  selectedBuilding = null
+}
+
 /** Translate the Part from one source into its empty languages without replacing edits made in flight.
  * @param source Source language selected beside the Part heading.
  * @returns Resolves after all missing translations have been applied together.
@@ -1294,7 +1294,9 @@ function blockTypeFirst(locale: LocaleKey): boolean {
       {floorNotice}
     </SimpleTooltip>
   {/if}
-  {#if !replacingNames[`${locale}-${field}`] ||
+  {#if field === 'buildingName' ||
+    field === 'streetName' ||
+    !replacingNames[`${locale}-${field}`] ||
     !addressComponentValue(address, locale, field)}
     {#if !translations &&
       field === 'blockExpression' &&
@@ -1337,49 +1339,77 @@ function blockTypeFirst(locale: LocaleKey): boolean {
       {@const emptySource = locales.every(
         target => !addressComponentValue(original, target, field),
       )}
-      <button
-        use:reverseTabStop
-        type="button"
-        aria-label={field !== 'accessHint' && unchanged && !emptySource
-          ? m.filters__clear()
-          : m.feature_address_reset()}
-        class="text-muted-foreground hover:text-primary focus-visible:outline-primary flex size-7 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-focus-within/subsection:opacity-100 group-hover/subsection:opacity-100 focus-visible:opacity-100 focus-visible:outline-2"
-        onclick={() => {
-          if (field === 'buildingNumberExpression') {
-            numberRequest++
-            numberCaveat = null
-          }
-          addedFields = addedFields.filter(item => item !== field)
-          if (field === 'floorExpression') {
-            explicitFloorType = undefined
-            floorDraft = undefined
-            floorNotice = ''
-            clearTimeout(floorInputTimer)
-            clearTimeout(floorNoticeTimer)
-          }
-          for (const target of locales) {
-            delete typeOverrides[`${target}-${field}`]
-            delete referenceDrafts[`${target}-${field}`]
-            clearTimeout(referenceTimers.get(`${target}-${field}`))
-            if (field === 'phaseExpression') {
-              delete phaseTypes[target]
-              delete phaseDrafts[target]
-              clearTimeout(phaseTimers.get(target))
-            }
-          }
-          onChange(
-            unchanged && !emptySource
-              ? clearAddressComponent(address, field)
-              : original,
-          )
-        }}
-      >
-        {#if field !== 'accessHint' && unchanged && !emptySource}
+      {@const nameField = field === 'buildingName' || field === 'streetName'}
+      {@const dismissEmptyName =
+        nameField && unchanged && emptySource && addedFields.includes(field)}
+      {#if nameField &&
+        locales.some(target => addressComponentValue(address, target, field))}
+        <button
+          type="button"
+          aria-label={`${m.filters__clear()}: ${labels[field]}`}
+          data-tooltip={m.address_name_clear_all()}
+          class="text-muted-foreground hover:text-primary focus-visible:outline-primary flex size-7 shrink-0 items-center justify-center rounded focus-visible:outline-2"
+          onclick={() => {
+            translationGeneration++
+            if (field === 'buildingName') cancelBuildingNameResolution()
+            addedFields = [...new Set([...addedFields, field])]
+            onChange(clearAddressComponent(address, field))
+          }}
+        >
           <XIcon class="size-4" />
-        {:else}
-          <ResetIcon class="size-4" />
-        {/if}
-      </button>
+        </button>
+      {/if}
+      {#if !nameField || !unchanged || dismissEmptyName}
+        <button
+          use:reverseTabStop
+          type="button"
+          aria-label={dismissEmptyName ||
+          (!nameField && field !== 'accessHint' && unchanged && !emptySource)
+            ? m.filters__clear()
+            : m.feature_address_reset()}
+          class="text-muted-foreground hover:text-primary focus-visible:outline-primary flex size-7 shrink-0 items-center justify-center rounded focus-visible:outline-2 {nameField
+            ? ''
+            : 'opacity-0 transition-opacity group-focus-within/subsection:opacity-100 group-hover/subsection:opacity-100 focus-visible:opacity-100'}"
+          onclick={() => {
+            if (nameField) translationGeneration++
+            if (field === 'buildingName') cancelBuildingNameResolution()
+            if (field === 'buildingNumberExpression') {
+              numberRequest++
+              numberCaveat = null
+            }
+            addedFields = addedFields.filter(item => item !== field)
+            if (field === 'floorExpression') {
+              explicitFloorType = undefined
+              floorDraft = undefined
+              floorNotice = ''
+              clearTimeout(floorInputTimer)
+              clearTimeout(floorNoticeTimer)
+            }
+            for (const target of locales) {
+              delete typeOverrides[`${target}-${field}`]
+              delete referenceDrafts[`${target}-${field}`]
+              clearTimeout(referenceTimers.get(`${target}-${field}`))
+              if (field === 'phaseExpression') {
+                delete phaseTypes[target]
+                delete phaseDrafts[target]
+                clearTimeout(phaseTimers.get(target))
+              }
+            }
+            onChange(
+              !nameField && unchanged && !emptySource
+                ? clearAddressComponent(address, field)
+                : original,
+            )
+          }}
+        >
+          {#if dismissEmptyName ||
+            (!nameField && field !== 'accessHint' && unchanged && !emptySource)}
+            <XIcon class="size-4" />
+          {:else}
+            <ResetIcon class="size-4" />
+          {/if}
+        </button>
+      {/if}
     {/if}
   {/if}
 {/snippet}
@@ -1434,6 +1464,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
 
 {#if splitColumns && isEditing}
   <div
+    data-address-parts-panel
     class="relative flex min-w-0 flex-col transition-opacity duration-250 motion-reduce:transition-none {independentScroll
       ? 'min-h-0'
       : ''}"
@@ -1534,13 +1565,15 @@ function blockTypeFirst(locale: LocaleKey): boolean {
       ? 'mb-2!'
       : ''}"
   >
-    <h2 class="text-lg font-semibold">
+    <h2 class="shrink-0 text-lg font-semibold">
       {splitColumns ? m.feature_location_title() : m.feature_address_title()}
     </h2>
-    <div class="flex min-w-0 flex-wrap items-center gap-2">
+    <div class="flex min-w-0 flex-[1_1_30rem] flex-wrap items-center justify-end gap-2">
       {@render identityControls?.()}
       {#if showLocaleToolbar}
         <LocaleToolbar
+          class="min-w-0 flex-[1_1_10rem]"
+          horizontal
           {selectedLocales}
           visibleLocales={addressLocaleState.visibleLocales}
           expanded={translations}
@@ -1552,6 +1585,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
           onChange={change => changeLocaleState({ ...change, expanded: translations })}
         />
       {/if}
+      <LinkedFieldsToolbar />
       {@render identityInfo?.()}
     </div>
   </div>
@@ -1630,7 +1664,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
       {labels}
     />
     {@render emptyAddressHelp()}
-    {#if showAccessHints}
+    {#if showAccessHints && locationKind !== 'address'}
       {#each shownLocales as tag (tag)}
         {@const hint = accessHintValue(tag)}
         {#if hint}
@@ -1710,10 +1744,19 @@ function blockTypeFirst(locale: LocaleKey): boolean {
           {@render emptyAddressHelp()}
         </div>
       {/if}
+      {#if linkedFields?.available() &&
+        linkedFields.expanded &&
+        linkedFields.visible('location')}
+        <h3 class="col-span-6 flex items-center gap-2 text-sm font-semibold">
+          {m.feature_address_title()}
+          <LinkedFieldToggle field="location" label={m.feature_address_title()} />
+        </h3>
+      {/if}
       {#each visibleGroups as { fields: group, title }, groupIndex (group[0])}
         {@const streetWithNumber =
           group.includes('streetName') && group.includes('buildingNumberExpression')}
         <div
+          hidden={linkedFields && !linkedFields.visible('location')}
           data-address-group={group[0]}
           class="col-span-6 min-w-0 {groupIndex
             ? 'border-t border-border/40 pt-6'
@@ -2196,21 +2239,16 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                                           : 'buildings'}
                                         {value}
                                         label={labels[field]}
-                                        onClear={() => {
-                                          if (field === 'buildingName') {
-                                            buildingRequest++
-                                            buildingLoading = false
-                                            buildingFailed = false
-                                            buildingSelection = null
-                                            selectedBuilding = null
-                                          }
+                                        onCustom={text => {
                                           translationGeneration++
+                                          if (field === 'buildingName')
+                                            cancelBuildingNameResolution()
                                           onChange(
                                             setAddressOverride(
                                               address,
                                               locale,
                                               field,
-                                              null,
+                                              text,
                                             ),
                                           )
                                         }}
@@ -2725,7 +2763,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
     <div id={`${uid}-accessibility`}>
       {#key accessibilityLocationId}
         <LocationAccessibility
-          readOnly={!isEditing}
+          readOnly={true}
           onRemove={isEditing
             ? () => {
                 accessibilityDismissed = true

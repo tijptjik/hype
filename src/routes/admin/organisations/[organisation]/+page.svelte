@@ -1,4 +1,7 @@
 <script lang="ts">
+import type { LocaleSelection } from '#lib/bits/custom/localeControls/localeControls.types.js'
+let contentLocaleSelection = $state<LocaleSelection | null>(null)
+
 import { translationPromptAttributes } from '#lib/forms/translationReview.js'
 import LocationUpdatePolicyForm from '#lib/bits/patterns/forms/locationUpdatePolicy/LocationUpdatePolicyForm.svelte'
 import { DEFAULT_PROJECT_LOCATION_POLICY } from '#lib/locations/model.js'
@@ -54,7 +57,6 @@ import {
   guardUserRolesDesync,
   revalidateAfterSubmitAttempt,
   removeUserRoleSelection,
-  resolveOptimisticHeaderFacets,
   resolveOptimisticHeaderStatus,
   resolveFacetTabsWithIssues,
   syncAdminFacetFromHash,
@@ -784,6 +786,20 @@ function onAddCapabilityLocale(locale: string): void {
   revalidateAfterProgrammaticChange()
 }
 
+// Languages selected in Profile or Fields also become editable capability labels.
+$effect(() => {
+  if (!isEditing || !contentLocaleSelection) return
+  const missing = contentLocaleSelection.selectedLocales.filter(locale =>
+    selectedCapabilityKeys.some(
+      key =>
+        formCapabilityDefinitions[key]?.i18n?.[contentFormKey(locale)] === undefined,
+    ),
+  )
+  untrack(() => {
+    for (const locale of missing) onAddCapabilityLocale(locale)
+  })
+})
+
 /**
  * Fills empty capability labels without overwriting edits made during translation.
  * @param sourceLocale - Locale to translate from.
@@ -1398,6 +1414,7 @@ $effect(() => {
         optimisticOrganisationData?.code,
       m.any_small_midge_aim(),
     )
+  // Destination tabs are known before entity data settles.
   // A scope toggle keeps the same navigation while the organisation profile reloads.
   const returningFromChangelog =
     historyScopeReturnPath === `${page.url.pathname}/changelog`
@@ -1406,11 +1423,7 @@ $effect(() => {
     !isCurrentRefSettled &&
     optimisticHeaderState.facets.length > 0
       ? optimisticHeaderState.facets.filter(facet => facet.ref !== 'changelog')
-      : resolveOptimisticHeaderFacets(
-          isCurrentRefSettled,
-          resolvedFacetTabsWithIssues,
-          optimisticHeaderState,
-        )
+      : resolvedFacetTabsWithIssues
   const facetKey = Array.isArray(displayFacets)
     ? displayFacets
         .map(facet => `${facet.ref}:${facet.hasIssues === true ? '1' : '0'}`)
@@ -1590,7 +1603,7 @@ $effect(() => {
             </div>
           </FormSurface>
         {:else if isCapabilitiesFacet}
-          <OrganisationCapabilitiesSkeleton />
+          <OrganisationCapabilities.Skeleton />
         {:else if !isCoreFacet}
           <ResourceFormSkeleton
             resource="organisation"
@@ -1682,6 +1695,7 @@ $effect(() => {
       <FormSurface>
         <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         <FormI18nDescriptorProfile
+          bind:localeSelection={contentLocaleSelection}
           onReveal={() =>
             navigateOnAdmin(
               adminCtx,
@@ -1770,6 +1784,7 @@ $effect(() => {
     >
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
         <OrganisationCapabilities
+          bind:localeSelection={contentLocaleSelection}
           bind:multilingual={multilingualExpanded}
           {selectedCapabilityKeys}
           {capabilitySearchOptions}
@@ -1868,6 +1883,7 @@ $effect(() => {
       <FormSurface class={`${resourceTabsStyles} flex min-h-0 flex-1 flex-col`}>
         <!-- Empty fields fill the facet; populated fields retain trailing scroll clearance. -->
         <FormFieldsSection
+          bind:localeSelection={contentLocaleSelection}
           onReveal={() =>
             navigateOnAdmin(
               adminCtx,

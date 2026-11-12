@@ -2,6 +2,7 @@
 import { z } from 'zod'
 import { FeatureLocationOverridesSchema, LocationFactsSchema } from './validation'
 // DOMAIN
+import { SHARED_CONTACT_FIELDS } from './sharedCorrection'
 import { CURATION_IDENTITY_FIELDS } from './curationIdentity'
 import { fillsMissingLocationValue } from './missingValue'
 import { equalLocationValue } from './baseline'
@@ -245,8 +246,7 @@ export function planLocationAdoption(input: {
         }) &&
         equalLocationValue(oldFacts.entity, next.entity) &&
         equalLocationValue(effectiveBefore.footprint, effectiveCandidate.footprint),
-      communications: ['phoneNumber', 'websites', 'socials'].every(key => {
-        const field = key as 'phoneNumber' | 'websites' | 'socials'
+      communications: SHARED_CONTACT_FIELDS.every(field => {
         return (
           equalLocationValue(effectiveBefore[field], effectiveCandidate[field]) ||
           (!overrides[field] &&
@@ -269,7 +269,7 @@ export function planLocationAdoption(input: {
           addressContent(comparedAfter.address),
         ),
     },
-    communicationsChanged: ['phoneNumber', 'websites', 'socials'].some(
+    communicationsChanged: SHARED_CONTACT_FIELDS.some(
       field =>
         !equalLocationValue(
           effectiveBefore[field as keyof EffectiveLocationFacts],

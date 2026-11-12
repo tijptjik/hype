@@ -1,4 +1,8 @@
 <script lang="ts">
+// LINKED FIELD CONTROLS
+import { getLinkedFields } from '../linkedFields/linkedFields.svelte.js'
+const linkedFields = getLinkedFields()
+
 import ExpandIcon from 'virtual:icons/proicons/full-screen-maximize'
 import CollapseIcon from 'virtual:icons/proicons/full-screen-minimize'
 import { m } from '#lib/i18n.js'
@@ -28,6 +32,7 @@ import type { FormFeatureFieldProps } from './formFeatureField.types'
 
 let {
   property,
+  idPrefix = 'feature-field',
   localeKey,
   value = '',
   checked = false,
@@ -103,13 +108,18 @@ const fieldClass = $derived(
 )
 </script>
 
-<article class={fieldClass}>
+<article
+  hidden={property.key === 'phoneNumber' &&
+    linkedFields &&
+    !linkedFields.visible('phoneNumber')}
+  class={fieldClass}
+>
   <!-- Keep label spacing local; legacy field-card sizing must not stretch this stack. -->
   <div class="flex min-w-0 flex-col gap-2 px-6 py-4">
     <div class="flex min-h-0 min-w-0 shrink-0 items-center justify-between gap-3">
       <div class="flex min-w-0 items-center gap-2">
         <FieldIcon class="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
-        <Label for={`feature-field-${property.id}`} text={title} {isEditing} />
+        <Label for={`${idPrefix}-${property.id}`} text={title} {isEditing} />
         <span class="bits-feature-field__subtitle">{property.key}</span>
       </div>
       {#if isEditing && property.dataType === 'link'}
@@ -164,7 +174,7 @@ const fieldClass = $derived(
     >
       {#if !isEditing && !hasValue && !isToggleField}
         <TextInput
-          id={`feature-field-${property.id}`}
+          id={`${idPrefix}-${property.id}`}
           value=""
           placeholder="—"
           isEditing={false}
@@ -193,7 +203,7 @@ const fieldClass = $derived(
         <FeatureFieldPhone
           bind:this={phoneControl}
           headerAction={true}
-          id={`feature-field-${property.id}`}
+          id={`${idPrefix}-${property.id}`}
           value={value == null ? '' : String(value)}
           {placeholder}
           {isEditing}
@@ -210,7 +220,7 @@ const fieldClass = $derived(
             .join(' ')}
         >
           <FeatureFieldSelect
-            id={`feature-field-${property.id}`}
+            id={`${idPrefix}-${property.id}`}
             value={value ?? ''}
             {placeholder}
             {options}
@@ -234,7 +244,7 @@ const fieldClass = $derived(
           class:justify-center={isEditing}
         >
           <FeatureFieldToggle
-            id={`feature-field-${property.id}`}
+            id={`${idPrefix}-${property.id}`}
             {checked}
             {isEditing}
             onChange={nextValue => onChange(nextValue)}
@@ -252,7 +262,7 @@ const fieldClass = $derived(
         >
           <FeatureFieldTextArea
             isPhone={property.component === 'PhoneField'}
-            id={`feature-field-${property.id}`}
+            id={`${idPrefix}-${property.id}`}
             value={value ?? ''}
             {placeholder}
             {isEditing}
@@ -276,7 +286,7 @@ const fieldClass = $derived(
                 ? 'number'
                 : 'text'}
             isPhone={property.component === 'PhoneField'}
-            id={`feature-field-${property.id}`}
+            id={`${idPrefix}-${property.id}`}
             value={value ?? ''}
             {placeholder}
             {isEditing}

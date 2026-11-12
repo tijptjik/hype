@@ -12,6 +12,7 @@ import {
   authorizeFeatureUpdateForSubmission,
 } from '#lib/api/services/authz/index.js'
 // DB
+import { getFeatureSyncPolicy } from '#lib/db/services/featureSyncPolicy.js'
 import { readFeaturePresentationPolicy } from '#lib/db/services/featurePresentationPolicy.js'
 import { rejectedFeatureLocationSourceIds } from '#lib/db/services/locationIdentityRejection.js'
 import { probeProjectQuery } from '#lib/db/services/project.js'
@@ -154,6 +155,29 @@ export const getFeatureLocation = guardedQuery(
     })
     if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
     return getAcceptedFeatureLocation(ctx.db, input.featureId, probe.projectId)
+  },
+)
+
+/** Read the effective sync policy for a Feature the caller can read.
+ * @param input Feature identity.
+ * @returns Inherited policy and provenance; no policy-management permission is needed.
+ * @remarks This read-only projection does not grant permission to change parent policies.
+ */
+export const getFeatureLocationSyncPolicy = guardedQuery(
+  z.strictObject({ featureId: z.string().min(1) }),
+  async (input, ctx) => {
+    const probe = await probeFeatureQuery(ctx.db, {
+      ref: input.featureId,
+      refKey: 'id',
+    })
+    if (!probe) return null
+    const decision = authorizeFeatureReadForProbe({
+      user: ctx.user,
+      userRoles: ctx.userRoles,
+      probe,
+    })
+    if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
+    return getFeatureSyncPolicy(ctx.db, input.featureId, probe.projectId)
   },
 )
 
@@ -694,38 +718,73 @@ export const importFeatureLocationCandidate = guardedCommand(
       },
     })
     if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
-    const env = ctx.event.locals.platform?.env
-    const apiKey = env?.SAANSEOI_API_KEY ?? env?.VITE_SAANSEOI_API_KEY
-    if (!apiKey?.trim()) error(503, 'LOCATION_SEARCH_UNAVAILABLE')
-    const client = {
-      ...locationSourceEndpoint(apiKey),
-      fetch: ctx.event.fetch,
-    }
-    let found: Awaited<ReturnType<typeof findSaanSeoiPlace>>
-    try {
-      const publication = await discoverLocationPublication(client)
-      found = await findSaanSeoiPlace(client, publication.pin, input.ssId)
-    } catch {
-      error(502, 'LOCATION_SOURCE_LOOKUP_FAILED')
-    }
-    if (!found) error(404, 'LOCATION_SOURCE_NOT_FOUND')
-    if (
-      found.projection.ssId !== input.ssId ||
-      found.projection.releaseId !== input.resourceReleaseId
-    )
-      error(409, 'LOCATION_SOURCE_CHANGED')
-    let candidate: Awaited<ReturnType<typeof persistLocationCandidate>>
-    try {
-      candidate = await persistLocationCandidate(
-        ctx.db,
-        probe.projectId,
-        found.projection,
-      )
-    } catch {
-      error(409, 'LOCATION_CANDIDATE_UNAVAILABLE')
-    }
-    if (!candidate) error(409, 'LOCATION_CANDIDATE_UNAVAILABLE')
-    return candidate
+    return importPinnedLocationCandidate(input, probe.projectId, ctx)
+  },
+)
+
+/** Import a pinned provider candidate after the caller has authorized its Project.
+ * @param input Exact source identity and release. @param projectId Authorized Project.
+ * @param ctx Request context. @returns Imported Location candidate.
+ */
+async function importPinnedLocationCandidate(
+  input: { ssId: string; resourceReleaseId: string },
+  projectId: string,
+  ctx: GuardedBaseContext,
+): Promise<
+  Extract<
+    NonNullable<Awaited<ReturnType<typeof persistLocationCandidate>>>,
+    { status: 'ready' }
+  >
+> {
+  const env = ctx.event.locals.platform?.env
+  const apiKey = env?.SAANSEOI_API_KEY ?? env?.VITE_SAANSEOI_API_KEY
+  if (!apiKey?.trim()) error(503, 'LOCATION_SEARCH_UNAVAILABLE')
+  const client = {
+    ...locationSourceEndpoint(apiKey),
+    fetch: ctx.event.fetch,
+  }
+  let found: Awaited<ReturnType<typeof findSaanSeoiPlace>>
+  try {
+    const publication = await discoverLocationPublication(client)
+    found = await findSaanSeoiPlace(client, publication.pin, input.ssId)
+  } catch {
+    error(502, 'LOCATION_SOURCE_LOOKUP_FAILED')
+  }
+  if (!found) error(404, 'LOCATION_SOURCE_NOT_FOUND')
+  if (
+    found.projection.ssId !== input.ssId ||
+    found.projection.releaseId !== input.resourceReleaseId
+  )
+    error(409, 'LOCATION_SOURCE_CHANGED')
+  let candidate: Awaited<ReturnType<typeof persistLocationCandidate>>
+  try {
+    candidate = await persistLocationCandidate(ctx.db, projectId, found.projection)
+  } catch {
+    error(409, 'LOCATION_CANDIDATE_UNAVAILABLE')
+  }
+  if (candidate?.status !== 'ready') error(409, 'LOCATION_CANDIDATE_UNAVAILABLE')
+  return candidate
+}
+
+/** Import a reviewed Location before its new Feature exists.
+ * @param input Owning Project and pinned provider identity. @returns Stable Location identity.
+ * @remarks Organisation management is required before reading the provider or writing a baseline.
+ */
+export const importDraftLocationCandidate = guardedCommand(
+  z.strictObject({
+    projectId: z.string().min(1),
+    ssId: z.string().min(1).max(200),
+    resourceReleaseId: z.string().min(1).max(200),
+  }),
+  async (input, ctx) => {
+    if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
+    const project = await probeProjectQuery(ctx.db, {
+      ref: input.projectId,
+      refKey: 'id',
+    })
+    if (!project) error(404, 'PROJECT_NOT_FOUND')
+    await requireLocationOrganisationManager(ctx, project.organisationId)
+    return importPinnedLocationCandidate(input, project.id, ctx)
   },
 )
 

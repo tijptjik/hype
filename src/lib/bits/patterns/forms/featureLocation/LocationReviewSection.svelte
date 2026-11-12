@@ -373,6 +373,7 @@ function blocked(group: Group): boolean {
       ? m.location_review_facts()
       : m.location_reset_location()}
     icon={LocationIcon}
+    description={m.location_review_description()}
   />
   <div class="flex flex-col gap-5 px-6 pt-5 pb-4">
     {#if isLocal}

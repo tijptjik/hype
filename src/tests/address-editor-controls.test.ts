@@ -13,6 +13,15 @@ import FormFixture from './fixtures/components/FeatureAddress3dFixture.svelte'
 import { emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
 import * as nameCatalogue from '#lib/addresses/nameCatalogue.js'
 import { structurePlaceAddress, setAddressName } from '#lib/addresses/nameCatalogue.js'
+vi.mock('#lib/addresses/nameSuggestions.js', () => ({
+  fetchNameSuggestions: async () => [
+    {
+      id: 'street',
+      names: { en: 'LYNDHURST TERRACE', 'zh-Hant': '擺花街' },
+      divisionCodes: [],
+    },
+  ],
+}))
 vi.mock('#lib/i18n.js', async original => ({
   ...(await original<object>()),
   translateText: async (_source: string, target: string, values: string[]) =>
@@ -111,7 +120,7 @@ it('shows the selected name as a tile and restores it when replacement is cancel
   await fireEvent.input(input, { target: { value: 'Uncommitted replacement' } })
   await fireEvent.click(view.getByRole('button', { name: 'Cancel' }))
   expect(
-    within(streetField).getByRole('button', { name: 'Clear: Lyndhurst Terrace · EN' }),
+    within(streetField).getByRole('button', { name: 'Clear: Street name' }),
   ).toBeTruthy()
   expect(view.queryByRole('combobox', { name: 'Street name' })).toBeNull()
   expect(view.getByRole('button', { name: 'Replace: Lyndhurst Terrace' })).toBeTruthy()
@@ -304,14 +313,23 @@ it('keeps actions beside the label and clears an active block reference before o
   expect(view.getByRole('combobox', { name: 'Block type' })).toHaveTextContent('Block')
 })
 
-it('returns an empty building editor to the parts tray', async () => {
+it('dismisses an explicitly added empty building name', async () => {
   const view = render(FormFixture, { displayAddressInToolbar: true })
   await fireEvent.click(view.getByRole('button', { name: 'Building name' }))
   const input = view.getByRole('combobox', { name: 'Building name' })
-  await fireEvent.focus(input)
   await fireEvent.click(
-    within(input.closest('fieldset')!).getByRole('button', { name: 'Use source' }),
+    within(input.closest('fieldset')!).getByRole('button', { name: 'Clear' }),
   )
+  expect(view.queryByRole('combobox', { name: 'Building name' })).toBeNull()
+  expect(view.getByRole('button', { name: 'Building name' })).toBeTruthy()
+})
+
+it('does not preselect a building for an establishment without structured address', () => {
+  const view = render(Fixture, {
+    initialAddress: emptyFeatureAddress(),
+    establishmentIdentity: true,
+  })
+  expect(view.getByText('Arome - MTR Olympic')).toBeTruthy()
   expect(view.queryByRole('combobox', { name: 'Building name' })).toBeNull()
   expect(view.getByRole('button', { name: 'Building name' })).toBeTruthy()
 })
@@ -332,7 +350,7 @@ it('extracts a typed floor term on blur and explains the selected type', async (
   ).toBeTruthy()
 })
 
-it('returns a populated source street to the tray without restoring its source text', async () => {
+it('clears a populated source street while keeping its reset available', async () => {
   const view = render(Fixture, {
     initialAddress: structurePlaceAddress(
       emptyFeatureAddress({ en: '25 Lyndhurst Terrace' }),
@@ -341,10 +359,12 @@ it('returns a populated source street to the tray without restoring its source t
   })
   const tile = view.getByRole('button', { name: 'Replace: Lyndhurst Terrace' })
   await fireEvent.click(
-    within(tile.closest('fieldset')!).getByRole('button', { name: 'Clear' }),
+    within(tile.closest('fieldset')!).getByRole('button', {
+      name: 'Clear: Street name',
+    }),
   )
   expect(view.queryByRole('button', { name: 'Replace: Lyndhurst Terrace' })).toBeNull()
-  expect(view.getByRole('button', { name: 'Street name' })).toBeTruthy()
+  expect(view.getByRole('combobox', { name: 'Street name' })).toBeTruthy()
 })
 
 it('restores the establishment street after clearing its selection', async () => {
@@ -357,8 +377,9 @@ it('restores the establishment street after clearing its selection', async () =>
   const field = view
     .getByRole('button', { name: 'Replace: Lyndhurst Terrace' })
     .closest('fieldset')!
-  await fireEvent.click(within(field).getByRole('button', { name: 'Clear' }))
-  await fireEvent.click(view.getByRole('button', { name: 'Street name' }))
+  await fireEvent.click(
+    within(field).getByRole('button', { name: 'Clear: Street name' }),
+  )
   const restoredField = view
     .getByRole('combobox', { name: 'Street name' })
     .closest('fieldset')!
@@ -400,7 +421,10 @@ it('keeps building controls without duplicating lookup in the section header', a
   const field = view
     .getByRole('button', { name: 'Replace: Martin Hostel' })
     .closest('fieldset')!
-  expect(within(field).getByRole('button', { name: 'Clear' })).toBeTruthy()
+  expect(
+    within(field).getByRole('button', { name: 'Clear: Building name' }),
+  ).toBeTruthy()
+  expect(within(field).queryByRole('button', { name: 'Use source' })).toBeNull()
   expect(view.queryByRole('button', { name: 'Lookup Address' })).toBeNull()
   expect(onLookup).not.toHaveBeenCalled()
   expect(view.getByRole('button', { name: 'Replace: Martin Hostel' })).toBeTruthy()
@@ -744,7 +768,7 @@ it.each([false, true])(
   },
 )
 
-it('clears only one street-name language and does not offer machine translation for streets', async () => {
+it('clears all street-name languages together', async () => {
   const initialAddress = setAddressName(emptyFeatureAddress(), 'streetName', {
     id: 'hollywood',
     names: { en: 'Hollywood Road', 'zh-hant': '荷李活道' },
@@ -755,55 +779,39 @@ it('clears only one street-name language and does not offer machine translation 
     translations: true,
     displayAddressInToolbar: true,
   })
-  await fireEvent.click(view.getByRole('button', { name: 'Clear: 荷李活道 · 简中' }))
-  expect(
-    view.getByRole('button', { name: 'Replace: Hollywood Road' }),
-  ).toBeInTheDocument()
-  expect(view.getByRole('button', { name: 'Replace: 荷李活道' })).toBeInTheDocument()
-  const field = view
-    .getByRole('button', { name: 'Replace: Hollywood Road' })
-    .closest<HTMLElement>('[data-address-group]')!
-  expect(within(field).queryByRole('button', { name: /Translate from/ })).toBeNull()
-  expect(
-    within(field).getByRole('combobox', { name: 'Street name' }),
-  ).toBeInTheDocument()
+  await fireEvent.click(view.getByRole('button', { name: 'Clear: Street name' }))
+  expect(view.queryByRole('button', { name: 'Replace: Hollywood Road' })).toBeNull()
+  expect(view.queryByRole('button', { name: 'Replace: 荷李活道' })).toBeNull()
+  expect(view.getAllByRole('combobox', { name: 'Street name' })).toHaveLength(3)
 })
 
-it('fills missing street locales when a provider address opens without requiring catalogue reselection', async () => {
-  const load = vi.spyOn(nameCatalogue, 'loadAddressNames').mockResolvedValue([
-    {
-      id: 'street',
-      names: { en: 'LYNDHURST TERRACE', 'zh-hant': '擺花街' },
-      divisionCodes: ['CW'],
-    },
-  ])
+it('does not load catalogues or invent translations when a name editor mounts', () => {
+  const load = vi.spyOn(nameCatalogue, 'loadAddressNames')
   try {
     const initialAddress = emptyFeatureAddress()
     initialAddress.overrides.en = { streetName: 'Lyndhurst Terrace' }
-    const view = render(FormFixture, {
-      initialAddress,
-      translations: true,
-      displayAddressInToolbar: true,
-    })
-    await waitFor(() =>
-      expect(view.getByRole('button', { name: 'Replace: 摆花街' })).toBeInTheDocument(),
-    )
-    expect(view.getByRole('button', { name: 'Replace: 擺花街' })).toBeInTheDocument()
+    const view = render(FormFixture, { initialAddress, translations: true })
+    expect(
+      view.getByRole('button', { name: 'Replace: Lyndhurst Terrace' }),
+    ).toBeTruthy()
+    expect(view.queryByRole('button', { name: 'Replace: 擺花街' })).toBeNull()
+    expect(view.getAllByRole('combobox', { name: 'Street name' })).toHaveLength(2)
+    expect(load).not.toHaveBeenCalled()
   } finally {
     load.mockRestore()
   }
 })
 
-it('clears one building language without restoring its previous name', async () => {
+it('clears every building-name language together', async () => {
   const initialAddress = setAddressName(emptyFeatureAddress(), 'buildingName', {
     id: 'building',
     names: { en: 'Test Building', 'zh-hant': '測試大廈' },
     divisionCodes: [],
   })
   const view = render(FormFixture, { initialAddress, translations: true })
-  await fireEvent.click(view.getByRole('button', { name: 'Clear: Test Building · EN' }))
+  await fireEvent.click(view.getByRole('button', { name: 'Clear: Building name' }))
   expect(view.queryByRole('button', { name: 'Replace: Test Building' })).toBeNull()
-  expect(view.getByRole('button', { name: 'Replace: 測試大廈' })).toBeInTheDocument()
+  expect(view.queryByRole('button', { name: 'Replace: 測試大廈' })).toBeNull()
 })
 
 it('reorders localized address rows without changing their values', async () => {
@@ -1000,4 +1008,61 @@ it('shows shared address components once and retains only distinct localized val
   expect(values('premisesName')).toEqual(['Shared Estate'])
   expect(values('buildingName')).toHaveLength(3)
   expect(values('streetName')).toHaveLength(2)
+})
+
+it('shows only reset in the name heading when a source building name changes', async () => {
+  const address = emptyFeatureAddress()
+  address.source.rawSource = {
+    data: { attributes: { i18n: { en: { buildingName: 'Wah Koon Building' } } } },
+  }
+  const view = render(Fixture, { initialAddress: address })
+  const group = view.container.querySelector(
+    '[data-address-group="buildingName"]',
+  ) as HTMLElement
+  expect(group).toBeTruthy()
+  expect(within(group).queryByRole('button', { name: 'Use source' })).toBeNull()
+  await fireEvent.click(
+    within(group).getByRole('button', { name: 'Clear: Building name' }),
+  )
+  const reset = view
+    .getByRole('combobox', { name: 'Building name' })
+    .closest('fieldset')!
+    .querySelector('legend button') as HTMLButtonElement
+  expect(reset).toBeTruthy()
+  expect(reset.getAttribute('aria-label')).toBe('Use source')
+  await fireEvent.click(reset)
+  expect(view.getByRole('button', { name: 'Replace: Wah Koon Building' })).toBeTruthy()
+  expect(within(group).queryByRole('button', { name: 'Use source' })).toBeNull()
+})
+
+it('accepts a custom name only in the edited language and restores all baseline names', async () => {
+  const initialAddress = emptyFeatureAddress()
+  initialAddress.source.rawSource = {
+    data: {
+      attributes: {
+        i18n: {
+          en: { buildingName: 'Baseline Building', streetName: 'Baseline Road' },
+          'zh-hant': { buildingName: '原有大廈' },
+        },
+      },
+    },
+  }
+  const view = render(FormFixture, { initialAddress, translations: true })
+  await fireEvent.click(
+    view.getByRole('button', { name: 'Replace: Baseline Building' }),
+  )
+  const input = view.getAllByRole('combobox', { name: 'Building name' })[0]
+  await fireEvent.input(input, { target: { value: 'Unlisted Building' } })
+  await fireEvent.click(
+    view.getByRole('button', { name: 'Use “Unlisted Building” as a custom name' }),
+  )
+  expect(view.getByRole('button', { name: 'Replace: Unlisted Building' })).toBeTruthy()
+  expect(view.getByRole('button', { name: 'Replace: 原有大廈' })).toBeTruthy()
+  expect(view.getByRole('button', { name: 'Replace: Baseline Road' })).toBeTruthy()
+  const group = view.container.querySelector(
+    '[data-address-group="buildingName"]',
+  ) as HTMLElement
+  await fireEvent.click(within(group).getByRole('button', { name: 'Use source' }))
+  expect(view.getByRole('button', { name: 'Replace: Baseline Building' })).toBeTruthy()
+  expect(within(group).queryByRole('button', { name: 'Use source' })).toBeNull()
 })

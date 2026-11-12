@@ -1,4 +1,10 @@
 <script lang="ts">
+// LINKED FIELD CONTROLS
+import LinkedFieldToggle from '../linkedFields/LinkedFieldToggle.svelte'
+import { getLinkedFields } from '../linkedFields/linkedFields.svelte.js'
+import ResetIcon from 'virtual:icons/lucide/rotate-ccw'
+import TagIcon from 'virtual:icons/lucide/tag'
+const linkedFields = getLinkedFields()
 // I18N
 import { m } from '#lib/i18n.js'
 // BITS
@@ -23,10 +29,12 @@ let {
   canInherit = true,
   localeState,
   translations = true,
+  inline = false,
 }: {
   association: Pick<AcceptedFeatureLocation, 'version' | 'brandMode'> & {
     effective: Pick<AcceptedFeatureLocation['effective'], 'brands'>
   }
+  inline?: boolean
   canInherit?: boolean
   localeState?: ProfileLocaleState
   translations?: boolean
@@ -40,7 +48,9 @@ const mode = $derived(pending?.choice.mode ?? association.brandMode)
 const brands = $derived(
   pending?.choice.mode === 'override'
     ? pending.choice.value
-    : (association.effective.brands ?? []),
+    : pending?.choice.mode === 'clear'
+      ? []
+      : (association.effective.brands ?? []),
 )
 const modes = $derived([
   ...(canInherit ? [{ value: 'inherit', label: m.location_brand_inherit() }] : []),
@@ -71,26 +81,51 @@ function rename(index: number, names: Record<string, string>): void {
 </script>
 
 <section
+  hidden={linkedFields && !linkedFields.visible('brands')}
   class="border-border min-w-0 space-y-4 border-t pt-5"
   aria-label={m.location_brand_title()}
 >
-  <h3 class="text-base font-semibold">{m.location_brand_title()}</h3>
-  <SelectField
-    triggerClass="bg-transparent! hover:bg-transparent! shadow-none!"
-    id="location-brand-mode"
-    label={m.location_brand_source()}
-    placeholder={m.location_brand_title()}
-    triggerAttrs={{ id: 'location-brand-mode' }}
-    value={mode}
-    items={modes}
-    disabled={!isEditing}
-    onValueChange={value => {
-      if (value === 'override')
-        change({ mode: value, value: structuredClone($state.snapshot(brands)) })
-      else if (value === 'inherit' || value === 'clear') change({ mode: value })
-    }}
-  />
-  {#if mode === 'override'}
+  <h3 class="flex items-center gap-2 text-base font-semibold">
+    <TagIcon class="size-4" aria-hidden="true" />
+    {m.location_brand_title()}<LinkedFieldToggle
+      field="brands"
+      label={m.location_brand_title()}
+    />
+    {#if inline && isEditing}
+      <button
+        type="button"
+        aria-label={m.location_brand_reset()}
+        title={m.location_brand_reset()}
+        class="text-muted-foreground hover:text-primary inline-flex size-8 items-center justify-center rounded-md"
+        onclick={() => change(canInherit ? { mode: 'inherit' } : { mode: 'clear' })}
+      >
+        <ResetIcon class="size-4" aria-hidden="true" />
+      </button>
+    {/if}
+  </h3>
+  {#if inline && pending?.choice.mode === 'inherit'}
+    <p role="status" class="text-muted-foreground text-sm">
+      {m.location_brand_reset_pending()}
+    </p>
+  {/if}
+  {#if !inline}
+    <SelectField
+      triggerClass="bg-transparent! hover:bg-transparent! shadow-none!"
+      id="location-brand-mode"
+      label={m.location_brand_source()}
+      placeholder={m.location_brand_title()}
+      triggerAttrs={{ id: 'location-brand-mode' }}
+      value={mode}
+      items={modes}
+      disabled={!isEditing}
+      onValueChange={value => {
+        if (value === 'override')
+          change({ mode: value, value: structuredClone($state.snapshot(brands)) })
+        else if (value === 'inherit' || value === 'clear') change({ mode: value })
+      }}
+    />
+  {/if}
+  {#if mode === 'override' || inline}
     {#each brands as brand, index}
       <div class="border-border space-y-2 rounded-lg border p-3">
         <LocationLocaleField

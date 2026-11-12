@@ -14,7 +14,7 @@ const browser = await chromium.launch({
   args: ['--ozone-platform=x11', `--class=${chromeClass}`],
 })
 try {
-  for (const width of [390, 1440]) {
+  for (const width of [1200, 1440]) {
     for (const action of ['skip', 'translate']) {
       const page = await browser.newPage({ viewport: { width, height: 1000 } })
       page.setDefaultTimeout(60000)

@@ -336,10 +336,11 @@ let localityEditor: AddressLocalityEditor | undefined = $state()
               class:opacity-50={stale}
               data-division-values-stale={stale}
             >
-              {#if isEditing && group.key === 'locality' && context}
+              {#if group.key === 'locality' && context}
                 <div inert={stale} aria-disabled={stale}>
                   <AddressLocalityEditor
                     bind:this={localityEditor}
+                    {isEditing}
                     paths={group.paths}
                     options={context.options}
                     node={divisionNode}

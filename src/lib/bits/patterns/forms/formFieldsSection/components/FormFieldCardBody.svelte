@@ -15,11 +15,13 @@ import {
 import { translateContentField } from '#lib/api/translation.remote.js'
 import {
   registerTranslationReview,
+  generateTranslationReview,
   completeTranslationReview,
   type TranslationReviewSection,
 } from '#lib/forms/translationReview.js'
 import { automaticTranslationFromRow } from '#lib/i18n/automaticSchema.js'
 import type { AutomaticTranslation } from '#lib/i18n/automatic.js'
+import TranslationReviewDialog from '../../translationReview/TranslationReviewDialog.svelte'
 // ANIMATION
 import { flip } from 'svelte/animate'
 import { cubicInOut } from 'svelte/easing'
@@ -375,7 +377,11 @@ type Proposal = {
 }
 let proposals = $state<Record<string, Proposal>>({})
 let dismissed = $state<Record<string, boolean>>({})
-let editorRoot: HTMLDivElement
+let editorRoot = $state<HTMLDivElement>()
+let reviewGenerating = $state(false)
+let reviewCompleted = $state(0)
+let reviewTotal = $state(0)
+let reviewSourceFallback = $state(false)
 const origins = $derived<PropertyTranslationOrigin[]>([
   { type: 'label' },
   { type: 'placeholder' },
@@ -400,6 +406,23 @@ const pendingProposals = $derived(
 )
 
 const reviewSection: TranslationReviewSection = {
+  close: () => {
+    reviewOpen = false
+  },
+  generate: async mode => {
+    reviewGenerating = true
+    reviewCompleted = 0
+    reviewSourceFallback = false
+    reviewTotal = reviewSection.missingKeys?.().length ?? 0
+    try {
+      await generateMissing(mode, fallback => {
+        if (fallback) reviewSourceFallback = true
+        else reviewCompleted++
+      })
+    } finally {
+      reviewGenerating = false
+    }
+  },
   outstandingKeys: () =>
     missingOrigins.flatMap(origin =>
       locales
@@ -499,7 +522,7 @@ $effect(() => {
           ),
       }),
     )
-  return registerTranslationReview(form, reviewSection)
+  return registerTranslationReview(form, reviewSection, editorRoot)
 })
 
 $effect(() => {
@@ -1220,31 +1243,22 @@ $effect(() => {
     {/if}
   {/each}
   {#if reviewOpen && !reviewGroup}
-    <div class="mb-4 flex flex-wrap items-center gap-3 text-sm" role="status">
-      <span>{m.translation_review_missing({ count: missingOrigins.length })}</span>
-      <button
-        type="button"
-        disabled={translating !== null}
-        onclick={() => void generateMissing()}
-      >
-        {m.translation_review_generate()}
-      </button>
-      <button
-        type="button"
-        disabled={translating !== null ||
-          (missingOrigins.length > 0 && !pendingProposals.length)}
-        onclick={() => finishReview(true)}
-      >
-        {m.translation_review_accept_all()}
-      </button>
-      <button
-        type="button"
-        disabled={translating !== null}
-        onclick={() => finishReview(false)}
-      >
-        {m.translation_review_keep_empty()}
-      </button>
-    </div>
+    <TranslationReviewDialog
+      form={editorRoot?.closest('form')}
+      busy={reviewGenerating || translating !== null}
+      completed={reviewCompleted}
+      total={reviewTotal}
+      sourceFallback={reviewSourceFallback}
+      pending={pendingProposals.length > 0}
+      allReady={(reviewSection.missingKeys?.().length ?? 0) === 0}
+      onGenerate={mode =>
+        void generateTranslationReview(editorRoot?.closest('form'), mode)}
+      onAccept={() => void finishReview(true)}
+      onSkip={() => void finishReview(false)}
+      onClose={() => {
+        reviewOpen = false
+      }}
+    />
   {/if}
   <!-- Settings stay together; translated text and its options share the adjacent workspace. -->
   <div class="grid min-w-0 items-start gap-6 lg:grid-cols-3" data-property-columns>

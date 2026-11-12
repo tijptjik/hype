@@ -2,7 +2,7 @@
 // ADDRESS LOCALES
 import { addressLocaleLabel } from './addressLocaleLabel.js'
 // SVELTE
-import { onMount, tick } from 'svelte'
+import { tick, untrack } from 'svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // ICONS
@@ -14,8 +14,9 @@ import StreetIcon from 'virtual:icons/lucide/road'
 // COMPONENTS
 import ScrollableText from '#lib/bits/custom/text/ScrollableText.svelte'
 // DOMAIN
-import { loadAddressNames, type AddressName } from '#lib/addresses/nameCatalogue.js'
-import { addressNameLabel, searchAddressNames } from '#lib/addresses/nameSearch.js'
+import type { AddressName } from '#lib/addresses/nameCatalogue.js'
+import { fetchNameSuggestions } from '#lib/addresses/nameSuggestions.js'
+import { addressNameLabel } from '#lib/addresses/nameSearch.js'
 import { streetDisplayName } from '#lib/addresses/formatting.js'
 // TYPES
 import type { LocaleKey } from '#lib/types.js'
@@ -29,6 +30,7 @@ let {
   prominent = false,
   detached = false,
   onSelect,
+  onCustom,
   onClear,
   onReplacingChange,
   onBlur,
@@ -43,10 +45,11 @@ let {
   onClear?: () => void
   onBlur?: () => void
   onSelect: (record: AddressName | null) => void
+  onCustom?: (value: string) => void
   onReplacingChange?: (replacing: boolean) => void
 } = $props()
 const uid = $props.id()
-let rows = $state<AddressName[]>([])
+let rows = $state.raw<AddressName[]>([])
 let query = $state('')
 let open = $state(false)
 let replacing = $state(false)
@@ -55,26 +58,63 @@ let pickerRoot: HTMLDivElement | undefined = $state()
 let input: HTMLInputElement | undefined = $state()
 let selection: HTMLButtonElement | undefined = $state()
 let failed = $state(false)
-let loading = $state(true)
+let loading = $state(false)
+let retry = $state(0)
 let active = $state(-1)
+const loadingMessage = $derived(
+  family === 'streets' ? m.address_streets_loading() : m.address_buildings_loading(),
+)
 const displayValue = $derived(
   family === 'streets' ? streetDisplayName(value, locale) : value,
 )
-// Standalone block identifiers belong in the block editor, not the named-building picker.
-const matches = $derived(
-  searchAddressNames(
-    family === 'buildings'
-      ? rows.filter(
-          row =>
-            !Object.values(row.names).some(name =>
-              /^Block\s+[\p{L}\p{N}-]+$/iu.test(name.trim()),
-            ),
-        )
-      : rows,
-    query,
-    locale,
-  ),
-)
+// Only bounded API results enter reactive state; obsolete requests cannot replace newer input.
+const matches = $derived(rows)
+$effect(() => {
+  const text = query.trim()
+  const vocabulary = family
+  const language = locale
+  retry
+  rows = []
+  failed = false
+  active = -1
+  if (!open || !text) {
+    loading = false
+    return
+  }
+  const controller = new AbortController()
+  loading = true
+  const timer = setTimeout(() => {
+    void fetchNameSuggestions(vocabulary, text, language, controller.signal)
+      .then(result => {
+        if (!controller.signal.aborted) rows = result
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) failed = true
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) loading = false
+      })
+  }, 180)
+  return () => {
+    clearTimeout(timer)
+    controller.abort()
+  }
+})
+
+/** Keep custom text separate from catalogue identity and published translations.
+ * @returns Nothing; only the active language receives authored text.
+ */
+function selectCustom(): void {
+  if (!query.trim() || !onCustom) return
+  selectionChanged = true
+  onCustom(query.trim())
+  cancel(true)
+}
+// Group clear/reset can change this language while a request is pending.
+$effect(() => {
+  value
+  untrack(() => cancel())
+})
 // Search text is a draft; the selected value changes only when a source result is chosen.
 /** Open an empty replacement search without clearing the saved selection. @returns Completion after focus moves. */
 async function replace(): Promise<void> {
@@ -118,19 +158,6 @@ function focusout(
   }, 0)
 }
 
-/** Retrieve the controlled vocabulary, exposing retry on failure. @returns Completion. */
-async function load(): Promise<void> {
-  loading = true
-  failed = false
-  try {
-    rows = await loadAddressNames(family)
-  } catch (error) {
-    failed = true
-    console.error(`Could not load ${family} names`, error)
-  } finally {
-    loading = false
-  }
-}
 /** Commit a source selection and restore the display value. @param row Chosen name. @returns Nothing. */
 function select(row: AddressName | null): void {
   selectionChanged = true
@@ -178,6 +205,7 @@ function keydown(event: KeyboardEvent): void {
   } else if (event.key === 'Enter' && open) {
     event.preventDefault()
     if (matches[active]) select(matches[active])
+    else selectCustom()
   }
 }
 /** Keep suggestions outside horizontal field clipping and reveal them in the editor pane.
@@ -225,10 +253,7 @@ function revealMenu(node: HTMLElement): { destroy: () => void } {
     },
   }
 }
-// Preload the catalogue when the containing page mounts its pickers.
-onMount(() => {
-  void load()
-})
+// The selected name needs no catalogue; load suggestions only when its input opens.
 </script>
 
 <div bind:this={pickerRoot} class="flex min-w-0 flex-1 items-center gap-2">
@@ -301,7 +326,7 @@ onMount(() => {
             type="button"
             aria-label={`${m.filters__clear()}: ${displayValue} · ${addressLocaleLabel(locale)}`}
             data-tooltip={m.filters__clear()}
-            class="text-muted-foreground hover:text-primary focus-visible:outline-primary mr-1 flex size-7 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-focus-within/name:opacity-100 group-hover/name:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 [@media(hover:none)]:opacity-100"
+            class="text-muted-foreground hover:text-primary focus-visible:outline-primary mr-1 flex size-7 shrink-0 items-center justify-center rounded opacity-0 group-focus-within/name:opacity-100 group-hover/name:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 [@media(hover:none)]:opacity-100"
             onclick={onClear}
           >
             <XIcon class="size-3.5" aria-hidden="true" />
@@ -335,16 +360,23 @@ onMount(() => {
             ? `${uid}-name-${active}`
             : undefined}
           autocomplete="off"
+          maxlength="160"
           bind:value={query}
-          placeholder={(family === 'buildings'
-            ? m.address_example_building
-            : m.address_example_street)(
-            {},
-            {
-              locale:
-                locale === 'en' ? 'en' : locale === 'zhHant' ? 'zh-hant' : 'zh-hans',
-            },
-          )}
+          placeholder={loading
+            ? loadingMessage
+            : (family === 'buildings'
+                ? m.address_example_building
+                : m.address_example_street)(
+                {},
+                {
+                  locale:
+                    locale === 'en'
+                      ? 'en'
+                      : locale === 'zhHant'
+                        ? 'zh-hant'
+                        : 'zh-hans',
+                },
+              )}
           class="border-border-input bg-panel text-foreground placeholder:text-muted-foreground/65 h-12 min-w-0 flex-1 rounded-lg border px-3 py-2 text-base placeholder:italic"
           onfocus={() => {
             open = true
@@ -374,8 +406,13 @@ onMount(() => {
           onfocusout={focusout}
           class="border-border bg-panel absolute inset-x-0 top-full z-30 mt-1 max-h-60 overflow-y-auto rounded-md border p-1 shadow-lg"
         >
+          {#if !query.trim()}
+            <p class="text-muted-foreground px-3 py-2 text-sm">
+              {m.address_names_type_hint()}
+            </p>
+          {/if}
           {#if loading}
-            <p role="status" class="px-3 py-2 text-sm">{m.resource_loading()}</p>
+            <p role="status" class="px-3 py-2 text-sm">{loadingMessage}</p>
           {:else if failed}
             <p role="status" class="px-3 py-2 text-sm">
               {m.address_names_unavailable()}
@@ -383,10 +420,23 @@ onMount(() => {
             <button
               type="button"
               class="px-3 py-2 text-sm underline"
-              onclick={() => void load()}
+              onclick={() => retry++}
             >
               {m.feature_start_retry()}
             </button>
+          {/if}
+          {#if query.trim() && onCustom}
+            <button
+              type="button"
+              class="hover:bg-muted focus-visible:outline-primary w-full rounded px-3 py-2 text-left text-sm"
+              onpointerdown={event => event.preventDefault()}
+              onclick={selectCustom}
+            >
+              {m.address_name_use_custom({ name: query.trim() })}
+            </button>
+            <p class="text-muted-foreground px-3 pb-2 text-xs">
+              {m.address_name_custom_help()}
+            </p>
           {/if}
           <div id={`${uid}-names`} role="listbox" aria-label={label}>
             {#if !loading && !failed}
@@ -427,7 +477,7 @@ onMount(() => {
               {/each}
             {/if}
           </div>
-          {#if !loading && !failed && !matches.length}
+          {#if query.trim() && !loading && !failed && !matches.length}
             <p role="status" class="px-3 py-2 text-sm">{m.feature_start_empty()}</p>
           {/if}
         </div>

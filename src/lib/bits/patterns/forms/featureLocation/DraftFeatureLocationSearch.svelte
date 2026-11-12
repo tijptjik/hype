@@ -33,6 +33,7 @@ import ReplaceIcon from 'virtual:icons/lucide/replace'
 import { createPlaceAddressWorker } from '#lib/addresses/placeAddressWorker.js'
 import BackIcon from 'virtual:icons/lucide/arrow-left'
 import SearchIcon from 'virtual:icons/lucide/search'
+import PinIcon from 'virtual:icons/lucide/map-pin'
 import ClearIcon from 'virtual:icons/lucide/x'
 import WarningIcon from 'virtual:icons/lucide/triangle-alert'
 import FilterIcon from 'virtual:icons/lucide/list-filter'
@@ -96,6 +97,7 @@ let {
   currentNameMode,
   focusRequest,
   onSelect,
+  onReviewDraft,
   onPreview,
   onAcceptedChange,
   onResolutionPendingChange,
@@ -104,12 +106,14 @@ let {
   onSelectionStart,
   onResultsChange,
   onResultsEnd,
+  onScrollEndChange,
   onUnlink,
   onBack,
   onFilterPanelChange,
   onMapCandidates,
   onDropPin,
   onManualEntry,
+  onFallbackChange,
   onModeChange,
   hasPin = false,
   coordinates,
@@ -118,7 +122,7 @@ let {
   active: boolean
   allowedLocationKinds?: readonly string[]
   suggestionKinds?: readonly string[]
-  preferredKind?: string
+  preferredKind?: Result['kind']
   initialMode?: 'search' | 'pin'
   searchRequest?: {
     id: number
@@ -143,7 +147,10 @@ let {
   onSelectionStart?: () => void
   onResolutionPendingChange?: (pending: boolean) => void
   onResultsChange?: (hasResults: boolean) => void
+  onScrollEndChange?: (atEnd: boolean) => void
   onResultsEnd?: () => boolean
+  /** Review an accepted, unpersisted identity in its owning Feature draft. */
+  onReviewDraft?: () => void
   onSelect: (result: Result) => void
   onBack?: () => void
   onFilterPanelChange?: (panel: Snippet | undefined) => void
@@ -151,6 +158,7 @@ let {
     markers: import('#lib/locations/searchPresentation.js').LocationSearchMarker[],
     select: (id: string) => void,
   ) => void
+  onFallbackChange?: (open: boolean) => void
   onManualEntry?: () => void
   onModeChange?: (mode: 'search' | 'pin') => void
   onDropPin?: () => void
@@ -259,7 +267,6 @@ function clearSearch(): void {
   nearbyFilter = ''
   if (localRows.length) localRows = []
   localSearchFailed = false
-  localSearchLimited = false
   schedule(false, false)
   previousRows = []
   previousQuery = ''
@@ -272,18 +279,57 @@ function clearSearch(): void {
 let radius = $state(300)
 let nearbyMode = $state(false)
 let resultsElement: HTMLElement | undefined = $state()
+let fallbackOpen = $state(false)
+let fallbackHeading = $state<HTMLHeadingElement>()
+$effect(() => {
+  onFallbackChange?.(fallbackOpen)
+  if (fallbackOpen) fallbackHeading?.focus()
+})
+let fallbackStage = $state<'building' | 'address'>('building')
+const customKindLabel = $derived(
+  locationKindLabel(preferredKind ?? 'establishment').toLowerCase(),
+)
 let includeShops = $state(true)
 let includeAddresses = $state(true)
 let includeBuildings = $state(true)
 $effect(() => {
-  const kinds = suggestionKinds
+  const kinds =
+    preferredKind && searchKinds.some(kind => kind === preferredKind)
+      ? [preferredKind]
+      : suggestionKinds
   if (kinds)
     untrack(() => {
+      fallbackOpen = false
       includeShops = kinds.includes('establishment')
       includeBuildings = kinds.includes('building')
       includeAddresses = kinds.includes('address')
     })
 })
+/** Open the next starting-point suggestion without changing the intended identity.
+ * @returns Nothing.
+ */
+export function openMissingLocation(): void {
+  fallbackOpen = true
+  fallbackStage =
+    includeBuildings ||
+    (includeAddresses && !includeShops) ||
+    preferredKind === 'building'
+      ? 'address'
+      : 'building'
+}
+/** Search one fallback provider while retaining the requested location kind.
+ * @param kind Starting-point provider to enable.
+ * @returns Nothing.
+ */
+function searchFallback(kind: 'building' | 'address'): void {
+  includeShops = false
+  includeBuildings = kind === 'building'
+  includeAddresses = kind === 'address'
+  filters = { operatingStatus: 'open' }
+  fallbackStage = 'address'
+  fallbackOpen = false
+  void tick().then(() => input?.focus())
+}
 const searchBuildings = $derived(includeBuildings)
 const hasPlaceCategory = $derived(hasPlaceSearchCategory(filters))
 const searchAddresses = $derived(includeAddresses)
@@ -334,7 +380,7 @@ $effect(() => {
   })
 })
 let accepted = $state(false)
-// Source previews need a persisted shared identity before linking to HYPE details.
+// Prefer saved identities; unpersisted selections remain reviewable through their owning draft.
 const selectedLocationLookup = $derived(
   accepted && selected?.source?.ssId && !selected.identity?.locationId
     ? getSharedLocationIdBySource({ ssId: selected.source.ssId })
@@ -346,9 +392,11 @@ const selectedLocationId = $derived(
 const selectedLocationHref = $derived(
   selectedLocationId
     ? `/admin/locations/${encodeURIComponent(selectedLocationId)}`
-    : selected?.buildingSource
-      ? `/admin/locations/building/${encodeURIComponent(selected.buildingSource.id)}?${new URLSearchParams({ release: selected.buildingSource.release, ...(selected.buildingSource.addressId ? { address: selected.buildingSource.addressId } : {}) })}`
-      : null,
+    : onReviewDraft
+      ? '/admin/locations/new'
+      : selected?.buildingSource
+        ? `/admin/locations/building/${encodeURIComponent(selected.buildingSource.id)}?${new URLSearchParams({ release: selected.buildingSource.release, ...(selected.buildingSource.addressId ? { address: selected.buildingSource.addressId } : {}) })}`
+        : null,
 )
 let linked = $state(false)
 let expandedGroup = $state<string | null>(null)
@@ -360,7 +408,6 @@ let previousScrollTop = 0
 let receivedRows = $state.raw<Result[]>([])
 let localRows = $state.raw<Result[]>([])
 let localSearchFailed = $state(false)
-let localSearchLimited = $state(false)
 const providerRevisions: Record<Result['kind'], number> = {
   establishment: 0,
   service_point: 0,
@@ -403,28 +450,9 @@ const rows = $derived(
           ),
     ),
 )
-// Filter a retained snapshot; local typing must never replace provider results or start a search.
-const filterNearbyRows = createDraftSearchFilter<Result>()
-let nearbyMatches = $state.raw<Result[] | null>(null)
-$effect(() => {
-  const snapshot = rows
-  const text = nearbyFilter.trim()
-  const mode = findMode
-  let current = true
-  if (mode !== 'pin' || !text) nearbyMatches = null
-  else {
-    void filterNearbyRows(snapshot, text, () => current).then(matches => {
-      if (current && matches) nearbyMatches = matches
-    })
-  }
-  return () => {
-    current = false
-  }
-})
+// Provider text and radius constraints are applied before each result page.
 const groups = $derived(
-  groupDraftSearchResults(
-    findMode === 'pin' && nearbyFilter.trim() ? (nearbyMatches ?? rows) : rows,
-  ).map(group => ({
+  groupDraftSearchResults(rows).map(group => ({
     ...group,
     representative:
       group.members.find(row => row.id === focusedResult) ?? group.representative,
@@ -617,6 +645,27 @@ function schedule(retainMatches = false, runSearch = true): void {
       void search()
     }, 300)
 }
+/** Refresh all nearby providers after text or radius changes.
+ * @returns Nothing; superseded responses are invalidated immediately.
+ */
+function scheduleNearby(): void {
+  schedule(false, false)
+  if (!coordinates || !nearbyMode) return
+  loading = true
+  pendingKinds = new Set(
+    searchKinds.filter(kind =>
+      kind === 'establishment'
+        ? includeShops
+        : kind === 'building'
+          ? searchBuildings
+          : searchAddresses,
+    ),
+  )
+  timer = setTimeout(() => {
+    timer = undefined
+    void search(true)
+  }, 300)
+}
 /** Search Places and building/address evidence independently, retaining partial results.
  * @param nearby Discover around the current pin instead of the typed query.
  * @param onlyKind Fetch only an uncached type without disturbing other providers.
@@ -626,11 +675,14 @@ async function search(nearby = false, onlyKind?: Result['kind']): Promise<void> 
   nearbyMode = nearby
   const request = onlyKind ? version : ++version
   if (!onlyKind) cachedKinds = new Set()
-  const q = query.trim()
+  const q = (nearby ? nearbyFilter : query).trim()
+  const near =
+    nearby && coordinates
+      ? { coordinates: [...coordinates] as [number, number], radius }
+      : undefined
   if (!onlyKind) {
     if (localRows.length) localRows = []
     localSearchFailed = false
-    localSearchLimited = false
   }
   if ((!nearby && !canSearch) || (nearby && !coordinates) || !hasSearchTypes) {
     if (!onlyKind) {
@@ -705,6 +757,7 @@ async function search(nearby = false, onlyKind?: Result['kind']): Promise<void> 
   }
   const reverse =
     nearby &&
+    !q &&
     coordinates &&
     (requestedKinds.has('building') || requestedKinds.has('address'))
       ? geocodeAddressCandidates(
@@ -756,11 +809,10 @@ async function search(nearby = false, onlyKind?: Result['kind']): Promise<void> 
     return { rows: [...unique.values()], total: unique.size, nextCursor: null }
   }
   await Promise.allSettled([
-    preferredKind && projectId && q && !onlyKind
+    !nearby && preferredKind && projectId && q && !onlyKind
       ? searchTargetLocations({ projectId, kind: preferredKind as Result['kind'], q })
           .then(found => {
             if (request !== version) return
-            localSearchLimited = Boolean(found.nextCursor)
             localRows = found.data.flatMap(row =>
               row.facts &&
               row.revisionId &&
@@ -794,7 +846,12 @@ async function search(nearby = false, onlyKind?: Result['kind']): Promise<void> 
       : Promise.resolve(),
     requestedKinds.has('building')
       ? (nearby
-          ? nearbyBuildings()
+          ? q
+            ? searchBuildingNames(q, getLocaleKey(), () => isCurrent('building'), {
+                coordinates: near!.coordinates,
+                maxDistance: near!.radius,
+              }).then(rows => ({ rows, total: rows.length, nextCursor: null }))
+            : nearbyBuildings()
           : searchBuildingNamesPage(q, getLocaleKey(), () => isCurrent('building'))
         )
           .then(page => {
@@ -814,9 +871,15 @@ async function search(nearby = false, onlyKind?: Result['kind']): Promise<void> 
       : Promise.resolve(),
     requestedKinds.has('establishment')
       ? Promise.resolve(
-          nearby && coordinates
+          nearby && coordinates && !q
             ? searchNearbyDraftLocations({ coordinates, radius, filters })
-            : searchDraftLocations({ q, locale: getLocale(), limit: 20, filters }),
+            : searchDraftLocations({
+                q,
+                locale: getLocale(),
+                limit: 20,
+                filters,
+                ...(near ? { near } : {}),
+              }),
         )
           .then(async places => {
             if (!isCurrent('establishment')) return
@@ -824,17 +887,19 @@ async function search(nearby = false, onlyKind?: Result['kind']): Promise<void> 
             if (!isCurrent('establishment')) return
             placesPartial = places.partial
             placesLimited = 'limited' in places && places.limited === true
-            placePaging = nearby
-              ? null
-              : {
-                  query: q,
-                  locale: getLocale(),
-                  filters: { ...filters },
-                  nextCursor:
-                    'nextCursor' in places && typeof places.nextCursor === 'string'
-                      ? places.nextCursor
-                      : null,
-                }
+            placePaging =
+              nearby && !q
+                ? null
+                : {
+                    query: q,
+                    locale: getLocale(),
+                    filters: { ...filters },
+                    ...(near ? { near } : {}),
+                    nextCursor:
+                      'nextCursor' in places && typeof places.nextCursor === 'string'
+                        ? places.nextCursor
+                        : null,
+                  }
             replaceRows('establishment', fresh)
           })
           .catch(() => {
@@ -843,26 +908,31 @@ async function search(nearby = false, onlyKind?: Result['kind']): Promise<void> 
           .finally(() => finish('establishment'))
       : Promise.resolve(),
     requestedKinds.has('address')
-      ? (nearby
+      ? (nearby && !q
           ? reverse!.then(rows => ({
               rows,
               nextCursor: null,
               total: rows.length,
               releaseSet: '',
             }))
-          : geocodeAddressPage({ address: q }, { signal: addressController!.signal })
+          : geocodeAddressPage(
+              { address: q },
+              { signal: addressController!.signal, ...(near ? { near } : {}) },
+            )
         )
           .then(page => {
             if (!isCurrent('address')) return
             const addresses = page.rows
-            addressPaging = nearby
-              ? null
-              : {
-                  query: q,
-                  total: page.total,
-                  nextCursor: page.nextCursor,
-                  releaseSet: page.releaseSet,
-                }
+            addressPaging =
+              nearby && !q
+                ? null
+                : {
+                    query: q,
+                    total: page.total,
+                    nextCursor: page.nextCursor,
+                    releaseSet: page.releaseSet,
+                    ...(near ? { near } : {}),
+                  }
             replaceRows('address', addressSearchRows(addresses, nearby))
           })
           .catch(() => {
@@ -993,6 +1063,7 @@ async function loadMoreAddresses(): Promise<void> {
     const page = await geocodeAddressPage(
       { address: paging.query },
       {
+        ...(paging.near ? { near: paging.near } : {}),
         cursor: paging.nextCursor,
         releaseSet: paging.releaseSet,
         signal: addressController?.signal,
@@ -1002,9 +1073,12 @@ async function loadMoreAddresses(): Promise<void> {
     const existing = new Set(receivedRows.map(row => row.id))
     receivedRows = [
       ...receivedRows,
-      ...addressSearchRows(page.rows).filter(row => !existing.has(row.id)),
+      ...addressSearchRows(page.rows, Boolean(paging.near)).filter(
+        row => !existing.has(row.id),
+      ),
     ]
     addressPaging = {
+      ...(paging.near ? { near: paging.near } : {}),
       query: paging.query,
       total: page.total,
       nextCursor: page.nextCursor,
@@ -1048,6 +1122,7 @@ async function loadMoreLocations(kind: 'establishment' | 'building'): Promise<vo
       const current = placePaging
       const page = await searchDraftLocations({
         q: current.query,
+        ...(current.near ? { near: current.near } : {}),
         locale: current.locale,
         filters: current.filters,
         limit: 20,
@@ -1088,6 +1163,27 @@ async function loadMoreLocations(kind: 'establishment' | 'building'): Promise<vo
   } finally {
     if (isCurrent()) moreLoading[kind] = false
   }
+}
+/** Report the actual end of discovery after all available pages have loaded.
+ * @returns Nothing.
+ */
+function reportScrollEnd(): void {
+  const list = resultsElement
+  onScrollEndChange?.(
+    Boolean(
+      list &&
+        rows.length &&
+        list.scrollHeight > list.clientHeight + 1 &&
+        list.scrollTop + list.clientHeight >= list.scrollHeight - 8 &&
+        !loading &&
+        !addressLoadingMore &&
+        !moreLoading.establishment &&
+        !moreLoading.building &&
+        !addressPaging?.nextCursor &&
+        !placePaging?.nextCursor &&
+        !buildingPaging?.nextCursor,
+    ),
+  )
 }
 /** Prefetch when each provider's final row enters view, including empty filtered pages.
  * @returns Nothing; hidden kinds, grouped subsets and selected previews do not load.
@@ -1131,7 +1227,10 @@ $effect(() => {
   includeShops
   searchAddresses
   searchBuildings
-  void tick().then(maybeLoadMoreLocations)
+  void tick().then(() => {
+    maybeLoadMoreLocations()
+    reportScrollEnd()
+  })
 })
 
 /** Capture discovery choices without retaining live requests or DOM references.
@@ -1139,6 +1238,7 @@ $effect(() => {
  */
 export function getProgress(): DraftLocationSearchProgress {
   return {
+    providerDefaultsVersion: 1,
     associationOrigin,
     associationOpen,
     query,
@@ -1220,9 +1320,26 @@ export function restoreProgress(progress: DraftLocationSearchProgress | null): v
   filters = progress?.filters ?? { operatingStatus: 'open' }
   radius = progress?.radius ?? 300
   nearbyMode = progress?.nearbyMode ?? false
-  includeShops = progress?.includeShops ?? true
-  includeAddresses = progress?.includeAddresses ?? true
-  includeBuildings = progress?.includeBuildings ?? true
+  const retainedChoices = progress?.providerDefaultsVersion === 1 || !preferredKind
+  includeShops =
+    retainedChoices && progress
+      ? progress.includeShops
+      : preferredKind
+        ? preferredKind === 'establishment'
+        : true
+  includeAddresses =
+    retainedChoices && progress
+      ? progress.includeAddresses
+      : preferredKind
+        ? preferredKind === 'address'
+        : true
+  includeBuildings =
+    retainedChoices && progress
+      ? progress.includeBuildings
+      : preferredKind
+        ? preferredKind === 'building'
+        : true
+  fallbackOpen = false
   selected = progress?.selected ?? null
   selectedResultNumber = progress?.selectedResultNumber
   accepted = progress?.accepted ?? false
@@ -1400,6 +1517,7 @@ async function acceptResult(result: Result): Promise<void> {
     }
     selected = result
   }
+  // Direct same-kind acceptance must carry the same identity and naming intent as picker acceptance.
   onSelect({
     ...result,
     localKind: result.source ? undefined : result.localKind,
@@ -1776,6 +1894,12 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
         {#if selectedLocationHref}
           <a
             href={selectedLocationHref}
+            onclick={event => {
+              if (!selectedLocationId && onReviewDraft) {
+                event.preventDefault()
+                onReviewDraft()
+              }
+            }}
             class="group/location-details text-primary focus-visible:outline-primary grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded text-base font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
           >
             <SimpleTooltip
@@ -1943,7 +2067,9 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
           {@render coordinatesControl()}
         </div>
       {/if}
-      <div class="flex min-w-0 flex-1 basis-64 items-center justify-center gap-2">
+      <div
+        class="flex min-w-0 flex-1 basis-64 flex-wrap items-center justify-center gap-2"
+      >
         {#if showSearchTypePrompt && !hasSearchTypes}
           <p
             role="status"
@@ -1962,7 +2088,13 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
               oninput={() => schedule(true)}
               maxlength="200"
               aria-label={m.feature_start_search()}
-              placeholder={m.feature_start_search()}
+              placeholder={includeShops && !includeBuildings && !includeAddresses
+                ? 'Search for an establishment'
+                : includeBuildings && !includeShops && !includeAddresses
+                  ? 'Search for a building'
+                  : includeAddresses && !includeShops && !includeBuildings
+                    ? 'Search for an address'
+                    : m.feature_start_search()}
               class="text-foreground w-full min-w-0 flex-1 rounded-lg border-0! bg-transparent py-3 pr-2 pl-4 shadow-none! ring-0! outline-none!"
               onkeydown={event => {
                 if (event.key === 'Escape' && !event.isComposing) {
@@ -2028,24 +2160,23 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
           </div>
         {:else if hasPin && coordinates}
           <div
-            class="border-border bg-panel focus-within:ring-primary flex min-w-0 flex-1 items-center rounded-lg border focus-within:ring-2"
+            class="border-border bg-panel focus-within:ring-primary flex min-w-0 flex-1 basis-48 items-center rounded-lg border focus-within:ring-2"
           >
             <input
               bind:value={nearbyFilter}
               disabled={!nearbyMode}
-              aria-label="Filter nearby results"
-              placeholder="Filter nearby results"
+              aria-label="Search nearby results"
+              placeholder="Search nearby results"
               maxlength="200"
               class="text-foreground min-h-11 w-full min-w-0 flex-1 rounded-lg bg-transparent px-3 py-3 text-sm outline-none disabled:opacity-40"
-              oninput={() => {
-                expandedGroup = null
-              }}
+              oninput={() => scheduleNearby()}
               onkeydown={event => {
                 if (event.key === 'Enter') event.preventDefault()
                 if (event.key === 'Escape') {
                   event.preventDefault()
                   event.stopPropagation()
                   nearbyFilter = ''
+                  scheduleNearby()
                 }
               }}
             >
@@ -2057,9 +2188,12 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
             {#if nearbyFilter}
               <button
                 type="button"
-                aria-label="Clear nearby filter"
+                aria-label="Clear nearby search"
                 class="text-muted-foreground hover:bg-muted mr-1 flex size-9 shrink-0 items-center justify-center rounded-md"
-                onclick={() => (nearbyFilter = '')}
+                onclick={() => {
+                  nearbyFilter = ''
+                  scheduleNearby()
+                }}
               >
                 <ClearIcon class="size-4" />
               </button>
@@ -2112,9 +2246,13 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
             aria-pressed={findMode === mode}
             disabled={mode === 'pin' && !onDropPin && !(hasPin && coordinates)}
             onclick={() => setFindMode(mode as 'search' | 'pin')}
-            class="text-muted-foreground aria-pressed:bg-panel aria-pressed:text-foreground hover:text-foreground focus-visible:outline-primary rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-2 disabled:opacity-40 aria-pressed:shadow-sm"
+            class="text-muted-foreground aria-pressed:bg-panel aria-pressed:text-foreground hover:text-foreground focus-visible:outline-primary flex size-10 items-center justify-center rounded-md text-sm transition-colors focus-visible:outline-2 disabled:opacity-40 aria-pressed:shadow-sm"
           >
-            {mode === 'search' ? m.feature_find_search() : m.feature_find_pin()}
+            {#if mode === 'search'}
+              <SearchIcon class="size-5" aria-hidden="true" />
+            {:else}
+              <PinIcon class="size-5" aria-hidden="true" />
+            {/if}
           </button>
         {/each}
       </fieldset>
@@ -2211,28 +2349,76 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
             ? m.feature_search_address_restart()
             : m.feature_search_address_retry()}
         </button>
-      {:else if paging?.nextCursor && !busy}
-        <button
-          type="button"
-          class="text-primary hover:bg-muted focus-visible:outline-primary rounded-md px-3 py-2 focus-visible:outline-2"
-          onclick={() =>
-            kind === 'address' ? loadMoreAddresses() : loadMoreLocations(kind)}
-        >
-          {m.feature_search_load_more()}
-        </button>
       {/if}
     </div>
   {/if}
 {/snippet}
 {#snippet searchResults()}
+  {#if fallbackOpen}
+    <section
+      class="motion-safe:animate-in motion-safe:fade-in mx-auto flex min-h-64 w-full max-w-xl flex-col items-center justify-center gap-5 px-6 py-10 text-center"
+      aria-label="Find another starting point"
+    >
+      <SearchIcon class="text-primary size-9" />
+      <h3
+        bind:this={fallbackHeading}
+        tabindex="-1"
+        class="text-xl font-semibold outline-none"
+      >
+        Can’t find what you’re looking for?
+      </h3>
+      <p class="text-muted-foreground text-sm">
+        {#if fallbackStage === 'building' && suggestionKinds?.includes('building')}
+          Search for the building where your {customKindLabel} is located. Select it to
+          use its address and position for your custom {customKindLabel}.
+        {:else}
+          If you have an address, search for it and use it as the starting point for
+          your custom {customKindLabel}.
+        {/if}
+      </p>
+      {#if fallbackStage === 'building' && suggestionKinds?.includes('building')}
+        <button
+          type="button"
+          class="bg-primary focus-visible:outline-primary rounded-lg px-5 py-3 font-medium text-white"
+          onclick={() => searchFallback('building')}
+        >
+          Search buildings
+        </button>
+      {:else if !suggestionKinds || suggestionKinds.includes('address')}
+        <button
+          type="button"
+          class="bg-primary focus-visible:outline-primary rounded-lg px-5 py-3 font-medium text-white"
+          onclick={() => searchFallback('address')}
+        >
+          Search addresses
+        </button>
+      {/if}
+      <button
+        type="button"
+        class="text-primary hover:bg-primary/10 focus-visible:outline-primary rounded-lg px-4 py-2 font-medium"
+        onclick={() => {
+          fallbackOpen = false
+          onManualEntry?.()
+        }}
+      >
+        Create a custom {customKindLabel}
+      </button>
+      <button
+        type="button"
+        class="text-muted-foreground rounded px-3 py-2 text-sm underline"
+        onclick={() => (fallbackOpen = false)}
+      >
+        Back to results
+      </button>
+    </section>
+  {:else}
+    {@render searchResultList()}
+  {/if}
+{/snippet}
+{#snippet searchResultList()}
   {#if localSearchFailed}
     <p role="status" class="text-muted-foreground px-6 py-2 text-sm">
       {m.location_local_unavailable()}
-    </p>
-  {/if}
-  {#if localSearchLimited}
-    <p role="status" class="text-muted-foreground px-6 py-2 text-sm">
-      {m.location_local_more()}
     </p>
   {/if}
   {#if fallbackStatus && !accepted && !associationOpen}
@@ -2244,6 +2430,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
         {allowedLocationKinds}
         showHeading={false}
         {autoAcceptSpecific}
+        showKindFields={!preferredKind}
         createNew={createNewAssociation}
         {onMapCandidates}
         markerNumberFor={result =>
@@ -2310,13 +2497,25 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
         <div
           role="status"
           aria-label={m.resource_loading()}
-          class="space-y-3 py-3 motion-safe:animate-pulse"
+          class="pt-3 motion-safe:animate-pulse"
         >
+          {#if preferredKind}
+            <div aria-hidden="true" class="flex h-11 items-center pt-4 pb-2">
+              <Skeleton class="h-4 w-36" />
+            </div>
+          {/if}
           {#each [0, 1, 2] as placeholder (placeholder)}
-            <div aria-hidden="true" class="flex h-12 items-center gap-3">
-              <div class="bg-muted size-6 rounded-full"></div>
-              <div class="flex-1 space-y-2">
-                <div class="bg-muted h-3 w-2/3 rounded"></div>
+            <div
+              aria-hidden="true"
+              class="border-border/50 flex min-h-20 items-center gap-3 border-b px-3 py-6"
+            >
+              <div class="bg-muted size-9 shrink-0 rounded-full"></div>
+              <div class="bg-muted size-5 shrink-0 rounded"></div>
+              <div class="min-w-0 flex-1 space-y-2">
+                <div class="flex gap-5">
+                  <div class="bg-muted h-4 w-40 rounded"></div>
+                  <div class="bg-muted h-4 w-1/3 rounded"></div>
+                </div>
                 <div class="bg-muted h-3 w-1/2 rounded"></div>
               </div>
             </div>
@@ -2325,9 +2524,12 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
       {/if}
       <section
         bind:this={resultsElement}
-        onscroll={maybeLoadMoreLocations}
+        onscroll={() => {
+          maybeLoadMoreLocations()
+          reportScrollEnd()
+        }}
         class={[
-          'min-h-0 flex-1 scroll-py-12 overflow-y-auto overscroll-contain pt-3 pb-16',
+          'min-h-0 flex-1 scroll-py-12 overflow-y-auto overscroll-contain pt-3 pb-24',
           !rows.length && 'flex flex-col',
         ]}
         aria-label={m.feature_start_search()}
@@ -2335,9 +2537,13 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
         {#if findMode === 'pin' &&
           nearbyFilter.trim() &&
           !visibleRows.length &&
+          !placesFailed &&
+          !placesPartial &&
+          !buildingsFailed &&
+          !addressesFailed &&
           !loading}
           <p role="status" class="text-muted-foreground px-6 py-10 text-center text-sm">
-            No nearby results match this filter.
+            No nearby results match this search.
           </p>
         {/if}
         {#each visibleRows as result, index (result.id)}
@@ -2575,14 +2781,14 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
     !onResultsEnd &&
     !associationOpen &&
     !accepted &&
-    rows.length}
+    searched}
     <div class="flex justify-center px-6 py-4">
       <button
         type="button"
         class="text-primary hover:bg-primary/10 focus-visible:outline-primary rounded-lg px-4 py-2 text-sm font-medium focus-visible:outline-2"
-        onclick={onManualEntry}
+        onclick={openMissingLocation}
       >
-        {m.feature_search_manual_location()}
+        Can’t find what you’re looking for?
       </button>
     </div>
   {/if}
@@ -2642,6 +2848,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
         max="1000"
         step="50"
         bind:value={radius}
+        onchange={() => scheduleNearby()}
         disabled={loading}
         aria-label={m.feature_location_radius()}
         class="accent-primary h-4 w-full cursor-pointer"

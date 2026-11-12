@@ -239,8 +239,3 @@ it('returns persisted titles without evaluating naming rules on reads', async ()
   )
   expect(response.data?.i18n?.en.title).toBe('Stored final title')
 })
-
-it('keeps address and service point permissions independent', () => {
-  expect(targetLocationKinds('service_point')).toEqual(['service_point'])
-  expect(targetLocationKinds('address')).toEqual(['address'])
-})

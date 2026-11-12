@@ -1422,6 +1422,82 @@ it('deliberately selects an existing building part without converting address fl
   )
 })
 
+it('creates a distinct service point from an establishment with optional operating relationship', async () => {
+  const onAccept = vi.fn()
+  const search = vi.fn().mockResolvedValue({ candidates: [], incomplete: false })
+  render(Picker, {
+    origin: candidate('establishment'),
+    allowedLocationKinds: ['service_point'],
+    createNew: true,
+    search,
+    onAccept,
+    onCancel: vi.fn(),
+  })
+  const name = await screen.findByRole('textbox', { name: /Service point.*Name/i })
+  await waitFor(() => expect(search).toHaveBeenCalled())
+  expect(search.mock.calls.every(([input]) => input.kind === 'service_point')).toBe(
+    true,
+  )
+  expect((name as HTMLInputElement).value).toBe('')
+  expect(screen.getByText('Service point name (required)')).toBeTruthy()
+  const create = screen.getByRole('button', {
+    name: 'Create service point',
+  }) as HTMLButtonElement
+  expect(create.disabled).toBe(true)
+  await fireEvent.click(create)
+  expect(onAccept).not.toHaveBeenCalled()
+  await fireEvent.input(name, { target: { value: '   ' } })
+  expect(create.disabled).toBe(true)
+  await fireEvent.input(name, { target: { value: 'Recycling point' } })
+  expect(
+    (screen.getByRole('button', { name: 'Create service point' }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(false)
+  await fireEvent.click(screen.getByRole('checkbox', { name: 'Operates in Cafe' }))
+  await fireEvent.click(
+    await screen.findByRole('button', { name: 'Create service point' }),
+  )
+  await waitFor(() => expect(onAccept).toHaveBeenCalled())
+  const result = onAccept.mock.lastCall?.[0]
+  expect(result).toMatchObject({
+    kind: 'service_point',
+    localKind: 'service_point',
+    names: { en: 'Recycling point' },
+    address: { association: { mode: 'unlinked', operatesInLocationId: 'l' } },
+  })
+  expect(result.identity).toBeUndefined()
+  expect(result.source).toBeUndefined()
+})
+
+it('scores a service-point candidate against the entered name instead of the host', async () => {
+  const host = candidate('building')
+  host.address.overrides.en.buildingNumberExpression = '359-361'
+  const row = {
+    ...candidate('service_point'),
+    names: { en: 'Sheung Wan' },
+    address: structuredClone(host.address),
+  }
+  const onAccept = vi.fn()
+  const view = render(Picker, {
+    origin: host,
+    allowedLocationKinds: ['service_point'],
+    createNew: true,
+    search: vi.fn().mockResolvedValue({ candidates: [row], incomplete: false }),
+    onAccept,
+    onCancel: vi.fn(),
+  })
+  const name = await screen.findByRole('textbox', { name: /Service point.*Name/i })
+  await fireEvent.input(name, { target: { value: 'Sheung Wan' } })
+  await waitFor(() =>
+    expect(
+      view.container
+        .querySelector('[data-association-result]')
+        ?.getAttribute('data-match-score'),
+    ).toBe('100'),
+  )
+  expect(onAccept).not.toHaveBeenCalled()
+})
+
 it('limits the resolution choices to eligible classes and keeps broad families out of the default guide', async () => {
   const view = render(Picker, {
     origin: candidate(),
@@ -1445,38 +1521,4 @@ it('limits the resolution choices to eligible classes and keeps broad families o
   await view.rerender({ allowedLocationKinds: undefined })
   expect(document.querySelector('[data-association-kind="built"]')).toBeNull()
   expect(document.querySelector('[data-association-kind="natural"]')).toBeNull()
-})
-
-it('creates a distinct service point from an establishment with optional operating relationship', async () => {
-  const onAccept = vi.fn()
-  const search = vi.fn().mockResolvedValue({ candidates: [], incomplete: false })
-  render(Picker, {
-    origin: candidate('establishment'),
-    allowedLocationKinds: ['service_point'],
-    createNew: true,
-    search,
-    onAccept,
-    onCancel: vi.fn(),
-  })
-  const name = await screen.findByRole('textbox', { name: /Service point.*Name/i })
-  await waitFor(() => expect(search).toHaveBeenCalled())
-  expect(search.mock.calls.every(([input]) => input.kind === 'service_point')).toBe(
-    true,
-  )
-  expect((name as HTMLInputElement).value).toBe('')
-  await fireEvent.input(name, { target: { value: 'Recycling point' } })
-  await fireEvent.click(screen.getByRole('checkbox', { name: 'Operates in Cafe' }))
-  await fireEvent.click(
-    await screen.findByRole('button', { name: 'Create service point' }),
-  )
-  await waitFor(() => expect(onAccept).toHaveBeenCalled())
-  const result = onAccept.mock.lastCall?.[0]
-  expect(result).toMatchObject({
-    kind: 'service_point',
-    localKind: 'service_point',
-    names: { en: 'Recycling point' },
-    address: { association: { mode: 'unlinked', operatesInLocationId: 'l' } },
-  })
-  expect(result.identity).toBeUndefined()
-  expect(result.source).toBeUndefined()
 })

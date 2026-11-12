@@ -247,6 +247,7 @@ export async function updateLocalLocationAddress(
     address?: unknown
     coordinates?: [number, number]
     divisionOverrides?: AddressDivisionOverrides
+    displayOverrides?: Record<string, string>
     parseSource?: Record<string, string>
     actorId: string
     allowSharedBaseline?: boolean
@@ -361,6 +362,7 @@ export async function updateLocalLocationAddress(
             rawSource: {},
             fallbackDisplay: {},
             authored: address,
+            displayOverrides: input.displayOverrides,
           }
         : {
             ...before.location.address,

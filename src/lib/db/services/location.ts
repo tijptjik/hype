@@ -157,7 +157,10 @@ export async function saveProjectLocationSettings(
 
 export type AcceptedFeatureLocation = {
   fieldEditModes?: Partial<
-    Record<'names' | 'phoneNumber' | 'brands' | 'location', 'community' | 'internal'>
+    Record<
+      'names' | 'phoneNumber' | 'websites' | 'socials' | 'brands' | 'location',
+      'community' | 'internal'
+    >
   >
   nameMode?: 'inherit' | 'independent'
   version: string

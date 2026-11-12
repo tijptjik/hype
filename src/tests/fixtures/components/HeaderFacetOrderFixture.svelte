@@ -4,7 +4,7 @@ import HeaderFacets from '#lib/bits/patterns/layout/header/components/HeaderFace
 import { getAdminFacetTabsForResource } from '#lib/navigation/facets.js'
 import { FirstClassResource } from '#lib/enums.js'
 setResponsiveCtx()
-let resource = $state(FirstClassResource.project)
+let resource = $state(FirstClassResource.hub)
 const items = $derived(
   Array.from(getAdminFacetTabsForResource(resource), ([ref, config]) => ({
     ref,
@@ -20,4 +20,8 @@ const items = $derived(
 </button>
 <button type="button" onclick={() => (resource = FirstClassResource.organisation)}>
   Switch to organisation
+</button>
+
+<button type="button" onclick={() => (resource = FirstClassResource.hub)}>
+  Switch to hub
 </button>

@@ -64,12 +64,12 @@
   }
 
   .bits-theme .bits-switch-field--disabled .bits-switch-label {
-    cursor: not-allowed;
+    cursor: default;
     opacity: 0.7;
   }
 
   .bits-theme .bits-switch-field--display .bits-switch-label {
-    cursor: not-allowed;
+    cursor: default;
     opacity: 1;
   }
 
@@ -176,7 +176,7 @@
   /* --------- */
   .bits-theme .bits-switch:disabled,
   .bits-theme .bits-switch[aria-disabled="true"] {
-    cursor: not-allowed;
+    cursor: default;
     pointer-events: none;
   }
 

@@ -17,6 +17,7 @@ import { authorizeTaskListForContext } from '#lib/api/services/authz/task.js'
 import { canBrowseUsers } from '#lib/api/services/authz/userDirectory.js'
 // NAVIGATION
 import { navigateOnAdmin } from '#lib/navigation/index.js'
+import { messagingNavigationEnabled } from '#lib/navigation/releases.js'
 // ENUMS
 import { FirstClassResource } from '#lib/enums.js'
 // ICONS
@@ -173,7 +174,7 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
     })
   }
 
-  if (adminCtx.view.isSuperAdmin()) {
+  if (adminCtx.view.user && !adminCtx.view.user.isAnonymous) {
     items.push({
       href: `${ADMIN_PATH}/templates`,
       label: m.display_templates_title(),
@@ -182,7 +183,9 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
     })
   }
 
-  items.push({ href: `${ADMIN_PATH}/messaging`, label: 'Messaging', icon: ChatIcon })
+  if (messagingNavigationEnabled) {
+    items.push({ href: `${ADMIN_PATH}/messaging`, label: 'Messaging', icon: ChatIcon })
+  }
   if (adminCtx.view.isSuperAdmin())
     items.push({ href: `${ADMIN_PATH}/docs`, label: 'Docs', icon: BookOpenIcon })
 

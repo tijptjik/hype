@@ -205,3 +205,25 @@ it('does not turn the combined building title into an undetermined locale', asyn
     'zh-hans': '金门商业大厦',
   })
 })
+
+it('finds nearby named buildings beyond the initial detail slice', async () => {
+  source.names.mockResolvedValue({
+    release: 'r1',
+    records: Array.from({ length: 45 }, (_, index) => ({
+      id: `tower-${index}`,
+      name: `Tower ${index}`,
+      names: {},
+      divisionCodes: [],
+    })),
+  })
+  source.details.mockImplementation(async (id: string) => ({
+    id,
+    coordinates: id === 'tower-44' ? [114, 22] : [115, 23],
+    addresses: [],
+  }))
+  const result = await searchBuildingNames('Tower', 'en', () => true, {
+    coordinates: [114, 22],
+    maxDistance: 300,
+  })
+  expect(result.map(row => row.buildingSource.id)).toEqual(['tower-44'])
+})

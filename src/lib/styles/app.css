@@ -23,11 +23,23 @@
     caret-color: currentColor;
   }
 
-  button,
-  [type="button"],
-  [type="submit"],
-  [type="reset"] {
+  :is(button, [type="button"], [type="submit"], [type="reset"]):not(
+    :disabled,
+    [aria-disabled="true"],
+    [data-disabled]:not([data-disabled="false"])
+  ) {
     cursor: pointer;
+  }
+}
+
+@layer components {
+  /* Disabled controls and their contents must not advertise an available action.
+     Override local cursor utilities without changing event or focus behavior. */
+  :is(:disabled, [aria-disabled="true"], [data-disabled]:not([data-disabled="false"])),
+  :is(:disabled, [aria-disabled="true"], [data-disabled]:not([data-disabled="false"]))
+    * {
+    /* biome-ignore lint/complexity/noImportantStyles: Disabled state must override component and utility cursors. */
+    cursor: default !important;
   }
 }
 

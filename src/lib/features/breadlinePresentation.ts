@@ -8,7 +8,7 @@ import {
 import { resolveBrandIdentity } from './brandIdentity'
 
 /**
- * Resolves accepted Location brands, with legacy fallback only for unassociated Features.
+ * Resolves accepted Location brands without the retired organisation classifier.
  * @param feature Hydrated feature.
  * @param locale Preferred display locale; all brands are retained.
  * @returns Bundled logo for a single known brand, or combined names for multiple brands.
@@ -41,22 +41,15 @@ export function breadlineBrand(
         )
       : undefined
     return known
-      ? { ...known, name: name || known.name }
+      ? { ...known, name: name || known.name, logoSrc: single?.logo || known.logoSrc }
       : {
           name: name || 'Breadline',
           badge: name ? name.slice(0, 2).toUpperCase() : 'B',
           color: '#3b7263',
+          ...(single?.logo ? { logoSrc: single.logo } : {}),
         }
   }
-  const name = presentationProperty(feature, 'brand')
-  const known = resolveBrandIdentity(name)
-  return (
-    known ?? {
-      name: name || 'Breadline',
-      badge: name ? name.slice(0, 2).toUpperCase() : 'B',
-      color: '#3b7263',
-    }
-  )
+  return { name: 'Breadline', badge: 'B', color: '#3b7263' }
 }
 
 /** Date-scoped data supplied by a run adapter; absent data is never fabricated. */

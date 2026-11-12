@@ -11,7 +11,6 @@ import type { FeatureEntityFormData } from '#lib/db/zod/schema/feature.form.js'
 import { canonicalContentTag } from '#lib/i18n/contentRecords.js'
 // DOMAIN
 import { TARGET_CONTEXTS } from '#lib/features/locationPolicy.js'
-import { sharedLocationEditRights } from './services/locationOwnership'
 import { historicalSourceLayerId } from '#lib/db/services/historicalLayers.js'
 import type { RemoteQuery } from '$app/server'
 import { error } from '@sveltejs/kit'
@@ -81,7 +80,10 @@ import {
   createFeatureForm,
   saveUnlinkedFeatureForm,
 } from '#lib/db/services/featureFormSave.js'
-import { requireLocationOrganisationManager } from '#lib/api/services/locationOwnership.js'
+import {
+  sharedLocationEditRights,
+  requireLocationOrganisationManager,
+} from '#lib/api/services/locationOwnership.js'
 import { saveLinkedFeatureForm } from '#lib/db/services/locationEdit.js'
 import {
   featureDestinationGuard,
@@ -606,7 +608,8 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
 
   if (
     mode === 'create' &&
-    (data.locationBrandEdit ||
+    (data.locationProfileEdit ||
+      data.locationBrandEdit ||
       data.locationReset ||
       data.locationFieldModes ||
       data.locationNames)
@@ -827,7 +830,11 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
 
   // Authorize reset and linked-name intent by their affected field groups before reading accepted source values.
   if (data.locationNames) submittedDataBeforeHydration.i18n = data.i18n
-  if (data.locationBrandEdit || data.locationReset?.phoneNumber)
+  if (
+    data.locationProfileEdit ||
+    data.locationBrandEdit ||
+    data.locationReset?.phoneNumber
+  )
     submittedDataBeforeHydration.properties = []
   if (data.locationReset?.location) {
     submittedDataBeforeHydration.geometry = data.geometry
@@ -1148,7 +1155,7 @@ export const featureForm = guardedForm('unchecked', async (input, ctx) => {
       ),
     )
   }
-  if (data.locationFieldModes || data.locationNames)
+  if (data.locationProfileEdit || data.locationFieldModes || data.locationNames)
     invalid(issue('Location field edits require the Feature revision migration'))
   const linkedSave = await saveLinkedFeatureForm(db, saveInput)
   if (linkedSave.status === 'conflict')

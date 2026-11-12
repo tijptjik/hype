@@ -45,6 +45,8 @@ export interface LocaleToolbarProps extends LocaleSelection {
   mode?: 'visibility' | 'membership'
   /** Keep compact header languages on one scrollable line. */
   horizontal?: boolean
+  /** Place locale chips below the toggle in compact form columns. */
+  stacked?: boolean
   /** Locales with nonempty values, used to flag content outside the displayed fields. */
   contentLocales?: readonly string[]
   alwaysExpanded?: boolean

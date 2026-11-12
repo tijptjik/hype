@@ -5,7 +5,7 @@ import * as m from '#lib/paraglide/messages.js'
 import { untrack } from 'svelte'
 // I18N
 import { getLocaleKey } from '#lib/i18n.js'
-import { featureTypeLabel } from '#lib/features/intents.js'
+import { DEFAULT_FEATURE_TYPES, featureTypeLabel } from '#lib/features/intents.js'
 // ICONS
 import ObjectIcon from 'virtual:icons/lucide/box'
 import PlaceIcon from 'virtual:icons/lucide/map-pin-house'
@@ -36,7 +36,7 @@ let {
 const illustrations = $derived({
   object: {
     icon: ObjectIcon,
-    description: 'An individual item, such as a sign, sculpture or drinking fountain.',
+    description: m.setup_object_example(),
   },
   place: {
     icon: PlaceIcon,
@@ -66,16 +66,15 @@ $effect(() => {
   let cancelled = false
   types = null
   failed = false
-  untrack(() => onChange(null))
   getFeatureIntentOptions({ layerId: id })
     .then(result => {
       if (cancelled) return
       types = result
-      if (result.length === 1) onChange(result[0])
-      else if (!requireSelection) {
-        const retained = result.find(type => type.id === previous)
-        if (retained) onChange(retained)
-      }
+      // Loading and retries never erase a choice; validate it against resolved options.
+      const retained = result.find(type => type.id === previous)
+      if (retained) onChange(retained)
+      else if (result.length === 1) onChange(result[0])
+      else if (previous || !requireSelection) onChange(null)
     })
     .catch(() => {
       if (!cancelled) failed = true
@@ -123,9 +122,18 @@ $effect(() => {
       {#each types as type (type.id)}
         {@const illustration = illustrations[type.kind ?? 'object']}
         {@const Icon = illustration.icon}
+        {@const defaultType = DEFAULT_FEATURE_TYPES.find(
+          item => item.id === type.id && item.kind === (type.kind ?? 'object'),
+        )}
+        {@const label = featureTypeLabel(type, getLocaleKey())}
+        <!-- Generic examples describe only unchanged built-in type names. -->
         <IntentChoiceCard
-          label={featureTypeLabel(type, getLocaleKey())}
-          description={illustration.description}
+          {label}
+          description={defaultType &&
+          type.label === defaultType.label &&
+          label === featureTypeLabel(defaultType, getLocaleKey())
+            ? illustration.description
+            : undefined}
           selected={value === type.id}
           onclick={() => onChange(type)}
         >

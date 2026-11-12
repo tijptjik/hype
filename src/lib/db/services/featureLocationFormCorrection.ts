@@ -29,6 +29,10 @@ import type { Database } from '#lib/types.js'
 import type { BatchItem } from 'drizzle-orm/batch'
 import type { FeatureRevisionContent } from '#lib/revisions/featureContent.js'
 import type { LocationReset } from '#lib/locations/reset.js'
+import {
+  LocationProfileEditSchema,
+  type LocationProfileEdit,
+} from '#lib/locations/profileEdit.js'
 import type { LocationBrandEdit } from '#lib/locations/brandEdit.js'
 
 /** Route direct staff form changes by field ownership and prepare one atomic history write.
@@ -48,12 +52,16 @@ export async function prepareFeatureLocationFormCorrection(
     reset?: LocationReset
     names?: Record<string, string>
     fieldModes?: Partial<
-      Record<'names' | 'phoneNumber' | 'brands' | 'location', 'community' | 'internal'>
+      Record<
+        'names' | 'phoneNumber' | 'websites' | 'socials' | 'brands' | 'location',
+        'community' | 'internal'
+      >
     >
     authorizeCommunity?: () => Promise<{ canEdit: boolean; superAdmin: boolean }>
     /** Server-resolved default; internal identities never contribute to community curations. */
     defaultFieldMode?: 'community' | 'internal'
     nameMode?: 'inherit' | 'independent'
+    profileEdit?: LocationProfileEdit
     brandEdit?: LocationBrandEdit
     authorizeOrganisation?: () => Promise<void>
   },
@@ -65,7 +73,10 @@ export async function prepareFeatureLocationFormCorrection(
   const association = input.content.placement.location
   const comparison = structuredClone(input.previous)
   const queries: BatchItem<'sqlite'>[] = []
-  if (!association) return { queries, comparison, authorized: false }
+  if (!association) {
+    if (input.profileEdit) throw new Error('LOCATION_REQUIRED')
+    return { queries, comparison, authorized: false }
+  }
   const original = input.previous.placement.location
   if (!original) throw new Error('LOCATION_CHANGED')
   if (
@@ -73,6 +84,11 @@ export async function prepareFeatureLocationFormCorrection(
     (input.brandEdit &&
       input.brandEdit.expectedRevision !== original.associationVersion)
   )
+    throw new Error('LOCATION_CHANGED')
+  const profileEdit = input.profileEdit
+    ? LocationProfileEditSchema.parse(input.profileEdit)
+    : undefined
+  if (profileEdit && profileEdit.expectedRevision !== original.associationVersion)
     throw new Error('LOCATION_CHANGED')
   let overrides = FeatureLocationOverridesSchema.parse(association.acceptedOverrides)
   const beforeOverrides = structuredClone(overrides)
@@ -241,6 +257,28 @@ export async function prepareFeatureLocationFormCorrection(
       organisationChanged = true
     }
   }
+  // Direct profile contacts do not depend on a configured Feature property.
+  for (const field of ['phoneNumber', 'websites', 'socials'] as const) {
+    const value = profileEdit?.values[field]
+    if (value === undefined) continue
+    Object.assign(overrides, { [field]: { mode: 'override', value } })
+    organisationChanged = true
+    if (field === 'phoneNumber') {
+      for (const [id, property] of Object.entries(input.content.properties)) {
+        if (property.selection.definition.key !== 'phoneNumber') continue
+        property.selection.value = JSON.stringify(value)
+        comparison.properties[id] = structuredClone(property)
+      }
+    }
+  }
+  if (
+    profileEdit?.values.accessibility &&
+    overrides.accessibility?.mode !== 'inherit' &&
+    overrides.accessibility
+  ) {
+    overrides.accessibility = { mode: 'inherit' }
+    organisationChanged = true
+  }
   if (input.brandEdit) {
     overrides.brands = input.brandEdit.choice
     organisationChanged = true
@@ -268,8 +306,18 @@ export async function prepareFeatureLocationFormCorrection(
     authorized = true
   }
   // Community-mode edits retain the same override and contribute only changed fields, never reset-to-inherit.
-  const patch: SharedCorrectionPatch = {}
-  for (const field of ['names', 'phoneNumber', 'brands', 'location'] as const) {
+  // Mobility answers are community facts, with no Organisation-owned parallel copy.
+  const patch: SharedCorrectionPatch = profileEdit?.values.accessibility
+    ? { accessibility: { mode: 'override', value: profileEdit.values.accessibility } }
+    : {}
+  for (const field of [
+    'names',
+    'phoneNumber',
+    'websites',
+    'socials',
+    'brands',
+    'location',
+  ] as const) {
     const choice = overrides[field]
     if (equalLocationValue(beforeOverrides[field] ?? null, choice ?? null)) continue
     const mode = modes[field] ?? input.defaultFieldMode ?? 'internal'
@@ -354,7 +402,15 @@ export async function prepareFeatureLocationFormCorrection(
       association.locationId,
     )
     const merged = structuredClone(current?.overrides ?? beforeOverrides)
-    for (const field of ['names', 'phoneNumber', 'brands', 'location'] as const) {
+    for (const field of [
+      'names',
+      'phoneNumber',
+      'websites',
+      'socials',
+      'brands',
+      'location',
+      'accessibility',
+    ] as const) {
       if (equalLocationValue(beforeOverrides[field] ?? null, overrides[field] ?? null))
         continue
       if (field === 'names') {

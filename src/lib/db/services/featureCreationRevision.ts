@@ -211,10 +211,17 @@ export async function prepareFeatureCreationContent(
     revisions: {},
     order: [],
   })
-  const content = buildFeatureFormCandidate(previous, source, {
-    ...input.data,
-    i18n: input.i18n,
-    properties: input.properties,
-  } as Parameters<typeof buildFeatureFormCandidate>[2])
+  // Creation has no accepted fields to retain: preserve submitted empty phone rows
+  // exactly as the relation writer does, instead of applying existing-record no-op cleanup.
+  const content = buildFeatureFormCandidate(
+    previous,
+    source,
+    {
+      ...input.data,
+      i18n: input.i18n,
+      properties: input.properties,
+    } as Parameters<typeof buildFeatureFormCandidate>[2],
+    false,
+  )
   return { content, checks }
 }

@@ -1,10 +1,20 @@
 // @vitest-environment jsdom
 // TESTS
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 // ADDRESS UI
 import { adaptivePlaceholder } from '#lib/bits/patterns/forms/formFeatureAddress/adaptivePlaceholder.js'
 
+beforeEach(() => {
+  vi.useFakeTimers()
+  vi.stubGlobal(
+    'requestAnimationFrame',
+    vi.fn((callback: FrameRequestCallback) => setTimeout(() => callback(0), 16)),
+  )
+  vi.stubGlobal('cancelAnimationFrame', (frame: number) => clearTimeout(frame))
+})
+
 afterEach(() => {
+  vi.useRealTimers()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
   document.body.replaceChildren()
@@ -45,14 +55,24 @@ it('retains a numeric example in narrow fields and restores the full examples wh
   expect(input.placeholder).toBe('25')
   width = 300
   resize()
+  vi.advanceTimersByTime(16)
   expect(input.placeholder).toBe('25, 25A, 25–27')
   width = 0
   resize()
+  vi.advanceTimersByTime(16)
   expect(input.placeholder).toBe('25, 25A, 25–27')
   width = 200
   action.update('The Harbourside')
+  vi.advanceTimersByTime(16)
   expect(input.placeholder).toBe('The Harbourside')
   action.update('1, II, B')
+  vi.advanceTimersByTime(16)
   expect(input.placeholder).toBe('1, II, B')
+  vi.mocked(requestAnimationFrame).mockClear()
+  resize()
+  resize()
+  resize()
+  expect(requestAnimationFrame).toHaveBeenCalledTimes(1)
   action.destroy()
+  expect(vi.getTimerCount()).toBe(0)
 })

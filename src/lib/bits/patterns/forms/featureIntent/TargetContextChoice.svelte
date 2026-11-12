@@ -8,6 +8,7 @@ import LocationIcon from '#lib/bits/custom/locationIcon/LocationIcon.svelte'
 import { LOCATION_ENTITY_KINDS, locationTaxonomy } from '#lib/locations/taxonomy.js'
 import { locationTaxonomyLabel } from '#lib/locations/taxonomy.i18n.js'
 // DOMAIN
+import { targetContextChoices } from './targetContextChoices'
 import {
   targetContextLabel,
   targetContextExamples,
@@ -22,13 +23,7 @@ let {
   value?: TargetContext | null
   onChange: (context: TargetContext) => void
 } = $props()
-const effectiveContexts = $derived([
-  ...new Set(
-    contexts.map(context =>
-      context === 'infrastructure' ? ('built' as const) : context,
-    ),
-  ),
-])
+const effectiveContexts = $derived(targetContextChoices(contexts))
 </script>
 <fieldset class="mb-8 grid min-w-0 gap-3">
   <legend class="mb-3 text-lg font-semibold">

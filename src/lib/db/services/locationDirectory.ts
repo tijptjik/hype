@@ -32,6 +32,9 @@ export async function listLocationResources(
     /** Narrow index results without changing detail-read authorization scope. */
     restrictToOrganisation?: boolean
     kind?: LocationKind
+    brandId?: string
+    upstream?: boolean
+    linkedFeatures?: boolean
     buildingId?: string
     q?: string
     after?: string
@@ -54,7 +57,22 @@ export async function listLocationResources(
     eq(locationRevision.locationId, locationTable.id),
     sql`${locationRevision.version} = (SELECT max(r.version) FROM locationRevisionContent r WHERE r.locationId=${locationTable.id} AND (${locationTable.state}!='linked' OR r.origin='saanseoi'))`,
   )
+  const linked = sql`EXISTS(SELECT 1 FROM featureLocation fl JOIN feature f ON f.id=fl.featureId JOIN project p ON p.id=f.projectId WHERE fl.locationId=${locationTable.id} AND (${input.organisationId ?? null} IS NULL OR p.organisationId=${input.organisationId ?? null}))`
   const match = and(
+    sql`${locationTable.state} != 'redirect'`,
+    input.brandId
+      ? sql`EXISTS(SELECT 1 FROM locationSharedHead h WHERE h.locationId=${locationTable.id} AND json_extract(h.corrections,'$.brandId.supersededBy') IS NULL AND json_extract(h.corrections,'$.brandId.choice.mode')='override' AND json_extract(h.corrections,'$.brandId.choice.value')=${input.brandId})`
+      : undefined,
+    input.upstream === undefined
+      ? undefined
+      : input.upstream
+        ? sql`${locationTable.ssId} IS NOT NULL`
+        : sql`${locationTable.ssId} IS NULL`,
+    input.linkedFeatures === undefined
+      ? undefined
+      : input.linkedFeatures
+        ? linked
+        : sql`NOT (${linked})`,
     // A parent-part picker only offers explicit members of the selected building.
     input.buildingId
       ? sql`EXISTS(SELECT 1 FROM locationMembershipHead m WHERE m.childLocationId=${locationTable.id}

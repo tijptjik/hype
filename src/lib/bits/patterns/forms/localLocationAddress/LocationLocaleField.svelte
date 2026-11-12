@@ -1,4 +1,8 @@
 <script lang="ts">
+// TRANSLATION REVIEW
+import { MultilingualReview } from '#lib/forms/multilingualReview.svelte.js'
+import MultilingualReviewPanel from '../translationReview/MultilingualReviewPanel.svelte'
+import TranslationSuggestion from '../translationReview/TranslationSuggestion.svelte'
 // SVELTE
 import { flip } from 'svelte/animate'
 import { slide } from 'svelte/transition'
@@ -48,19 +52,36 @@ const locales = $derived(
     ...Object.keys(value).filter(tag => value[tag]?.trim()),
   ]).filter(tag => !/^und(?:-|$)/i.test(tag)),
 )
+let reviewVisible = $state(false)
 const shown = $derived(
-  displayedLocales(
-    {
-      selectedLocales: locales,
-      visibleLocales: localeState
-        ? [
-            ...localeState.visibleLocales,
-            ...locales.filter(tag => !localeState.selectedLocales.includes(tag)),
-          ]
-        : locales,
-    },
-    translations,
-  ),
+  reviewVisible
+    ? locales
+    : displayedLocales(
+        {
+          selectedLocales: locales,
+          visibleLocales: localeState
+            ? [
+                ...localeState.visibleLocales,
+                ...locales.filter(tag => !localeState.selectedLocales.includes(tag)),
+              ]
+            : locales,
+        },
+        translations,
+      ),
+)
+const review = new MultilingualReview(
+  () =>
+    locales.map(locale => ({
+      key: `${uid}:${locale}`,
+      field: uid,
+      locale,
+      value: canonical[locale] ?? '',
+      set: (text: string) => update(locale, text),
+    })),
+  () => !disabled,
+  () => {
+    reviewVisible = true
+  },
 )
 let beforeEdit: Record<string, string> = {}
 
@@ -75,32 +96,54 @@ function update(locale: string, text: string): void {
 </script>
 
 <fieldset class="min-w-0 space-y-2" data-location-locale-field={label}>
+  <MultilingualReviewPanel {review} />
   <legend class="mb-1 min-h-7 text-sm font-medium">{label}</legend>
   {#each shown as locale (locale)}
+    {@const reviewKey = `${uid}:${locale}`}
     <div
       animate:flip={{ duration: prefersReducedMotion.current ? 0 : 200 }}
       transition:slide={{ duration: prefersReducedMotion.current ? 0 : 200 }}
     >
-      <FormI18nInlineRow
-        value={canonical[locale] ?? ''}
-        label={translations ? `${label} · ${shortLocaleLabel(locale)}` : label}
-        prefix={translations ? shortLocaleLabel(locale) : ''}
-        editable={!disabled}
-        showVerification={false}
-        required={false}
-        issues={undefined}
-        attrs={{
-          id: `${uid}-${locale}`,
-          maxlength: 1000,
-          oninput: (event: Event) =>
-            update(locale, (event.currentTarget as HTMLInputElement).value),
-        }}
-        onStart={() => {
-          beforeEdit[locale] = canonical[locale] ?? ''
-        }}
-        onCancel={() => update(locale, beforeEdit[locale] ?? '')}
-        onClear={() => update(locale, '')}
-      />
+      <div
+        data-missing-translation={(review.started && !canonical[locale]?.trim()) ||
+          undefined}
+      >
+        {#if review.current(reviewKey)}
+          <TranslationSuggestion
+            value={review.proposals[reviewKey].value}
+            {label}
+            prefix={shortLocaleLabel(locale)}
+            onChange={text => {
+              review.proposals[reviewKey].value = text
+            }}
+            onAccept={edited => review.accept(reviewKey, edited)}
+            onReject={() => review.reject(reviewKey)}
+          />
+        {:else}
+          <FormI18nInlineRow
+            value={canonical[locale] ?? ''}
+            label={translations || reviewVisible
+              ? `${label} · ${shortLocaleLabel(locale)}`
+              : label}
+            prefix={translations || reviewVisible ? shortLocaleLabel(locale) : ''}
+            editable={!disabled}
+            showVerification={false}
+            required={false}
+            issues={undefined}
+            attrs={{
+              id: `${uid}-${locale}`,
+              maxlength: 1000,
+              oninput: (event: Event) =>
+                update(locale, (event.currentTarget as HTMLInputElement).value),
+            }}
+            onStart={() => {
+              beforeEdit[locale] = canonical[locale] ?? ''
+            }}
+            onCancel={() => update(locale, beforeEdit[locale] ?? '')}
+            onClear={() => update(locale, '')}
+          />
+        {/if}
+      </div>
     </div>
   {/each}
 </fieldset>

@@ -33,7 +33,17 @@ export const LocationNamesEditSchema = contentLocaleMap(
     value => Object.keys(value).length > 0 && Object.keys(value).length <= 100,
     'Keep at least one name and no more than 100 languages',
   )
-const brands = z.array(z.strictObject({ identifiers: names, names }))
+const brands = z.array(
+  z.strictObject({
+    identifiers: names,
+    names,
+    logo: z
+      .string()
+      .regex(/^\/api\/identity-catalogue\/logos\/[a-f0-9-]+$/)
+      .nullable()
+      .optional(),
+  }),
+)
 const location = z.strictObject({
   geometry: z.strictObject({
     type: z.literal('Point'),

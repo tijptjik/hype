@@ -96,7 +96,10 @@ it.each(['feature', 'location'] as const)(
     ).toContain(
       `${base === 'location' ? 'Linked location name' : 'Feature name'} · inherited default`,
     )
-    expect(view.getByText('Using inherited default')).toBeTruthy()
+    expect(view.getByText('Inherited default')).toBeTruthy()
+    expect(
+      view.getByRole('dialog', { name: 'Feature naming' }).closest('form'),
+    ).toBeNull()
     expect(view.queryByText('No template selected')).toBeNull()
     await fireEvent.click(view.getByRole('button', { name: 'Accept naming rule' }))
     expect(onAccept).toHaveBeenCalledWith(undefined)

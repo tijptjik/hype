@@ -7,6 +7,7 @@ import {
 } from '#lib/api/location.remote.js'
 import { importBuildingLocation } from '#lib/api/buildingLocation.remote.js'
 // TYPES
+import type { LocationReview } from '#lib/context/locationCreation.svelte.js'
 import type { AccessibilityDraft } from './accessibility'
 import type { LocalLocationInput } from './local.js'
 
@@ -17,6 +18,7 @@ export type DraftLocalLocationIntent = {
   replacementLocationId?: string
   accessibility?: AccessibilityDraft
   nameMode?: 'independent' | 'inherit'
+  review?: LocationReview
   input?: LocalLocationInput
   buildingSource?: import('./buildingSource').BuildingSource
   identity?: { locationId: string; revisionId: string }
@@ -48,6 +50,15 @@ export async function linkDraftLocalLocation(
     if (!intent.replacementRevision || existing.version !== intent.replacementRevision)
       throw new Error('Feature already has a different Location')
   }
+  if (intent.review) {
+    const { saveLocationReview } = await import('./saveLocationReview.js')
+    try {
+      intent.identity = await saveLocationReview(intent.review, intent.featureId)
+    } finally {
+      // Even a failed correction must retain an already-created identity for retry.
+      retain(intent)
+    }
+  }
   if (!intent.identity) {
     if (!intent.input) throw new Error('Local Location creation input is required')
     intent = {
@@ -63,10 +74,11 @@ export async function linkDraftLocalLocation(
     }
     retain(intent)
   }
+  if (!intent.identity) throw new Error('Location identity is required')
   const link = {
     featureId: intent.featureId,
-    locationId: intent.identity!.locationId,
-    revisionId: intent.identity!.revisionId,
+    locationId: intent.identity.locationId,
+    revisionId: intent.identity.revisionId,
     expectedFeatureModifiedAt: modifiedAt,
     nameMode: intent.nameMode ?? 'inherit',
   }

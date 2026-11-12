@@ -1,10 +1,20 @@
 // @vitest-environment jsdom
 // TESTS
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 // UI
 import { fitSearchParts } from '#lib/bits/patterns/forms/featureLocation/fitSearchParts.js'
 
+beforeEach(() => {
+  vi.useFakeTimers()
+  vi.stubGlobal(
+    'requestAnimationFrame',
+    vi.fn((callback: FrameRequestCallback) => setTimeout(() => callback(0), 16)),
+  )
+  vi.stubGlobal('cancelAnimationFrame', (frame: number) => clearTimeout(frame))
+})
+
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   document.body.replaceChildren()
 })
@@ -43,14 +53,23 @@ it('drops the broadest geography before street details and restores parts when r
   expect(parts.map(part => part.style.display)).toEqual(['', '', 'none', 'none'])
   available = 420
   resize()
+  vi.advanceTimersByTime(16)
   expect(parts.map(part => part.style.display)).toEqual(['', '', '', 'none'])
   available = 70
   resize()
+  vi.advanceTimersByTime(16)
   expect(parts.map(part => part.style.display)).toEqual(['', 'none', 'none', 'none'])
   available = 600
   resize()
+  vi.advanceTimersByTime(16)
   expect(parts.map(part => part.style.display)).toEqual(['', '', '', ''])
+  vi.mocked(requestAnimationFrame).mockClear()
+  resize()
+  resize()
+  resize()
+  expect(requestAnimationFrame).toHaveBeenCalledTimes(1)
   action.destroy()
+  expect(vi.getTimerCount()).toBe(0)
 })
 
 it('measures the scroller text rather than a collapsed viewport, then reserves a readable identity width', () => {
@@ -88,6 +107,7 @@ it('measures the scroller text rather than a collapsed viewport, then reserves a
   expect(street.style.display).toBe('none')
   available = 350
   resize()
+  vi.advanceTimersByTime(16)
   expect(identity.style.width).toBe('200px')
   expect(street.style.display).toBe('')
   action.destroy()

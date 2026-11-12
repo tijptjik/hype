@@ -11,7 +11,8 @@ import { expandLocationMatchingTypes } from '#lib/locations/taxonomy.js'
 import { getLocaleKey, m } from '#lib/i18n.js'
 import { locationKindLabel } from '#lib/locations/kinds.i18n.js'
 // COMPONENTS
-import BuildingPartParents from '../localLocationAddress/BuildingPartParents.svelte'
+import BuildingSuggestionCard from './BuildingSuggestionCard.svelte'
+import EnclosingBuildingParts from './EnclosingBuildingParts.svelte'
 import AssociationUnitInput from './AssociationUnitInput.svelte'
 import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 import LocationIcon from '#lib/bits/custom/locationIcon/LocationIcon.svelte'
@@ -80,6 +81,7 @@ import {
   type LocationSearchMarker,
 } from '#lib/locations/searchPresentation.js'
 // DOMAIN
+import { buildingPartAddress } from '#lib/locations/buildingPartAddress.js'
 import { canOperateIn } from '#lib/features/locationPolicy.js'
 // BITS COMPONENTS
 import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
@@ -103,12 +105,14 @@ let {
   onMapCandidates,
   showHeading = true,
   autoAcceptSpecific = false,
+  showKindFields = true,
   createNew = false,
   markerNumberFor = () => 0,
 }: {
   origin: Result
   allowedLocationKinds?: readonly string[]
   showHeading?: boolean
+  showKindFields?: boolean
   autoAcceptSpecific?: boolean
   createNew?: boolean
   cached?: Result[]
@@ -167,6 +171,9 @@ const initial = untrack((): Result => {
 })
 let buildingId = $state(initial.address.association?.buildingId ?? '')
 let parentPartId = $state(initial.address.association?.parentPartId ?? '')
+let enclosingPartsReady = $state(true)
+let parentMarkers = $state<LocationSearchMarker[]>([])
+let selectParentMarker = $state<((id: string) => void) | undefined>()
 let operatesIn = $state(false)
 const originalAddress = $derived(
   normalizeAssociationComponents($state.snapshot(origin.address)),
@@ -497,7 +504,9 @@ const resultRows = $derived(
   candidates[kind]
     .filter(row => !visibleProvisional || !sameRecord(row, visibleProvisional))
     .sort(
-      (a, b) => associationMatch(origin, b).score - associationMatch(origin, a).score,
+      (a, b) =>
+        associationMatch(comparisonOrigin(kind), b).score -
+        associationMatch(comparisonOrigin(kind), a).score,
     ),
 )
 const ghost = $derived(
@@ -607,13 +616,36 @@ $effect(() => {
         ]
       : [],
   )
+  const choosingBuilding = kind === 'building_part' && !matched?.identity
+  const shownMarkers = choosingBuilding ? parentMarkers : markers
   untrack(() =>
-    onMapCandidates?.(markers, id => {
+    onMapCandidates?.(shownMarkers, id => {
+      if (choosingBuilding) {
+        selectParentMarker?.(id)
+        return
+      }
       const row = rows.find(candidate => candidate.id === id)
       if (row) compare(row)
     }),
   )
 })
+
+/** Compare creation candidates with the name being authored, not the host's name.
+ * @param value Target kind being checked.
+ * @returns Address evidence with the current draft name, without a borrowed identity.
+ */
+function comparisonOrigin(value: AssociationKind): Result {
+  return createNew
+    ? {
+        ...origin,
+        kind: value,
+        names: names[value],
+        identity: undefined,
+        source: undefined,
+        buildingSource: undefined,
+      }
+    : origin
+}
 
 /** Read the strongest candidate independently of which level is selected.
  * @param value Association level. @returns Evidence strength, never a probability.
@@ -637,7 +669,7 @@ function matchStrength(value: AssociationKind): number {
     0,
     ...rows
       .filter(row => queryMatches(row, names[value][tag] ?? ''))
-      .map(row => associationMatch(origin, row).score),
+      .map(row => associationMatch(comparisonOrigin(value), row).score),
   )
 }
 /** Flag evidence worth reviewing without accepting a candidate.
@@ -692,7 +724,9 @@ async function reconcile(value: AssociationKind): Promise<void> {
       ).values(),
     ]
     // A unique complete semantic match may preselect a draft, but never silently save or override an explicit choice.
-    const exact = candidates[value].filter(row => associationMatch(origin, row).exact)
+    const exact = candidates[value].filter(
+      row => associationMatch(comparisonOrigin(value), row).exact,
+    )
     if (
       !createNew &&
       (!allowedLocationKinds || allowedLocationKinds.includes(value)) &&
@@ -927,7 +961,12 @@ function acceptInitialSelection(): void {
  * @param manual Explicit address-only intent. @returns Nothing.
  */
 function accept(manual = false): void {
-  if (!canAccept || (kind === 'building_part' && !matched?.identity && !buildingId))
+  if (
+    !canAccept ||
+    (kind === 'building_part' &&
+      !matched?.identity &&
+      (!buildingId || !enclosingPartsReady))
+  )
     return
   const selectedKind = manual ? 'address' : kind
   const target = manual ? null : custom ? (provisional[kind] ?? null) : matched
@@ -990,6 +1029,8 @@ function accept(manual = false): void {
     checkedAt: new Date().toISOString(),
     targetId: custom ? undefined : target?.id,
   }
+  if (selectedKind === 'building_part' && (!target || custom))
+    address = buildingPartAddress(address, selectedNames)
   if (target && moveMarker && target.address.coordinates)
     address.coordinates = target.address.coordinates
   if (customPosition) address.coordinates = [...customPosition]
@@ -1222,7 +1263,9 @@ onMount(() => {
       moreSpecific.every(
         value =>
           !Object.values(names[value]).some(name => name.trim()) &&
-          !candidates[value].some(row => associationMatch(origin, row).exact),
+          !candidates[value].some(
+            row => associationMatch(comparisonOrigin(value), row).exact,
+          ),
       )
     ) {
       alreadyMostSpecific = true
@@ -1603,23 +1646,29 @@ onDestroy(() => {
 <section
   class={initialSearchPending
     ? 'hidden'
-    : 'bg-panel flex min-h-0 flex-1 flex-col overflow-hidden'}
+    : kind === 'building_part'
+      ? 'bg-panel flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain'
+      : 'bg-panel flex min-h-0 flex-1 flex-col overflow-hidden'}
   inert={initialSearchPending}
   data-location-association-picker
 >
-  <div class="grid gap-4 p-4 sm:grid-cols-2">
-    <LocationKindField
-      value={kind}
-      allowPartCreation={true}
-      allowedKinds={displayKinds}
-      onChange={next => {
-        if (next !== 'unknown') selectKind(next)
-      }}
-    />
-  </div>
+  {#if showKindFields}
+    <div class="grid gap-4 p-4 sm:grid-cols-2">
+      <LocationKindField
+        value={kind}
+        allowPartCreation={true}
+        allowedKinds={displayKinds}
+        onChange={next => {
+          if (next !== 'unknown') selectKind(next)
+        }}
+      />
+    </div>
+  {/if}
   <div
     use:measureSpace
-    class="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+    class={kind === 'building_part'
+      ? 'shrink-0'
+      : 'min-h-0 flex-1 overflow-y-auto overscroll-contain'}
     data-association-scroll
   >
     <div class="flex flex-col">
@@ -1880,6 +1929,11 @@ onDestroy(() => {
             inert={Boolean(matched)}
             data-association-discovery
           >
+            {#if createNew && kind === 'service_point'}
+              <p class="mx-auto w-full max-w-lg text-sm font-medium">
+                {m.location_service_name()}
+              </p>
+            {/if}
             <label
               class="relative mx-auto block w-full max-w-lg"
               data-association-search
@@ -1894,9 +1948,9 @@ onDestroy(() => {
                 aria-label={`${locationKindLabel(kind)} · ${m.field_name()}`}
                 aria-busy={lookups[kind] === 'checking'}
                 value={names[kind][tag] ?? ''}
-                placeholder={m.association_search_kind({
-                  kind: locationKindLabel(kind),
-                })}
+                placeholder={createNew && kind === 'service_point'
+                  ? m.location_service_name_placeholder()
+                  : m.association_search_kind({ kind: locationKindLabel(kind) })}
                 maxlength="1000"
                 class="border-border focus-visible:outline-primary min-h-11 w-full rounded-md border bg-transparent py-2 pr-16 pl-10 text-base focus-visible:outline-2"
                 oninput={event => editName(event.currentTarget.value)}
@@ -1922,6 +1976,11 @@ onDestroy(() => {
                 </button>
               {/if}
             </label>
+            {#if createNew && kind === 'service_point'}
+              <p class="text-muted-foreground mx-auto w-full max-w-lg text-sm">
+                {m.location_service_name_help()}
+              </p>
+            {/if}
             {#if lookups[kind] === 'failed'}
               <p class="text-muted-foreground text-xs" role="status">
                 {m.association_incomplete()}
@@ -1946,7 +2005,7 @@ onDestroy(() => {
                         : m.association_record_custom()}
                 <button
                   type="button"
-                  data-match-score={associationMatch(origin, row).score}
+                  data-match-score={associationMatch(comparisonOrigin(kind), row).score}
                   data-association-result={row.id}
                   data-record-mode={recordMode(row)}
                   aria-pressed={custom && row.id === provisional[kind]?.id}
@@ -1985,13 +2044,13 @@ onDestroy(() => {
                     >
                       <span class="sr-only"
                         >{m.association_match_score({
-                          score: associationMatch(origin, row).score,
+                          score: associationMatch(comparisonOrigin(kind), row).score,
                         })}</span
                       >
                       <span
                         aria-hidden="true"
                         class="text-foreground text-base leading-none font-semibold"
-                        >{associationMatch(origin, row).score}</span
+                        >{associationMatch(comparisonOrigin(kind), row).score}</span
                       >
                       <span aria-hidden="true" class="text-muted-foreground text-[10px]"
                         >/100</span
@@ -2227,33 +2286,103 @@ onDestroy(() => {
   </div>
   {#if (!matched && ghost) || kind === 'address' || (matched && comparingRecords)}
     <footer
-      class="bg-panel shrink-0 space-y-3 px-4 pt-3 pb-6 sm:px-6"
+      class="bg-panel @container shrink-0 space-y-3 px-4 pt-3 pb-6 sm:px-6"
       data-association-footer
     >
       {#key viewPhase}
         <div
           in:fade={{ duration: prefersReducedMotion.current ? 0 : 180 }}
-          class="space-y-3"
+          class={kind === 'building_part'
+            ? 'mx-auto grid w-full max-w-7xl grid-cols-1 items-start gap-8 @3xl:grid-cols-[minmax(0,1fr)_minmax(8rem,0.75fr)_minmax(0,1fr)]'
+            : 'space-y-3'}
         >
+          {#if kind === 'building_part' && !matched?.identity && projectId}
+            <section
+              class="border-primary/25 bg-primary/5 flex min-h-72 min-w-0 flex-col items-center gap-6 rounded-2xl border p-6 text-center sm:p-8"
+              data-association-building-step
+            >
+              <h3 class="text-base font-semibold">
+                <span
+                  class="bg-primary text-primary-content mr-2 inline-flex size-7 items-center justify-center rounded-full text-xs"
+                  >1</span
+                >
+                {locationKindLabel('building')}
+              </h3>
+              <BuildingSuggestionCard
+                {projectId}
+                address={originalAddress}
+                bind:buildingId
+                onBuildingChange={() => {
+                  parentPartId = ''
+                  enclosingPartsReady = true
+                }}
+                onMapCandidates={(markers, select) => {
+                  parentMarkers = markers
+                  selectParentMarker = select
+                }}
+              />
+            </section>
+          {/if}
+          {#if kind === 'building_part' && !matched?.identity && projectId}
+            {#key buildingId}
+              <EnclosingBuildingParts
+                {projectId}
+                {buildingId}
+                address={originalAddress}
+                bind:parentPartId
+                bind:ready={enclosingPartsReady}
+              />
+            {/key}
+          {/if}
           {#if !matched && ghost}
             <section
-              class="border-primary/40 bg-primary/5 mx-auto grid w-full max-w-3xl min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-dashed p-3"
+              class="bg-primary/5 mx-auto grid w-full max-w-3xl min-w-0 items-center border {kind ===
+              'building_part'
+                ? 'border-primary/25 min-h-72 content-start gap-6 rounded-2xl p-6 text-center sm:p-8'
+                : resultRows.length
+                  ? 'border-primary/40 grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-lg border-dashed p-3'
+                  : 'border-primary/40 grid-cols-1 gap-3 rounded-lg p-6 text-center sm:p-8'}"
               data-association-ghost
               data-tooltip={m.association_ghost_help()}
             >
+              {#if kind === 'building_part'}
+                <h3 class="col-span-full text-base font-semibold">
+                  <span
+                    class="border-primary/30 mr-2 inline-flex size-7 items-center justify-center rounded-full border text-xs"
+                    >2</span
+                  >
+                  {locationKindLabel('building_part')}
+                </h3>
+                {#if !buildingId}
+                  <p class="text-muted-foreground col-span-full text-sm" role="status">
+                    {m.location_part_choose_building_first()}
+                  </p>
+                {/if}
+              {/if}
               <div class="min-w-0 space-y-1">
-                <p class="text-xs font-semibold break-words whitespace-normal">
+                <p
+                  class="{resultRows.length
+                    ? 'text-xs'
+                    : 'text-lg'} font-semibold break-words whitespace-normal"
+                >
                   {ghost.names[tag] || Object.values(ghost.names).find(Boolean)}
                 </p>
                 <p
-                  class="text-muted-foreground text-[10px] break-words whitespace-normal"
+                  class="text-muted-foreground {resultRows.length
+                    ? 'text-[10px]'
+                    : 'text-base'} break-words whitespace-normal"
                 >
                   {getAddressDisplay(ghost.address, getLocaleKey())}
                 </p>
               </div>
               <button
                 type="button"
-                class="bg-primary focus-visible:outline-primary col-span-2 justify-self-end rounded-md px-3 py-2 text-xs font-medium text-white focus-visible:outline-2 sm:col-span-1 sm:self-center"
+                disabled={!Object.values(ghost.names).some(name => name.trim()) ||
+                  changingSelection ||
+                  (kind === 'building_part' && (!buildingId || !enclosingPartsReady))}
+                class="bg-primary focus-visible:outline-primary rounded-md font-medium text-white disabled:opacity-40 focus-visible:outline-2 {resultRows.length
+                  ? 'col-span-2 justify-self-end px-3 py-2 text-xs sm:col-span-1 sm:self-center'
+                  : 'min-h-12 w-full px-6 py-3 text-base sm:w-auto sm:min-w-64 sm:justify-self-center'}"
                 onclick={() => {
                   if (visibleProvisional) {
                     custom = true
@@ -2261,7 +2390,7 @@ onDestroy(() => {
                   } else chooseCustom()
                 }}
               >
-                {visibleProvisional
+                {visibleProvisional && !createNew
                   ? m.association_use_location()
                   : {
                       premises: m.association_create_premises,
@@ -2292,16 +2421,8 @@ onDestroy(() => {
               })}
             </label>
           {/if}
-          {#if kind === 'building_part' && !matched?.identity && projectId}
-            <BuildingPartParents
-              {projectId}
-              address={originalAddress}
-              bind:buildingId
-              bind:parentPartId
-            />
-          {/if}
           <div
-            class="mx-auto w-full max-w-[45rem] items-center gap-3 {matched &&
+            class="col-span-full mx-auto w-full max-w-[45rem] items-center gap-3 {matched &&
             comparingRecords
               ? 'grid grid-cols-2'
               : 'flex justify-center'}"

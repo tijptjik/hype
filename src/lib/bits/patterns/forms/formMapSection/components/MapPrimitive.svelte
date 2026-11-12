@@ -4,7 +4,7 @@ import {
   VISUAL_RESIZE_CONTEXT,
   type VisualResizeContext,
 } from '#lib/bits/custom/main/visualResize.js'
-import LazyMaplet from '#lib/bits/patterns/maps/LazyMaplet.svelte'
+import AdminMapOutlet from '#lib/bits/patterns/maps/AdminMapOutlet.svelte'
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // THEME
 import { getThemeModel } from '#lib/themes/theme.svelte.js'
@@ -61,29 +61,28 @@ const theme = getThemeModel()
 const mapStyleCode = $derived(theme.mapSelected ?? THEME_MAP_STYLES[theme.selected])
 const initialCollapsed =
   adminCtx.view.getUserPreferences().admin?.isAdminMapCollapsed ?? false
+const mapProps = $derived({
+  pinControls,
+  pinHighlightRequest,
+  showMarker,
+  onMapReady,
+  locationCandidates,
+  onLocationCandidateSelect,
+  coordinates,
+  coordinateTransitionPending,
+  freezeForResize: resizeState?.active ?? false,
+  initialCenter,
+  initialZoom,
+  addressMeta,
+  mapStyleCode,
+  draggable,
+  draggingLocked,
+  initialCollapsed,
+  activeResourceRef: adminCtx.activeResourceRef,
+  dragEndCallback: onCoordinateChange,
+  toggleFullscreen: onToggleFullscreen,
+  toggleCollapsed: onToggleCollapsed,
+})
 </script>
 
-<div class="bits-feature-map">
-  <LazyMaplet
-    {pinControls}
-    {pinHighlightRequest}
-    {showMarker}
-    {onMapReady}
-    {locationCandidates}
-    {onLocationCandidateSelect}
-    {coordinates}
-    {coordinateTransitionPending}
-    freezeForResize={resizeState?.active ?? false}
-    {initialCenter}
-    {initialZoom}
-    {addressMeta}
-    {mapStyleCode}
-    {draggable}
-    {draggingLocked}
-    {initialCollapsed}
-    activeResourceRef={adminCtx.activeResourceRef}
-    dragEndCallback={onCoordinateChange}
-    toggleFullscreen={onToggleFullscreen}
-    toggleCollapsed={onToggleCollapsed}
-  />
-</div>
+<AdminMapOutlet {...mapProps} />

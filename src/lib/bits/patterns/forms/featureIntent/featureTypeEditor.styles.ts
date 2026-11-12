@@ -5,8 +5,6 @@ export const typeInputAppearance = {
   inputClass: 'h-10! px-[11px]!',
 }
 export const typeSelectAppearance = {
-  contentClass:
-    'bg-panel! [&_[role=option]]:bg-transparent! [&_[role=option][data-highlighted]]:bg-muted/50!',
   displayClass: 'h-[42px]! rounded-md! border-transparent! bg-transparent! pl-[11px]!',
   triggerClass:
     'h-[42px]! rounded-md! border-border/30! bg-transparent! pl-[11px]! hover:border-border/60! hover:bg-muted/50! [&_.bits-form\\_\\_select-label]:pl-0!',

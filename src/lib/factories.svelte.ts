@@ -17,6 +17,7 @@ import { debounce, deepEqual } from '@sillvva/utils'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import { handleResourceFormSubmissionResult } from '#lib/client/services/form.js'
 import { m } from '#lib/i18n.js'
+import { submissionErrorMessage } from '#lib/forms/submissionError.js'
 import { onMount, tick, untrack } from 'svelte'
 import { v7 } from 'uuid'
 
@@ -547,14 +548,18 @@ export function configureForm<Input = RemoteFormInput>(
         }
       } catch (error) {
         settleUpdates?.(false)
-        // TODO Add a error toast
+        // Preserve remote HTTP error details without logging submitted form values.
+        console.error(
+          '[form] submission failed',
+          submissionErrorMessage(error) ?? 'Unknown submission error',
+        )
         if (!resultDispatched) {
           const submitIssues = form.fields.allIssues() ?? []
           const hasIssues = submitIssues.length > 0
           const outcome: SubmitOutcome = {
             success: false,
             issues: hasIssues ? submitIssues : undefined,
-            error: hasIssues ? undefined : (error as Error).message,
+            error: hasIssues ? undefined : submissionErrorMessage(error),
           }
           isSubmitRequested = false
           await dispatchResult(outcome, typedData)

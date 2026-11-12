@@ -1,4 +1,6 @@
 <script lang="ts">
+// COMPONENTS
+import FeatureSyncPolicy from './FeatureSyncPolicy.svelte'
 // SVELTE
 import { onDestroy, untrack, tick, type Snippet } from 'svelte'
 import { flip } from 'svelte/animate'
@@ -13,7 +15,6 @@ import { hasStructuredAddressComponents } from '#lib/addresses/presentation.js'
 import { locationMatchSeeds } from '#lib/locations/matchSeed.js'
 import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 import { locationSyncMode } from '#lib/locations/associationSync.js'
-import LocationAssociationIcon from '#lib/bits/custom/locationAssociationIcon/LocationAssociationIcon.svelte'
 import LocationAssociationHeading from './LocationAssociationHeading.svelte'
 import LocationAssociationPicker from './LocationAssociationPicker.svelte'
 import { searchAssociationCandidates } from '#lib/locations/associationSearch.js'
@@ -858,7 +859,7 @@ async function link(): Promise<void> {
       <LocationIcon kind={pendingLocation.kind} class="text-primary size-6 shrink-0" />
       <span
         data-pending-location
-        class="text-primary min-w-0 flex-1 text-base font-medium break-words whitespace-normal"
+        class="text-primary min-w-0 flex-1 text-base font-medium whitespace-nowrap"
         >{pendingLocation.names[localeTag] ||
           Object.values(pendingLocation.names).find(Boolean)}</span
       >
@@ -906,7 +907,7 @@ async function link(): Promise<void> {
             {#if association}
               <a
                 href={`/admin/locations/${encodeURIComponent(association.locationId)}`}
-                class="text-primary block min-w-0 text-base font-medium break-words whitespace-normal"
+                class="text-primary block min-w-0 text-base font-medium whitespace-nowrap"
                 >{association.effective.names[localeTag] ||
                   Object.values(association.effective.names).find(Boolean)}</a
               >
@@ -981,18 +982,7 @@ async function link(): Promise<void> {
         (accepted.current.kind === 'address' ? 'manual' : undefined),
       { identity: { ssId: accepted.current.ssId ?? undefined } },
     )}
-    <span
-      class="text-primary inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm"
-    >
-      <LocationAssociationIcon {mode} />
-      <span
-        >{mode === 'manual'
-          ? m.location_sync_unsynced()
-          : mode === 'linked'
-            ? m.association_linked()
-            : m.association_unlinked()}</span
-      >
-    </span>
+    <FeatureSyncPolicy {featureId} manual={mode === 'manual'} />
   {/if}
 {/snippet}
 {#snippet emptyMapControls()}

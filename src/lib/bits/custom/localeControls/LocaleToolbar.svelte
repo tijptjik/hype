@@ -36,6 +36,7 @@ let {
   mode = 'visibility',
   alwaysExpanded = false,
   horizontal = false,
+  stacked = false,
   contentLocales = [],
   labels = defaultLocaleControlLabels,
   class: className = '',
@@ -282,11 +283,13 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
   class={`group/locale-toolbar min-w-0 ${className}`}
 >
   <div
-    class={horizontal
-      ? 'flex min-h-10 min-w-0 items-center justify-end gap-2'
-      : alwaysExpanded
-        ? 'min-w-0'
-        : 'flex min-h-10 min-w-0 flex-wrap items-center justify-end gap-2 sm:flex-nowrap'}
+    class={stacked
+      ? 'flex min-h-10 min-w-0 flex-wrap items-center justify-end gap-2'
+      : horizontal
+        ? 'flex min-h-10 min-w-0 items-center justify-end gap-2'
+        : alwaysExpanded
+          ? 'min-w-0'
+          : 'flex min-h-10 min-w-0 flex-wrap items-center justify-end gap-2 sm:flex-nowrap'}
   >
     {#if isExpanded}
       <div
@@ -294,11 +297,13 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
         transition:revealLocales
         inert={!isExpanded}
         aria-hidden={!isExpanded}
-        class={horizontal
-          ? 'max-w-96 min-w-0 flex-initial'
-          : alwaysExpanded
-            ? 'min-w-0'
-            : 'order-2 min-w-0 basis-full sm:order-none sm:flex-1 sm:basis-auto'}
+        class={stacked
+          ? 'order-2 min-w-0 basis-full'
+          : horizontal
+            ? 'max-w-96 min-w-0 flex-initial'
+            : alwaysExpanded
+              ? 'min-w-0'
+              : 'order-2 min-w-0 basis-full sm:order-none sm:flex-1 sm:basis-auto'}
       >
         <div
           use:localeOverflow={horizontal}

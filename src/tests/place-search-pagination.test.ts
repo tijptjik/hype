@@ -176,6 +176,22 @@ it('forwards the upstream text cursor with unchanged filters and rejects expired
   ).rejects.toBeInstanceOf(PlaceSearchPageError)
 })
 
+it('sends the same nearby circle on initial and continuation text requests', async () => {
+  const request = vi.fn(async (url: URL) => {
+    expect(url.searchParams.get('nearLat')).toBe('22.28')
+    expect(url.searchParams.get('nearLng')).toBe('114.15')
+    expect(url.searchParams.get('maxDistance')).toBe('300')
+    return Response.json({ results: [], meta: { nextCursor: null } })
+  })
+  const input = {
+    q: 'bakery',
+    near: { coordinates: [114.15, 22.28] as [number, number], radius: 300 },
+  }
+  await searchSaanSeoiPlacesPage(client(request), input)
+  await searchSaanSeoiPlacesPage(client(request), { ...input, cursor: 'next-page' })
+  expect(request).toHaveBeenCalledTimes(2)
+})
+
 it('requests embedded previews and applies category and default status filters before pagination', async () => {
   const preview = { place: { id: 'bakery' }, i18n: {} }
   const request = vi.fn(async (url: URL) => {

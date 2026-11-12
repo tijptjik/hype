@@ -169,7 +169,7 @@ function updateField(field: TemplateComponentField, next: string): void {
 }
 </script>
 
-<div class="grid min-w-0 gap-6">
+<div class="grid min-w-0 gap-4">
   {#if isEditing}
     <fieldset class="flex flex-wrap gap-2" aria-label="Insert component">
       {#each componentKinds as kind}

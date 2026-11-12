@@ -45,6 +45,7 @@ visit(script)
 
 const javascript = ts.transpileModule(
   `
+  const adminCtx = { locationCreation: { clear() {} } };
   let savedLocationNameDraft = {}, draftSelectionSaved = false, draftSelectionBefore = {};
   let isNewFeatureRef = true, draftLocalKind = undefined, pendingNavigationRestore = null;
   const refresh = ${refreshSource.replaceAll('import.meta.env.DEV', 'false')};
@@ -118,6 +119,15 @@ function setup(linked = false) {
 }
 
 describe('new Feature silent save navigation', () => {
+  it('preserves the draft and navigation checkpoint after a rejected save', async () => {
+    const state = setup(true)
+    await state.refresh({ ...state.outcome, success: false, result: undefined })
+    expect(state.refreshFeature).not.toHaveBeenCalled()
+    expect(state.goto).not.toHaveBeenCalled()
+    expect(state.finishDraftPlaceLink).not.toHaveBeenCalled()
+    expect(state.hasRestorableDraft()).toBe(true)
+  })
+
   it('replaces the current URL in place and adopts the saved ID for the next update', async () => {
     const state = setup()
     expect(state.hasRestorableDraft()).toBe(true)

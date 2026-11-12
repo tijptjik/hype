@@ -9,8 +9,19 @@ export function adaptivePlaceholder(
   const canvas = document.createElement('canvas')
   const context = canvas.getContext('2d')
   let input: HTMLInputElement | null = null
+  let frame = 0
+  let disposed = false
   const fitContent = (): void => {
-    input = node.querySelector('input[id^="address-"]:not([id$="-type"])')
+    frame = 0
+    if (disposed) return
+    const nextInput = node.querySelector<HTMLInputElement>(
+      'input[id^="address-"]:not([id$="-type"])',
+    )
+    if (nextInput !== input) {
+      if (input) resize.unobserve(input)
+      input = nextInput
+      if (input) resize.observe(input)
+    }
     if (!input || !context) return
     const style = getComputedStyle(input)
     const placeholderStyle = getComputedStyle(input, '::placeholder')
@@ -31,11 +42,14 @@ export function adaptivePlaceholder(
     }
     if (input.placeholder !== candidate) input.placeholder = candidate
   }
-  const resize = new ResizeObserver(fitContent)
-  const mutations = new MutationObserver(() => {
-    if (input) resize.observe(input)
-    fitContent()
-  })
+  /** Coalesce DOM and resize notifications without measuring inside observer delivery.
+   * @returns Nothing.
+   */
+  function schedule(): void {
+    if (!disposed && !frame) frame = requestAnimationFrame(fitContent)
+  }
+  const resize = new ResizeObserver(schedule)
+  const mutations = new MutationObserver(schedule)
   mutations.observe(node, {
     childList: true,
     subtree: true,
@@ -44,13 +58,14 @@ export function adaptivePlaceholder(
   })
   resize.observe(node)
   fitContent()
-  if (input) resize.observe(input)
   return {
     update(value) {
       example = value
-      fitContent()
+      schedule()
     },
     destroy() {
+      disposed = true
+      cancelAnimationFrame(frame)
       resize.disconnect()
       mutations.disconnect()
     },

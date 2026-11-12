@@ -1,4 +1,10 @@
 <script lang="ts">
+import { translationPromptAttributes } from '#lib/forms/translationReview.js'
+// SHARED CONTENT LOCALES
+import type { LocaleSelection } from '#lib/bits/custom/localeControls/localeControls.types.js'
+let multilingualExpanded = $state(false)
+let contentLocaleSelection = $state<LocaleSelection | null>(null)
+
 import FeatureIntentSettings from '#lib/bits/patterns/forms/featureIntent/FeatureIntentSettings.svelte'
 // LOADING PRESENTATION
 import ResourceFormSkeleton from '#lib/bits/patterns/forms/formSkeleton/ResourceFormSkeleton.svelte'
@@ -36,7 +42,6 @@ import {
   focusFacetFromHash,
   getEditorCtrl,
   revalidateAfterSubmitAttempt,
-  resolveOptimisticHeaderFacets,
   resolveOptimisticHeaderStatus,
   resolveFacetTabsWithIssues,
   syncAdminFacetFromHash,
@@ -1368,11 +1373,8 @@ $effect(() => {
       layer?.data?.i18n?.[getLocaleKey()]?.name,
       m.maps__layers(),
     )
-  const displayFacets = resolveOptimisticHeaderFacets(
-    isCurrentRefSettled,
-    headerFacetTabsWithIssues,
-    optimisticHeaderState,
-  )
+  // Destination tabs are known before entity data settles.
+  const displayFacets = headerFacetTabsWithIssues
   const facetKey = Array.isArray(displayFacets)
     ? displayFacets
         .map(facet => `${facet.ref}:${facet.hasIssues === true ? '1' : '0'}`)
@@ -1501,7 +1503,15 @@ $effect(() => {
 >
   <Main.Form
     bind:formEl={contentsElement}
-    attrs={formCtx.attributes}
+    attrs={{
+      ...formCtx.attributes,
+      ...translationPromptAttributes(
+        adminCtx.view.cache.organisation.get(
+          layer?.data?.organisationId ?? selectedParentProject?.organisationId ?? '',
+        )?.settings,
+        committedLayer?.data?.modifiedAt,
+      ),
+    }}
     isReady={Boolean(formCtx.form?.fields && (layer?.data || isNewLayerRef))}
   >
     {#snippet fallback()}
@@ -1522,6 +1532,8 @@ $effect(() => {
       <FormSurface>
         <SectionHeaderPrimitive.Issues issues={formLevelIssues} />
         <FormI18nDescriptorProfile
+          bind:expanded={multilingualExpanded}
+          bind:localeSelection={contentLocaleSelection}
           onReveal={() =>
             navigateOnAdmin(adminCtx, FirstClassResource.layer, layerRef, 'core')}
           form={formCtx.form}
@@ -1711,6 +1723,8 @@ $effect(() => {
             >
           {/if}
           <FeatureIntentSettings
+            bind:multilingual={multilingualExpanded}
+            bind:localeSelection={contentLocaleSelection}
             draft={formCtx.form.fields.value().data?.featureIntentSettings as
               | string
               | undefined}

@@ -2,6 +2,8 @@ import { goto } from '$app/navigation'
 import { m, getI18n, getLocaleKey } from '#lib/i18n.js'
 import { getHashiconUrl, getURLfromImage } from '#lib/client/services/image.js'
 import { getUrlForResource } from '#lib/navigation/index.js'
+import { breadlineBrand } from '#lib/features/breadlinePresentation.js'
+import type { PresentationFeature } from '#lib/features/presentationProperties.js'
 import { FirstClassResource } from '#lib/enums.js'
 import type { AdminCtx } from '#lib/context/admin.svelte.js'
 import type { ImageContextEnvelope } from '#lib/db/zod/schema/image.types.js'
@@ -198,6 +200,10 @@ export function createAdminIndexCardModel<T extends Exclude<Resource, Task>>(
   const previewImageSrc = getPreviewImageSrc(resourceType, entity)
   const rawImage = getNestedValue(entity, keyMap.image)
   const imageEnvelope = rawImage ? (rawImage as ImageContextEnvelope) : null
+  const brandLogo =
+    resourceType === FirstClassResource.feature
+      ? breadlineBrand(entity as PresentationFeature, localeKey).logoSrc
+      : undefined
   const imageSrc =
     previewImageSrc ??
     // TODO: Switch project index cards back to project images once the map-preview rollout is complete.
@@ -206,17 +212,19 @@ export function createAdminIndexCardModel<T extends Exclude<Resource, Task>>(
     //   : null) ??
     (imageEnvelope
       ? getURLfromImage({ image: imageEnvelope })
-      : getHashiconUrl(entity.id))
+      : (brandLogo ?? getHashiconUrl(entity.id)))
   const image = imageEnvelope?.image as
     | ({ presentationMode?: ImagePresentation } & Record<string, unknown>)
     | undefined
   const imageLayout =
     previewImageSrc != null
       ? 'cover'
-      : image?.presentationMode === 'contain' ||
-          image?.presentationMode === 'cast-edges'
-        ? image.presentationMode
-        : 'cover'
+      : !imageEnvelope && brandLogo
+        ? 'contain'
+        : image?.presentationMode === 'contain' ||
+            image?.presentationMode === 'cast-edges'
+          ? image.presentationMode
+          : 'cover'
   const title = String(
     getIndexCardPropertyValue(entity, keyMap, localeKey, keyMap.title) ?? '',
   )
@@ -342,11 +350,12 @@ export function createAdminIndexCardModel<T extends Exclude<Resource, Task>>(
     title,
     description,
     imageSrc,
-    // A failed map preview falls back to the uploaded cover, then the resource identicon.
+    // Failed previews fall back through the uploaded cover and accepted brand logo to the identicon.
     imageFallbackSrcs: [
       ...(previewImageSrc && imageEnvelope
         ? [getURLfromImage({ image: imageEnvelope })]
         : []),
+      ...(brandLogo ? [brandLogo] : []),
       getHashiconUrl(entity.id),
     ].filter(src => src !== imageSrc),
     imageAlt: title,

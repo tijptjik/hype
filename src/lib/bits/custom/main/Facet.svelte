@@ -236,7 +236,9 @@ function measureLayout(measureContent = true): void {
 
   const navHeight = hasFacetNav && navElement ? navElement.offsetHeight : 0
   const facetRect = facet.getBoundingClientRect()
-  const bottomInset = Math.max(16, window.innerHeight - facetRect.bottom + 16)
+  const bottomInset =
+    Math.max(16, window.innerHeight - facetRect.bottom + 16) +
+    (centerAction?.bottomOffset ?? 0)
   // Empty states can center above overlay actions without shortening result lists.
   if (navMode === 'overlay' && hasFacetNav)
     overlayBottomSpace = Math.max(
@@ -347,6 +349,7 @@ function scheduleResizeLayout(): void {
 }
 
 $effect(() => {
+  centerAction?.bottomOffset
   hasFacetNav
   fillHeight
   navMode

@@ -27,10 +27,10 @@ let { importCtx, index }: Props = $props()
 const column = $derived(importCtx.getColumns()[index])
 const isSkipped = $derived(column.modelType === 'SKIP')
 const disabledLabelClass = $derived(
-  isSkipped ? 'cursor-not-allowed text-base-content/20' : '',
+  isSkipped ? 'cursor-default text-base-content/20' : '',
 )
 const disabledSelectClass = $derived(
-  isSkipped ? 'cursor-not-allowed text-base-content/20' : '',
+  isSkipped ? 'cursor-default text-base-content/20' : '',
 )
 
 function handleColumnLocaleChange(): void {

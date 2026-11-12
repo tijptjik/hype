@@ -47,6 +47,8 @@ export type DraftLocationSearchResult = {
 }
 /** Serializable discovery state, excluding callbacks, DOM and in-flight requests. */
 export type DraftLocationSearchProgress = {
+  /** Versioned provider choices distinguish explicit choices from legacy all-provider defaults. */
+  providerDefaultsVersion?: 1
   query: string
   nearbyFilter?: string
   findMode: 'search' | 'pin'
@@ -69,12 +71,14 @@ export type DraftLocationSearchProgress = {
   previousScrollTop: number
   searched: boolean
   addressPaging?: {
+    near?: { coordinates: [number, number]; radius: number }
     query: string
     total: number
     nextCursor: string | null
     releaseSet: string
   } | null
   placePaging?: {
+    near?: { coordinates: [number, number]; radius: number }
     query: string
     filters: PlaceSearchFilters
     locale: 'en' | 'zh-hant' | 'zh-hans'

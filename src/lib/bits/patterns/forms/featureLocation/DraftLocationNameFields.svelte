@@ -3,6 +3,11 @@
 import { MultilingualReview } from '#lib/forms/multilingualReview.svelte.js'
 import MultilingualReviewPanel from '../translationReview/MultilingualReviewPanel.svelte'
 import TranslationSuggestion from '../translationReview/TranslationSuggestion.svelte'
+// LINKED FIELD CONTROLS
+import LinkedFieldToggle from '../linkedFields/LinkedFieldToggle.svelte'
+import { getLinkedFields } from '../linkedFields/linkedFields.svelte.js'
+const linkedFields = getLinkedFields()
+
 // SVELTE
 import { onDestroy, tick } from 'svelte'
 import { flip } from 'svelte/animate'
@@ -10,6 +15,8 @@ import { slide } from 'svelte/transition'
 import { MediaQuery } from 'svelte/reactivity'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
+// ICONS
+import LockIcon from 'virtual:icons/lucide/lock-keyhole'
 // COMPONENTS
 import LocationIcon from '#lib/bits/custom/locationIcon/LocationIcon.svelte'
 import FormI18nSourceBar from '../formI18nSection/components/FormI18nSourceBar.svelte'
@@ -34,6 +41,7 @@ let {
   localeState,
   translations,
   isEditing,
+  locked = false,
   recordKey,
   onChange,
   onBlur,
@@ -43,10 +51,12 @@ let {
   localeState?: ProfileLocaleState
   translations: boolean
   isEditing: boolean
+  locked?: boolean
   recordKey?: string | null
   onBlur?: () => void
   onChange: (names: Record<string, string>) => void
 } = $props()
+const editable = $derived(isEditing && !locked)
 // Shared Profile choices retain empty draft languages; populated names remain reachable.
 const locales = $derived(
   normalizeContentLocales([
@@ -88,7 +98,7 @@ const review = new MultilingualReview(
       value: canonicalNames[locale] ?? '',
       set: (text: string) => onChange({ ...canonicalNames, [locale]: text }),
     })),
-  () => isEditing,
+  () => editable,
   () => {
     reviewVisible = true
   },
@@ -102,11 +112,30 @@ onDestroy(() => {
 })
 </script>
 
-<section class="col-span-6 min-w-0 space-y-3 pb-3" data-draft-location-name>
+<section
+  hidden={linkedFields && !linkedFields.visible('names')}
+  class="col-span-6 min-w-0 space-y-3 pb-3"
+  data-draft-location-name
+>
   <MultilingualReviewPanel {review} />
-  <h3 class="text-muted-foreground text-xs font-medium">{locationKindLabel(kind)}</h3>
+  <div class="flex items-center gap-2">
+    <h3 class="text-muted-foreground text-xs font-medium">{locationKindLabel(kind)}</h3>
+    {#if locked}
+      <span class="text-muted-foreground inline-flex items-center gap-1 text-xs">
+        <LockIcon class="size-3" aria-hidden="true" />
+        {m.feature_name_locked()}
+      </span>
+    {/if}
+  </div>
   <fieldset class="min-w-0 space-y-2">
-    <legend class="mb-1 text-sm font-medium">{m.field_name()}</legend>
+    <legend class="mb-1 text-sm font-medium">
+      <span class="inline-flex items-center gap-2"
+        >{m.field_name()}<LinkedFieldToggle
+          field="names"
+          label={m.field_name()}
+        /></span
+      >
+    </legend>
     {#each shown as locale (locale)}
       {@const tag = locale}
       {@const reviewKey = `${recordKey ?? ''}:${kind}:${locale}`}
@@ -141,7 +170,7 @@ onDestroy(() => {
               onAccept={edited => review.accept(reviewKey, edited)}
               onReject={() => review.reject(reviewKey)}
             />
-          {:else if editingLocale === locale && isEditing}
+          {:else if editingLocale === locale && editable}
             <input
               onblur={() => {
                 editingLocale = null
@@ -160,19 +189,25 @@ onDestroy(() => {
           {:else}
             <button
               type="button"
-              disabled={!isEditing}
-              class="hover:bg-foreground/5 min-h-10 w-full rounded-md border border-transparent px-3 py-2 text-left text-base font-medium break-words whitespace-normal"
+              disabled={!editable}
+              class="enabled:hover:bg-foreground/5 min-h-10 w-full rounded-md border border-transparent px-3 py-2 text-left text-base font-medium break-words whitespace-normal"
               onclick={async () => {
                 editingLocale = locale
                 await tick()
                 document.getElementById(`draft-location-name-${locale}`)?.focus()
               }}
             >
-              {canonicalNames[tag] || m.field_name()}
+              {#if canonicalNames[tag]?.trim()}
+                {canonicalNames[tag]}
+              {:else}
+                <span class="text-muted-foreground font-normal italic"
+                  >{m.field_name()}</span
+                >
+              {/if}
             </button>
           {/if}
           {#if translations &&
-            isEditing &&
+            editable &&
             !canonicalNames[tag]?.trim() &&
             sources.length}
             <FormI18nSourceBar
@@ -204,7 +239,7 @@ onDestroy(() => {
                   // Preserve manual edits and never apply a response to another selected identity.
                   if (
                     active &&
-                    isEditing &&
+                    editable &&
                     result.status === 'translated' &&
                     recordKey === originalKey &&
                     kind === originalKind &&

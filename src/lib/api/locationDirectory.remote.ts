@@ -231,6 +231,7 @@ export const saveLocalLocationAddress = guardedCommand(
       ])
       .optional(),
     divisionOverrides: AddressDivisionOverridesSchema.optional(),
+    displayOverrides: z.record(z.string().max(32), z.string().max(4000)).optional(),
     parseSource: z.record(z.string().max(32), z.string().max(4000)).optional(),
   }),
   async (input, ctx) => {

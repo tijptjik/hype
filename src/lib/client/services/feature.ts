@@ -400,6 +400,11 @@ export function getProgrammaticFeatureInputEntries(
   if (featureData?.locationReset)
     appendEntry('data.locationReset', JSON.stringify(featureData.locationReset))
 
+  if (featureData?.locationProfileEdit)
+    appendEntry(
+      'data.locationProfileEdit',
+      JSON.stringify(featureData.locationProfileEdit),
+    )
   if (featureData?.locationBrandEdit)
     appendEntry('data.locationBrandEdit', JSON.stringify(featureData.locationBrandEdit))
 

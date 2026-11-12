@@ -19,6 +19,7 @@ import { getURLfromImage } from '#lib/client/services/image.js'
 // DOMAIN
 import { featureCreationSourceLayerId } from '../formFeatureParentSection/formFeatureParentSection.controller'
 import { TARGET_CONTEXTS } from '#lib/features/locationPolicy.js'
+import { targetContextChoices } from '../featureIntent/targetContextChoices'
 import { setupResourceLabel, setupResourceMatches } from './featureSetup.types'
 import { featureTypeLabel } from '#lib/features/intents.js'
 import { getProjectDisplayName } from '#lib/projectNames.js'
@@ -65,9 +66,11 @@ let measuredHeight = $state(0)
 $effect(() => {
   onHeightChange?.(step >= 3 ? measuredHeight : 0)
 })
-let confirmedLayerId = $state<string | null>(untrack(() => initialLayerId ?? null))
+let confirmedLayerId = $state<string | null>(
+  untrack(() => layer?.id ?? initialLayerId ?? null),
+)
 let initialLayerApplied = $state(false)
-let confirmedTypeId = $state<string | null>(null)
+let confirmedTypeId = $state<string | null>(untrack(() => type?.id ?? null))
 let resolvedTypes = $state<FeatureType[] | undefined>(undefined)
 let pendingLayer = $state<ParentSectionLayerItem | null>(null)
 let failedLayer = $state<ParentSectionLayerItem | null>(null)
@@ -77,7 +80,7 @@ let failedImages = $state<string[]>([])
 onDestroy(() => {
   selectionVersion++
 })
-let confirmedContext = $state<TargetContext | null>(null)
+let confirmedContext = $state<TargetContext | null>(untrack(() => context ?? null))
 const layerAnswered = $derived(Boolean(layer && layer.id === confirmedLayerId))
 const typeAnswered = $derived(
   Boolean(layerAnswered && type && type.id === confirmedTypeId),
@@ -85,11 +88,7 @@ const typeAnswered = $derived(
 const contextAnswered = $derived(
   typeAnswered && context !== null && context === confirmedContext,
 )
-const contextOptions = $derived([
-  ...new Set(
-    contexts.map(value => (value === 'infrastructure' ? ('built' as const) : value)),
-  ),
-])
+const contextOptions = $derived(targetContextChoices(contexts))
 let query = $state('')
 let scope = $state<FeatureSetupScope>(untrack(() => ({ ...initialScope })))
 let catalogue = $state<FeatureSetupResults>({
@@ -214,14 +213,10 @@ function selectType(next: FeatureType | null): void {
     step = 1
     return
   }
-  const options = [
-    ...new Set(
-      (
-        next.targetContexts ??
-        TARGET_CONTEXTS.filter(kind => next.locationKinds.includes(kind))
-      ).map(value => (value === 'infrastructure' ? ('built' as const) : value)),
-    ),
-  ]
+  const options = targetContextChoices(
+    next.targetContexts ??
+      TARGET_CONTEXTS.filter(kind => next.locationKinds.includes(kind)),
+  )
   if (options.length === 1) {
     confirmedContext = options[0]
     onContext(options[0])

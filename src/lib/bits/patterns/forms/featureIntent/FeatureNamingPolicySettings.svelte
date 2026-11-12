@@ -65,20 +65,21 @@ const parent = $derived(
         </button>
       {/if}
     </div>
-  {:else if disabled}
+  {:else}
     <p class="text-sm">Using the {parent === 'hub' ? 'Hub' : parent} default</p>
   {/if}
   {#if !disabled}
     <button
       id={triggerId}
       type="button"
+      aria-haspopup="dialog"
       aria-expanded={expanded}
       aria-controls={editorId}
       onclick={onConfigure}
       class="border-border hover:bg-muted focus-visible:outline-primary w-full rounded-md border px-4 py-2 text-sm font-medium focus-visible:outline-2"
     >
       {expanded
-        ? 'Go to naming editor'
+        ? 'Naming editor open'
         : override
           ? 'Configure naming rule'
           : 'Define custom rules'}

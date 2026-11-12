@@ -1,4 +1,10 @@
 <script lang="ts">
+// THIRD-PARTY
+import { draggable, droppable, dndState, type DragDropState } from '@thisux/sveltednd'
+// SERVICES
+import { getDropIndex } from '#lib/client/services/dragDrop.js'
+// COMPONENTS
+import { ResourceCard } from '#lib/bits/patterns/cards/resourceCard/index.js'
 // I18N
 import * as m from '#lib/paraglide/messages.js'
 // BITS
@@ -21,8 +27,10 @@ let {
   saving,
   onSave,
   actions,
+  showOperatingHosts = false,
   editor,
 }: {
+  showOperatingHosts?: boolean
   actions?: Snippet
   editor?: Snippet
   locationId: string
@@ -32,6 +40,8 @@ let {
   saving: boolean
   onSave: (row: Record<string, unknown>, suppress?: boolean) => Promise<void>
 } = $props()
+const instanceId = $props.id()
+const container = `location-addresses-${instanceId}`
 let history = $state(false)
 let afterId = $state<string | undefined>()
 let pages = $state<Record<string, unknown>[]>([])
@@ -41,9 +51,33 @@ let failure = $state('')
 const request = $derived(
   getRelationshipPage({ locationId, organisationId, table, history, afterId }),
 )
+// Establishments occupy hosts; their hosts own the physical membership records.
+const hostRequest = $derived(
+  table === 'locationMembership' && showOperatingHosts
+    ? getRelationshipPage({
+        locationId,
+        organisationId,
+        table: 'locationOccupancy',
+        history: false,
+      })
+    : null,
+)
 const rows = $derived([...pages, ...(request.current?.rows ?? [])])
 const currentAddresses = $derived(
   rows.filter(r => r.addressState === 'current' && r.assertionState === 'asserted'),
+)
+const canOrder = $derived(
+  table === 'locationAddress' &&
+    canEdit &&
+    !history &&
+    request.ready &&
+    !request.current?.nextCursor &&
+    currentAddresses.length > 0 &&
+    currentAddresses.length <= 100,
+)
+// Current addresses are rendered once, as draggable resource rows while ordering is available.
+const displayRows = $derived(
+  canOrder ? rows.filter(row => !currentAddresses.includes(row)) : rows,
 )
 const ordered = $derived(
   order.length
@@ -70,12 +104,26 @@ function more(): void {
     afterId = request.current.nextCursor
   }
 }
-/** Adjust a draft; one save commits every address priority together. */
-function move(index: number, offset: number): void {
+/** Reorder addresses using the same insertion-edge handling as Project layer rows.
+ * @param state Current Svelte DND state.
+ * @param targetId Address receiving the drop.
+ * @returns Nothing; priorities are persisted together by Save address order.
+ */
+function handleDrop(state: DragDropState, targetId: string): void {
+  if (busy || saving) return
+  const destination = getDropIndex(state, ordered, targetId, container)
+  if (destination === null) return
+  const dragged = state.draggedItem
+  if (
+    !dragged ||
+    typeof dragged !== 'object' ||
+    !('id' in dragged) ||
+    typeof dragged.id !== 'string'
+  )
+    return
   const next = [...ordered]
-  const other = index + offset
-  if (other < 0 || other >= next.length) return
-  ;[next[index], next[other]] = [next[other], next[index]]
+  const [item] = next.splice(next.indexOf(dragged.id), 1)
+  next.splice(destination, 0, item)
   order = next
 }
 /** Save exact immutable heads and reject stale or incomplete address lists. */
@@ -154,7 +202,7 @@ async function saveOrder(clear = false): Promise<void> {
       aria-label={m.relationship_loading()}
     ></div>
   {/if}
-  {#each rows as row (String(row.id))}
+  {#each displayRows as row (String(row.id))}
     <div
       class="bg-muted/20 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-lg p-4 text-sm"
     >
@@ -213,7 +261,14 @@ async function saveOrder(clear = false): Promise<void> {
           />
         {/if}
         <Button
-          text="Suppress in this scope"
+          text={organisationId
+            ? 'Hide for this organisation'
+            : 'Withdraw shared relationship'}
+          attrs={{
+            'data-tooltip': organisationId
+              ? 'Exclude this relationship from this organisation’s view. Other organisations and version history are unchanged.'
+              : 'Withdraw this shared assertion from current views. Its recorded history remains available.',
+          }}
           size="sm"
           style="ghost"
           disabled={saving}
@@ -222,45 +277,85 @@ async function saveOrder(clear = false): Promise<void> {
       {/if}
     </div>
   {:else}
-    {#if request.ready}
+    {#if request.ready && !rows.length}
       <p class="text-muted-foreground bg-muted/20 rounded-lg px-4 py-6 text-sm">
-        {m.relationship_empty()}
+        {#if hostRequest}
+          This establishment has operating locations, not physical membership. Physical
+          groupings belong to its host building or complex.
+        {:else}
+          {m.relationship_empty()}
+        {/if}
       </p>
+      {#if hostRequest}
+        {#await hostRequest then hosts}
+          {#each hosts.rows.filter(
+            row =>
+              row.occupancyState === 'current' &&
+              row.containerLocationId &&
+              row.assertionState !== 'suppressed',
+          ) as host (String(host.id))}
+            <a
+              class="text-primary block text-sm font-medium hover:underline"
+              href={`/admin/locations/${host.containerLocationId}${organisationId ? `?organisation=${encodeURIComponent(organisationId)}` : ''}#relationships`}
+              >View physical membership ·
+              {String(host.containerLocationIdLabel ?? host.containerLocationId)}</a
+            >
+          {/each}
+        {/await}
+      {/if}
     {/if}
   {/each}
 
   {#if request.current?.nextCursor}
     <Button type="button" text={m.relationship_more()} onClick={more} disabled={busy} />
   {/if}
-  {#if table === 'locationAddress' &&
-    canEdit &&
-    !history &&
-    request.ready &&
-    !request.current?.nextCursor &&
-    currentAddresses.length > 0 &&
-    currentAddresses.length <= 100}
-    <ol class="space-y-2">
-      {#each ordered as id, index}
-        <li class="flex items-center gap-2 text-sm">
-          <span
-            >{index + 1}.
-            {String(rows.find(r => r.id === id)?.addressLabel ?? id)}</span
+  {#if canOrder}
+    <p class="text-muted-foreground text-xs">
+      Drag addresses into preferred order, then save. The first address has the highest
+      priority.
+    </p>
+    <!-- Match Project layer rows: the grip starts dragging and each row owns its insertion gap. -->
+    <div
+      class="flex min-w-0 flex-col gap-0 py-1.5 [--bits-dnd-gap:0px]"
+      data-address-order
+    >
+      {#each ordered as id, index (id)}
+        <div
+          data-dnd-item
+          data-address-id={id}
+          data-dnd-active={dndState.isDragging}
+          class="before:bg-foreground! after:bg-foreground! relative py-1.5 before:top-0! after:bottom-0!"
+          class:cursor-grab={!busy && !saving}
+          use:draggable={{
+            container: `${container}-${id}`,
+            containerGroup: container,
+            dragData: { id },
+            disabled: busy || saving,
+            handle: '.bits-card__drag-handle',
+            interactive: ['a', 'button', 'input', 'label'],
+            attributes: { draggingClass: 'opacity-55' },
+          }}
+          use:droppable={{
+            container: `${container}-${id}`,
+            containerGroup: container,
+            disabled: busy || saving,
+            callbacks: { onDrop: state => handleDrop(state, id) },
+          }}
+        >
+          <ResourceCard.Root
+            isDraggable={!busy && !saving}
+            reserveDragSpace={true}
+            class="border-border bg-foreground/4 min-h-14 rounded-lg border bg-none shadow-none before:hidden [&>span]:z-3 [&>span]:cursor-grab [&>span]:active:cursor-grabbing"
           >
-          <Button
-            type="button"
-            text={m.relationship_up()}
-            disabled={busy || index === 0}
-            onClick={() => move(index, -1)}
-          />
-          <Button
-            type="button"
-            text={m.relationship_down()}
-            disabled={busy || index === ordered.length - 1}
-            onClick={() => move(index, 1)}
-          />
-        </li>
+            <ResourceCard.Body
+              code={String(index + 1)}
+              name={String(rows.find(row => row.id === id)?.addressLabel ?? id)}
+              wrapTitle
+            />
+          </ResourceCard.Root>
+        </div>
       {/each}
-    </ol>
+    </div>
     <div class="flex flex-wrap gap-2">
       <Button
         type="button"

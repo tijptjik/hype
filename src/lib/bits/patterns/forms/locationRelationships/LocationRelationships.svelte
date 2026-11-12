@@ -216,6 +216,7 @@ async function save(
     {#each ['locationMembership', 'locationOccupancy', 'locationAddress'] as table}
       <RelationshipPage
         {locationId}
+        showOperatingHosts={canOccupy}
         {organisationId}
         {canEdit}
         table={table as 'locationMembership' | 'locationOccupancy' | 'locationAddress'}

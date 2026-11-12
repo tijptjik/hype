@@ -89,13 +89,13 @@ const sections = $derived(
     naming: [
       {
         icon: TypeIcon,
-        title: 'Start with a base name',
-        body: 'Use the feature’s own base name or the linked location’s name. With no conditions, the title is just that base name.',
+        title: 'Choose the inputs',
+        body: 'Use feature name and properties, and linked location name and attributes. Either name can be omitted; a template can use properties alone.',
       },
       {
         icon: ListIcon,
-        title: 'Apply rules in order',
-        body: 'Each condition adds text before or after the base name. The preview combines all conditions in their configured order.',
+        title: 'Reusable templates',
+        body: 'Select an existing template or create one here with the shared template editor. Saved templates can also be edited in Display templates. Existing assignments keep their accepted version.',
       },
       {
         icon: ToggleIcon,
@@ -124,8 +124,8 @@ const sections = $derived(
       },
       {
         icon: TypeIcon,
-        title: 'Base name still available',
-        body: 'You can choose the feature or linked location as the name source even when no conditional fields are available.',
+        title: 'Scope follows the properties',
+        body: 'System fields can be used across the organisation. A template using a project-owned property is only available in that project, including its layers.',
       },
     ],
   }[topic],

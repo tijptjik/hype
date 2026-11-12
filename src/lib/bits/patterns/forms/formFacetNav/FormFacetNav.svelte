@@ -30,7 +30,9 @@ const rootClass = $derived(
     <button
       type="button"
       id={centerAction.id}
-      class="border-border bg-panel text-foreground hover:bg-primary focus-visible:outline-primary rounded-lg border px-4 py-3 text-sm transition-[transform,background-color,color] duration-300 ease-out hover:text-white focus-visible:outline-2 motion-reduce:transition-none"
+      class="focus-visible:outline-primary rounded-lg border px-4 py-3 text-sm transition-[transform,background-color,color] duration-300 ease-out focus-visible:outline-2 motion-reduce:transition-none {centerAction.emphasis
+        ? 'border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 font-semibold'
+        : 'border-border bg-panel text-foreground hover:bg-primary hover:text-white'}"
       style:transform={centerAction.centerInContent
         ? 'translateY(var(--facet-center-action-offset, 0px))'
         : 'translateY(0)'}

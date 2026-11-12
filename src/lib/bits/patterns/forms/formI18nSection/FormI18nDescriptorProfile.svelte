@@ -162,6 +162,49 @@ $effect(() => {
   )
 })
 
+/** Register an empty descriptor bucket for a language selected in any resource tab.
+ * @param locale Content language added to the shared selection.
+ * @returns Nothing; existing authored values are preserved.
+ */
+function registerDescriptorLocale(locale: string): void {
+  const current = form.fields.value()
+  const key = contentFormKey(locale)
+  if (current.data && !current.data.i18n?.[key]) {
+    form.fields.set({
+      ...current,
+      data: {
+        ...current.data,
+        i18n: {
+          ...current.data.i18n,
+          [key]: {
+            name: '',
+            nameShort: '',
+            description: '',
+            subscriptionBenefits: '',
+            privacyPolicy: '',
+            termsOfService: '',
+            nameGen: false,
+            nameShortGen: false,
+            descriptionGen: false,
+            subscriptionBenefitsGen: false,
+            privacyPolicyGen: false,
+            termsOfServiceGen: false,
+          },
+        },
+      },
+    })
+    onChange()
+  }
+}
+$effect(() => {
+  recordKey
+  if (!isEditing || !localeSelection) return
+  const selected = localeSelection.selectedLocales
+  untrack(() => {
+    for (const locale of selected) registerDescriptorLocale(locale)
+  })
+})
+
 /** Apply a successful translation without changing other fields or their verification.
  * @param field Descriptor field filled by the translation job.
  * @param locale Canonical target language tag.
@@ -266,36 +309,7 @@ function stageAutomatic(
         }}
         onChange={change => {
           // Register a complete empty descriptor bucket before mounting its controls.
-          if (change.action === 'add') {
-            const current = form.fields.value()
-            const key = contentFormKey(change.locale)
-            if (current.data && !current.data.i18n?.[key]) {
-              form.fields.set({
-                ...current,
-                data: {
-                  ...current.data,
-                  i18n: {
-                    ...current.data.i18n,
-                    [key]: {
-                      name: '',
-                      nameShort: '',
-                      description: '',
-                      subscriptionBenefits: '',
-                      privacyPolicy: '',
-                      termsOfService: '',
-                      nameGen: false,
-                      nameShortGen: false,
-                      descriptionGen: false,
-                      subscriptionBenefitsGen: false,
-                      privacyPolicyGen: false,
-                      termsOfServiceGen: false,
-                    },
-                  },
-                },
-              })
-              onChange()
-            }
-          }
+          if (change.action === 'add') registerDescriptorLocale(change.locale)
           localLocaleState = { ...localeState, ...change }
           localeSelection = {
             selectedLocales: change.selectedLocales,

@@ -593,11 +593,7 @@ export function useAdminHeaderModel(
     showDeleteAction && !isDeleted && Boolean(formActions?.toggleDelete),
   )
 
-  const deleteMenuLabel = $derived(
-    resolvedHeaderTitle
-      ? `${m.forms__delete()} ${resolvedHeaderTitle}`
-      : m.forms__delete(),
-  )
+  const deleteMenuLabel = $derived(m.forms__delete())
   const publishStatusLabel = $derived(
     isPublished ? m.published() : m.forms__unpublished(),
   )
@@ -911,6 +907,7 @@ export function useAdminHeaderModel(
     }
   })
   const featuresAction = $derived.by((): HeaderButtonActionConfig | null => {
+    if (formActions?.featuresAction) return formActions.featuresAction
     const resourceType = adminCtx.activeResourceType
     const resourceRef = adminCtx.activeResourceRef
     if (
@@ -1206,6 +1203,7 @@ export function useAdminHeaderModel(
       isVisible: resolvedVisibility.showFormActions,
       primaryAction,
       content: formActions?.content ?? null,
+      locationsAction: formActions?.locationsAction ?? null,
       featuresAction,
       usersAction,
       historyAction,

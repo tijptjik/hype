@@ -258,3 +258,21 @@ it('normalizes uppercase components independently while preserving mixed-case br
     data: original.included[1],
   })
 })
+
+it('passes a forward text circle to the provider before pagination', async () => {
+  const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+    const url = new URL(String(input))
+    expect(url.searchParams.get('nearLat')).toBe('22.28')
+    expect(url.searchParams.get('nearLng')).toBe('114.15')
+    expect(url.searchParams.get('maxDistance')).toBe('300')
+    expect(url.searchParams.get('address')).toBe('holly')
+    return Response.json({
+      ...response(),
+      meta: { total: 1, nextCursor: null, release: { apiReleaseSet: 'release' } },
+    })
+  })
+  await geocodeAddressPage(
+    { address: 'holly' },
+    { fetcher, near: { coordinates: [114.15, 22.28], radius: 300 } },
+  )
+})

@@ -1,5 +1,8 @@
 // @vitest-environment node
 import { expect, it } from 'vitest'
+import { z } from 'zod'
+import { materializeLocationAdoption } from '#lib/locations/adoptionMaterialize.js'
+import { materializeLocationReset } from '#lib/locations/reset.js'
 import {
   emptyFeatureAddress,
   FeatureAddressSchema,
@@ -214,3 +217,47 @@ it('fills missing components from the original without mistaking formatting defa
   expect(choices.number).toBe('original')
   expect(choices.access).toBe('location')
 })
+
+it.each([undefined, 'address', 'plus_code', 'automatic'] as const)(
+  'materializes JSON-safe location revisions with display mode %s',
+  locationDisplayMode => {
+    const original = address('Queen Road', '120')
+    if (locationDisplayMode !== undefined)
+      original.locationDisplayMode = locationDisplayMode
+    const facts = localIdentityFromAddress(
+      'establishment',
+      { en: 'Cafe' },
+      original,
+    ).facts
+    const input = {
+      facts,
+      locationFacts: facts,
+      overrides: {},
+      data: { addressMeta: { address: original } },
+      i18n: { en: { title: 'Cafe' } },
+    }
+    const results = [
+      materializeEffectiveLocation(input),
+      materializeLocationAdoption({ ...input, fieldGroup: 'location' }),
+      materializeLocationReset({
+        ...input,
+        reset: {
+          expectedRevision: 'revision',
+          names: [],
+          phoneNumber: false,
+          location: true,
+        },
+      }),
+    ]
+    for (const result of results) {
+      expect(z.json().safeParse(result.data.addressMeta).success).toBe(true)
+      expect(result.data.addressMeta?.address?.locationDisplayMode).toBe(
+        locationDisplayMode,
+      )
+      if (locationDisplayMode === undefined)
+        expect(result.data.addressMeta?.address).not.toHaveProperty(
+          'locationDisplayMode',
+        )
+    }
+  },
+)

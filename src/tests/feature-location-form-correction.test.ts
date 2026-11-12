@@ -198,6 +198,102 @@ describe('Feature form Location correction revisions', () => {
       previous.placement.location?.acceptancePolicy,
     )
   })
+  it('saves mobility solely through community curation, with an accepted field pin', async () => {
+    const { previous, content } = setup()
+    const accessibility = {
+      wheelchair: 'yes',
+      stepFreeEntrance: 'yes',
+      lift: 'not_needed',
+      toilet: 'unknown',
+    } as const
+    await prepareFeatureLocationFormCorrection(
+      { get: async () => ({ id: 'source' }) } as unknown as Database,
+      {
+        featureId: 'feature',
+        organisationId: 'org',
+        actorId: 'actor',
+        guard: sql`1`,
+        previous,
+        content,
+        profileEdit: {
+          expectedRevision: required(previous.placement.location).associationVersion,
+          values: { accessibility },
+        },
+        authorizeCommunity: async () => ({ canEdit: true, superAdmin: false }),
+      },
+    )
+    expect(prepareSharedLocationCorrection).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        patch: { accessibility: { mode: 'override', value: accessibility } },
+      }),
+    )
+    expect(prepareOrganisationLocationWrite).not.toHaveBeenCalled()
+    expect(
+      content.placement.location?.acceptancePolicy?.factsSharedFields,
+    ).toContainEqual({ field: 'accessibility', revision: 'shared-next' })
+  })
+  it('keeps contact assignments independent and supports phone editing without a universal property', async () => {
+    const { previous, content } = setup()
+    await prepareFeatureLocationFormCorrection(
+      { get: async () => ({ id: 'source' }) } as unknown as Database,
+      {
+        featureId: 'feature',
+        organisationId: 'org',
+        actorId: 'actor',
+        guard: sql`1`,
+        previous,
+        content,
+        profileEdit: {
+          expectedRevision: required(previous.placement.location).associationVersion,
+          values: {
+            phoneNumber: ['+85221234567'],
+            websites: ['https://example.com'],
+            socials: { instagram: 'https://instagram.com/example' },
+          },
+        },
+        fieldModes: {
+          phoneNumber: 'community',
+          websites: 'internal',
+          socials: 'community',
+        },
+        authorizeCommunity: async () => ({ canEdit: true, superAdmin: false }),
+        authorizeOrganisation: async () => {},
+      },
+    )
+    expect(prepareSharedLocationCorrection).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        patch: {
+          phoneNumber: { mode: 'override', value: ['+85221234567'] },
+          socials: {
+            mode: 'override',
+            value: { instagram: 'https://instagram.com/example' },
+          },
+        },
+      }),
+    )
+    expect(content.placement.location?.acceptedOverrides.websites).toEqual({
+      mode: 'override',
+      value: ['https://example.com'],
+    })
+  })
+  it('rejects stale profile edits before preparing any writes', async () => {
+    const { previous, content } = setup()
+    await expect(
+      prepareFeatureLocationFormCorrection({} as Database, {
+        featureId: 'feature',
+        organisationId: 'org',
+        actorId: 'actor',
+        guard: sql`1`,
+        previous,
+        content,
+        profileEdit: { expectedRevision: 'outdated', values: { websites: [] } },
+      }),
+    ).rejects.toThrow('LOCATION_CHANGED')
+    expect(prepareSharedLocationCorrection).not.toHaveBeenCalled()
+    expect(prepareOrganisationLocationWrite).not.toHaveBeenCalled()
+  })
   it('defaults shared-record phone edits to community and retains its Organisation override atomically', async () => {
     const { previous, content } = setup()
     for (const value of [previous, content]) {

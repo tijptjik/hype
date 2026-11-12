@@ -122,7 +122,7 @@ function finish(): void {
           : m.feature_address_unit_type(),
     }}
     triggerClass="inline-flex! w-auto! items-center! h-auto! min-h-9! max-w-full! gap-0! sm:gap-1! rounded border-border! bg-background! px-2! sm:px-3! py-1! text-[11px]! sm:text-xs! [&_svg]:hidden! sm:[&_svg]:block! [&_svg]:size-3! [&_span]:pl-0! [&_span]:whitespace-normal! [&_span]:break-normal!"
-    contentClass="bg-panel! text-foreground!"
+    contentClass="text-foreground!"
     onOpenChange={open => {
       selectOpen = open
       if (!open) finish()

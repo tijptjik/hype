@@ -205,7 +205,7 @@ function getStatusColor(status: FeatureResolutionData['status']): string {
           </a>
         {:else}
           <span
-            class="border-base-content/10 text-base-content/30 inline-flex cursor-not-allowed items-center gap-2 border-l px-3 py-2 text-sm"
+            class="border-base-content/10 text-base-content/30 inline-flex cursor-default items-center gap-2 border-l px-3 py-2 text-sm"
             data-tooltip={m.feature_import__resolution_no_current_title()}
           >
             <Icon src={MapPin} class="h-4 w-4" />

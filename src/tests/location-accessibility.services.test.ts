@@ -10,12 +10,16 @@ import {
   saveLocationAccessibility as saveWithRights,
 } from '#lib/db/services/locationAccessibility.js'
 import { appendLocationRelationship } from '#lib/db/services/locationRelationships.js'
+import { sharedLocationFacts } from '#lib/db/services/locationShared.js'
 // DOMAIN
 import {
   AccessibilitySchema,
   UNKNOWN_ACCESSIBILITY,
 } from '#lib/locations/accessibility.js'
-import { createLocationFactsSnapshot } from '#lib/locations/factsSnapshot.js'
+import {
+  createLocationFactsSnapshot,
+  readLocationFacts,
+} from '#lib/locations/factsSnapshot.js'
 import type { LocationFacts } from '#lib/locations/model.js'
 
 const saveLocationAccessibility = (
@@ -38,6 +42,19 @@ function setup() {
   stores.push(s)
   s.sqlite.exec(readFileSync('migrations/0155_location_accessibility.sql', 'utf8'))
   s.sqlite.exec(readFileSync('migrations/0209_shared_location_corrections.sql', 'utf8'))
+  // This focused legacy harness uses the current localized snapshot envelope and matching adapter.
+  s.sqlite.exec(
+    'ALTER TABLE location ADD COLUMN matchingType TEXT GENERATED ALWAYS AS (kind) VIRTUAL',
+  )
+  const snapshotGuard = readFileSync(
+    'migrations/0142_location_facts_snapshots.sql',
+    'utf8',
+  ).split('CREATE TRIGGER location_revision_snapshot_insert')[1]
+  s.sqlite.exec(
+    'DROP TRIGGER location_revision_snapshot_insert; CREATE TRIGGER location_revision_snapshot_insert' +
+      snapshotGuard.replace('$.common.names', '$.i18n'),
+  )
+
   for (const [id, kind, state] of [
     ['shop', 'establishment', 'unresolved'],
     ['tower', 'building', 'unresolved'],
@@ -141,6 +158,15 @@ it('keeps four independent values, unknowns and immutable history; rejects stale
   expect((await readLocationAccessibility(s.db, 'shop'))?.record?.values).toEqual(
     values,
   )
+  const source = s.sqlite
+    .prepare("SELECT facts FROM locationRevision WHERE id='shop-1'")
+    .get()
+  const projected = await sharedLocationFacts(
+    s.db,
+    'shop',
+    readLocationFacts(source?.facts),
+  )
+  expect(projected.facts.accessibility).toEqual(values)
   await expect(save(s)).rejects.toThrow('ACCESSIBILITY_CHANGED')
   await saveLocationAccessibility(
     s.db,
@@ -157,11 +183,14 @@ it('keeps four independent values, unknowns and immutable history; rejects stale
   )
   expect(
     s.sqlite.prepare('SELECT COUNT(*) n FROM locationAccessibility').get()?.n,
+  ).toBe(0)
+  expect(
+    s.sqlite.prepare('SELECT COUNT(*) n FROM locationSharedRevision').get()?.n,
   ).toBe(2)
-  expect(() => s.sqlite.exec("UPDATE locationAccessibility SET actorId='x'")).toThrow(
+  expect(() => s.sqlite.exec("UPDATE locationSharedRevision SET actorId='x'")).toThrow(
     'immutable',
   )
-  expect(() => s.sqlite.exec('DELETE FROM locationAccessibility')).toThrow('immutable')
+  expect(() => s.sqlite.exec('DELETE FROM locationSharedRevision')).toThrow('immutable')
 })
 it('shows a named venue report without assigning any of its values to the building', async () => {
   const s = setup()

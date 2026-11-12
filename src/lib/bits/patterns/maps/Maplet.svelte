@@ -509,9 +509,10 @@ $effect(() => {
   const controller = mapInstance
     ? createMapController(() => activeMapInstance ?? null)
     : null
-  mapProps.onMapReady?.(controller)
+  const onMapReady = mapProps.onMapReady
+  onMapReady?.(controller)
   return () => {
-    mapProps.onMapReady?.(null)
+    onMapReady?.(null)
   }
 })
 
@@ -566,7 +567,15 @@ onDestroy(() => {
 
 // EFFECTS :: ON UPDATE
 $effect(() => {
-  if (!coordinateTuple) pendingViewport = null
+  if (!coordinateTuple) {
+    // A fresh unpinned draft retains its discovery view when reusing an existing map.
+    pendingViewport =
+      mapProps.showMarker === false &&
+      mapProps.initialCenter &&
+      !mapProps.locationCandidates?.length
+        ? { center: mapProps.initialCenter, zoom: mapProps.initialZoom ?? 20 }
+        : null
+  }
   if (map && coordinateTuple && feature) {
     feature.setDraggable((mapProps.draggable ?? true) && !mapProps.draggingLocked)
     const coordinateKey = coordinateTuple.join(',')

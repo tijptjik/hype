@@ -29,15 +29,33 @@ export const IdentityCatalogueContentSchema = z.strictObject({
       'Categories must be distinct',
     )
     .optional(),
+  // Discovery preferences are independent of the brand classification.
+  discovery: z
+    .strictObject({
+      terms: z
+        .array(z.string().trim().max(200))
+        .max(20)
+        .default([])
+        .transform(values => values.filter(Boolean)),
+      category: z
+        .string()
+        .refine(value => placeTaxonomyPath(value).length > 0)
+        .optional(),
+    })
+    .optional(),
   i18n: z
     .record(
       z.string().min(2).max(32),
-      z.strictObject({ name: z.string().trim().min(1).max(300) }),
+      z.strictObject({ name: z.string().trim().max(300) }),
+    )
+    .refine(
+      value => Object.values(value).some(row => Boolean(row.name.trim())),
+      'Provide at least one catalogue name',
     )
     .refine(
       value =>
-        ['en', 'zh-Hant', 'zh-Hans'].every(locale => Boolean(value[locale]?.name)),
-      'Provide all three catalogue names',
+        ['en', 'zh-Hant', 'zh-Hans'].every(locale => value[locale] !== undefined),
+      'Include the primary locale rows; untranslated names may be empty',
     )
     .refine(
       value =>

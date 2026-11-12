@@ -12,6 +12,7 @@ export type LocationOverride<T> =
   | { mode: 'clear' }
 
 export type LocationBrand = {
+  logo?: string | null
   identifiers: Record<string, string>
   names: Record<string, string>
 }

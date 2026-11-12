@@ -11,6 +11,7 @@ let resolutions = $state(0)
       locale="en"
       label="Building name"
       {value}
+      onCustom={text => (value = text)}
       onSelect={record => (value = record?.names.en ?? '')}
       onBlur={() => resolutions++}
     />

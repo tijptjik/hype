@@ -9,6 +9,7 @@ import {
 import { beforeEach, afterEach, expect, it, vi } from 'vitest'
 import { GeocodeRequestError } from '#lib/api/external/geocoding.js'
 import DraftSearch from '#lib/bits/patterns/forms/featureLocation/DraftFeatureLocationSearch.svelte'
+import { targetSuggestionKinds } from '#lib/features/locationPolicy.js'
 import { emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
 // JSDOM does not implement the Web Animations API used by Svelte flip.
 Element.prototype.animate = () => ({ cancel() {} }) as Animation
@@ -136,8 +137,14 @@ it('focuses after navigation, searches while typing and returns the explicitly s
   mocks.places.mockResolvedValue({ rows: [{ id: 'bakery', facts }], partial: false })
   mocks.addresses.mockResolvedValue([])
   const onSelect = vi.fn()
-  const view = render(DraftSearch, { active: false, focusRequest: 0, onSelect })
-  await view.rerender({ active: true, focusRequest: 1, onSelect })
+  const onReviewDraft = vi.fn()
+  const view = render(DraftSearch, {
+    active: false,
+    focusRequest: 0,
+    onSelect,
+    onReviewDraft,
+  })
+  await view.rerender({ active: true, focusRequest: 1, onSelect, onReviewDraft })
   const input = screen.getByRole('textbox')
   await waitFor(() => expect(document.activeElement).toBe(input))
   await fireEvent.input(input, { target: { value: 'Bakery' } })
@@ -162,6 +169,10 @@ it('focuses after navigation, searches while typing and returns the explicitly s
       }),
     ),
   )
+  const review = screen.getByRole('link', { name: /Test Bakery/ })
+  expect(review.getAttribute('href')).toBe('/admin/locations/new')
+  await fireEvent.click(review)
+  expect(onReviewDraft).toHaveBeenCalledTimes(1)
 })
 
 it('publishes numbered map previews and highlights hovered rows without selecting them', async () => {
@@ -1369,7 +1380,7 @@ it('guides name and map discovery without offering manual entry before results',
   await fireEvent.click(screen.getByRole('button', { name: 'Search by location' }))
   expect(onDropPin).toHaveBeenCalledTimes(1)
   expect(
-    (screen.getByRole('textbox', { name: 'Filter nearby results' }) as HTMLInputElement)
+    (screen.getByRole('textbox', { name: 'Search nearby results' }) as HTMLInputElement)
       .disabled,
   ).toBe(true)
   expect(screen.getByRole('button', { name: 'Search Nearby' })).toBeTruthy()
@@ -2849,6 +2860,8 @@ it('lazy loads Places at their own boundary, once per cursor, and appends withou
   await fireEvent.input(screen.getByRole('textbox'), { target: { value: 'Paged' } })
   const row = await screen.findByRole('button', { name: /Paged Shop 19/ })
   const list = row.closest('section')!
+  expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull()
+  expect(list.querySelector('[data-search-result] [data-pagination-kind]')).toBeNull()
   pagingViewport(list, { establishment: 600, building: 2000 })
   list.scrollTop = 50
   await fireEvent.scroll(list)
@@ -2974,8 +2987,14 @@ it('continues empty filtered Place pages and stops while Places are hidden', asy
   mocks.addresses.mockResolvedValue([])
   const view = render(DraftSearch, { active: true, focusRequest: 0, onSelect: vi.fn() })
   await fireEvent.input(screen.getByRole('textbox'), { target: { value: 'Paged' } })
-  const more = await screen.findByRole('button', { name: 'Load more' })
-  const list = more.closest('section')!
+  await waitFor(() =>
+    expect(
+      document.querySelector('[data-pagination-kind="establishment"]'),
+    ).toBeTruthy(),
+  )
+  const list = document
+    .querySelector('[data-pagination-kind="establishment"]')!
+    .closest('section')!
   expect(screen.queryByText('No matching locations found.')).toBeNull()
   pagingViewport(list, { establishment: 200 })
   await fireEvent.scroll(list)
@@ -3161,7 +3180,13 @@ it('offers manual entry as an alternative after resolution has results', async (
     onManualEntry,
     onSelect: vi.fn(),
   })
-  await fireEvent.click(await screen.findByRole('button', { name: 'Add Manual Entry' }))
+  await fireEvent.click(
+    await screen.findByRole('button', { name: 'Can’t find what you’re looking for?' }),
+  )
+  expect(onManualEntry).not.toHaveBeenCalled()
+  await fireEvent.click(
+    screen.getByRole('button', { name: 'Create a custom establishment' }),
+  )
   expect(onManualEntry).toHaveBeenCalledTimes(1)
 })
 
@@ -3202,6 +3227,201 @@ it.each([false, true])(
   },
 )
 
+it.each(['search', 'pin'] as const)(
+  'retains address evidence for service points in %s mode',
+  async mode => {
+    vi.useRealTimers()
+    mocks.places.mockResolvedValue({ rows: [], partial: false })
+    mocks.nearby.mockResolvedValue({ rows: [], partial: false })
+    mocks.targetLocations.mockResolvedValue({ data: [] })
+    mocks.addresses.mockResolvedValue([
+      {
+        addressMeta: {
+          address: {
+            version: 1,
+            source: {
+              rawSource: {},
+              status: 'unresolved',
+              address2dId: 'hollywood',
+              fallbackDisplay: { en: '123 Hollywood Road' },
+            },
+            coordinates: [114.15, 22.28],
+            matchStatus: 'unresolved',
+            overrides: {},
+          },
+        },
+      },
+    ])
+    const onSelect = vi.fn()
+    render(DraftSearch, {
+      active: true,
+      focusRequest: 0,
+      projectId: 'project',
+      onSelect,
+      preferredKind: 'service_point',
+      allowedLocationKinds: ['service_point'],
+      suggestionKinds: targetSuggestionKinds('service_point'),
+      onDropPin: vi.fn(),
+      hasPin: true,
+      coordinates: [114.15, 22.28],
+    })
+    if (mode === 'pin') {
+      await fireEvent.click(screen.getByRole('button', { name: 'Map pin' }))
+      await fireEvent.click(screen.getByRole('button', { name: 'Search Nearby' }))
+    } else {
+      await fireEvent.input(screen.getByRole('textbox'), {
+        target: { value: 'Hollywood' },
+      })
+    }
+    const evidence = await screen.findByRole('button', { name: /123 Hollywood Road/ })
+    await fireEvent.click(evidence)
+    expect(screen.getByRole('button', { name: 'Create here' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Use this location' })).toBeNull()
+    expect(screen.queryByText('No matching locations or addresses.')).toBeNull()
+    expect(onSelect).not.toHaveBeenCalled()
+  },
+)
+
+it('starts with establishments and progressively offers building and address starting points', async () => {
+  vi.useRealTimers()
+  mocks.places.mockResolvedValue({ rows: [], partial: false })
+  mocks.addresses.mockResolvedValue([])
+  const onManualEntry = vi.fn()
+  render(DraftSearch, {
+    active: true,
+    focusRequest: 0,
+    preferredKind: 'establishment',
+    allowedLocationKinds: ['establishment'],
+    suggestionKinds: targetSuggestionKinds('establishment'),
+    onManualEntry,
+    onSelect: vi.fn(),
+  })
+  expect(
+    screen.getByRole('button', { name: 'Shops' }).getAttribute('aria-pressed'),
+  ).toBe('true')
+  expect(
+    screen.getByRole('button', { name: 'Building' }).getAttribute('aria-pressed'),
+  ).toBe('false')
+  expect(
+    screen.getByRole('button', { name: 'Address' }).getAttribute('aria-pressed'),
+  ).toBe('false')
+  await fireEvent.input(screen.getByRole('textbox'), {
+    target: { value: 'Missing shop' },
+  })
+  await fireEvent.click(
+    await screen.findByRole('button', { name: 'Can’t find what you’re looking for?' }),
+  )
+  await fireEvent.click(screen.getByRole('button', { name: 'Search buildings' }))
+  expect(
+    screen.getByRole('button', { name: 'Building' }).getAttribute('aria-pressed'),
+  ).toBe('true')
+  expect(
+    screen.getByRole('button', { name: 'Shops' }).getAttribute('aria-pressed'),
+  ).toBe('false')
+  await fireEvent.click(
+    await screen.findByRole('button', { name: 'Can’t find what you’re looking for?' }),
+  )
+  await fireEvent.click(screen.getByRole('button', { name: 'Search addresses' }))
+  expect(
+    screen.getByRole('button', { name: 'Address' }).getAttribute('aria-pressed'),
+  ).toBe('true')
+  await fireEvent.click(
+    await screen.findByRole('button', { name: 'Can’t find what you’re looking for?' }),
+  )
+  expect(screen.queryByRole('button', { name: 'Search buildings' })).toBeNull()
+  await fireEvent.click(
+    screen.getByRole('button', { name: 'Create a custom establishment' }),
+  )
+  expect(onManualEntry).toHaveBeenCalledTimes(1)
+})
+
+it('migrates legacy all-provider drafts but preserves new explicit provider choices', async () => {
+  vi.useRealTimers()
+  const view = render(DraftSearch, {
+    active: true,
+    focusRequest: 0,
+    preferredKind: 'establishment',
+    allowedLocationKinds: ['establishment'],
+    suggestionKinds: targetSuggestionKinds('establishment'),
+    onSelect: vi.fn(),
+  })
+  const progress = view.component.getProgress()
+  view.component.restoreProgress({
+    ...progress,
+    providerDefaultsVersion: undefined,
+    includeShops: true,
+    includeBuildings: true,
+    includeAddresses: true,
+  })
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'Building' }).getAttribute('aria-pressed'),
+    ).toBe('false'),
+  )
+  expect(
+    screen.getByRole('button', { name: 'Address' }).getAttribute('aria-pressed'),
+  ).toBe('false')
+  view.component.restoreProgress({
+    ...view.component.getProgress(),
+    includeBuildings: true,
+  })
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'Building' }).getAttribute('aria-pressed'),
+    ).toBe('true'),
+  )
+})
+
+it.each(['establishment', undefined] as const)(
+  'accepts an establishment without another review with preferred kind %s',
+  async preferredKind => {
+    vi.useRealTimers()
+    const onSelect = vi.fn()
+    const view = render(DraftSearch, {
+      active: true,
+      focusRequest: 0,
+      preferredKind,
+      allowedLocationKinds: ['establishment'],
+      suggestionKinds: targetSuggestionKinds('establishment'),
+      onSelect,
+    })
+    const row = {
+      id: 'bakery',
+      kind: 'establishment' as const,
+      names: { en: 'Arome Bakery' },
+      identity: { locationId: 'bakery', revisionId: 'r1' },
+      address: emptyFeatureAddress(),
+    }
+    view.component.restoreProgress({
+      ...view.component.getProgress(),
+      query: 'arome',
+      receivedRows: [row],
+      searched: true,
+    })
+    const button = await screen.findByRole('button', { name: /Arome Bakery/ })
+    const list = button.closest('section')!
+    const scroll = vi.spyOn(list, 'scrollTo')
+    await fireEvent.click(button)
+    expect(scroll).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: 'Create here' })).toBeNull()
+    expect(button.closest('[data-search-result]')?.textContent).not.toContain(
+      'Matching locations',
+    )
+    await fireEvent.click(screen.getByRole('button', { name: 'Use this location' }))
+    await waitFor(() =>
+      expect(onSelect).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: 'establishment',
+          identity: row.identity,
+          localKind: 'establishment',
+          associationConfirmed: true,
+        }),
+      ),
+    )
+    expect(document.querySelector('[data-location-association-picker]')).toBeNull()
+  },
+)
+
 it('uses an upstream location even when restored draft state contains a local creation flag', async () => {
   vi.useRealTimers()
   const onSelect = vi.fn()
@@ -3238,50 +3458,7 @@ it('uses an upstream location even when restored draft state contains a local cr
   expect(onSelect.mock.lastCall?.[0].localKind).toBeUndefined()
 })
 
-it.each(['establishment', undefined] as const)(
-  'accepts an establishment without another review with preferred kind %s',
-  async preferredKind => {
-    vi.useRealTimers()
-    const onSelect = vi.fn()
-    const view = render(DraftSearch, {
-      active: true,
-      focusRequest: 0,
-      preferredKind,
-      allowedLocationKinds: ['establishment'],
-      onSelect,
-    })
-    const row = {
-      id: 'bakery',
-      kind: 'establishment' as const,
-      names: { en: 'Arome Bakery' },
-      identity: { locationId: 'bakery', revisionId: 'r1' },
-      address: emptyFeatureAddress(),
-    }
-    view.component.restoreProgress({
-      ...view.component.getProgress(),
-      query: 'arome',
-      receivedRows: [row],
-      searched: true,
-    })
-    const button = await screen.findByRole('button', { name: /Arome Bakery/ })
-    await fireEvent.click(button)
-    expect(onSelect).not.toHaveBeenCalled()
-    await fireEvent.click(screen.getByRole('button', { name: 'Use this location' }))
-    await waitFor(() =>
-      expect(onSelect).toHaveBeenCalledWith(
-        expect.objectContaining({
-          kind: 'establishment',
-          identity: row.identity,
-          localKind: 'establishment',
-          associationConfirmed: true,
-        }),
-      ),
-    )
-    expect(document.querySelector('[data-location-association-picker]')).toBeNull()
-  },
-)
-
-it('filters retained nearby results locally and clears without another provider search', async () => {
+it('searches nearby text on providers and clears back to nearby discovery', async () => {
   vi.useRealTimers()
   mocks.nearby.mockResolvedValue({
     rows: ['Sesame Bakery', 'Coffee Shop'].map((name, index) => ({
@@ -3311,20 +3488,145 @@ it('filters retained nearby results locally and clears without another provider 
     onDropPin: vi.fn(),
   })
   const filter = screen.getByRole('textbox', {
-    name: 'Filter nearby results',
+    name: 'Search nearby results',
   }) as HTMLInputElement
   expect(filter.disabled).toBe(true)
   await fireEvent.click(screen.getByRole('button', { name: 'Search Nearby' }))
   await screen.findByRole('button', { name: /Coffee Shop/ })
   expect(filter.disabled).toBe(false)
   const requests = mocks.nearby.mock.calls.length
+  mocks.places.mockResolvedValue({
+    rows: [
+      {
+        id: 'new-match',
+        facts: {
+          names: { en: 'Sesame Hidden Bakery' },
+          location: {
+            geometry: { type: 'Point', coordinates: [114.15, 22.28] },
+            address: {
+              status: 'unresolved',
+              rawSource: {},
+              fallbackDisplay: { en: '3 Tak Man Street' },
+            },
+          },
+        },
+      },
+    ],
+    partial: false,
+    limited: false,
+    nextCursor: null,
+  })
   await fireEvent.input(filter, { target: { value: 'Sesame' } })
   await waitFor(() =>
     expect(screen.queryByRole('button', { name: /Coffee Shop/ })).toBeNull(),
   )
-  expect(screen.getByRole('button', { name: /Sesame Bakery/ })).toBeTruthy()
+  await screen.findByRole('button', { name: /Sesame Hidden Bakery/ })
+  expect(mocks.places).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      q: 'Sesame',
+      near: { coordinates: [114.15, 22.28], radius: 300 },
+    }),
+  )
+  expect(mocks.pages).toHaveBeenLastCalledWith(
+    { address: 'Sesame' },
+    expect.objectContaining({ near: { coordinates: [114.15, 22.28], radius: 300 } }),
+  )
+  expect(mocks.buildings).toHaveBeenLastCalledWith(
+    'Sesame',
+    expect.any(String),
+    expect.any(Function),
+    { coordinates: [114.15, 22.28], maxDistance: 300 },
+  )
   await fireEvent.keyDown(filter, { key: 'Enter' })
-  await fireEvent.click(screen.getByRole('button', { name: 'Clear nearby filter' }))
+  await fireEvent.click(screen.getByRole('button', { name: 'Clear nearby search' }))
   await screen.findByRole('button', { name: /Coffee Shop/ })
-  expect(mocks.nearby.mock.calls.length).toBe(requests)
+  expect(mocks.nearby.mock.calls.length).toBe(requests + 1)
+})
+
+it('invalidates an in-flight nearby text search as soon as the query changes', async () => {
+  vi.useRealTimers()
+  let finishOld!: (value: unknown) => void
+  mocks.places.mockImplementation(
+    () =>
+      new Promise(resolve => {
+        finishOld = resolve
+      }),
+  )
+  mocks.nearby.mockResolvedValue({ rows: [], partial: false })
+  render(DraftSearch, {
+    active: true,
+    focusRequest: 0,
+    initialMode: 'pin',
+    hasPin: true,
+    coordinates: [114.15, 22.28],
+    onSelect: vi.fn(),
+    onDropPin: vi.fn(),
+  })
+  await fireEvent.click(screen.getByRole('button', { name: 'Search Nearby' }))
+  const input = screen.getByRole('textbox', { name: 'Search nearby results' })
+  await fireEvent.input(input, { target: { value: 'Old' } })
+  await waitFor(() => expect(mocks.places).toHaveBeenCalled())
+  await fireEvent.input(input, { target: { value: 'New' } })
+  finishOld({
+    rows: [
+      {
+        id: 'obsolete',
+        facts: {
+          names: { en: 'Obsolete shop' },
+          location: {
+            geometry: { type: 'Point', coordinates: [114.15, 22.28] },
+            address: { status: 'unresolved', rawSource: {}, fallbackDisplay: {} },
+          },
+        },
+      },
+    ],
+    partial: false,
+    nextCursor: null,
+  })
+  mocks.places.mockResolvedValue({ rows: [], partial: false, nextCursor: null })
+  await waitFor(() =>
+    expect(mocks.places).toHaveBeenLastCalledWith(
+      expect.objectContaining({ q: 'New' }),
+    ),
+  )
+  expect(screen.queryByRole('button', { name: /Obsolete shop/ })).toBeNull()
+})
+
+it('refreshes the nearby text circle when a radius adjustment finishes', async () => {
+  vi.useRealTimers()
+  mocks.nearby.mockResolvedValue({ rows: [], partial: false })
+  mocks.places.mockResolvedValue({ rows: [], partial: false, nextCursor: null })
+  render(DraftSearch, {
+    active: true,
+    focusRequest: 0,
+    initialMode: 'pin',
+    hasPin: true,
+    coordinates: [114.15, 22.28],
+    onSelect: vi.fn(),
+    onDropPin: vi.fn(),
+  })
+  await fireEvent.click(screen.getByRole('button', { name: 'Search Nearby' }))
+  await fireEvent.input(
+    screen.getByRole('textbox', { name: 'Search nearby results' }),
+    { target: { value: 'Bakery' } },
+  )
+  await waitFor(() =>
+    expect(mocks.places).toHaveBeenCalledWith(
+      expect.objectContaining({
+        q: 'Bakery',
+        near: { coordinates: [114.15, 22.28], radius: 300 },
+      }),
+    ),
+  )
+  const radius = screen.getByRole('slider')
+  await fireEvent.input(radius, { target: { value: '500' } })
+  await fireEvent.change(radius)
+  await waitFor(() =>
+    expect(mocks.places).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        q: 'Bakery',
+        near: { coordinates: [114.15, 22.28], radius: 500 },
+      }),
+    ),
+  )
 })

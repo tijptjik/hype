@@ -269,6 +269,8 @@ export function buildFeatureFormCandidate(
     )
       entry.selection.definition = structuredClone(prior.selection.definition)
   }
+  if (data.locationProfileEdit && !previous.placement.location)
+    throw new Error('LOCATION_REQUIRED')
   if (data.locationBrandEdit && !previous.placement.location) {
     if (data.locationBrandEdit.choice.mode === 'inherit')
       throw new Error('Detached brands cannot inherit')
@@ -418,6 +420,7 @@ export async function saveFeatureFormRevision(
           authorizeCommunity: input.authorizeCommunityCorrection,
           nameMode: data.locationNameMode,
           brandEdit: data.locationBrandEdit,
+          profileEdit: data.locationProfileEdit,
           authorizeOrganisation: input.authorizeLocationCorrection,
         })
       : { queries: [], comparison: previous, authorized: false }

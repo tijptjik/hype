@@ -180,8 +180,6 @@ onMount(() => {
 })
 </script>
 
-<svelte:head><title>Users · HYPE</title></svelte:head>
-
 <UserDirectory
   {users}
   {totalCount}

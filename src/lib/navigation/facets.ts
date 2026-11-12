@@ -1,5 +1,7 @@
 // I18N
 import { m } from '#lib/i18n.js'
+// NAVIGATION
+import { messagingNavigationEnabled } from '#lib/navigation/releases.js'
 // ICONS
 import RelationshipsIcon from 'virtual:icons/lucide/network'
 import ShareIcon from 'virtual:icons/proicons/share'
@@ -245,7 +247,9 @@ export const getAdminFacetTabsForResource = (
   options: { coreOnly?: boolean } = {},
 ): Map<FacetType, { label: string; icon?: Component | null }> => {
   const supported = getAdminFacetSetForResource(resourceType).filter(
-    facet => !options.coreOnly || facet === ADMIN_FACETS.core,
+    facet =>
+      (messagingNavigationEnabled || facet !== ADMIN_FACETS.messaging) &&
+      (!options.coreOnly || facet === ADMIN_FACETS.core),
   )
   const labelOverrides = ADMIN_FACET_LABEL_OVERRIDES_BY_RESOURCE[resourceType] ?? {}
 

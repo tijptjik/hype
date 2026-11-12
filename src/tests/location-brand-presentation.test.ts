@@ -2,8 +2,8 @@ import { expect, test } from 'vitest'
 import { breadlineBrand } from '#lib/features/breadlinePresentation.js'
 
 const legacy = { properties: [{ property: { key: 'brand' }, value: 'maxims' }] }
-test('linked brands take precedence, while clear and empty arrays suppress legacy fallback', () => {
-  expect(breadlineBrand(legacy).logoSrc).toBeTruthy()
+test('only Location brands supply branding; the retired classifier is ignored', () => {
+  expect(breadlineBrand(legacy).name).toBe('Breadline')
   expect(breadlineBrand({ ...legacy, locationBrands: [] }).name).toBe('Breadline')
   const result = breadlineBrand(
     {
@@ -29,4 +29,19 @@ test('all brand names are retained and multiple brands do not arbitrarily choose
   })
   expect(result.name).toBe('Maison Kayser · Second brand')
   expect(result.logoSrc).toBeUndefined()
+})
+
+test('prefers the accepted catalogue logo over bundled brand artwork', () => {
+  const logo = '/api/identity-catalogue/logos/abc-123'
+  expect(
+    breadlineBrand({
+      locationBrands: [
+        {
+          identifiers: { breadlineBrand: 'kayser', catalogueVersion: '2' },
+          names: { en: 'Maison Kayser' },
+          logo,
+        },
+      ],
+    }).logoSrc,
+  ).toBe(logo)
 })

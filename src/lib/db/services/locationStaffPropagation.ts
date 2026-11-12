@@ -153,7 +153,7 @@ export async function prepareStaffLocationPropagation(
               !overrides[field as keyof typeof overrides]
             )
               return true
-            if (['phoneNumber', 'websites', 'socials'].includes(field))
+            if (['phoneNumber', 'websites', 'socials', 'accessibility'].includes(field))
               return rules.communications !== 'review'
             if (
               [

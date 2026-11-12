@@ -187,6 +187,7 @@ import {
   getFeatureLocationCandidate,
   getFeatureLocationSearchDetails,
   importFeatureLocationCandidate,
+  importDraftLocationCandidate,
   searchFeatureLocations,
   createLocalLocation,
   getLocalLocationCreationAccess,
@@ -1195,6 +1196,20 @@ describe('canonical candidate import boundary', () => {
       locationId: 'location',
       revisionId: 'revision',
     })
+  })
+  it('imports before Feature creation only after Organisation authorization', async () => {
+    const draft = { projectId: 'p', ssId: 'ss-id', resourceReleaseId: 'release' }
+    mocks.authorizeOrganisation.mockReturnValueOnce({ allowed: false })
+    await expect(importDraftLocationCandidate(draft)).rejects.toMatchObject({
+      status: 403,
+    })
+    expect(mocks.discoverPublication).not.toHaveBeenCalled()
+    expect(await importDraftLocationCandidate(draft)).toMatchObject({
+      locationId: 'location',
+      revisionId: 'revision',
+    })
+    expect(mocks.probeFeature).not.toHaveBeenCalled()
+    expect(mocks.linkLocation).not.toHaveBeenCalled()
   })
   it('reads search display facts without importing or associating a Location', async () => {
     mocks.lookupSource.mockResolvedValue({

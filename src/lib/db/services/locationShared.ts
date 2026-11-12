@@ -143,6 +143,7 @@ export async function prepareSharedLocationCorrection(
               catalogueVersion: String(record.version),
             },
             names: catalogueNames(record),
+            ...(record.logo ? { logo: record.logo } : {}),
           },
         ],
       }
@@ -201,6 +202,18 @@ export async function prepareSharedLocationCorrection(
       omittedFields: omittedSourceContacts(source.rawSource),
     },
   )
+  // Mobility facts share the curation store; placement evidence still prevents stale venue aggregation.
+  if (patch.accessibility && corrections.accessibility) {
+    const occupancy = await db.all<{
+      id: string
+    }>(sql`SELECT id FROM locationOccupancyHead
+      WHERE establishmentLocationId=${input.locationId} AND scopeOrganisationId IS NULL
+      AND assertionState='asserted' AND occupancyState='current' ORDER BY id`)
+    corrections.accessibility.placementKey = JSON.stringify({
+      position: facts.location,
+      occupancy: occupancy.map(row => row.id),
+    })
+  }
   for (const field of ['brandId', 'groupId'] as const) {
     if (cataloguePins[field] && corrections[field])
       corrections[field].catalogue = cataloguePins[field]

@@ -1,10 +1,11 @@
 <script lang="ts">
 // SVELTE
 import { untrack } from 'svelte'
+// BITS
+import { Dialog } from 'bits-ui'
 // COMPONENTS
 import { Button } from '#lib/bits/core/index.js'
 import FeatureNamingSettings from './FeatureNamingSettings.svelte'
-import FeatureIntentHelp from './FeatureIntentHelp.svelte'
 // TYPES
 import type { FeatureNameRule } from '#lib/features/locationPolicy.js'
 let {
@@ -35,69 +36,72 @@ let draftRule = $state<FeatureNameRule>(
 let editingTemplate = $state(false)
 let isOverriding = $state(untrack(() => override !== undefined))
 </script>
-<section
-  {id}
-  class="border-border/50 min-w-0 border-t pt-4 lg:col-span-3"
-  style:scroll-margin-top="calc(var(--feature-type-toolbar-height, 0px) + 1.5rem)"
-  aria-labelledby={`${id}-title`}
-  data-naming-editor
+<Dialog.Root
+  open={true}
+  onOpenChange={open => {
+    if (!open) onCancel()
+  }}
 >
-  <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-    <div class="flex items-center gap-1">
-      <h3 id={`${id}-title`} tabindex="-1" class="text-base font-semibold outline-none">
-        Rule-based feature naming
-      </h3>
-      <FeatureIntentHelp topic="naming" label="About naming rules" />
-    </div>
-    <div class="flex flex-wrap items-center gap-3">
-      <p class="text-sm">
-        {isOverriding ? 'Custom rules' : 'Using inherited default'}
-      </p>
-      {#if !disabled}
-        <button
-          type="button"
-          aria-label="Reset to inherited default"
-          onclick={() => onAccept(undefined)}
-          class="text-muted-foreground hover:text-foreground focus-visible:outline-primary rounded px-2 py-1 text-sm underline underline-offset-2 focus-visible:outline-2"
+  <Dialog.Portal>
+    <Dialog.Overlay class="fixed inset-0 z-[1000] bg-black/40 backdrop-blur-sm" />
+    <Dialog.Content
+      {id}
+      class="bits-theme border-border bg-panel text-foreground fixed top-1/2 left-1/2 z-[1001] flex max-h-[92dvh] w-[calc(100vw-1rem)] max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-xl border shadow-2xl"
+      onInteractOutside={event => event.preventDefault()}
+      onCloseAutoFocus={event => event.preventDefault()}
+      data-naming-editor
+    >
+      <header
+        class="border-border/50 flex shrink-0 items-start justify-between gap-4 border-b px-4 py-3 sm:px-5"
+      >
+        <div class="min-w-0">
+          <Dialog.Title id={`${id}-title`} class="text-lg font-semibold"
+            >Feature naming</Dialog.Title
+          >
+          <Dialog.Description class="text-muted-foreground mt-1 text-xs"
+            >Choose a template or create one using Feature properties and linked
+            Location attributes.</Dialog.Description
+          >
+        </div>
+        <span class="text-muted-foreground shrink-0 pt-1 text-xs"
+          >{isOverriding ? 'Custom rule' : 'Inherited default'}</span
         >
-          Reset
-        </button>
-      {/if}
-    </div>
-  </div>
-  <FeatureNamingSettings
-    {scopeType}
-    {scopeId}
-    {locales}
-    rule={draftRule}
-    {disabled}
-    {inheritedRule}
-    inheriting={!isOverriding}
-    onUseDefault={() => {
-      draftRule = structuredClone($state.snapshot(inheritedRule))
-      isOverriding = false
-    }}
-    onChange={rule => {
-      draftRule = rule
-      isOverriding = true
-    }}
-    onEditingChange={editing => (editingTemplate = editing)}
-  />
-  <footer
-    class="border-border/50 mt-3 flex flex-wrap items-center justify-end gap-3 border-t pt-3"
-  >
-    <div class="flex gap-2">
-      <Button text={disabled ? 'Close' : 'Cancel'} style="ghost" onClick={onCancel} />
-      {#if !disabled}
-        <Button
-          text="Accept naming rule"
-          disabled={editingTemplate}
-          onClick={() =>
-            onAccept(
-              isOverriding ? structuredClone($state.snapshot(draftRule)) : undefined,
-            )}
+      </header>
+      <div class="min-h-0 overflow-y-auto px-4 py-4 sm:px-5" data-naming-scroll>
+        <FeatureNamingSettings
+          {scopeType}
+          {scopeId}
+          {locales}
+          rule={draftRule}
+          {disabled}
+          {inheritedRule}
+          inheriting={!isOverriding}
+          onUseDefault={() => {
+            draftRule = structuredClone($state.snapshot(inheritedRule))
+            isOverriding = false
+          }}
+          onChange={rule => {
+            draftRule = rule
+            isOverriding = true
+          }}
+          onEditingChange={editing => (editingTemplate = editing)}
         />
-      {/if}
-    </div>
-  </footer>
-</section>
+      </div>
+      <footer
+        class="border-border/50 flex shrink-0 flex-wrap items-center justify-end gap-2 border-t px-4 py-3 sm:px-5"
+      >
+        <Button text={disabled ? 'Close' : 'Cancel'} style="ghost" onClick={onCancel} />
+        {#if !disabled}
+          <Button
+            text="Accept naming rule"
+            disabled={editingTemplate}
+            onClick={() =>
+              onAccept(
+                isOverriding ? structuredClone($state.snapshot(draftRule)) : undefined,
+              )}
+          />
+        {/if}
+      </footer>
+    </Dialog.Content>
+  </Dialog.Portal>
+</Dialog.Root>

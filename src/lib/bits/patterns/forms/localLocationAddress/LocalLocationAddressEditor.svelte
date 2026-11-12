@@ -9,6 +9,9 @@ import LocationBrandEditor from '../featureLocation/LocationBrandEditor.svelte'
 // COMPONENTS
 import Tabs from '#lib/bits/core/tabs/Tabs.svelte'
 import CommunityCurationLocks from './CommunityCurationLocks.svelte'
+import LocationCommunications from '../featureLocation/LocationCommunications.svelte'
+import { UNKNOWN_ACCESSIBILITY } from '#lib/locations/accessibility.js'
+import type { LocationProfileEdit } from '#lib/locations/profileEdit.js'
 import LocationAccessibility from '../featureLocation/LocationAccessibility.svelte'
 // SVELTE
 import { onDestroy, untrack } from 'svelte'
@@ -60,6 +63,7 @@ import {
   prepareLocalLocationAddress,
   localAddressDraft,
   localAddressContent,
+  localAddressDisplayOverrides,
 } from '#lib/addresses/locationDraft.js'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
@@ -106,6 +110,7 @@ function communityClosed(field: CurationLockField): boolean {
 let branch = $state<Record<string, string>>({})
 let format = $state<Record<string, string>>({})
 let branchId = $state('')
+let profileValues = $state<LocationProfileEdit['values']>({})
 let brandLink = $state<string | null>(null),
   groupLink = $state<string | null>(null)
 let changedLinks = $state<{ brandId?: boolean; groupId?: boolean }>({})
@@ -218,12 +223,16 @@ function edit(): void {
   groupLink = editableFacts?.groupId ?? null
   changedLinks = {}
   sharedBrandEdit = undefined
+  profileValues = {}
   const retained = {
     ...$state.snapshot(retainedAddress),
     source: editableFacts.location.address,
     coordinates: editableFacts.location.geometry.coordinates,
   }
   draft = localAddressDraft(prepareLocalLocationAddress(retained, retained))
+  // Restore explicit complete labels as editable overrides rather than recomposing them.
+  for (const [tag, label] of Object.entries(retained.source.displayOverrides ?? {}))
+    draft.overrides[tag] = { formattedAddress: label }
   draft.divisionOverrides = {
     ...retained.source.divisionOverrides,
     ...draft.divisionOverrides,
@@ -433,6 +442,7 @@ async function save(): Promise<void> {
                 rawSource: {},
                 fallbackDisplay: {},
                 authored: localAddressContent($state.snapshot(draft)),
+                displayOverrides: localAddressDisplayOverrides($state.snapshot(draft)),
                 divisionOverrides: draft.divisionOverrides,
               }
             : editableFacts.location.address
@@ -453,6 +463,16 @@ async function save(): Promise<void> {
         patch.branch = { mode: 'override', value: branch }
       if (JSON.stringify(format) !== JSON.stringify(editableFacts?.format ?? {}))
         patch.format = { mode: 'override', value: $state.snapshot(format) }
+      for (const field of [
+        'phoneNumber',
+        'websites',
+        'socials',
+        'accessibility',
+      ] as const) {
+        const value = profileValues[field]
+        if (value !== undefined)
+          Object.assign(patch, { [field]: { mode: 'override', value } })
+      }
       if (sharedBrandEdit) patch.brands = sharedBrandEdit.choice
       if (changedLinks.brandId)
         patch.brandId = brandLink
@@ -501,6 +521,10 @@ async function save(): Promise<void> {
         address:
           JSON.stringify(draft) !== initialAddressSignature
             ? localAddressContent($state.snapshot(draft))
+            : undefined,
+        displayOverrides:
+          JSON.stringify(draft) !== initialAddressSignature
+            ? localAddressDisplayOverrides($state.snapshot(draft))
             : undefined,
         divisionOverrides:
           JSON.stringify(draft) !== initialAddressSignature
@@ -585,7 +609,8 @@ $effect(() => {
   onControlsChange({
     dirty:
       editing &&
-      (Boolean(sharedBrandEdit) ||
+      (Object.keys(profileValues).length > 0 ||
+        Boolean(sharedBrandEdit) ||
         Object.keys(changedLinks).length > 0 ||
         JSON.stringify(branch) !== JSON.stringify(editableFacts?.branch ?? {}) ||
         JSON.stringify(format) !== JSON.stringify(editableFacts?.format ?? {}) ||
@@ -651,7 +676,7 @@ $effect(() => {
             class="@min-[900px]:border-border min-w-0 space-y-6 @min-[900px]:border-l @min-[900px]:pl-6"
           >
             {#if !place.facts}
-              <LocationAccessibility locationId={place.id} />
+              <LocationAccessibility locationId={place.id} readOnly />
             {/if}
             {#if editing}
               <section
@@ -775,6 +800,13 @@ $effect(() => {
                     {/if}
                   </div>
                 {/if}
+                {#if communityRecord && activeKind === 'establishment'}
+                  <LocationCommunications
+                    value={{ ...editableFacts, ...profileValues }}
+                    isEditing={!busy && Boolean(place.canEditShared)}
+                    onChange={value => (profileValues = { ...profileValues, ...value })}
+                  />
+                {/if}
                 {#if place.canEditShared && communityRecord}
                   <LocationBrandEditor
                     localeState={editorLocaleState}
@@ -887,6 +919,20 @@ $effect(() => {
                     ])) ?? null}
                   locationKind={activeKind}
                   accessibilityLocationId={place.id}
+                  accessibilityDraft={profileValues.accessibility ??
+                    editableFacts?.accessibility ??
+                    undefined}
+                  onAccessibilityDraftChange={communityRecord &&
+                  place.canEditShared &&
+                  !communityClosed('accessibility')
+                    ? value => {
+                        if (value && !Object.keys(value).length) return
+                        profileValues = {
+                          ...profileValues,
+                          accessibility: { ...UNKNOWN_ACCESSIBILITY, ...value },
+                        }
+                      }
+                    : undefined}
                   {address}
                   isEditing={editing}
                   showAccessHints={false}

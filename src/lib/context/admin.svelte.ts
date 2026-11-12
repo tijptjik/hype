@@ -15,6 +15,7 @@ import { debouncedUpdateUserPreferences } from '#lib/client/services/user.js'
 // I18N
 import { getLocaleKey } from '#lib/i18n.js'
 // CONTEXT
+import { LocationCreation } from './locationCreation.svelte.js'
 import { FeatureMultilingualState } from './featureMultilingual.svelte.js'
 import { ResourceIndexUi } from './resourceIndexUi.svelte.js'
 import type { FeatureIndexQuery } from '#lib/features/indexQuery.js'
@@ -45,6 +46,7 @@ import type { Hub } from '#lib/db/zod/schema/hub.types.js'
 import type { AdminPreferences } from '#lib/db/zod/schema/user.types.js'
 
 export class AdminCtx {
+  readonly locationCreation = new LocationCreation()
   readonly featureMultilingual = new FeatureMultilingualState()
   readonly navigation = new SurfaceNavigation((type, ref) => {
     if (type === 'organisation' || type === 'project' || type === 'hub')
@@ -1017,6 +1019,12 @@ export const ADMINCTX_KEY = Symbol.for('hype.context.admin')
 
 export const setAdminCtx = (view: ResourceViewCtx) => {
   const context = new AdminCtx(view)
+  // Creation handoffs are discarded when the owning account changes.
+  $effect(() => {
+    const accountId = view.user?.id
+    const owner = context.locationCreation.current?.accountId
+    if (owner && owner !== accountId) untrack(() => context.locationCreation.clear())
+  })
   setSurfaceNavigation(context.navigation)
   return setContext(ADMINCTX_KEY, context)
 }

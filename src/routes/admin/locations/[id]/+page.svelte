@@ -126,7 +126,7 @@ $effect(() => {
               ]}
               class="h-full min-h-0"
               contentClass="h-full"
-              panelClass="h-full"
+              panelClass="flex h-full min-h-0 flex-col"
             >
               {#snippet children(view)}
                 {#if view === 'features'}

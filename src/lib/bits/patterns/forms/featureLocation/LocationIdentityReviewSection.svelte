@@ -172,7 +172,7 @@ $effect(() => {
 
 /** Keep settled candidates and comparisons visible while a new search is pending. */
 async function search(): Promise<void> {
-  if (busy || !query.trim()) return
+  if (busy || !featureId || !query.trim()) return
   busy = true
   failure = ''
   try {
@@ -190,7 +190,7 @@ async function search(): Promise<void> {
 
 /** Capture only the exact server-resolved source revision selected for this Location. */
 async function select(candidate: LocationSearchCandidate): Promise<void> {
-  if (busy || isDirty) return
+  if (busy || isDirty || !featureId) return
   busy = true
   failure = ''
   try {
@@ -289,11 +289,15 @@ async function accept(): Promise<void> {
   busy = true
   failure = ''
   try {
-    const result = await acceptLocationIdentityReview({
+    const command = acceptLocationIdentityReview({
       locationId,
       reviewId: detail.id,
       reason: reason.trim(),
-    }).updates(getFeatureLocation({ featureId }))
+    })
+    // Standalone Location reviews have no Feature query to refresh.
+    const result = featureId
+      ? await command.updates(getFeatureLocation({ featureId }))
+      : await command
     if (!alive) return
     if (result.status === 'conflict') {
       failure = m.location_identity_stale()
@@ -345,11 +349,15 @@ async function confirmMerge(): Promise<void> {
   busy = true
   failure = ''
   try {
-    const result = await acceptLocationMergeReview({
+    const command = acceptLocationMergeReview({
       locationId,
       reviewId: merge.reviewId,
       reason: mergeReason.trim(),
-    }).updates(getFeatureLocation({ featureId }))
+    })
+    // Standalone Location reviews have no Feature query to refresh.
+    const result = featureId
+      ? await command.updates(getFeatureLocation({ featureId }))
+      : await command
     if (!alive) return
     if (result.status !== 'applied') {
       failure = m.location_identity_stale()
@@ -435,7 +443,7 @@ function rows(facts: LocationFacts): Array<{ label: string; value: string }> {
               {m.feature_location_save_first()}
             </p>
           {/if}
-          {#if !onActionsChange}
+          {#if !onActionsChange && featureId}
             <div class="flex items-end gap-3">
               <TextInput
                 id="location-identity-search"

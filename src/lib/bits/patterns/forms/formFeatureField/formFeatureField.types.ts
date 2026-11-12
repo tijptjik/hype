@@ -1,6 +1,8 @@
 import type { Property } from '#lib/db/zod/schema/property.types.js'
 
 export type FormFeatureFieldProps = {
+  /** Distinguish the same property rendered in separate editor facets. */
+  idPrefix?: string
   property: Property
   localeKey: 'en' | 'zhHans' | 'zhHant'
   value?: string | null

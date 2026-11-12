@@ -23,6 +23,7 @@ import {
 let {
   primaryAction = null,
   content = null,
+  locationsAction = null,
   featuresAction = null,
   usersAction = null,
   historyAction = null,
@@ -59,6 +60,21 @@ function resolveIconClasses(icon?: unknown): string {
       hideLabelInstantly
       disabled={featuresAction?.disabled ?? !featuresAction}
       onClick={() => featuresAction?.onClick?.()}
+    />
+  {/if}
+
+  {#if locationsAction}
+    <Button
+      size="sm"
+      text={locationsAction?.text ?? ''}
+      color={locationsAction?.color ?? 'neutral'}
+      style={locationsAction?.style ?? 'outline'}
+      iconComponent={locationsAction?.icon}
+      class={resolveActionClass(locationsAction?.class)}
+      hideLabel
+      hideLabelInstantly
+      disabled={locationsAction?.disabled ?? !locationsAction}
+      onClick={() => locationsAction?.onClick?.()}
     />
   {/if}
 

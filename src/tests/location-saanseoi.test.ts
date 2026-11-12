@@ -77,3 +77,35 @@ describe('SaanSeoi full Location projection', () => {
     expect(result.issues).toEqual([{ kind: 'addressRecordsPending' }])
   })
 })
+
+it('adapts nullable publisher contacts and URL-list socials without losing source evidence', () => {
+  const socials = ['https://www.facebook.com/first', 'https://www.facebook.com/second']
+  const source = {
+    ...resource,
+    attributes: { ...resource.attributes, websites: null, socials },
+  }
+  const result = projectSaanSeoiPlace(source, meta, pin)
+  expect(result.facts.websites).toBeUndefined()
+  expect(result.facts.socials).toEqual({
+    'facebook.com': socials[0],
+    'facebook.com:2': socials[1],
+  })
+  expect(result.rawSource.resource).toEqual(source)
+  expect(
+    projectSaanSeoiPlace(
+      { ...source, attributes: { ...source.attributes, socials: null } },
+      meta,
+      pin,
+    ).facts.socials,
+  ).toBeUndefined()
+  expect(() =>
+    projectSaanSeoiPlace(
+      {
+        ...source,
+        attributes: { ...source.attributes, socials: ['javascript:alert(1)'] },
+      },
+      meta,
+      pin,
+    ),
+  ).toThrow()
+})

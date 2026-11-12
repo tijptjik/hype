@@ -42,6 +42,7 @@ export const MODEL_FORM_TABS = {
       'locationNames',
       'locationReset',
       'locationBrandEdit',
+      'locationProfileEdit',
     ],
     fields: ['properties'],
   },

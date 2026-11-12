@@ -178,3 +178,19 @@ export function localAddressContent(draft: FeatureAddress): LocalLocationAddress
   // Administrative and landform IDs are derived from the marker, never authored corrections.
   return markerDerivedAddressContent(LocalLocationAddressSchema.parse(content))
 }
+
+/** Preserve explicit complete labels separately from structured address evidence.
+ * @param draft Editable address and retained complete labels.
+ * @returns Effective label overrides; component edits clear obsolete complete labels.
+ */
+export function localAddressDisplayOverrides(
+  draft: FeatureAddress,
+): Record<string, string> {
+  const labels = { ...draft.source.displayOverrides }
+  for (const [tag, corrections] of Object.entries(draft.overrides)) {
+    if (Object.hasOwn(corrections, 'formattedAddress'))
+      labels[tag] = String(corrections.formattedAddress ?? '')
+    else if (Object.keys(corrections).length) delete labels[tag]
+  }
+  return labels
+}

@@ -26,10 +26,7 @@ import type {
   ResourceSubmitDraft,
   ResourceSubmitMode,
 } from '#lib/client/services/formRelations.types.js'
-import type {
-  HeaderCtrlState,
-  HeaderFacetItem,
-} from '#lib/context/headerState.types.js'
+import type { HeaderCtrlState } from '#lib/context/headerState.types.js'
 import type { HeaderTransitionSnapshot } from '#lib/client/services/formHeader.types.js'
 import type { User } from '#lib/db/zod/schema/user.types.js'
 import type {
@@ -293,7 +290,6 @@ type ResetLocaleFieldsParams<
 //
 // 6. OPTIMISTIC HEADER UPDATE
 // - captureHeaderTransitionSnapshot
-// - resolveOptimisticHeaderFacets
 // - resolveOptimisticHeaderStatus
 //
 // 7. ISSUE MESSAGES
@@ -1280,41 +1276,6 @@ export function captureHeaderTransitionSnapshot(headerCtrl: {
     isDeleted: Boolean(current?.isDeleted ?? false),
     facets,
   }
-}
-
-/**
- * Resolve which facet tabs should be displayed while a destination entity is
- * still settling.
- *
- * @param isSettled Whether the destination entity has finished loading.
- * @param resolvedFacets The resolved facet set for the current route.
- * @param snapshot The previous header transition snapshot.
- * @returns The facets that should be rendered during the current transition.
- */
-export function resolveOptimisticHeaderFacets(
-  isSettled: boolean,
-  resolvedFacets:
-    | Map<
-        FacetType,
-        string | { label: string; icon?: Component | null; hasIssues?: boolean }
-      >
-    | HeaderFacetItem[],
-  snapshot: HeaderTransitionSnapshot,
-):
-  | Map<
-      FacetType,
-      string | { label: string; icon?: Component | null; hasIssues?: boolean }
-    >
-  | HeaderFacetItem[] {
-  if (isSettled) return resolvedFacets
-  // Start with Profile until optional facets have been resolved for the destination.
-  if (snapshot.facets.length === 0) {
-    return Array.isArray(resolvedFacets)
-      ? resolvedFacets.filter(facet => facet.ref === 'core')
-      : new Map([...resolvedFacets].filter(([ref]) => ref === 'core'))
-  }
-
-  return snapshot.facets
 }
 
 /**

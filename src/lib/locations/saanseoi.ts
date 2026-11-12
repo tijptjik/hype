@@ -8,6 +8,22 @@ import type { LocationFacts } from './model'
 
 const identifier = z.string().min(1)
 const optionalId = identifier.nullable()
+/** Adapt publisher URL lists to named HYPE contacts without dropping same-site accounts.
+ * @param urls Validated public HTTP(S) URLs. @returns Stable host-labelled contacts.
+ * @remarks Original arrays remain unchanged in retained source evidence.
+ */
+function projectSocialUrls(urls: string[]): Record<string, string> {
+  const contacts: Record<string, string> = {}
+  for (const url of urls) {
+    const host = new URL(url).hostname.replace(/^www\./, '').slice(0, 40)
+    let key = host
+    let index = 2
+    while (Object.hasOwn(contacts, key)) key = `${host}:${index++}`
+    contacts[key] = url
+  }
+  return contacts
+}
+
 const recordSchema = z.object({
   type: z.literal('places'),
   id: identifier,
@@ -20,8 +36,16 @@ const recordSchema = z.object({
     address3dId: optionalId,
     address3dUnitId: optionalId,
     phones: z.array(z.string()).nullable(),
-    websites: LocationFactsSchema.shape.websites,
-    socials: LocationFactsSchema.shape.socials,
+    websites: LocationFactsSchema.shape.websites
+      .nullable()
+      .transform(value => value ?? undefined),
+    socials: z
+      .union([
+        LocationFactsSchema.shape.socials,
+        LocationFactsSchema.shape.websites.unwrap().transform(projectSocialUrls),
+      ])
+      .nullable()
+      .transform(value => value ?? undefined),
     accessibility: LocationFactsSchema.shape.accessibility,
     operatingStatus: z.string().nullable().optional(),
     identifiers: z.object({ wikidata: z.object({ brandId: identifier }) }).nullable(),

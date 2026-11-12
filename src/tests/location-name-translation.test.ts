@@ -215,3 +215,63 @@ it.each(['locale', 'reopened'] as const)(
     expect(onChange).not.toHaveBeenCalled()
   },
 )
+
+it('keeps unnamed service-point locales empty until explicitly edited', async () => {
+  const onChange = vi.fn()
+  render(Names, {
+    names: { en: 'Sheung Wan' },
+    kind: 'service_point',
+    localeState,
+    translations: true,
+    isEditing: true,
+    onChange,
+  })
+  expect(screen.getByRole('heading', { name: 'Service point' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Sheung Wan' })).toBeTruthy()
+  await fireEvent.click(screen.getByRole('button', { name: 'Name' }))
+  expect(screen.getByRole('textbox', { name: 'Name · zh-Hant' })).toHaveValue('')
+  expect(onChange).not.toHaveBeenCalled()
+  expect(mocks.translateName).not.toHaveBeenCalled()
+})
+
+it('locks linked Location names and translations even in Feature edit mode', async () => {
+  const onChange = vi.fn()
+  render(Names, {
+    names: { en: 'Sheung Wan' },
+    kind: 'service_point',
+    localeState,
+    translations: true,
+    isEditing: true,
+    locked: true,
+    onChange,
+  })
+  expect(screen.getByText('Linked · read-only')).toBeTruthy()
+  const name = screen.getByRole('button', { name: 'Sheung Wan' })
+  expect(name).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'Name' })).toBeDisabled()
+  await fireEvent.click(name)
+  expect(screen.queryByRole('textbox')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'from en' })).toBeNull()
+  expect(onChange).not.toHaveBeenCalled()
+  expect(mocks.translateName).not.toHaveBeenCalled()
+})
+
+it('discards pending name translation when the Location becomes locked', async () => {
+  let resolve!: (value: { status: string; text: string }) => void
+  mocks.translateName.mockReturnValue(new Promise(done => (resolve = done)))
+  const onChange = vi.fn()
+  const view = render(Names, {
+    names: { en: 'Sheung Wan' },
+    kind: 'service_point',
+    localeState,
+    translations: true,
+    isEditing: true,
+    onChange,
+  })
+  await fireEvent.click(screen.getByRole('button', { name: 'from en' }))
+  await waitFor(() => expect(mocks.translateName).toHaveBeenCalledOnce())
+  await view.rerender({ locked: true })
+  resolve({ status: 'translated', text: '上環' })
+  await new Promise(done => setTimeout(done, 0))
+  expect(onChange).not.toHaveBeenCalled()
+})

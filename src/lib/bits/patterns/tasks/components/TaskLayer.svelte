@@ -47,7 +47,7 @@ const items = $derived(
       placeholder={m.resource__layer_singular()}
       disabled={disabled || isBusy}
       triggerClass="w-full border-border bg-panel! text-foreground"
-      contentClass="border-foreground/12 bg-panel text-foreground text-md"
+      contentClass="border-foreground/12 text-foreground text-md"
       onValueChange={value => {
         if (!value || value === currentLayerId) return
         void onLayerChange?.(value)

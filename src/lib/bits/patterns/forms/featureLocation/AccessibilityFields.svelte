@@ -81,7 +81,6 @@ const choices = $derived({
         <span id={`${uid}-${field}-help`} class="sr-only">{help[field]}</span>
         <Select
           triggerClass="w-full! bg-transparent!"
-          contentClass="bg-panel! [&>div]:bg-transparent! [&_[role=option]]:bg-transparent! [&_[role=option][data-highlighted]]:bg-muted! [&_[role=option][data-state=checked]]:bg-muted/50!"
           value={value[field] ?? UNKNOWN_ACCESSIBILITY[field]}
           {disabled}
           triggerAttrs={{

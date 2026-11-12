@@ -21,6 +21,7 @@ import ChevronDownIcon from 'virtual:icons/lucide/chevron-down'
 // COMPONENTS
 import AddressMap from './AddressMap.svelte'
 import AddressDetails from './AddressDetails.svelte'
+import { animateAddressMode } from './animateAddressMode.svelte.js'
 import AddressDisplayField from './AddressDisplayField.svelte'
 import AddressDivisions from './AddressDivisions.svelte'
 // API
@@ -244,6 +245,13 @@ let copiedCoordinates = $state(false)
 let toolbarWidth = $state(0)
 // Surface geometry accounts for open panels; standalone editors use their measured bar.
 let editorLayoutWidth = $state(0)
+let addressEditor = $state<HTMLDivElement>()
+// Capture positions in the owning component before its child markup changes mode.
+const addressModeMotion = animateAddressMode(
+  () => addressEditor,
+  () => isEditing,
+)
+onDestroy(addressModeMotion.destroy)
 let minimumEditorWidth = $state(560)
 let partsRequested = $state(true)
 let divisionsRequested = $state(true)
@@ -322,7 +330,7 @@ const divisionsStale = $derived(
     JSON.stringify(resolvedDivisions.coordinates.slice(0, 2)) !==
       JSON.stringify(coordinates.slice(0, 2)),
 )
-const coordinateDigits = 5
+const coordinateDigits = 4
 // Density is calculated from full-size offscreen groups, never from the collapsed widget.
 let coordinatesCompact = $state(false)
 let coordinateCopyFailed = $state(false)
@@ -631,7 +639,7 @@ $effect(() => {
 {#snippet addressToolbar(coordinateControl?: Snippet)}
   <div class="contents">
     <div
-      class="min-w-0 flex-1 basis-0 {toolbarWidth > 0 && toolbarWidth < 640
+      class="w-max min-w-0 shrink-0 {toolbarWidth > 0 && toolbarWidth < 640
         ? 'col-start-1 row-start-1'
         : ''}"
       data-address-toolbar-location
@@ -639,9 +647,9 @@ $effect(() => {
       {@render locationControl?.(coordinateControl)}
     </div>
     <div
-      class="w-max min-w-0 max-w-full flex-initial space-y-2 {toolbarWidth > 0 &&
+      class="min-w-0 max-w-full flex-1 basis-0 space-y-2 {toolbarWidth > 0 &&
       toolbarWidth < 640
-        ? 'col-span-2 row-start-2 justify-self-center'
+        ? 'col-span-2 row-start-2 w-full'
         : ''}"
       data-address-toolbar-display
     >
@@ -656,7 +664,7 @@ $effect(() => {
         {address}
         locale={displayLocale}
         {isEditing}
-        alignEnd={true}
+        alignEnd={false}
         scrollWhenConstrained={true}
         {onChange}
       />
@@ -863,6 +871,7 @@ $effect(() => {
       </div>
     {/if}
     <div
+      bind:this={addressEditor}
       bind:clientWidth={editorLayoutWidth}
       style:grid-template-columns={isEditing && showAddressDetails
         ? `${hasAvailableParts ? (openPanels.parts ? sidePanelWidth : collapsedPanelWidth) : emptyPartsInset - columnGap}px minmax(0, 1fr)${showDivisions ? ` ${openPanels.divisions ? sidePanelWidth : collapsedPanelWidth}px` : ''}`

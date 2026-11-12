@@ -1,7 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { tick, type Snippet } from 'svelte'
-import { slide } from 'svelte/transition'
+import { fly, slide } from 'svelte/transition'
 import { prefersReducedMotion } from 'svelte/motion'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
@@ -18,18 +18,24 @@ import type { AddressDivision } from '#lib/addresses/divisions.js'
 
 let {
   paths,
+  isEditing = true,
   options,
   node,
   labels,
   onChange,
 }: {
   paths: AddressDivision[][]
+  isEditing?: boolean
   options: AddressDivision[]
   node: Snippet<[AddressDivision]>
   labels: Record<string, string>
   onChange: (paths: AddressDivision[][]) => void
 } = $props()
 const uid = $props.id()
+// Leaving edit mode discards only the uncommitted picker state.
+$effect(() => {
+  if (!isEditing) close()
+})
 let searching = $state(false)
 let query = $state('')
 let pending = $state<AddressDivision | null>(null)
@@ -135,39 +141,46 @@ export function close(): void {
           transition:slide={{ duration: prefersReducedMotion.current ? 0 : 180 }}
         >
           <div class="flex min-w-0 items-start gap-1">
-            <button
-              type="button"
-              class="hover:text-primary min-w-0 flex-1 text-left"
-              aria-label={index === path.length - 1
-                ? m.address_neighbourhood_choose()
-                : addressDivisionName(division, getLocaleKey())}
-              onclick={() => {
-                open()
-              }}
-            >
+            <div class="relative min-w-0 flex-1">
               {@render node(division)}
-            </button>
-            <button
-              type="button"
-              class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive mt-1 flex size-7 shrink-0 items-center justify-center rounded-md"
-              aria-label={`${m.address_neighbourhood_clear()}: ${addressDivisionName(division, getLocaleKey())}`}
-              data-tooltip={m.address_neighbourhood_clear()}
-              onclick={() => {
-                // Keep the valid ancestor prefix when removing this branch of the hierarchy.
-                onChange(
-                  paths
-                    .map((current, currentIndex) =>
-                      currentIndex === pathIndex ? current.slice(0, index) : current,
-                    )
-                    .filter(current => current.length),
-                )
-                close()
-              }}
-            >
-              <XIcon class="size-3.5" aria-hidden="true" />
-            </button>
+              {#if isEditing}
+                <button
+                  type="button"
+                  class="hover:bg-primary/5 focus-visible:outline-primary absolute inset-0 rounded-md"
+                  aria-label={index === path.length - 1
+                    ? m.address_neighbourhood_choose()
+                    : addressDivisionName(division, getLocaleKey())}
+                  onclick={() => open()}
+                ></button>
+              {/if}
+            </div>
+            {#if isEditing}
+              <button
+                type="button"
+                transition:fly={{
+                  x: 12,
+                  duration: prefersReducedMotion.current ? 0 : 180,
+                }}
+                class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive mt-1 flex size-7 shrink-0 items-center justify-center rounded-md"
+                aria-label={`${m.address_neighbourhood_clear()}: ${addressDivisionName(division, getLocaleKey())}`}
+                data-tooltip={m.address_neighbourhood_clear()}
+                onclick={() => {
+                  // Keep the valid ancestor prefix when removing this branch of the hierarchy.
+                  onChange(
+                    paths
+                      .map((current, currentIndex) =>
+                        currentIndex === pathIndex ? current.slice(0, index) : current,
+                      )
+                      .filter(current => current.length),
+                  )
+                  close()
+                }}
+              >
+                <XIcon class="size-3.5" aria-hidden="true" />
+              </button>
+            {/if}
           </div>
-          {#if index < path.length - 1 || hasChildren(path)}
+          {#if index < path.length - 1 || (isEditing && hasChildren(path))}
             <span
               class="border-muted-foreground/35 pointer-events-none absolute top-7 -bottom-4 left-[7px] w-2 rounded-bl border-b border-l"
               aria-hidden="true"
@@ -175,7 +188,7 @@ export function close(): void {
           {/if}
         </li>
       {/each}
-      {#if path.length && hasChildren(path)}
+      {#if isEditing && path.length && hasChildren(path)}
         <li
           class="flex items-start gap-3"
           style:margin-left={`${path.length * 16}px`}
@@ -193,7 +206,7 @@ export function close(): void {
       {/if}
     </ol>
   {/each}
-  {#if searching && (!childOf || hasChildren(childOf))}
+  {#if isEditing && searching && (!childOf || hasChildren(childOf))}
     <div bind:this={panel} class="min-w-0 space-y-2">
       <label class="sr-only" for={`${uid}-search`}
         >{m.address_neighbourhood_search()}</label
@@ -295,7 +308,7 @@ export function close(): void {
         </fieldset>
       {/if}
     </div>
-  {:else if !paths.length}
+  {:else if isEditing && !paths.length}
     <button
       type="button"
       class="text-primary min-h-9 text-sm hover:underline"

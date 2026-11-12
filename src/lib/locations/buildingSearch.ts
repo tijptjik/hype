@@ -84,50 +84,56 @@ export async function searchBuildingNames(
   const offset = options?.offset ?? 0
   if (options?.candidateLimit && named.length > offset + limit) options.onLimited?.()
   const matches = named.slice(offset, offset + limit)
-  const groups = await Promise.all(
-    matches.map(async row => {
-      if (!isCurrent()) return []
-      const details = await loadBuildingDetails(row.id, bundle.release)
-      if (!isCurrent()) return []
-      if (
-        options?.coordinates &&
-        locationDistance(options.coordinates, details.coordinates) >
-          (options.maxDistance ?? 100)
-      )
-        return []
-      const names = buildingNames(row.names, row.name)
-      const building = { ...row, names, release: bundle.release }
-      const candidates = details.addresses.length ? details.addresses : [undefined]
-      return candidates.map(candidate => {
-        const projected = fillBuildingDetails(
-          emptyFeatureAddress(),
-          building,
-          details,
-          candidate,
-          false,
-          locale,
-          streets,
-        )
-        // Published building values are the reset baseline, not user corrections.
-        const address = {
-          ...projected,
-          source: { ...projected.source, authored: localAddressContent(projected) },
-          overrides: {},
-        }
-        return {
-          id: `building:${row.id}:${candidate ? `${candidate.id}:${candidate.snapshotId}` : ''}`,
-          kind: 'building' as const,
-          names,
-          buildingSource: {
-            id: row.id,
-            release: bundle.release,
-            ...(candidate ? { addressId: candidate.id } : {}),
-          },
-          address,
-        }
-      })
-    }),
-  )
+  // Resolve the entire named set before radius filtering, with bounded detail concurrency.
+  const groups: BuildingSearchResult[][] = []
+  for (let index = 0; index < matches.length && isCurrent(); index += 8) {
+    groups.push(
+      ...(await Promise.all(
+        matches.slice(index, index + 8).map(async row => {
+          if (!isCurrent()) return []
+          const details = await loadBuildingDetails(row.id, bundle.release)
+          if (!isCurrent()) return []
+          if (
+            options?.coordinates &&
+            locationDistance(options.coordinates, details.coordinates) >
+              (options.maxDistance ?? 100)
+          )
+            return []
+          const names = buildingNames(row.names, row.name)
+          const building = { ...row, names, release: bundle.release }
+          const candidates = details.addresses.length ? details.addresses : [undefined]
+          return candidates.map(candidate => {
+            const projected = fillBuildingDetails(
+              emptyFeatureAddress(),
+              building,
+              details,
+              candidate,
+              false,
+              locale,
+              streets,
+            )
+            // Published building values are the reset baseline, not user corrections.
+            const address = {
+              ...projected,
+              source: { ...projected.source, authored: localAddressContent(projected) },
+              overrides: {},
+            }
+            return {
+              id: `building:${row.id}:${candidate ? `${candidate.id}:${candidate.snapshotId}` : ''}`,
+              kind: 'building' as const,
+              names,
+              buildingSource: {
+                id: row.id,
+                release: bundle.release,
+                ...(candidate ? { addressId: candidate.id } : {}),
+              },
+              address,
+            }
+          })
+        }),
+      )),
+    )
+  }
   options?.onPage?.({
     release: bundle.release,
     total: named.length,

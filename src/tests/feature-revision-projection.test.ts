@@ -41,6 +41,8 @@ import {
   saveUnlinkedFeatureForm,
 } from '#lib/db/services/featureFormSave.js'
 import { prepareInitialFeatureSubmission } from '#lib/db/services/featureInitialDraft.js'
+import { prepareFeatureLocationAssociationCapture } from '#lib/db/services/featureLocationAssociationRevision.js'
+import { prepareFeatureLocationAssociationWrite } from '#lib/db/services/locationAssociation.js'
 import { prepareFeatureAcceptedCapture } from '#lib/db/services/featureAcceptedCapture.js'
 import { FeatureInsert } from '#lib/db/zod/schema/feature.js'
 import {
@@ -2897,6 +2899,53 @@ describe('enrolled Feature projection guards', () => {
       f.sqlite.prepare('SELECT count(*) n FROM featureRevisionWriteScope').get()?.n,
     ).toBe(0)
   })
+  it.each([null, '[]'])(
+    'creates staff features with empty phone controls (%s)',
+    async valueJson => {
+      const f = fixture()
+      f.sqlite.exec(
+        readFileSync('migrations/0186_feature_revision_projection_guards.sql', 'utf8'),
+      )
+      f.sqlite.exec(
+        readFileSync('migrations/0187_feature_revision_creation.sql', 'utf8'),
+      )
+      f.sqlite.exec('UPDATE featureRevisionCreationPolicy SET enabled=1')
+      f.sqlite.exec("UPDATE property SET component='PhoneField' WHERE id='private'")
+      const created = await createFeatureForm(f.db, {
+        data: FeatureInsert.parse({
+          id: 'empty-phone-create',
+          organisationId: 'org',
+          projectId: 'project',
+          layerId: 'layer',
+          geometry: { type: 'Point', coordinates: [114, 22] },
+        }),
+        i18n: { en: { title: 'Named establishment' } },
+        properties: [{ propertyId: 'private', value: null, valueJson }],
+        revisionActor: { actorId: 'creator', mode: 'staff' },
+      })
+      expect(created.id).toBe('empty-phone-create')
+      expect(
+        f.sqlite
+          .prepare(
+            "SELECT value,valueJson FROM featureProperty WHERE featureId=? AND propertyId='private'",
+          )
+          .get(created.id),
+      ).toEqual({ value: null, valueJson })
+      const workspace = await readFeatureRevisionWorkspace(f.db, {
+        featureId: created.id,
+        actorId: 'creator',
+        canPublish: true,
+        guard: sql`1`,
+      })
+      expect(workspace).toMatchObject({ enabled: true, publishedRevisionId: null })
+      expect(
+        f.sqlite
+          .prepare('SELECT content FROM featureRevision WHERE featureId=?')
+          .all(created.id)
+          .map(row => JSON.parse(String(row.content)).properties.private.selection),
+      ).toContainEqual(expect.objectContaining({ value: null, valueJson }))
+    },
+  )
   it('initializes accepted private staff content atomically without a proposal', async () => {
     const f = fixture()
     f.sqlite.exec(
@@ -5106,4 +5155,51 @@ it('keeps the legacy unlinked transfer and destination guard in one transaction'
       )
       .get(),
   ).toBeUndefined()
+})
+
+it('captures explicit null policy fields on an initial Location link', async () => {
+  const f = fixture()
+  f.sqlite.exec(`CREATE TABLE location(id TEXT PRIMARY KEY,matchingType TEXT);
+    CREATE TABLE locationCanonical(aliasId TEXT,locationId TEXT);
+    CREATE TABLE locationOccupancy(id TEXT,containerLocationId TEXT);
+    CREATE TABLE locationMembership(id TEXT,parentLocationId TEXT);
+    INSERT INTO location VALUES ('location','establishment');`)
+  await f.initialize()
+  const parent = f.sqlite.prepare('SELECT modifiedAt FROM feature WHERE id=?').get('f')!
+  const write = prepareFeatureLocationAssociationWrite(f.db, {
+    featureId: 'f',
+    projectId: 'project',
+    locationId: 'location',
+    factsRevisionId: 'facts',
+    locationRevisionId: 'facts',
+    actorId: 'actor',
+    expectedFeatureModifiedAt: String(parent.modifiedAt),
+    expectedRevision: null,
+    overrides: {},
+    acceptancePolicy: {
+      nameMode: 'inherit',
+      factsSharedRevision: null,
+      locationSharedRevision: null,
+    },
+  })
+  const capture = await prepareFeatureLocationAssociationCapture(f.db, {
+    association: write.input,
+    version: write.version,
+    guard: sql`1`,
+  })
+  expect(
+    await executeRevisionBatch(f.db, sql`1`, [
+      ...capture.before,
+      write.query,
+      ...capture.after,
+    ]),
+  ).not.toBeNull()
+  const row = f.sqlite
+    .prepare('SELECT acceptancePolicy FROM featureLocation WHERE featureId=?')
+    .get('f')!
+  expect(JSON.parse(String(row.acceptancePolicy))).toEqual({
+    nameMode: 'inherit',
+    factsSharedRevision: null,
+    locationSharedRevision: null,
+  })
 })

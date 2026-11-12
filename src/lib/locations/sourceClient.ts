@@ -26,10 +26,23 @@ export type PlaceSourceClient = {
 
 export const PlaceSearchInputSchema = z
   .strictObject({
+    near: z
+      .strictObject({
+        coordinates: z.tuple([
+          z.number().finite().min(-180).max(180),
+          z.number().finite().min(-90).max(90),
+        ]),
+        radius: z.number().finite().min(50).max(1000),
+      })
+      .optional(),
     filters: PlaceSearchFiltersSchema.optional(),
     q: z.string().trim().max(200),
     locale: z.enum(['en', 'zh-hant', 'zh-hans']).optional(),
     limit: z.number().int().min(1).max(20).default(10),
+  })
+  .refine(input => !input.near || Boolean(input.q), {
+    path: ['q'],
+    message: 'Nearby text search requires search text',
   })
   .refine(input => Boolean(input.q) || hasPlaceSearchCategory(input.filters), {
     path: ['q'],
@@ -240,6 +253,13 @@ export async function searchSaanSeoiPlacesPage(
     region: 'hk',
     paginate: 'true',
     include: 'preview',
+    ...(query.near
+      ? {
+          nearLng: String(query.near.coordinates[0]),
+          nearLat: String(query.near.coordinates[1]),
+          maxDistance: String(query.near.radius),
+        }
+      : {}),
     limit: String(query.limit),
     ...(query.locale ? { locale: query.locale } : {}),
     ...(query.cursor ? { cursor: query.cursor } : {}),
@@ -279,6 +299,13 @@ export async function searchSaanSeoiPlaces(
     ...placeSearchFilterParams(query.filters),
     q: query.q,
     region: 'hk',
+    ...(query.near
+      ? {
+          nearLng: String(query.near.coordinates[0]),
+          nearLat: String(query.near.coordinates[1]),
+          maxDistance: String(query.near.radius),
+        }
+      : {}),
     limit: String(query.limit),
     ...(query.locale ? { locale: query.locale } : {}),
   }).toString()

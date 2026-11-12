@@ -87,6 +87,8 @@ export const SharedCorrectionPatchSchema = z
   })
 export type SharedCorrectionPatch = z.infer<typeof SharedCorrectionPatchSchema>
 export type SharedCorrectionEntry = {
+  /** Placement evidence for mobility answers, retained in the ordinary curation revision. */
+  placementKey?: string
   /** Immutable catalogue evidence accepted with this community reference. */
   catalogue?: IdentityCatalogueRecord
 

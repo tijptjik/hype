@@ -4,8 +4,9 @@ import { onMount, onDestroy } from 'svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // DOMAIN
-import { loadAddressNames, type AddressName } from '#lib/addresses/nameCatalogue.js'
-import { addressNameLabel, searchAddressNames } from '#lib/addresses/nameSearch.js'
+import type { AddressName } from '#lib/addresses/nameCatalogue.js'
+import { fetchNameSuggestions } from '#lib/addresses/nameSuggestions.js'
+import { addressNameLabel } from '#lib/addresses/nameSearch.js'
 // BITS COMPONENTS
 import LoadingSkeleton from '#lib/bits/custom/skeleton/LoadingSkeleton.svelte'
 // TYPES
@@ -43,19 +44,18 @@ let {
 const uid = $props.id()
 let input: HTMLInputElement | HTMLTextAreaElement | undefined = $state()
 let draft: string | null = $state(null)
-let rows = $state<AddressName[]>([])
+let rows = $state.raw<AddressName[]>([])
 let loading = $state(false)
-let loaded = false
+let retry = $state(0)
 let failed = $state(false)
 let open = $state(false)
 let active = $state(-1)
-let alive = true
 let pointerDown = false
 let pendingBlur = false
 let blurTimer: ReturnType<typeof setTimeout>
 const text = $derived(draft ?? value)
 const pending = $derived(family === 'streets' && draft !== null && draft !== value)
-const matches = $derived(searchAddressNames(rows, text, locale, 8))
+const matches = $derived(rows.slice(0, 8))
 $effect(() => onPending?.(pending))
 // A catalogue selection can update all languages while their inputs remain mounted.
 $effect(() => {
@@ -67,7 +67,6 @@ onMount(() => {
   if (focusOnMount) input?.focus()
 })
 onDestroy(() => {
-  alive = false
   clearTimeout(blurTimer)
   onPending?.(false)
 })
@@ -92,24 +91,46 @@ function finishPointer(): void {
     }, 0)
 }
 
-/** Load the shared vocabulary only when a catalogue input is opened.
- * @returns Completion; failed requests keep the current selected value intact.
- */
-async function load(): Promise<void> {
-  if (!family || loaded || loading) return
-  loading = true
+// Debounce public suggestions and fence responses when a different field opens.
+$effect(() => {
+  const query = text.trim()
+  const vocabulary = family
+  const language = locale
+  retry
+  rows = []
   failed = false
-  try {
-    const found = await loadAddressNames(family)
-    if (alive) {
-      rows = found
-      loaded = true
-    }
-  } catch {
-    if (alive) failed = true
-  } finally {
-    if (alive) loading = false
+  if (!open || !vocabulary || !query) {
+    loading = false
+    return
   }
+  loading = true
+  const controller = new AbortController()
+  const timer = setTimeout(() => {
+    void fetchNameSuggestions(vocabulary, query, language, controller.signal)
+      .then(result => {
+        if (!controller.signal.aborted) rows = result
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) failed = true
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) loading = false
+      })
+  }, 180)
+  return () => {
+    clearTimeout(timer)
+    controller.abort()
+  }
+})
+/** Accept authored text without claiming a catalogue identity.
+ * @returns Nothing; the parent retains the edit as an explicit correction.
+ */
+function useCustom(): void {
+  onChange(text.trim())
+  draft = null
+  open = false
+  onPending?.(false)
+  onBlur?.()
 }
 /** Commit a known name with its multilingual catalogue record.
  * @param record Explicitly selected suggestion. @returns Nothing.
@@ -208,7 +229,6 @@ function keydown(event: KeyboardEvent): void {
       onfocus={() => {
         if (family) {
           open = true
-          void load()
         }
       }}
       onkeydown={keydown}
@@ -237,7 +257,13 @@ function keydown(event: KeyboardEvent): void {
       class="border-border bg-panel absolute top-full left-0 z-30 mt-1 max-h-56 w-full min-w-0 overflow-y-auto rounded-md border p-1 shadow-lg"
     >
       {#if loading}
-        <div role="status" aria-label={m.resource_loading()} aria-busy="true">
+        <div
+          role="status"
+          aria-label={family === 'streets'
+            ? m.address_streets_loading()
+            : m.address_buildings_loading()}
+          aria-busy="true"
+        >
           {#each Array(3) as _, index (index)}
             <div class="w-full rounded p-2 text-left text-xs">
               <LoadingSkeleton rows={1} />
@@ -246,9 +272,19 @@ function keydown(event: KeyboardEvent): void {
         </div>
       {/if}
       {#if failed}
-        <button type="button" class="p-2 text-xs underline" onclick={() => void load()}>
+        <button type="button" class="p-2 text-xs underline" onclick={() => retry++}>
           {m.address_names_unavailable()}
           · {m.feature_start_retry()}
+        </button>
+      {/if}
+      {#if text.trim()}
+        <button
+          type="button"
+          class="hover:bg-muted w-full rounded p-2 text-left text-xs"
+          onpointerdown={event => event.preventDefault()}
+          onclick={useCustom}
+        >
+          {m.address_name_use_custom({ name: text.trim() })}
         </button>
       {/if}
       <div id={`${uid}-names`} role="listbox" aria-label={label}>

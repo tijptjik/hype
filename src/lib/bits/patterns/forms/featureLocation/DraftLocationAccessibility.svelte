@@ -1,4 +1,8 @@
 <script lang="ts">
+// COMMUNITY FIELDS
+import CommunityIcon from '#lib/bits/custom/icon/CommunityIcon.svelte'
+import { getLinkedFields } from '../linkedFields/linkedFields.svelte.js'
+const linkedFields = getLinkedFields()
 // SVELTE
 import { onMount, tick } from 'svelte'
 // I18N
@@ -31,12 +35,24 @@ onMount(() => {
 })
 </script>
 
-<section class="space-y-3 py-3" aria-label={m.accessibility_title()}>
+<section
+  hidden={linkedFields?.available() && linkedFields.expanded && !linkedFields.community}
+  class="space-y-3 py-3"
+  aria-label={m.accessibility_title()}
+>
   {#if !hideHeading}
     <h2 class="text-muted-foreground text-xs font-medium">{m.accessibility_title()}</h2>
   {/if}
   <div class="group/subsection flex items-center gap-2">
     <h3 class="text-sm font-semibold">{m.accessibility_mobility_heading()}</h3>
+    {#if linkedFields?.available() && linkedFields.expanded}
+      <span
+        role="img"
+        title={m.location_visibility_shared()}
+        aria-label={m.location_visibility_shared()}
+        ><CommunityIcon class="size-4" /></span
+      >
+    {/if}
     <button
       type="button"
       use:reverseTabStop

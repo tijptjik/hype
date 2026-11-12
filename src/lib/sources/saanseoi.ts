@@ -224,3 +224,19 @@ export async function loadBuildingDetails(
     throw Error('Incomplete building projections')
   return { ...points.records[0], addresses: addresses.records[0].addresses }
 }
+
+/** Load the complete point index at a pinned building release, including unnamed buildings.
+ * @param release Building export release used for the accompanying names and details.
+ * @returns Validated building points; cached projection chunks are reused between searches.
+ */
+export async function loadBuildingPoints(
+  release: string,
+): Promise<z.infer<typeof buildingPointSchema>[]> {
+  const url = `${saanseoiOrigin()}/buildings/v0.1/exports/physical/overture/points/manifest.json?release=${encodeURIComponent(release)}`
+  const result = await fetchSaanseoiProjection(url, buildingPointSchema, fetch, {
+    release,
+  })
+  if (result.manifest.family !== 'buildings' || result.manifest.projection !== 'points')
+    throw new Error('Invalid building points projection')
+  return result.records
+}

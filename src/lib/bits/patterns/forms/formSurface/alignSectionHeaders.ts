@@ -10,6 +10,8 @@ const headerSelector = '.bits-form__section-header'
 export function alignSectionHeaders(surface: HTMLElement): { destroy(): void } {
   let frame = 0
   let headers: HTMLElement[] = []
+  let refreshPending = true
+  const observed = new Set<Element>()
   const previous = new Map<HTMLElement, { value: string; priority: string }>()
 
   /** Restore the authored inline minimum, including its cascade priority.
@@ -37,6 +39,10 @@ export function alignSectionHeaders(surface: HTMLElement): { destroy(): void } {
    */
   function align(): void {
     frame = 0
+    if (refreshPending) {
+      refreshPending = false
+      refresh()
+    }
     for (const header of headers) restoreMinimum(header)
     const rows: { top: number; height: number; headers: HTMLElement[] }[] = []
     for (const header of headers) {
@@ -62,7 +68,6 @@ export function alignSectionHeaders(surface: HTMLElement): { destroy(): void } {
    * @returns Nothing.
    */
   function refresh(): void {
-    resize.disconnect()
     headers = Array.from(surface.querySelectorAll<HTMLElement>(headerSelector)).filter(
       header => header.closest('[data-form-surface]') === surface,
     )
@@ -72,7 +77,7 @@ export function alignSectionHeaders(surface: HTMLElement): { destroy(): void } {
         previous.delete(header)
       }
     }
-    resize.observe(surface)
+    const nextObserved = new Set<Element>([surface])
     for (const header of headers) {
       if (!previous.has(header)) {
         previous.set(header, {
@@ -80,13 +85,28 @@ export function alignSectionHeaders(surface: HTMLElement): { destroy(): void } {
           priority: header.style.getPropertyPriority('min-height'),
         })
       }
-      resize.observe(header)
+      nextObserved.add(header)
       // Intrinsic content can shrink while the synchronized header stays tall.
-      for (const child of header.children) resize.observe(child)
+      for (const child of header.children) nextObserved.add(child)
     }
-    schedule()
+    // Retain unchanged subscriptions; reconnecting them generates fresh resize deliveries.
+    for (const element of observed) {
+      if (!nextObserved.has(element)) {
+        resize.unobserve(element)
+        observed.delete(element)
+      }
+    }
+    for (const element of nextObserved) {
+      if (!observed.has(element)) {
+        resize.observe(element)
+        observed.add(element)
+      }
+    }
   }
-  const mutation = new MutationObserver(refresh)
+  const mutation = new MutationObserver(() => {
+    refreshPending = true
+    schedule()
+  })
   mutation.observe(surface, {
     subtree: true,
     childList: true,
@@ -94,7 +114,7 @@ export function alignSectionHeaders(surface: HTMLElement): { destroy(): void } {
     attributes: true,
     attributeFilter: ['class', 'hidden'],
   })
-  refresh()
+  schedule()
   return {
     destroy() {
       cancelAnimationFrame(frame)

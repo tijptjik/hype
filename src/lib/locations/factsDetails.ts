@@ -10,7 +10,15 @@ import { OperatingStatusSchema, BuildingStatusSchema } from './entityStatus'
 
 const names = z.record(z.string(), z.string())
 export const LocationBrandsSchema = z.array(
-  z.strictObject({ identifiers: names, names }),
+  z.strictObject({
+    identifiers: names,
+    names,
+    logo: z
+      .string()
+      .regex(/^\/api\/identity-catalogue\/logos\/[a-f0-9-]+$/)
+      .nullable()
+      .optional(),
+  }),
 )
 const identifier = z.string().trim().min(1)
 

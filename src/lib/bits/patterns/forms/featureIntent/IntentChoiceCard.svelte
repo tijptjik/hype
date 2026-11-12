@@ -12,7 +12,7 @@ let {
   icon,
 }: {
   label: string
-  description: string
+  description?: string
   selected: boolean
   onclick: () => void
   icon: Snippet
@@ -39,8 +39,10 @@ let {
   </span>
   <span class="min-w-0 break-words whitespace-normal">
     <span class="block font-semibold">{label}</span>
-    <span class="text-muted-foreground mt-1 block text-sm leading-relaxed"
-      >{description}</span
-    >
+    {#if description}
+      <span class="text-muted-foreground mt-1 block text-sm leading-relaxed"
+        >{description}</span
+      >
+    {/if}
   </span>
 </button>

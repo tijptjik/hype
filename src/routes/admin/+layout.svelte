@@ -20,6 +20,7 @@ import { m } from '#lib/i18n.js'
 import ResourcePanel from '#lib/bits/patterns/resourcePanel/ResourcePanel.svelte'
 import { useResourcePanelModel } from '#lib/adapters/panels/useResourcePanelModel.svelte.js'
 import AdminMenu from '#lib/bits/patterns/bars/adminMenu/AdminMenu.svelte'
+import AdminMapHost from '#lib/bits/patterns/maps/AdminMapHost.svelte'
 // BITS
 import AdminShell from '#lib/bits/patterns/layout/app/components/AdminShell.svelte'
 // ADAPTERS
@@ -34,6 +35,7 @@ import {
 } from '#lib/navigation/index.js'
 // CONTEXT
 import { setAdminCtx } from '#lib/context/admin.svelte.js'
+import { setAdminMap } from '#lib/context/adminMap.svelte.js'
 import { ResourceViewCtx, setSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getRootCTX } from '#lib/context/root.svelte.js'
 import { setDivisionCtx } from '#lib/context/division.svelte.js'
@@ -112,6 +114,15 @@ onDestroy(() => {
 // CONTEXT :: ADMIN
 // svelte-ignore state_referenced_locally
 const adminCtx = setAdminCtx(view)
+const adminMap = setAdminMap()
+let mapAccountId: string | null = untrack(() => root.user?.id ?? null)
+$effect(() => {
+  const accountId = root.user?.id ?? null
+  if (accountId !== mapAccountId) {
+    mapAccountId = accountId
+    untrack(() => adminMap.clear())
+  }
+})
 // Shallow facet navigation changes the visible URL without replacing page.url.
 adminCtx.navigation.syncUrl(page.shallow?.url ?? page.url, 'admin')
 $effect(() => adminCtx.navigation.syncUrl(page.shallow?.url ?? page.url, 'admin'))
@@ -456,3 +467,6 @@ afterNavigate(({ shallow }) => {
     {/if}
   {/key}
 </AdminShell>
+
+<!-- Keep the renderer outside AdminShell's route-keyed viewport. -->
+<AdminMapHost owner={adminMap} />

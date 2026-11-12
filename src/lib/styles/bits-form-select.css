@@ -1,32 +1,29 @@
 @layer components {
-  /* Portal content is rendered outside `.bits-theme`, so provide unscoped fallbacks. */
+  /* Share plain menu surfaces inside and outside `.bits-theme`, including portals. */
   .bits-form__select-content {
     @apply max-h-72 overflow-hidden rounded-lg border p-1 shadow-xl;
     z-index: 120;
-    background-color: var(--color-base-100);
+    background-color: var(--color-panel);
     min-width: var(--bits-select-anchor-width);
     border-color: color-mix(in oklab, var(--color-border-input) 55%, transparent);
   }
 
   .bits-form__select-viewport {
-    @apply bg-base-100 p-1;
-    background-color: var(--color-base-100);
+    @apply p-1;
+    background-color: transparent;
   }
 
   .bits-form__select-item {
     @apply flex h-10 w-full items-center gap-2 rounded-md px-3 text-sm outline-none data-[disabled]:opacity-50;
-    background-color: var(--color-base-100);
+    background-color: transparent;
   }
 
+  /* The checkmark marks selection; only keyboard/pointer focus receives a neutral wash. */
   .bits-form__select-item[data-highlighted] {
-    background-color: var(--color-base-200);
-  }
-
-  .bits-form__select-item[data-state="checked"] {
     background-color: color-mix(
       in oklab,
-      var(--color-base-200) 85%,
-      var(--color-primary)
+      var(--color-base-content) 6%,
+      var(--color-panel)
     );
   }
 
@@ -84,35 +81,5 @@
 
   .bits-theme .bits-form__select-display--ghost {
     @apply pl-2 pr-12;
-  }
-
-  .bits-theme .bits-form__select-content {
-    @apply max-h-72 overflow-hidden rounded-lg border p-1 shadow-xl;
-    z-index: 120;
-    background-color: var(--color-base-100);
-    min-width: var(--bits-select-anchor-width);
-    border-color: color-mix(in oklab, var(--color-border-input) 55%, transparent);
-  }
-
-  .bits-theme .bits-form__select-item {
-    @apply flex h-10 w-full items-center gap-2 rounded-md px-3 text-sm outline-none data-[disabled]:opacity-50;
-    background-color: var(--color-base-100);
-  }
-
-  .bits-theme .bits-form__select-item[data-highlighted] {
-    background-color: var(--color-base-200);
-  }
-
-  .bits-theme .bits-form__select-item[data-state="checked"] {
-    background-color: color-mix(
-      in oklab,
-      var(--color-base-200) 85%,
-      var(--color-primary)
-    );
-  }
-
-  .bits-theme .bits-form__select-viewport {
-    @apply bg-base-100 p-1;
-    background-color: var(--color-base-100);
   }
 }

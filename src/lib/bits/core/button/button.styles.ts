@@ -62,7 +62,7 @@ const FOCUS_VISIBLE_CLASSES = cx(
 
 const ARIA_DISABLED_CLASSES = cx(
   '[&[aria-disabled=true]]:pointer-events-none',
-  '[&[aria-disabled=true]]:cursor-not-allowed',
+  '[&[aria-disabled=true]]:cursor-default',
   '[&[aria-disabled=true]]:opacity-30',
   '[&[aria-disabled=true]]:shadow-none',
   '[&[aria-disabled=true]]:border-[var(--btn-disabled-border,var(--btn-border))]',
@@ -76,10 +76,7 @@ const TRANSITION_CLASSES = cx(
   'ease-[ease,ease,ease,ease,ease,ease]',
 )
 
-const POINTER_CLASSES = cx(
-  'disabled:pointer-events-none',
-  'disabled:cursor-not-allowed',
-)
+const POINTER_CLASSES = cx('disabled:pointer-events-none', 'disabled:cursor-default')
 
 const ROOT_BASE_CLASSES = cx(
   BG_CLASSES,

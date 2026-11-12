@@ -1,7 +1,6 @@
 <script lang="ts">
 // SVELTE
 import { tick } from 'svelte'
-import { prefersReducedMotion } from 'svelte/motion'
 // UTILITIES
 import { propertyKeyFromLabel } from '#lib/utils/nameIdentifier.js'
 // COMPONENTS
@@ -13,6 +12,7 @@ import FeatureNamingPolicySettings from './FeatureNamingPolicySettings.svelte'
 import FeatureNamingRuleEditor from './FeatureNamingRuleEditor.svelte'
 import type { FeatureNameRule } from '#lib/features/locationPolicy.js'
 // DOMAIN
+import { DEFAULT_FEATURE_TYPES } from '#lib/features/intents.js'
 import { TARGET_CONTEXTS } from '#lib/features/locationPolicy.js'
 import { LOCATION_ENTITY_KINDS, locationTaxonomy } from '#lib/locations/taxonomy.js'
 import { locationTaxonomyLabel } from '#lib/locations/taxonomy.i18n.js'
@@ -82,42 +82,11 @@ const inheritedNaming = $derived(
     conditions: [],
   },
 )
-/** Reveal the full-width editor beneath the current three columns.
- * @returns Completion after the editor is rendered and focused.
+/** Open the focused naming dialog without expanding or scrolling the parent form.
+ * @returns Nothing; the dialog manages initial focus.
  */
-async function openNamingEditor(): Promise<void> {
-  const opening = !namingEditorOpen
+function openNamingEditor(): void {
   namingEditorOpen = true
-  await tick()
-  if (opening) {
-    // Let the facet measure the newly mounted editor and publish its scroll clearance.
-    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
-    await tick()
-    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
-  }
-  const editor = document.getElementById(namingEditorId)
-  const heading = document.getElementById(`${namingEditorId}-title`)
-  if (!editor || !heading) return
-  // Scroll only the owning viewport; scrollIntoView also moves clipping ancestors.
-  let viewport = editor.parentElement
-  while (viewport && !/^(auto|scroll)$/.test(getComputedStyle(viewport).overflowY))
-    viewport = viewport.parentElement
-  const clearance = Number.parseFloat(getComputedStyle(editor).scrollMarginTop) || 0
-  const behavior = prefersReducedMotion.current ? 'instant' : 'smooth'
-  const top = editor.getBoundingClientRect().top - clearance
-  if (viewport) {
-    viewport.scrollTo({
-      top:
-        viewport.scrollTop +
-        top -
-        viewport.getBoundingClientRect().top -
-        viewport.clientTop,
-      behavior,
-    })
-  } else {
-    window.scrollTo({ top: window.scrollY + top, behavior })
-  }
-  heading.focus({ preventScroll: true })
 }
 /** Close an accepted or cancelled editor and restore focus to its summary.
  * @returns Completion after the summary trigger receives focus.
@@ -133,6 +102,19 @@ const targets = $derived(
 )
 let identifierEdited = $state(false)
 let automaticIdentifier = $state<string | null>(null)
+/** Apply the selected kind's starting behavior to the editable definition.
+ * @param kind Newly selected feature kind.
+ * @returns Nothing.
+ * @remarks Runs only on selection; loading existing settings preserves overrides.
+ */
+function updateKind(kind: string): void {
+  const defaults = DEFAULT_FEATURE_TYPES.find(candidate => candidate.kind === kind)
+  if (!defaults) return
+  type.kind = defaults.kind
+  type.relation = defaults.relation
+  type.start = defaults.start
+  type.unresolvedMode = defaults.unresolvedMode
+}
 /** Follow English names until the identifier has been explicitly customized.
  * @param before Previous English label. @param after New English label. @returns Nothing.
  */
@@ -207,7 +189,7 @@ function updateEnglishName(before: string, after: string): void {
           forthcoming: true,
         },
       ]}
-      onChange={value => (type.kind = value as FeatureType['kind'])}
+      onChange={updateKind}
     />
     <div>
       <FeatureNamingPolicySettings

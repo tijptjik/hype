@@ -37,7 +37,7 @@ let {
       {items}
       {placeholder}
       triggerClass="h-10 w-full rounded-full border border-foreground/10 bg-base-300/95 px-4 text-sm text-foreground shadow-none"
-      contentClass="border border-foreground/10 bg-base-300 text-foreground"
+      contentClass="border border-foreground/10 text-foreground"
       onValueChange={nextValue => onValueChange?.(nextValue)}
     />
   </div>

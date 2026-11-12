@@ -22,6 +22,7 @@ import {
 } from './property.profile'
 import { AddressMetaSchema } from '#lib/addresses/featureAddress.js'
 import { LocationResetSchema } from '#lib/locations/reset.js'
+import { LocationProfileEditSchema } from '#lib/locations/profileEdit.js'
 import { LocationBrandEditSchema } from '#lib/locations/brandEdit.js'
 import { decodeLocationFormValue } from '#lib/locations/form.js'
 // TYPES
@@ -122,11 +123,14 @@ export const FeatureEntityFormData = z.object({
       z.record(z.string().min(1).max(35), z.string().max(1000)),
     )
     .optional(),
+  locationProfileEdit: z
+    .preprocess(decodeLocationFormValue, LocationProfileEditSchema)
+    .optional(),
   locationFieldModes: z
     .preprocess(
       decodeLocationFormValue,
       z.partialRecord(
-        z.enum(['names', 'phoneNumber', 'brands', 'location']),
+        z.enum(['names', 'phoneNumber', 'websites', 'socials', 'brands', 'location']),
         z.enum(['community', 'internal']),
       ),
     )
@@ -171,11 +175,14 @@ export const FeatureDraftEntityFormData = z.object({
       z.record(z.string().min(1).max(35), z.string().max(1000)),
     )
     .optional(),
+  locationProfileEdit: z
+    .preprocess(decodeLocationFormValue, LocationProfileEditSchema)
+    .optional(),
   locationFieldModes: z
     .preprocess(
       decodeLocationFormValue,
       z.partialRecord(
-        z.enum(['names', 'phoneNumber', 'brands', 'location']),
+        z.enum(['names', 'phoneNumber', 'websites', 'socials', 'brands', 'location']),
         z.enum(['community', 'internal']),
       ),
     )

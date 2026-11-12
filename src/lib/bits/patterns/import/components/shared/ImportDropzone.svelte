@@ -55,7 +55,7 @@ function handleSelect(e: CustomEvent): void {
   on:select={handleSelect}
   class={spacious
     ? `group border-base-content/25 bg-base-100/35 focus-within:border-primary/60 focus-within:bg-base-100/60 flex w-full flex-col items-center justify-center gap-5 rounded-2xl border border-dashed px-8 py-10 text-center transition-colors ${fill ? 'min-h-64 flex-1' : 'min-h-48 shrink-0'} ${disabled ? 'cursor-default' : 'hover:border-primary/60 hover:bg-base-100/60 cursor-pointer'}`
-    : `border-primary/80 bg-glass-300/30 hover:border-primary hover:bg-base-200/50 flex h-48 w-full flex-col justify-center gap-2 rounded-xl border-2 border-dashed text-center transition-colors ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
+    : `border-primary/80 bg-glass-300/30 hover:border-primary hover:bg-base-200/50 flex h-48 w-full flex-col justify-center gap-2 rounded-xl border-2 border-dashed text-center transition-colors ${disabled ? 'cursor-default opacity-50' : ''}`}
   disableDefaultStyles={true}
 >
   <div class={spacious ? 'bg-base-100/70 text-primary/70 rounded-2xl p-5' : ''}>

@@ -104,10 +104,18 @@ let input = $state<HTMLTextAreaElement>()
 </script>
 
 <div
-  class="min-w-0 space-y-1 {alignEnd ? 'w-max max-w-full' : 'flex-1'}"
+  class="min-w-0 space-y-1 {scrollWhenConstrained
+    ? centered
+      ? 'mx-auto w-max max-w-full overflow-hidden'
+      : 'w-full max-w-full overflow-hidden'
+    : alignEnd
+      ? 'w-max max-w-full'
+      : 'flex-1'}"
   class:opacity-50={stale}
   class:grayscale={stale}
-  style:max-width={centered && availableWidth ? `${availableWidth}px` : undefined}
+  style:max-width={centered && !scrollWhenConstrained && availableWidth
+    ? `${availableWidth}px`
+    : undefined}
   data-address-stale={stale}
 >
   {#if showLocale}
@@ -170,7 +178,7 @@ let input = $state<HTMLTextAreaElement>()
         style:max-width={stacked ? '100%' : undefined}
         data-address-display-text
         class={scrollWhenConstrained
-          ? 'grid min-w-0 shrink grid-cols-[minmax(0,1fr)] overflow-hidden'
+          ? 'grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] overflow-hidden'
           : 'flex min-w-0 flex-1'}
       >
         {#if scrollWhenConstrained}

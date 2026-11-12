@@ -773,3 +773,28 @@ it('commits an Organisation correction and its Feature adoption after advancing 
     (await readLocationCorrectionContext(f.db, scope))?.expectedOrganisationRevision,
   ).toBe(saved)
 })
+
+it('replicates mobility through the same accepted field pins and Feature history as contacts', async () => {
+  const f = await setup()
+  const accessibility = {
+    wheelchair: 'yes',
+    stepFreeEntrance: 'yes',
+    lift: 'not_needed',
+    toilet: 'unknown',
+  } as const
+  const prepared = await prepareStaffLocationPropagation(f.db, {
+    ...f.input,
+    facts: { ...facts, accessibility },
+    fields: ['accessibility'],
+  })
+  expect(
+    await executeRevisionBatch(f.db, prepared.guard, prepared.statements),
+  ).not.toBeNull()
+  const after = await readCurrentFeatureRevision(f.db, {
+    featureId: 'f',
+    guard: sql`1`,
+  })
+  expect(
+    after?.content.placement.location?.acceptancePolicy?.factsSharedFields,
+  ).toContainEqual({ field: 'accessibility', revision: 'staff' })
+})

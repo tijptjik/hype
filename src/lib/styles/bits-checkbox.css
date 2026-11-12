@@ -50,7 +50,7 @@
   }
 
   .bits-theme .bits-checkbox-field--disabled .bits-checkbox-label {
-    cursor: not-allowed;
+    cursor: default;
     opacity: 0.7;
   }
 
@@ -101,7 +101,7 @@
 
   .bits-theme .bits-checkbox:disabled,
   .bits-theme .bits-checkbox[aria-disabled="true"] {
-    cursor: not-allowed;
+    cursor: default;
     pointer-events: none;
     opacity: 0.5;
   }

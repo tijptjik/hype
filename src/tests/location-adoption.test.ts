@@ -5,6 +5,7 @@ import {
   readLocationAdoptionPlan,
   type AdoptionSourceRevision,
 } from '#lib/locations/adoption.js'
+import { UNKNOWN_ACCESSIBILITY } from '#lib/locations/accessibility.js'
 import { DEFAULT_PROJECT_LOCATION_POLICY } from '#lib/locations/model.js'
 
 const automatic = {
@@ -247,4 +248,31 @@ describe('stored adoption comparison compatibility', () => {
     expect(readLocationAdoptionPlan(plan)).toBe(plan)
     expect(plan).not.toHaveProperty('evidence')
   })
+})
+
+it('routes community mobility changes through the ordinary shared-facts adoption policy', () => {
+  const previous = source()
+  previous.facts.accessibility = { ...UNKNOWN_ACCESSIBILITY }
+  const candidate = source('new', 2)
+  candidate.origin = 'local'
+  candidate.facts.accessibility = { ...UNKNOWN_ACCESSIBILITY, wheelchair: 'yes' }
+  const { version: _version, ...rules } = DEFAULT_PROJECT_LOCATION_POLICY
+  for (const communications of ['follow', 'review'] as const) {
+    const result = planLocationAdoption({
+      facts: previous,
+      location: previous,
+      candidate,
+      overrides: {},
+      policy: {
+        ...DEFAULT_PROJECT_LOCATION_POLICY,
+        community: {
+          ...rules,
+          communications,
+          acceptMissing: false,
+        },
+      },
+    })
+    expect(result.comparison.communicationsChanged).toBe(true)
+    expect(result.decision.facts).toBe(communications === 'follow' ? 'adopt' : 'review')
+  }
 })

@@ -43,7 +43,6 @@ import {
   prepareSubmitPayloadMeta,
   revalidateAfterSubmitAttempt,
   removeUserRoleSelection,
-  resolveOptimisticHeaderFacets,
   resolveOptimisticHeaderStatus,
   resolveFacetTabsWithIssues,
   syncAdminFacetFromHash,
@@ -1535,11 +1534,8 @@ $effect(() => {
       hub?.data?.i18n?.[getLocaleKey()]?.name ?? hub?.data?.code,
       m.hub__title(),
     )
-  const displayFacets = resolveOptimisticHeaderFacets(
-    isCurrentRefSettled,
-    resolvedFacetTabsWithIssues,
-    optimisticHeaderState,
-  )
+  // Destination tabs are known before entity data settles.
+  const displayFacets = resolvedFacetTabsWithIssues
   const facetKey = Array.isArray(displayFacets)
     ? displayFacets
         .map(facet => `${facet.ref}:${facet.hasIssues === true ? '1' : '0'}`)

@@ -6,6 +6,7 @@ import { Button } from '#lib/bits/core/button/index.js'
 import { SelectField, TextInput, TextArea } from '#lib/bits/custom/form/index.js'
 import HistoryIcon from 'virtual:icons/lucide/history'
 import RelationshipLocationPicker from './RelationshipLocationPicker.svelte'
+import LineageDiagram from './LineageDiagram.svelte'
 // API
 import {
   getLocationLineage,
@@ -146,20 +147,21 @@ function toggle(): void {
   {#each rows as row (String(row.id))}
     <article class="bg-muted/20 space-y-3 rounded-lg p-4 text-sm">
       <p>
-        {String(row.type)}
-        · {String(row.basis)} · {String(row.effectiveFrom ?? '')}
+        {row.type === 'merge'
+          ? m.lineage_merge()
+          : row.type === 'split'
+            ? m.lineage_split()
+            : row.type === 'replacement'
+              ? m.lineage_replacement()
+              : m.lineage_reconfiguration()}
+        {#if row.effectiveFrom}
+          · {String(row.effectiveFrom)}
+        {/if}
+        {#if row.basis === 'identity_correction'}
+          · Identity correction
+        {/if}
       </p>
-      {#each row.participants as participant}
-        <a
-          class="mr-3 underline"
-          href={'/admin/locations/' +
-            participant.locationId +
-            (organisationId
-              ? '?organisation=' + encodeURIComponent(organisationId)
-              : '')}
-          >{participant.side}: {participant.label ?? participant.locationId}</a
-        >
-      {/each}
+      <LineageDiagram participants={row.participants} {organisationId} />
     </article>
   {:else}
     {#if request.ready}

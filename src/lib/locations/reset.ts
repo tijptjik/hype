@@ -80,7 +80,9 @@ export function materializeLocationReset(input: {
     // Geometry and canonical address are one unit; clear all local address corrections.
     const address = FeatureAddressSchema.parse({
       version: 1,
-      locationDisplayMode: data.addressMeta?.address?.locationDisplayMode,
+      ...(data.addressMeta?.address?.locationDisplayMode === undefined
+        ? {}
+        : { locationDisplayMode: data.addressMeta?.address?.locationDisplayMode }),
       source: location.address,
       coordinates: addressSourceCoordinates(location.address),
       matchStatus: location.address.status,

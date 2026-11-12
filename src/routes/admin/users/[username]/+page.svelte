@@ -67,13 +67,6 @@ $effect(() => {
 })
 </script>
 
-<svelte:head
-  ><title>
-    {profile?.profile.displayUsername ?? page.params.username}
-    · Users · HYPE
-  </title></svelte:head
->
-
 <Main.Root
   onDimensionsChange={(width, height) =>
     adminCtx.view.layout.setMainDimensions(width, height)}

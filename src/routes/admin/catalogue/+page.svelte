@@ -1,4 +1,10 @@
 <script lang="ts">
+// TRANSLATION REVIEW
+import { MultilingualReview } from '#lib/forms/multilingualReview.svelte.js'
+import MultilingualReviewPanel from '#lib/bits/patterns/forms/translationReview/MultilingualReviewPanel.svelte'
+import TranslationSuggestion from '#lib/bits/patterns/forms/translationReview/TranslationSuggestion.svelte'
+let reviewForm = $state<HTMLFormElement>()
+
 // SVELTE
 import { page } from '$app/state'
 import { onDestroy, untrack } from 'svelte'
@@ -15,6 +21,8 @@ import FeatureIcon from 'virtual:icons/proicons/location'
 import Tags from 'virtual:icons/lucide/tags'
 import ListTree from 'virtual:icons/lucide/list-tree'
 import Languages from 'virtual:icons/lucide/languages'
+import BrandLocations from '#lib/bits/patterns/resource/brandLocations/BrandLocations.svelte'
+import LocationsIcon from 'virtual:icons/lucide/map-pinned'
 import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
 import RetryIcon from 'virtual:icons/lucide/rotate-cw'
 import ImageIcon from 'virtual:icons/lucide/image'
@@ -38,7 +46,7 @@ import {
 import { Button } from '#lib/bits/core/index.js'
 import * as Main from '#lib/bits/custom/main/index.js'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
-import { SectionHeader, TextInput } from '#lib/bits/custom/form/index.js'
+import { SectionHeader, TextInput, TextArea } from '#lib/bits/custom/form/index.js'
 import SearchSelect from '#lib/bits/core/searchSelect/SearchSelect.svelte'
 import FormI18nInlineRow from '#lib/bits/patterns/forms/formI18nSection/components/FormI18nInlineRow.svelte'
 import ResourceRow from '#lib/bits/patterns/resource/rows/ResourceRow/ResourceRow.svelte'
@@ -59,7 +67,6 @@ import {
 } from '#lib/locations/cataloguePresentation.js'
 import {
   IdentityCatalogueContentSchema,
-  seedIdentityCatalogue,
   type IdentityCatalogueRecord,
   type IdentityCatalogueContent,
 } from '#lib/locations/identityCatalogue.js'
@@ -70,7 +77,7 @@ admin.setResourceType(false)
 let importStatus = $state('')
 let kind = $state<'brand' | 'group'>('brand')
 let search = $state('')
-let catalogueLayout = $state<'list' | 'card'>('list')
+let catalogueLayout = $state<'list' | 'card'>('card')
 let groupSearch = $state('')
 let groups = $state<IdentityCatalogueRecord[]>([])
 let newGroup = $state<{ id: string; i18n: IdentityCatalogueContent['i18n'] } | null>(
@@ -164,6 +171,9 @@ const detail = $derived(
 const featuresActive = $derived(
   selected?.kind === 'brand' && page.url.searchParams.get('facet') === 'features',
 )
+const locationsActive = $derived(
+  selected?.kind === 'brand' && page.url.searchParams.get('facet') === 'locations',
+)
 let multilingual = $state(false)
 let selectedLocales = $state<string[]>(['en', 'zh-Hant', 'zh-Hans'])
 let visibleLocales = $state<string[]>(['en', 'zh-Hant', 'zh-Hans'])
@@ -182,6 +192,41 @@ $effect(() => {
 const dirty = $derived(content !== null && JSON.stringify(content) !== baseline)
 const canEdit = $derived(admin.view.isSuperAdmin() || Boolean(organisationId))
 const isEditing = $derived(header.state.isEditing && canEdit)
+$effect(() => {
+  for (const locale of selectedLocales) {
+    if (content && !content.i18n[locale]) content.i18n[locale] = { name: '' }
+    if (newGroup && !newGroup.i18n[locale]) newGroup.i18n[locale] = { name: '' }
+  }
+})
+const translationReview = new MultilingualReview(
+  () => [
+    ...selectedLocales.map(locale => ({
+      key: `${selected?.id ?? kind}:name:${locale}`,
+      field: 'name',
+      locale,
+      value: content?.i18n[locale]?.name ?? '',
+      set: (text: string) => {
+        if (content) content.i18n[locale] = { name: text }
+      },
+    })),
+    ...(newGroup
+      ? selectedLocales.map(locale => ({
+          key: `${newGroup!.id}:group:${locale}`,
+          field: 'group',
+          locale,
+          value: newGroup?.i18n[locale]?.name ?? '',
+          set: (text: string) => {
+            if (newGroup) newGroup.i18n[locale] = { name: text }
+          },
+        }))
+      : []),
+  ],
+  () => isEditing && !busy,
+  () => {
+    multilingual = true
+    visibleLocales = [...selectedLocales]
+  },
+)
 const valid = $derived(
   content !== null &&
     IdentityCatalogueContentSchema.safeParse(content).success &&
@@ -197,10 +242,37 @@ $effect(() => {
   const activeKind = kind
   const cards = catalogueLayout === 'card'
   const isDetail = detail
+  const isLocations = locationsActive
   const isFeatures = featuresActive
   const hasFeatures = selected?.kind === 'brand'
   const controls = {
-    content: isFeatures ? null : localeControl,
+    content: isFeatures || isLocations ? null : localeControl,
+    locationsAction: hasFeatures
+      ? {
+          text: 'Locations',
+          icon: LocationsIcon,
+          style: isLocations ? ('soft' as const) : ('outline' as const),
+          disabled: isEditing || busy,
+          onClick: () => {
+            const url = new URL(page.url.href)
+            url.searchParams.set('facet', 'locations')
+            void goto(url.pathname + url.search)
+          },
+        }
+      : null,
+    featuresAction: hasFeatures
+      ? {
+          text: 'Features',
+          icon: FeatureIcon,
+          style: isFeatures ? ('soft' as const) : ('outline' as const),
+          disabled: isEditing || busy,
+          onClick: () => {
+            const url = new URL(page.url.href)
+            url.searchParams.set('facet', 'features')
+            void goto(url.pathname + url.search)
+          },
+        }
+      : null,
     dirty,
     isSubmitting: busy,
     disableSave: !valid || !canEdit,
@@ -208,12 +280,12 @@ $effect(() => {
     canPublish: false,
     showPublishAction: false,
     showDeleteAction: false,
-    submit: save,
+    submit: () => reviewForm?.requestSubmit(),
     reset: reset,
   }
   untrack(() => {
     if (isDetail) {
-      if (!isFeatures) header.setSearch(null)
+      if (!isFeatures && !isLocations) header.setSearch(null)
       header.setHeaderForEntity(title, Tags, new Map(), { showFacets: hasFeatures })
       if (hasFeatures)
         header.setFacets(
@@ -222,7 +294,7 @@ $effect(() => {
             { ref: 'features', label: 'Features', icon: FeatureIcon, hideLabel: true },
           ],
           {
-            active: isFeatures ? 'features' : 'core',
+            active: isFeatures ? 'features' : isLocations ? 'locations' : 'core',
             onFacetChange: facet => {
               const url = new URL(page.url.href)
               if (facet === 'features') url.searchParams.set('facet', 'features')
@@ -237,8 +309,11 @@ $effect(() => {
           href: `/admin/catalogue?kind=${kind}${organisationId ? `&organisation=${organisationId}` : ''}`,
         },
       ])
-      header.setFormActions(isFeatures ? { ...controls, canEdit: false } : controls)
+      header.setFormActions(
+        isFeatures || isLocations ? { ...controls, canEdit: false } : controls,
+      )
     } else {
+      header.setFormActions({ featuresAction: null, locationsAction: null })
       header.setHeaderForIndex('Entity Catalog', Tags, {
         showNew: canEdit,
         showFacets: true,
@@ -291,7 +366,7 @@ $effect(() => {
 })
 onDestroy(() => {
   header.setSearch(null)
-  header.setFormActions({ content: null })
+  header.setFormActions({ content: null, featuresAction: null, locationsAction: null })
 })
 $effect(() => {
   refresh
@@ -385,7 +460,10 @@ function edit(record: IdentityCatalogueRecord | null): void {
         ),
         logo: null,
       }
-  selectedLocales = Object.keys(content.i18n)
+  selectedLocales = [
+    ...new Set(['en', 'zh-Hant', 'zh-Hans', ...Object.keys(content.i18n)]),
+  ]
+  for (const locale of selectedLocales) content.i18n[locale] ??= { name: '' }
   visibleLocales = [...selectedLocales]
   baseline = JSON.stringify(content)
   header.setEditing(record === null)
@@ -645,6 +723,17 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
         </div>
       {/if}
     </div>
+  {:else if locationsActive && selected}
+    <Main.Facet
+      edgeToEdge
+      fillHeight
+      class="top-0 bottom-0"
+      contentClass="h-full overflow-auto"
+    >
+      {#key selected.id}
+        <BrandLocations brand={selected} {organisationId} />
+      {/key}
+    </Main.Facet>
   {:else if featuresActive && selected}
     <Main.Facet
       edgeToEdge
@@ -657,394 +746,508 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
       {/key}
     </Main.Facet>
   {:else}
-    <FormSurface>
-      <div>
-        {#if content}
-          <section
-            class="bits-form__section border-border mx-auto my-6 max-w-4xl overflow-hidden rounded-xl border pb-0!"
-            data-catalogue-card
-          >
-            <div
-              class="grid min-w-0 grid-cols-[12rem_minmax(0,1fr)]"
-              data-catalogue-columns
-            >
-              <section class="grid min-w-0 content-start" aria-label="Brand image">
-                <SectionHeader
-                  title={kind === 'brand' ? 'Brand' : 'Group'}
-                  icon={Tags}
-                />
-                <div class="grid gap-4 px-6 py-4">
-                  <div class="relative size-28" data-catalogue-logo-picker>
-                    <Dropzone
-                      disabled={!isEditing || busy}
-                      uploadSelectionMode="single"
-                      showPrompt={false}
-                      rounded="rounded-xl"
-                      bind:inputElement={logoInput}
-                      onFiles={async (files, rejections) => {
-                        if (rejections.length) failed = true
-                        if (files[0]) await upload(files[0])
-                      }}
-                    >
-                      <div
-                        class="border-border bg-muted/30 relative flex size-28 items-center justify-center overflow-hidden rounded-xl border"
-                      >
-                        {#if content.logo}
-                          <img
-                            src={`${content.logo}${logoRetry ? `?retry=${logoRetry}` : ''}`}
-                            onerror={() => (logoFailed = true)}
-                            onload={() => (logoFailed = false)}
-                            class:hidden={logoFailed}
-                            alt="Catalogue logo"
-                            class="size-full object-contain p-2"
-                          >
-                          {#if logoFailed}
-                            <ImageIcon class="text-muted-foreground size-10" />
-                          {/if}
-                        {:else}
-                          <ImageIcon class="text-muted-foreground size-10" />
-                        {/if}
-                        {#if isEditing}
-                          <span
-                            class="bg-background/70 pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 backdrop-blur-sm transition-opacity group-focus-within/gallery-dropzone:opacity-100 group-hover/gallery-dropzone:opacity-100"
-                            data-logo-overlay
-                          >
-                            <PhotoIcon class="size-7" />
-                          </span>
-                        {/if}
-                      </div>
-                    </Dropzone>
-                    {#if logoFailed}
-                      <div class="absolute bottom-1 left-1/2 z-80 -translate-x-1/2">
-                        <Button
-                          text="Retry image"
-                          iconComponent={RetryIcon}
-                          hideLabel
-                          style="ghost"
-                          size="sm"
-                          class="size-6! p-0!"
-                          disabled={busy}
-                          onClick={() => {
-                            logoFailed = false
-                            logoRetry++
-                          }}
-                        />
-                      </div>
-                    {/if}
-                  </div>
-                </div>
-              </section>
-              <section class="grid min-w-0 content-start" aria-label="Names">
-                <SectionHeader title="Names" icon={Languages} />
-                <div class="px-6 py-4">
-                  <div class="grid gap-2">
-                    {#each shownLocales as locale (locale)}
-                      <div
-                        transition:slide={{
-                          duration: prefersReducedMotion.current ? 0 : 180,
-                        }}
-                      >
-                        <FormI18nInlineRow
-                          value={content.i18n[locale].name}
-                          label={`Name · ${locale}`}
-                          prefix={locale === shownLocales[0]
-                            ? ''
-                            : shortLocaleLabel(locale)}
-                          editable={isEditing && !busy}
-                          required={false}
-                          issues={undefined}
-                          showVerification={false}
-                          attrs={{
-                            id: `catalogue-name-${locale}`,
-                            oninput: (event: Event) => {
-                              if (content)
-                                content.i18n[locale].name = (
-                                  event.currentTarget as HTMLInputElement
-                                ).value
-                            },
-                          }}
-                          onStart={() => {
-                            namesBeforeEdit[locale] = content?.i18n[locale].name ?? ''
-                          }}
-                          onCancel={() => {
-                            if (content)
-                              content.i18n[locale].name = namesBeforeEdit[locale]
-                          }}
-                          onClear={() => {
-                            if (content) content.i18n[locale].name = ''
-                          }}
-                        />
-                      </div>
-                    {/each}
-                  </div>
-                </div>
-              </section>
+    {#key selected?.id ?? `new-${kind}`}
+      <form
+        bind:this={reviewForm}
+        class="contents"
+        data-translation-tab="core"
+        data-translation-baseline-modified={selected?.version}
+        onsubmit={event => {
+          event.preventDefault()
+          void save()
+        }}
+      >
+        <MultilingualReviewPanel review={translationReview} />
+        <FormSurface>
+          <div>
+            {#if content}
               <section
-                class="col-span-2 grid min-w-0 content-start"
-                aria-label="Identity"
+                class="bits-form__section border-border mx-auto my-6 max-w-4xl overflow-hidden rounded-xl border pb-0!"
+                data-catalogue-card
               >
-                <SectionHeader title="Identity" icon={ListTree} />
-                <div class="grid grid-cols-2 items-start gap-x-8 gap-y-6 px-6 py-5">
-                  <TextInput
-                    id="catalogue-code"
-                    label="Code"
-                    value={content.code ?? ''}
-                    onValueChange={value => {
-                      if (content) content.code = value || undefined
-                    }}
-                    {isEditing}
-                    disabled={busy}
-                    variant="resource"
-                    class="gap-1!"
-                  />
-                  <div class="grid gap-2">
-                    <h4 class="text-muted-foreground text-xs font-medium">
-                      {kind === 'group' ? 'Parent group (optional)' : 'Group'}
-                    </h4>
-                    {#if isEditing}
-                      {#if !newGroup}
-                        <SearchSelect
-                          plain
-                          selectedDisplay
-                          resetOnSelect
-                          createLabel="Create group"
-                          onCreate={name => {
-                            if (!content) return
-                            previousGroupId = content.groupId ?? null
-                            groupSearch = ''
-                            newGroup = {
-                              id: crypto.randomUUID(),
-                              i18n: seedIdentityCatalogue({ en: name }).i18n,
-                            }
-                            content.groupId = newGroup.id
+                <div
+                  class="grid min-w-0 grid-cols-[12rem_minmax(0,1fr)]"
+                  data-catalogue-columns
+                >
+                  <section class="grid min-w-0 content-start" aria-label="Brand image">
+                    <SectionHeader
+                      title={kind === 'brand' ? 'Brand' : 'Group'}
+                      icon={Tags}
+                    />
+                    <div class="grid gap-4 px-6 py-4">
+                      <div class="relative size-28" data-catalogue-logo-picker>
+                        <Dropzone
+                          disabled={!isEditing || busy}
+                          uploadSelectionMode="single"
+                          showPrompt={false}
+                          rounded="rounded-xl"
+                          bind:inputElement={logoInput}
+                          onFiles={async (files, rejections) => {
+                            if (rejections.length) failed = true
+                            if (files[0]) await upload(files[0])
                           }}
-                          label={kind === 'group'
-                            ? 'Search parent groups'
-                            : 'Search groups'}
-                          value={content.groupId ?? ''}
-                          items={groups.map(group => ({
-                            value: group.id,
-                            label: catalogueDisplayName(group),
-                            keywords: group.code,
-                            image: group.logo ?? undefined,
-                            href: catalogueHref(group),
-                          }))}
-                          disabled={busy}
-                          onSearch={value => (groupSearch = value)}
-                          onSelect={value => {
-                            if (content) content.groupId = value || null
-                          }}
-                        />
-                      {/if}
-                      {#if newGroup}
-                        <fieldset
-                          transition:slide={{
-                            duration: prefersReducedMotion.current ? 0 : 160,
-                          }}
-                          class="grid gap-3 py-2"
-                          aria-label="New group names"
                         >
-                          {#each shownLocales.filter(
-                            locale => newGroup?.i18n[locale],
-                          ) as locale (locale)}
-                            <div
-                              transition:fade={{
-                                duration: prefersReducedMotion.current ? 0 : 160,
-                              }}
-                            >
-                              <FormI18nInlineRow
-                                value={newGroup.i18n[locale].name}
-                                label={`Group name · ${locale}`}
-                                prefix={locale === shownLocales[0]
-                                  ? ''
-                                  : shortLocaleLabel(locale)}
-                                editable={!busy}
-                                required={false}
-                                issues={undefined}
-                                showVerification={false}
-                                attrs={{
-                                  id: `catalogue-group-name-${locale}`,
-                                  oninput: (event: Event) => {
-                                    if (newGroup)
-                                      newGroup.i18n[locale].name = (
-                                        event.currentTarget as HTMLInputElement
-                                      ).value
-                                  },
-                                }}
-                                onStart={() => {
-                                  groupNamesBeforeEdit[locale] =
-                                    newGroup?.i18n[locale].name ?? ''
-                                }}
-                                onCancel={() => {
-                                  if (newGroup)
-                                    newGroup.i18n[locale].name =
-                                      groupNamesBeforeEdit[locale]
-                                }}
-                                onClear={() => {
-                                  if (newGroup) newGroup.i18n[locale].name = ''
-                                }}
-                              />
-                            </div>
-                          {/each}
-                          <Button
-                            text="Cancel new group"
-                            style="ghost"
-                            size="sm"
-                            disabled={busy}
-                            onClick={() => {
-                              if (content) content.groupId = previousGroupId
-                              newGroup = null
-                            }}
-                          />
-                        </fieldset>
-                      {/if}
-                    {:else}
-                      {@const group = groups.find(
-                        group => group.id === content?.groupId,
-                      )}
-                      {#if group}
-                        <a
-                          href={catalogueHref(group)}
-                          class="hover:text-primary focus-visible:outline-primary flex items-center gap-3 rounded-md px-4 py-2"
-                        >
-                          {#if group.logo}
-                            <img src={group.logo} alt="" class="size-7 object-contain">
-                          {:else}
-                            <Building class="text-muted-foreground size-5 shrink-0" />
-                          {/if}
-                          <span class="text-sm">{catalogueDisplayName(group)}</span>
-                        </a>
-                      {:else}
-                        <div class="flex items-center gap-3 px-4 py-2">
-                          <Building class="text-muted-foreground size-5 shrink-0" />
-                          <span class="text-sm">{content.groupId || 'None'}</span>
-                        </div>
-                      {/if}
-                    {/if}
-                  </div>
-                  {#if kind === 'brand'}
-                    <div class="grid gap-2">
-                      <h4 class="text-muted-foreground text-xs font-medium">
-                        Categories
-                      </h4>
-                      {#if isEditing}
-                        <SearchSelect
-                          label="Add category"
-                          plain
-                          resetOnSelect
-                          items={categoryOptions
-                            .filter(key => !content?.categories?.includes(key))
-                            .map(key => ({
-                              value: key,
-                              label: placeCategoryLabel(key),
-                            }))}
-                          disabled={busy}
-                          onSelect={value => {
-                            if (value && content)
-                              content.categories = [
-                                ...new Set([...(content.categories ?? []), value]),
-                              ]
-                          }}
-                        />
-                      {/if}
-                      <fieldset
-                        class="mt-4 flex flex-wrap gap-2 px-4"
-                        aria-label="Categories"
-                      >
-                        {#each content.categories ?? [] as key (key)}
-                          {#if isEditing}
-                            <Button
-                              text={`${placeCategoryLabel(key)} ×`}
-                              style="soft"
-                              size="sm"
-                              disabled={busy}
-                              onClick={() => {
-                                if (content)
-                                  content.categories = content.categories?.filter(
-                                    value => value !== key,
-                                  )
-                              }}
-                            />
-                          {:else}
-                            <span
-                              class="border-border bg-muted/30 rounded-full border px-3 py-1 text-sm"
-                              >{placeCategoryLabel(key)}</span
-                            >
-                          {/if}
-                        {:else}
-                          {#if !isEditing}
-                            <span class="text-muted-foreground text-sm">None</span>
-                          {/if}
-                        {/each}
-                      </fieldset>
-                    </div>
-                  {/if}
-                </div>
-              </section>
-            </div>
-            {#if selected?.kind === 'group' ||
-              (selected?.kind === 'brand' && groupBrands.length > 0)}
-              <section
-                aria-label={selected?.kind === 'group' ? 'Brands' : 'Sibling brands'}
-              >
-                <SectionHeader
-                  title={selected?.kind === 'group' ? 'Brands' : 'Sibling brands'}
-                  icon={Tags}
-                />
-                <div class="px-6 py-5">
-                  {#if groupBrandsLoading}
-                    <p role="status" class="text-muted-foreground text-sm">
-                      Loading brands…
-                    </p>
-                  {:else if groupBrandsFailed}
-                    <p role="alert" class="text-destructive text-sm">
-                      Unable to load brands.
-                    </p>
-                  {:else if groupBrands.length}
-                    <div
-                      class="grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-6"
-                    >
-                      {#each groupBrands as brand (brand.id)}
-                        {@const name =
-                          brand.i18n[canonicalContentTag(getLocaleKey())]?.name ??
-                          brand.i18n.en.name}
-                        <a
-                          href={catalogueHref(brand)}
-                          class="hover:bg-muted/40 focus-visible:outline-primary flex min-w-0 flex-col items-center gap-3 rounded-lg p-2 text-center"
-                        >
-                          <span
-                            class="border-border bg-muted/30 flex size-20 items-center justify-center rounded-xl border"
+                          <div
+                            class="border-border bg-muted/30 relative flex size-28 items-center justify-center overflow-hidden rounded-xl border"
                           >
-                            {#if brand.logo}
+                            {#if content.logo}
                               <img
-                                src={brand.logo}
-                                alt=""
+                                src={`${content.logo}${logoRetry ? `?retry=${logoRetry}` : ''}`}
+                                onerror={() => (logoFailed = true)}
+                                onload={() => (logoFailed = false)}
+                                class:hidden={logoFailed}
+                                alt="Catalogue logo"
                                 class="size-full object-contain p-2"
                               >
+                              {#if logoFailed}
+                                <ImageIcon class="text-muted-foreground size-10" />
+                              {/if}
                             {:else}
-                              <Tags class="text-muted-foreground size-8" />
+                              <ImageIcon class="text-muted-foreground size-10" />
                             {/if}
-                          </span>
-                          <span class="text-sm break-words">{name}</span>
-                        </a>
-                      {/each}
+                            {#if isEditing}
+                              <span
+                                class="bg-background/70 pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 backdrop-blur-sm transition-opacity group-focus-within/gallery-dropzone:opacity-100 group-hover/gallery-dropzone:opacity-100"
+                                data-logo-overlay
+                              >
+                                <PhotoIcon class="size-7" />
+                              </span>
+                            {/if}
+                          </div>
+                        </Dropzone>
+                        {#if logoFailed}
+                          <div class="absolute bottom-1 left-1/2 z-80 -translate-x-1/2">
+                            <Button
+                              text="Retry image"
+                              iconComponent={RetryIcon}
+                              hideLabel
+                              style="ghost"
+                              size="sm"
+                              class="size-6! p-0!"
+                              disabled={busy}
+                              onClick={() => {
+                                logoFailed = false
+                                logoRetry++
+                              }}
+                            />
+                          </div>
+                        {/if}
+                      </div>
                     </div>
-                  {:else}
-                    <p class="text-muted-foreground px-4 text-sm">No linked brands.</p>
-                  {/if}
+                  </section>
+                  <section class="grid min-w-0 content-start" aria-label="Names">
+                    <SectionHeader title="Names" icon={Languages} />
+                    <div class="px-6 py-4">
+                      <div class="grid gap-2">
+                        {#each shownLocales as locale (locale)}
+                          {@const reviewKey = `${selected?.id ?? kind}:name:${locale}`}
+                          <div
+                            transition:slide={{
+                              duration: prefersReducedMotion.current ? 0 : 180,
+                            }}
+                          >
+                            <div
+                              data-missing-translation={(translationReview.started &&
+                                !content.i18n[locale]?.name?.trim()) ||
+                                undefined}
+                            >
+                              {#if translationReview.current(reviewKey)}
+                                <TranslationSuggestion
+                                  value={translationReview.proposals[reviewKey].value}
+                                  label={`Name · ${locale}`}
+                                  prefix={shortLocaleLabel(locale)}
+                                  onChange={text => {
+                                    translationReview.proposals[reviewKey].value = text
+                                  }}
+                                  onAccept={edited =>
+                                    translationReview.accept(reviewKey, edited)}
+                                  onReject={() => translationReview.reject(reviewKey)}
+                                />
+                              {:else}
+                                <FormI18nInlineRow
+                                  value={content.i18n[locale].name}
+                                  label={`Name · ${locale}`}
+                                  prefix={locale === shownLocales[0]
+                                    ? ''
+                                    : shortLocaleLabel(locale)}
+                                  editable={isEditing && !busy}
+                                  required={false}
+                                  issues={undefined}
+                                  showVerification={false}
+                                  attrs={{
+                                    id: `catalogue-name-${locale}`,
+                                    oninput: (event: Event) => {
+                                      if (content)
+                                        content.i18n[locale].name = (
+                                          event.currentTarget as HTMLInputElement
+                                        ).value
+                                    },
+                                  }}
+                                  onStart={() => {
+                                    namesBeforeEdit[locale] =
+                                      content?.i18n[locale].name ?? ''
+                                  }}
+                                  onCancel={() => {
+                                    if (content)
+                                      content.i18n[locale].name =
+                                        namesBeforeEdit[locale]
+                                  }}
+                                  onClear={() => {
+                                    if (content) content.i18n[locale].name = ''
+                                  }}
+                                />
+                              {/if}
+                            </div>
+                          </div>
+                        {/each}
+                      </div>
+                    </div>
+                  </section>
+                  <section
+                    class="col-span-2 grid min-w-0 content-start"
+                    aria-label="Identity"
+                  >
+                    <SectionHeader title="Identity" icon={ListTree} />
+                    <div class="grid grid-cols-2 items-start gap-x-8 gap-y-6 px-6 py-5">
+                      <TextInput
+                        id="catalogue-code"
+                        label="Code"
+                        value={content.code ?? ''}
+                        onValueChange={value => {
+                          if (content) content.code = value || undefined
+                        }}
+                        {isEditing}
+                        disabled={busy}
+                        variant="resource"
+                        class="gap-1!"
+                      />
+                      <div class="grid gap-2">
+                        <h4 class="text-muted-foreground text-xs font-medium">
+                          {kind === 'group' ? 'Parent group (optional)' : 'Group'}
+                        </h4>
+                        {#if isEditing}
+                          {#if !newGroup}
+                            <SearchSelect
+                              plain
+                              selectedDisplay
+                              resetOnSelect
+                              createLabel="Create group"
+                              onCreate={name => {
+                                if (!content) return
+                                previousGroupId = content.groupId ?? null
+                                groupSearch = ''
+                                newGroup = {
+                                  id: crypto.randomUUID(),
+                                  i18n: Object.fromEntries(
+                                    selectedLocales.map(locale => [
+                                      locale,
+                                      { name: locale === 'en' ? name : '' },
+                                    ]),
+                                  ),
+                                }
+                                content.groupId = newGroup.id
+                              }}
+                              label={kind === 'group'
+                                ? 'Search parent groups'
+                                : 'Search groups'}
+                              value={content.groupId ?? ''}
+                              items={groups.map(group => ({
+                                value: group.id,
+                                label: catalogueDisplayName(group),
+                                keywords: group.code,
+                                image: group.logo ?? undefined,
+                                href: catalogueHref(group),
+                              }))}
+                              disabled={busy}
+                              onSearch={value => (groupSearch = value)}
+                              onSelect={value => {
+                                if (content) content.groupId = value || null
+                              }}
+                            />
+                          {/if}
+                          {#if newGroup}
+                            <fieldset
+                              transition:slide={{
+                                duration: prefersReducedMotion.current ? 0 : 160,
+                              }}
+                              class="grid gap-3 py-2"
+                              aria-label="New group names"
+                            >
+                              {#each shownLocales.filter(
+                                locale => newGroup?.i18n[locale],
+                              ) as locale (locale)}
+                                {@const reviewKey = `${newGroup.id}:group:${locale}`}
+                                <div
+                                  transition:fade={{
+                                    duration: prefersReducedMotion.current ? 0 : 160,
+                                  }}
+                                >
+                                  <div
+                                    data-missing-translation={(translationReview.started &&
+                                      !newGroup.i18n[locale]?.name?.trim()) ||
+                                      undefined}
+                                  >
+                                    {#if translationReview.current(reviewKey)}
+                                      <TranslationSuggestion
+                                        value={translationReview.proposals[reviewKey]
+                                          .value}
+                                        label={`Group name · ${locale}`}
+                                        prefix={shortLocaleLabel(locale)}
+                                        onChange={text => {
+                                          translationReview.proposals[reviewKey].value =
+                                            text
+                                        }}
+                                        onAccept={edited =>
+                                          translationReview.accept(reviewKey, edited)}
+                                        onReject={() =>
+                                          translationReview.reject(reviewKey)}
+                                      />
+                                    {:else}
+                                      <FormI18nInlineRow
+                                        value={newGroup.i18n[locale].name}
+                                        label={`Group name · ${locale}`}
+                                        prefix={locale === shownLocales[0]
+                                          ? ''
+                                          : shortLocaleLabel(locale)}
+                                        editable={!busy}
+                                        required={false}
+                                        issues={undefined}
+                                        showVerification={false}
+                                        attrs={{
+                                          id: `catalogue-group-name-${locale}`,
+                                          oninput: (event: Event) => {
+                                            if (newGroup)
+                                              newGroup.i18n[locale].name = (
+                                                event.currentTarget as HTMLInputElement
+                                              ).value
+                                          },
+                                        }}
+                                        onStart={() => {
+                                          groupNamesBeforeEdit[locale] =
+                                            newGroup?.i18n[locale].name ?? ''
+                                        }}
+                                        onCancel={() => {
+                                          if (newGroup)
+                                            newGroup.i18n[locale].name =
+                                              groupNamesBeforeEdit[locale]
+                                        }}
+                                        onClear={() => {
+                                          if (newGroup) newGroup.i18n[locale].name = ''
+                                        }}
+                                      />
+                                    {/if}
+                                  </div>
+                                </div>
+                              {/each}
+                              <Button
+                                text="Cancel new group"
+                                style="ghost"
+                                size="sm"
+                                disabled={busy}
+                                onClick={() => {
+                                  if (content) content.groupId = previousGroupId
+                                  newGroup = null
+                                }}
+                              />
+                            </fieldset>
+                          {/if}
+                        {:else}
+                          {@const group = groups.find(
+                            group => group.id === content?.groupId,
+                          )}
+                          {#if group}
+                            <a
+                              href={catalogueHref(group)}
+                              class="hover:text-primary focus-visible:outline-primary flex items-center gap-3 rounded-md px-4 py-2"
+                            >
+                              {#if group.logo}
+                                <img
+                                  src={group.logo}
+                                  alt=""
+                                  class="size-7 object-contain"
+                                >
+                              {:else}
+                                <Building
+                                  class="text-muted-foreground size-5 shrink-0"
+                                />
+                              {/if}
+                              <span class="text-sm">{catalogueDisplayName(group)}</span>
+                            </a>
+                          {:else}
+                            <div class="flex items-center gap-3 px-4 py-2">
+                              <Building class="text-muted-foreground size-5 shrink-0" />
+                              <span class="text-sm">{content.groupId || 'None'}</span>
+                            </div>
+                          {/if}
+                        {/if}
+                      </div>
+                      {#if kind === 'brand'}
+                        <div class="grid gap-2">
+                          <h4 class="text-muted-foreground text-xs font-medium">
+                            Categories
+                          </h4>
+                          {#if isEditing}
+                            <SearchSelect
+                              label="Add category"
+                              plain
+                              resetOnSelect
+                              items={categoryOptions
+                                .filter(key => !content?.categories?.includes(key))
+                                .map(key => ({
+                                  value: key,
+                                  label: placeCategoryLabel(key),
+                                }))}
+                              disabled={busy}
+                              onSelect={value => {
+                                if (value && content)
+                                  content.categories = [
+                                    ...new Set([...(content.categories ?? []), value]),
+                                  ]
+                              }}
+                            />
+                          {/if}
+                          <fieldset
+                            class="mt-4 flex flex-wrap gap-2 px-4"
+                            aria-label="Categories"
+                          >
+                            {#each content.categories ?? [] as key (key)}
+                              {#if isEditing}
+                                <Button
+                                  text={`${placeCategoryLabel(key)} ×`}
+                                  style="soft"
+                                  size="sm"
+                                  disabled={busy}
+                                  onClick={() => {
+                                    if (content)
+                                      content.categories = content.categories?.filter(
+                                        value => value !== key,
+                                      )
+                                  }}
+                                />
+                              {:else}
+                                <span
+                                  class="border-border bg-muted/30 rounded-full border px-3 py-1 text-sm"
+                                  >{placeCategoryLabel(key)}</span
+                                >
+                              {/if}
+                            {:else}
+                              {#if !isEditing}
+                                <span class="text-muted-foreground text-sm">None</span>
+                              {/if}
+                            {/each}
+                          </fieldset>
+                        </div>
+                      {/if}
+                    </div>
+                  </section>
                 </div>
+                {#if content && kind === 'brand'}
+                  <section
+                    class="border-border mx-auto mb-6 max-w-4xl rounded-xl border"
+                  >
+                    <SectionHeader title="Location discovery" icon={LocationsIcon} />
+                    <div class="grid gap-5 p-6 md:grid-cols-2">
+                      <TextInput
+                        label="Suggested search terms (one per line)"
+                        value={(content.discovery?.terms ?? []).join('\n')}
+                        disabled={!isEditing || busy}
+                        onValueChange={value => {
+                          if (content)
+                            content.discovery = {
+                              ...content.discovery,
+                              terms: value.split('\n'),
+                            }
+                        }}
+                      />
+                      <SearchSelect
+                        label="Discovery category"
+                        plain
+                        value={content.discovery?.category ?? ''}
+                        disabled={!isEditing || busy}
+                        items={categoryOptions.map(value => ({
+                          value,
+                          label: placeCategoryLabel(value),
+                        }))}
+                        onSelect={value => {
+                          if (content)
+                            content.discovery = {
+                              terms: content.discovery?.terms ?? [],
+                              ...(value ? { category: value } : {}),
+                            }
+                        }}
+                      />
+                    </div>
+                  </section>
+                {/if}
+                {#if selected?.kind === 'group' ||
+                  (selected?.kind === 'brand' && groupBrands.length > 0)}
+                  <section
+                    aria-label={selected?.kind === 'group'
+                      ? 'Brands'
+                      : 'Sibling brands'}
+                  >
+                    <SectionHeader
+                      title={selected?.kind === 'group' ? 'Brands' : 'Sibling brands'}
+                      icon={Tags}
+                    />
+                    <div class="px-6 py-5">
+                      {#if groupBrandsLoading}
+                        <p role="status" class="text-muted-foreground text-sm">
+                          Loading brands…
+                        </p>
+                      {:else if groupBrandsFailed}
+                        <p role="alert" class="text-destructive text-sm">
+                          Unable to load brands.
+                        </p>
+                      {:else if groupBrands.length}
+                        <div
+                          class="grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-6"
+                        >
+                          {#each groupBrands as brand (brand.id)}
+                            {@const name =
+                              brand.i18n[canonicalContentTag(getLocaleKey())]?.name ||
+                              catalogueDisplayName(brand)}
+                            <a
+                              href={catalogueHref(brand)}
+                              class="hover:bg-muted/40 focus-visible:outline-primary flex min-w-0 flex-col items-center gap-3 rounded-lg p-2 text-center"
+                            >
+                              <span
+                                class="border-border bg-muted/30 flex size-20 items-center justify-center rounded-xl border"
+                              >
+                                {#if brand.logo}
+                                  <img
+                                    src={brand.logo}
+                                    alt=""
+                                    class="size-full object-contain p-2"
+                                  >
+                                {:else}
+                                  <Tags class="text-muted-foreground size-8" />
+                                {/if}
+                              </span>
+                              <span class="text-sm break-words">{name}</span>
+                            </a>
+                          {/each}
+                        </div>
+                      {:else}
+                        <p class="text-muted-foreground px-4 text-sm">
+                          No linked brands.
+                        </p>
+                      {/if}
+                    </div>
+                  </section>
+                {/if}
               </section>
+            {:else if loadingDetail}
+              <div
+                role="status"
+                aria-label="Loading catalogue details"
+                class="bg-muted h-64 animate-pulse rounded-xl"
+              ></div>
             {/if}
-          </section>
-        {:else if loadingDetail}
-          <div
-            role="status"
-            aria-label="Loading catalogue details"
-            class="bg-muted h-64 animate-pulse rounded-xl"
-          ></div>
-        {/if}
-      </div>
-    </FormSurface>
+          </div>
+        </FormSurface>
+      </form>
+    {/key}
   {/if}
   {#if failed}
     <p role="alert" class="text-destructive px-6 py-3 text-sm">

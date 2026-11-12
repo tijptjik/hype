@@ -3,8 +3,7 @@ import {
   readSharedLocationCorrection,
 } from './locationShared'
 import { resolveSharedCorrections } from '#lib/locations/sharedCorrection.js'
-import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch'
-import { locationAccessibility } from '../schema/locationAccessibility'
+import { executeRevisionBatch } from './revisionBatch'
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // DOMAIN
@@ -84,9 +83,47 @@ function decode(row: Row, key: string): AccessibilityRecord {
   }
 }
 
-/** Read direct facts and separately attributed current venue reports, never a building-wide rating.
+/** Resolve mobility through ordinary community facts, retaining old observations as a read-only fallback.
+ * @param db Request database. @param subject Shared Location snapshot.
+ * @returns Community values and their optimistic concurrency token.
+ */
+async function readDirect(
+  db: Database,
+  subject: Subject,
+): Promise<{ record: AccessibilityRecord | null; token: string | null }> {
+  const shared = await readSharedLocationCorrection(db, subject.id)
+  const facts = readLocationFacts(subject.facts)
+  const corrections = shared ? JSON.parse(shared.corrections) : {}
+  const effective = shared ? resolveSharedCorrections(facts, corrections).facts : facts
+  // An explicit community clear must never resurrect a legacy observation.
+  if (corrections.accessibility || effective.accessibility)
+    return {
+      token: shared?.id ?? null,
+      record: effective.accessibility
+        ? {
+            id: shared?.id ?? subject.revisionId,
+            locationId: subject.id,
+            values: effective.accessibility,
+            recordedAt: shared?.createdAt ?? '',
+            stale: corrections.accessibility?.placementKey
+              ? corrections.accessibility.placementKey !==
+                (await placementKey(db, subject))
+              : false,
+          }
+        : null,
+    }
+  const legacy = await db.get<Row>(
+    sql`SELECT * FROM locationAccessibilityHead WHERE locationId=${subject.id}`,
+  )
+  return {
+    token: shared?.id ?? legacy?.id ?? null,
+    record: legacy ? decode(legacy, await placementKey(db, subject)) : null,
+  }
+}
+
+/** Read community mobility facts and separately labelled current venue signals.
  * @param db Request database. @param locationId Exact shared subject.
- * @returns Direct observation plus at most 50 venues; no private or scoped occupancy leaks.
+ * @returns Direct facts and at most 50 named venues; no private occupancy is exposed.
  */
 export async function readLocationAccessibility(
   db: Database,
@@ -94,74 +131,46 @@ export async function readLocationAccessibility(
 ): Promise<AccessibilityView | null> {
   const subject = await accessibilitySubject(db, locationId)
   if (!subject) return null
-  const row = await db.get<Row>(
-    sql`SELECT * FROM locationAccessibilityHead WHERE locationId=${locationId}`,
-  )
-  let record = row ? decode(row, await placementKey(db, subject)) : null
-  const shared = await readSharedLocationCorrection(db, locationId)
-  const facts = readLocationFacts(subject.facts)
-  const effective = shared
-    ? resolveSharedCorrections(facts, JSON.parse(shared.corrections)).facts
-    : facts
-  if (effective.accessibility && (!record || shared))
-    record = {
-      id: row?.id ?? '',
-      locationId,
-      values: effective.accessibility,
-      recordedAt: shared?.createdAt ?? '',
-      stale: record?.stale ?? false,
-    }
-  const venues: AccessibilityView['venues'] = []
-  // Only explicit shared current tenancy establishes this signal; never infer it from proximity or an address string.
+  const direct = await readDirect(db, subject)
+  // Explicit public tenancy supplies venue signals; proximity never grants inheritance.
   const children =
     subject.kind === 'establishment'
       ? []
-      : await db.all<Row & { facts: string; occupancy: string }>(sql`
-    SELECT DISTINCT a.*,v.facts,
-      (SELECT json_group_array(id) FROM (SELECT id FROM locationOccupancyHead
-        WHERE establishmentLocationId=l.id AND scopeOrganisationId IS NULL
-        AND assertionState='asserted' AND occupancyState='current' ORDER BY id)) occupancy
+      : await db.all<Subject>(sql`
+    SELECT DISTINCT l.id,l.matchingType AS kind,v.id revisionId,v.facts
     FROM locationOccupancyHead r JOIN location l ON l.id=${canonicalLocationSQL(sql`r.establishmentLocationId`)}
-    JOIN locationAccessibilityHead a ON a.locationId=l.id
     JOIN locationRevisionContent v ON v.id=(SELECT latest.id FROM locationRevisionContent latest
       WHERE latest.locationId=l.id AND (l.state!='linked' OR latest.origin='saanseoi') ORDER BY latest.version DESC LIMIT 1)
     WHERE ${canonicalLocationSQL(sql`r.containerLocationId`)}=${locationId}
     AND r.scopeOrganisationId IS NULL AND r.assertionState='asserted' AND r.occupancyState='current'
     AND l.state IN ('linked','unresolved') AND l.matchingType='establishment' ORDER BY l.id LIMIT 51`)
-  // Fetch venue snapshots and occupancy tokens in one bounded query rather than one request per tenant.
+  const venues: AccessibilityView['venues'] = []
   for (const child of children.slice(0, 50)) {
-    const facts = readLocationFacts(child.facts)
-    const report = decode(
-      child,
-      JSON.stringify({
-        position: facts.location,
-        occupancy: JSON.parse(child.occupancy),
-      }),
-    )
-    // Historical placement observations remain visible on their own record, not as current building signals.
+    const { record } = await readDirect(db, child)
     if (
-      report.stale ||
-      Object.values(report.values).every(value => value === 'unknown')
+      !record ||
+      record.stale ||
+      Object.values(record.values).every(value => value === 'unknown')
     )
       continue
     venues.push({
-      locationId: child.locationId,
-      names: facts.names,
-      record: report,
+      locationId: child.id,
+      names: readLocationFacts(child.facts).names,
+      record,
     })
   }
   return {
     locationRevisionId: subject.revisionId,
-    observationId: row?.id ?? null,
-    record,
+    observationId: direct.token,
+    record: direct.record,
     venues,
     moreVenues: children.length > 50,
   }
 }
 
-/** Append shared values with both observation-head and source-revision concurrency fences.
+/** Compatibility API for ordinary community curation with head and source concurrency fences.
  * @param db Request database. @param raw Validated values and expected revisions. @param actorId Authenticated contributor.
- * @returns New immutable observation ID; competing writes fail without replacing history.
+ * @returns New community revision ID; legacy observation history is never rewritten.
  */
 export async function saveLocationAccessibility(
   db: Database,
@@ -176,10 +185,10 @@ export async function saveLocationAccessibility(
   const subject = await accessibilitySubject(db, input.locationId)
   if (!subject || subject.revisionId !== input.expectedLocationRevisionId)
     throw new Error('ACCESSIBILITY_CHANGED')
-  const key = await placementKey(db, subject)
-  const id = crypto.randomUUID()
-  // INSERT SELECT makes a stale head, source snapshot or subject eligibility a no-op, including the first-write race.
+  const current = await readDirect(db, subject)
+  if (current.token !== input.expectedId) throw new Error('ACCESSIBILITY_CHANGED')
   const head = await readSharedLocationCorrection(db, input.locationId)
+  // All new answers live only in the standard curation history and replication path.
   const shared = await prepareSharedLocationCorrection(db, {
     locationId: input.locationId,
     sourceRevisionId: subject.revisionId,
@@ -187,29 +196,13 @@ export async function saveLocationAccessibility(
     actorId,
     rights,
     patch: { accessibility: { mode: 'override', value: input.values } },
-    guard: sql`(SELECT id FROM locationAccessibilityHead WHERE locationId=${input.locationId}) IS ${input.expectedId}`,
+    guard: sql`EXISTS(SELECT 1 FROM location WHERE id=${input.locationId} AND state IN ('linked','unresolved') AND matchingType IN ('establishment','building','premises'))`,
   }).catch(cause => {
     if (cause instanceof Error && cause.message === 'SHARED_LOCATION_CHANGED')
       throw new Error('ACCESSIBILITY_CHANGED')
     throw cause
   })
-  const inserted = await executeRevisionBatch(db, shared.guard, [
-    ...shared.queries,
-    db
-      .insert(locationAccessibility)
-      .select(sql`    SELECT ${id},${input.locationId},${input.expectedId},${subject.revisionId},${key},${JSON.stringify(input.values)},${actorId},strftime('%Y-%m-%dT%H:%M:%fZ','now')
-    WHERE (SELECT id FROM locationAccessibilityHead WHERE locationId=${input.locationId}) IS ${input.expectedId}
-    AND (SELECT v.id FROM locationRevisionContent v JOIN location l ON l.id=v.locationId
-      WHERE l.id=${input.locationId} AND l.state IN ('linked','unresolved')
-      AND l.matchingType IN ('establishment','building','premises')
-      AND (l.state!='linked' OR v.origin='saanseoi') ORDER BY v.version DESC LIMIT 1)=${subject.revisionId}
-    AND (SELECT json_group_array(id) FROM (SELECT id FROM locationOccupancyHead
-      WHERE establishmentLocationId=${subject.id} AND scopeOrganisationId IS NULL
-      AND assertionState='asserted' AND occupancyState='current' ORDER BY id))=${JSON.stringify(JSON.parse(key).occupancy)}
-`)
-      .returning({ id: locationAccessibility.id }),
-    prepareRevisionCheck(db, sql`changes()=1`),
-  ])
-  if (!inserted) throw new Error('ACCESSIBILITY_CHANGED')
-  return id
+  if (!(await executeRevisionBatch(db, shared.guard, shared.queries)))
+    throw new Error('ACCESSIBILITY_CHANGED')
+  return shared.id
 }

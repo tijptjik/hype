@@ -5,7 +5,10 @@ import {
   getAddressLocale,
   type FeatureAddress,
 } from '#lib/addresses/featureAddress.js'
-import { localAddressContent } from '#lib/addresses/locationDraft.js'
+import {
+  localAddressContent,
+  localAddressDisplayOverrides,
+} from '#lib/addresses/locationDraft.js'
 // VALIDATION
 import { LocalLocationInputSchema, type LocalLocationInput } from './local.js'
 
@@ -96,6 +99,7 @@ export function localIdentityFromAddress(
           snapshotId: null,
           rawSource: {},
           fallbackDisplay: {},
+          displayOverrides: localAddressDisplayOverrides(address),
           authored:
             kind === 'building' ? { ...content, unit: null, unitI18n: {} } : content,
         },

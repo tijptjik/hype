@@ -6,6 +6,8 @@ export interface FormFacetNavAction {
   disabled?: boolean
   /** Center this action in the facet content until results are available. */
   centerInContent?: boolean
+  bottomOffset?: number
+  emphasis?: boolean
   id?: string
 }
 

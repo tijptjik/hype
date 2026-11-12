@@ -568,3 +568,43 @@ it('resolves exact current codes within their brand or group namespace', async (
   )
   expect(await readIdentityCatalogueByCode(f.db, 'brand', 'same')).toBeNull()
 })
+
+it('retains discovery preferences independently from classification and translations', async () => {
+  const f = fixture()
+  const content = {
+    ...seedIdentityCatalogue({ en: 'AROME' }),
+    categories: ['bakery'],
+    discovery: { terms: ['AROME Bakery', '東海堂'], category: 'cafe' },
+  }
+  await saveIdentityCatalogue(f.db, {
+    id: 'discovery-brand',
+    kind: 'brand',
+    expectedVersion: 0,
+    content,
+    actorId: 'editor',
+    guard: sql`1`,
+  })
+  const record = await readIdentityCatalogue(f.db, 'discovery-brand')
+  expect(record?.discovery).toEqual(content.discovery)
+  expect(record?.categories).toEqual(['bakery'])
+  expect(record?.i18n.en.name).toBe('AROME')
+})
+
+it('saves intentionally untranslated catalogue names without filling them from another locale', async () => {
+  const f = fixture()
+  const content = seedIdentityCatalogue({ en: 'Kitchen' })
+  content.i18n['zh-Hant'].name = ''
+  content.i18n['zh-Hans'].name = ''
+  const saved = await saveIdentityCatalogue(f.db, {
+    id: 'incomplete-brand',
+    kind: 'brand',
+    expectedVersion: 0,
+    content,
+    actorId: 'editor',
+    guard: sql`1`,
+  })
+  const record = await readIdentityCatalogue(f.db, saved.id)
+  expect(record?.i18n.en.name).toBe('Kitchen')
+  expect(record?.i18n['zh-Hant'].name).toBe('')
+  expect(record?.i18n['zh-Hans'].name).toBe('')
+})

@@ -258,6 +258,7 @@ export async function prepareFeatureEdit(
     previous: current.content,
     content,
     acceptedLocation: input.templateLocation?.(content),
+    creationScope: { organisationId: state.organisationId, projectId: state.projectId },
   })
   const idle = await prepareFeatureIdleRevision(db, {
     ...input,

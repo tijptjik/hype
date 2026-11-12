@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { onDestroy, onMount, tick, type Snippet } from 'svelte'
+import { onDestroy, tick, type Snippet } from 'svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // BITS
@@ -67,6 +67,7 @@ let copiedId = $state<string | null>(null)
 let measurementElement: HTMLDivElement | undefined = $state()
 let controlsCompact = $state(false)
 let toolbarMeasured = $state(false)
+let balancedSideWidth = $state<number | null>(null)
 let copyFailed = $state(false)
 let copyTimer: ReturnType<typeof setTimeout> | undefined
 onDestroy(() => clearTimeout(copyTimer))
@@ -94,11 +95,8 @@ async function copySourceId(): Promise<void> {
 const mapId = $props.id()
 const minimumHeight = 200
 const maximumHeight = 1200
+// Match the Feature Location map's initial height, retaining manual resizing.
 let height = $state(320)
-// Give the fixed Location map half the viewport on entry, retaining manual resizing.
-onMount(() => {
-  if (fixedMap) height = Math.min(maximumHeight, window.innerHeight * 0.5)
-})
 let drag = $state<{ pointerId: number; startY: number; startHeight: number } | null>(
   null,
 )
@@ -209,6 +207,17 @@ function measureToolbar(
         parseFloat(styles.columnGap) * (probe.children.length - 1) +
         parseFloat(styles.paddingLeft) +
         parseFloat(styles.paddingRight)
+      // Equal side tracks center the address in the pane, not between unequal controls.
+      const sideWidth = Math.max(
+        probe.children[0]?.getBoundingClientRect().width ?? 0,
+        probe.children[2]?.getBoundingClientRect().width ?? 0,
+      )
+      const spare =
+        width -
+        parseFloat(styles.paddingLeft) -
+        parseFloat(styles.paddingRight) -
+        2 * parseFloat(styles.columnGap)
+      balancedSideWidth = sideWidth * 2 + 176 <= spare ? sideWidth : null
       probe.remove()
       controlsCompact = required > width
       coordinatesCompact = true
@@ -226,9 +235,12 @@ function measureToolbar(
     .then(() => {
       if (disposed) return
       ready = true
-      const options = node.querySelector('[data-location-options]')
-      if (options)
-        optionsObserver.observe(options, {
+      // Linked names resolve after the first measurement; remeasure their track before they overlap the address.
+      const measuredGroups = node.querySelectorAll(
+        '[data-location-options], [data-address-toolbar-location]',
+      )
+      for (const group of measuredGroups)
+        optionsObserver.observe(group, {
           subtree: true,
           childList: true,
           characterData: true,
@@ -333,11 +345,18 @@ function measureToolbar(
     use:measureToolbar={`${singleRowToolbar}:${measurementKey}`}
     style:visibility={singleRowToolbar && !toolbarMeasured ? 'hidden' : undefined}
     data-compact={toolbarWidth > 0 && toolbarWidth < 800}
+    style:grid-template-columns={singleRowToolbar &&
+    toolbarWidth >= 640 &&
+    balancedSideWidth !== null
+      ? `${balancedSideWidth}px minmax(0,1fr) ${balancedSideWidth}px`
+      : undefined}
     class="group/address-toolbar relative z-20 {singleRowToolbar &&
     toolbarWidth > 0 &&
     toolbarWidth < 640
       ? 'grid grid-cols-[minmax(0,1fr)_auto]'
-      : 'flex'} items-center justify-between gap-x-[clamp(0.5rem,2vw,2rem)] gap-y-3 border-b border-border/60 bg-panel px-6 py-3 {!singleRowToolbar &&
+      : singleRowToolbar && balancedSideWidth !== null
+        ? 'grid'
+        : 'flex'} items-center justify-between gap-x-[clamp(0.5rem,2vw,2rem)] gap-y-3 border-b border-border/60 bg-panel px-6 py-3 {!singleRowToolbar &&
     (locationControl || (isEditing && showLookup))
       ? 'flex-wrap'
       : 'flex-nowrap'}"
@@ -360,7 +379,7 @@ function measureToolbar(
       class="flex w-max shrink-0 flex-nowrap items-center justify-end gap-1 not-has-[*]:hidden {centerLocationControl
         ? 'absolute top-1/2 right-6 -translate-y-1/2'
         : ''} {singleRowToolbar
-        ? 'min-w-0 flex-1 basis-0 justify-end'
+        ? 'min-w-0 justify-self-end justify-end'
         : 'ml-auto'} {singleRowToolbar && toolbarWidth > 0 && toolbarWidth < 640
         ? 'col-start-2 row-start-1'
         : ''}"
