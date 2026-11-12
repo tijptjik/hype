@@ -1,7 +1,6 @@
 <script lang="ts">
 import { Button } from '#lib/bits/core/button/index.js'
 import { cx } from '#lib/bits/utils.js'
-import { InfoDialog } from '#lib/bits/core/dialog/index.js'
 import { Separator } from '#lib/bits/core/separator/index.js'
 import * as Main from '../../../main'
 import { m } from '#lib/i18n.js'
@@ -185,25 +184,58 @@ export function rememberHeight(): void {
           class="mx-0 mx-2 my-0 block h-6 bg-[color:color-mix(in_oklab,var(--color-foreground)_30%,transparent)]"
         />
 
-        <InfoDialog
-          title={m.antsy_patient_moth_taste()}
-          triggerText=""
-          triggerIconComponent={InfoIcon}
-          triggerIconClasses="h-[22px] w-[22px] text-foreground hover:text-primary"
+        <SimpleTooltip
+          showArrow
+          triggerClass="inline-flex"
+          triggerProps={{ 'aria-label': m.antsy_patient_moth_taste(), role: 'button' }}
+          contentClass="w-[24rem] max-w-[calc(100vw-2rem)] p-4 text-left"
         >
-          <section>
-            <h3 class="font-bold">{m.antsy_patient_moth_taste()}</h3>
-            <p>{@html m.home_legal_trout_hurl()}</p>
-          </section>
-          <section>
-            <h3 class="font-bold">{m.feature__classification()}</h3>
-            <p>{m.weak_main_earthworm_thrive()}</p>
-          </section>
-          <section>
-            <h3 class="font-bold">{m.feature__specification()}</h3>
-            <p>{m.less_new_crocodile_dust()}</p>
-          </section>
-        </InfoDialog>
+          {#snippet trigger()}
+            <span
+              class="text-foreground hover:text-primary inline-flex size-10 items-center justify-center rounded-full"
+            >
+              <InfoIcon class="size-5.5" aria-hidden="true" />
+            </span>
+          {/snippet}
+          <div
+            class="max-h-[min(calc(100dvh-5rem),calc(var(--bits-popover-content-available-height,100dvh)-2.5rem))] overflow-y-auto"
+          >
+            <div class="border-border/50 flex items-center gap-2.5 border-b pb-3">
+              <InfoIcon class="text-primary size-5 shrink-0" aria-hidden="true" />
+              <h3 class="text-[15px] leading-snug font-semibold">
+                {m.antsy_patient_moth_taste()}
+              </h3>
+            </div>
+            <p class="text-muted-foreground mt-3 text-sm leading-relaxed">
+              {m.home_legal_trout_hurl()}
+            </p>
+            <ul class="mt-4 space-y-4">
+              <li class="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-2.5">
+                <GhostIcon class="text-primary mt-0.5 size-5" aria-hidden="true" />
+                <div class="space-y-1">
+                  <p class="text-sm leading-snug font-semibold">
+                    {m.feature__intangible()}
+                  </p>
+                  <p class="text-muted-foreground text-sm leading-relaxed">
+                    {m.feature_status_removed_help()}
+                    {m.feature_status_removed_unpublish_help()}
+                  </p>
+                </div>
+              </li>
+              <li class="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-2.5">
+                <OctagonMinusIcon class="text-error mt-0.5 size-5" aria-hidden="true" />
+                <div class="space-y-1">
+                  <p class="text-sm leading-snug font-semibold">
+                    {m.feature__cannot_visit()}
+                  </p>
+                  <p class="text-muted-foreground text-sm leading-relaxed">
+                    {m.feature_status_inaccessible_help()}
+                  </p>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </SimpleTooltip>
 
         <Button
           text={isCollapsed
