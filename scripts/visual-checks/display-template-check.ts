@@ -17,31 +17,27 @@ for (const [name, engine] of [
           body: '<html lang="en" data-theme="breadline-light"><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>@layer theme,base,components,utilities;</style><script>globalThis.__sveltekit_dev={env:{}}</script></head><body class="bits-theme"><div id="app"></div><script type="module" src="/src/tests/fixtures/displayTemplateCheck.ts"></script></body></html>',
         }),
       )
-      await page.goto('http://127.0.0.1:4173/__template-check.html')
+      await page.goto(
+        `${process.argv[2] ?? 'http://127.0.0.1:4173'}/__template-check.html`,
+      )
+      const select = async (label: string, option: string): Promise<void> => {
+        await page.getByRole('combobox', { name: label, exact: true }).click()
+        await page.getByRole('option', { name: option, exact: true }).click()
+      }
       await page.getByRole('textbox', { name: 'Expression', exact: true }).waitFor()
       await page.getByText('Sample values', { exact: true }).first().click()
       await page
-        .locator('details label')
-        .filter({ hasText: 'brand.name' })
-        .locator('input')
+        .getByRole('textbox', { name: 'brand.name: Sample values', exact: true })
         .fill('AROME')
       await page
-        .locator('details label')
-        .filter({ hasText: 'branch' })
-        .locator('input')
+        .getByRole('textbox', { name: 'branch: Sample values', exact: true })
         .fill('Central')
       await page.waitForFunction(
         () => document.querySelector('output')?.textContent === 'AROME - Central',
       )
+      await select('branch: Cases', 'Missing')
       await page
-        .locator('details label')
-        .filter({ hasText: 'branch' })
-        .locator('select')
-        .selectOption('missing')
-      await page
-        .locator('details label')
-        .filter({ hasText: 'source.name' })
-        .locator('input')
+        .getByRole('textbox', { name: 'source.name: Sample values', exact: true })
         .fill('Original name')
       await page.waitForFunction(
         () => document.querySelector('output')?.textContent === 'Original name',
@@ -49,20 +45,12 @@ for (const [name, engine] of [
       await page
         .getByRole('textbox', { name: 'Expression', exact: true })
         .fill('{{ cases(properties.open, "Open", "Closed", "Unknown") }}')
-      await page
-        .locator('details label')
-        .filter({ hasText: 'properties.open' })
-        .locator('select')
-        .selectOption('false')
+      await select('properties.open: Cases', 'False')
       await page.waitForFunction(
         () => document.querySelector('output')?.textContent === 'Closed',
       )
-      await page
-        .getByRole('combobox', { name: 'Insert', exact: true })
-        .selectOption('cases')
-      await page
-        .getByRole('combobox', { name: 'Property', exact: true })
-        .selectOption('properties.open')
+      await select('Insert', 'Cases')
+      await select('Property', 'properties.open')
       await page
         .getByRole('textbox', { name: 'True / present', exact: true })
         .fill('Yes')

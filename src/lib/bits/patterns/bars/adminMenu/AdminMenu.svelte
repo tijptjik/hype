@@ -28,6 +28,7 @@ import InboxArrowDown from 'virtual:icons/proicons/mail-open'
 import MapPin from 'virtual:icons/proicons/location'
 import StoreIcon from '#lib/bits/custom/icon/StoreIcon.svelte'
 import ChatIcon from 'virtual:icons/proicons/chat'
+import TemplateIcon from 'virtual:icons/proicons/code'
 import BookOpenIcon from 'virtual:icons/proicons/book-open'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
@@ -165,6 +166,14 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
       href: `${ADMIN_PATH}/import`,
       label: 'Bulk Upload',
       icon: CloudArrowUp,
+    })
+  }
+
+  if (adminCtx.view.isSuperAdmin()) {
+    items.push({
+      href: `${ADMIN_PATH}/templates`,
+      label: m.display_templates_title(),
+      icon: TemplateIcon,
     })
   }
 

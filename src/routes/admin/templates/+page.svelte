@@ -1,8 +1,9 @@
 <script lang="ts">
 // SVELTE
+import { untrack } from 'svelte'
 import { page } from '$app/state'
 // ICONS
-import Braces from 'virtual:icons/lucide/braces'
+import Braces from 'virtual:icons/proicons/code'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
@@ -19,6 +20,10 @@ import TemplateConsumers from '#lib/bits/patterns/forms/displayTemplate/Template
 import OrganisationTemplateDefaults from '#lib/bits/patterns/forms/displayTemplate/OrganisationTemplateDefaults.svelte'
 import DisplayTemplateEditor from '#lib/bits/patterns/forms/displayTemplate/DisplayTemplateEditor.svelte'
 import { Button } from '#lib/bits/core/index.js'
+import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
+import * as Main from '#lib/bits/custom/main/index.js'
+import { SectionHeader, TextInput, SelectField } from '#lib/bits/custom/form/index.js'
+import Plus from 'virtual:icons/proicons/add'
 // I18N
 import { m } from '#lib/i18n.js'
 // DOMAIN
@@ -47,6 +52,12 @@ let busy = $state(false)
 let saved = $state(false)
 let selected = $state<DisplayTemplateRecord | null>(null)
 let draft = $state<DisplayTemplateDefinition | null>(null)
+let baseline = $state('')
+const dirty = $derived(draft !== null && JSON.stringify(draft) !== baseline)
+const canEdit = $derived(
+  selected === null || selected.organisationId === organisationId,
+)
+const isEditing = $derived(header.state.isEditing && canEdit)
 let locale = $state('en')
 let refresh = $state(0)
 let fieldProperties = $state<{ path: string; label: string }[]>([])
@@ -65,19 +76,32 @@ const properties = $derived([
   ...locationProperties,
   ...(draft?.target === 'feature' ? fieldProperties : []),
 ])
-const valid = $derived(
-  draft !== null && DisplayTemplateDefinitionSchema.safeParse(draft).success,
+const validation = $derived(
+  draft ? DisplayTemplateDefinitionSchema.safeParse(draft) : null,
+)
+const valid = $derived(validation?.success === true)
+const issues = $derived(
+  validation && !validation.success ? validation.error.issues : [],
 )
 $effect(() => {
-  header.setHeaderForStandAlone(m.display_templates_title(), Braces, {
-    showNew: false,
-    showFilter: false,
-    showFacets: false,
-    showViewActions: false,
-    showLayoutToggle: false,
-    showControlBarToggle: false,
+  const title =
+    selected?.name ?? (draft ? m.display_templates_new() : m.display_templates_title())
+  const controls = {
+    dirty,
+    isSubmitting: busy,
+    disableSave: !valid || !canEdit,
+    canEdit: Boolean(draft) && canEdit,
+    canPublish: false,
+    showPublishAction: false,
+    showDeleteAction: false,
+    submit: save,
+    reset: () => edit(selected),
+  }
+  untrack(() => {
+    header.setHeaderForEntity(title, Braces, new Map(), { showFacets: false })
+    header.setCrumbs([{ name: m.display_templates_title(), href: '/admin/templates' }])
+    header.setFormActions(controls)
   })
-  header.clearFooter()
 })
 $effect(() => {
   refresh
@@ -113,7 +137,10 @@ $effect(() => {
     } catch {
       if (!cancelled) failed = true
     } finally {
-      if (!cancelled) loading = false
+      if (!cancelled) {
+        loading = false
+        if (!failed && records.length) edit(records[0])
+      }
     }
   }
   void load()
@@ -169,13 +196,15 @@ function edit(record: DisplayTemplateRecord | null): void {
         },
       }
   locale = Object.keys(draft.locales)[0]
+  baseline = JSON.stringify(draft)
+  header.setEditing(record === null)
   saved = false
 }
 /** Publish a version without altering existing assignments.
  * @returns Completion after a successful version-fenced save or an actionable error.
  */
 async function save(): Promise<void> {
-  if (!draft || !valid || busy) return
+  if (!draft || !valid || busy || !dirty || !canEdit) return
   busy = true
   saved = false
   failed = false
@@ -189,6 +218,8 @@ async function save(): Promise<void> {
     const record = { ...draft, ...result, organisationId }
     selected = record
     records = [...records.filter(item => item.id !== record.id), record]
+    baseline = JSON.stringify(draft)
+    header.setEditing(false)
     saved = true
   } catch {
     failed = true
@@ -198,125 +229,173 @@ async function save(): Promise<void> {
 }
 </script>
 
-<div class="mx-auto grid w-full max-w-6xl gap-8 p-6 md:grid-cols-[16rem_minmax(0,1fr)]">
-  <aside class="space-y-3">
-    <Button
-      type="button"
-      style="outline"
-      disabled={busy || loading}
-      onClick={() => edit(null)}
-      text={m.display_templates_new()}
-    />
-    {#if loading}
-      <div
-        role="status"
-        aria-label={m.display_templates_loading()}
-        class="bg-muted h-32 animate-pulse rounded-md"
-      ></div>
-    {/if}
-    {#each records as record (record.id)}
-      <button
-        type="button"
-        disabled={busy}
-        onclick={() => edit(record)}
-        class="hover:bg-muted w-full rounded-md border p-3 text-left text-sm"
-        aria-pressed={selected?.id === record.id}
-      >
-        <span class="block font-medium break-words">{record.name}</span>
-        <span class="text-muted-foreground"
-          >{record.code}
-          · {m.display_templates_version({ version: String(record.version) })}</span
-        >
-      </button>
-    {/each}
-  </aside>
-  <div class="grid min-w-0 gap-8">
-    {#if organisationId && !featureId && !loading}
-      <OrganisationTemplateDefaults {organisationId} templates={records} />
-    {/if}
-    {#if failed}
-      <p role="alert" class="text-destructive text-sm">
-        {m.display_templates_failed()}
-      </p>
-      <Button
-        type="button"
-        style="outline"
-        onClick={() => refresh++}
-        text={m.retry()}
-      />
-    {/if}
-    {#if selected && featureState}
-      <Button
-        text={m.display_templates_apply()}
-        style="outline"
-        disabled={busy}
-        onClick={applyTemplate}
-      />
-    {/if}
-    {#if selected && organisationId && !featureId}
-      {#key `${organisationId}:${selected.id}:${selected.version}`}
-        <TemplateConsumers {organisationId} template={selected} />
-      {/key}
-    {/if}
-    {#if draft}
-      <fieldset
-        disabled={busy ||
-          (selected !== null && selected.organisationId !== organisationId)}
-        class="min-w-0 space-y-4"
-      >
-        <div class="grid gap-4 sm:grid-cols-2">
-          <label class="grid gap-1 text-sm"
-            >{m.display_templates_name()}<input
-              bind:value={draft.name}
-              class="border-input bg-background rounded-md border p-2"
-            ></label
-          >
-          <label class="grid gap-1 text-sm"
-            >{m.display_templates_code()}<input
-              bind:value={draft.code}
-              disabled={selected !== null}
-              class="border-input bg-background rounded-md border p-2"
-            ></label
-          >
-        </div>
-        <label class="grid gap-1 text-sm"
-          >{m.display_templates_target()}<select
-            bind:value={draft.target}
-            class="border-input bg-background rounded-md border p-2"
-          >
-            <option value="feature">{m.display_templates_feature()}</option>
-            <option value="location">{m.display_templates_location()}</option>
-          </select></label
-        >
-        <div class="flex flex-wrap gap-2">
-          {#each Object.keys(draft.locales) as tag (tag)}
-            <Button
-              type="button"
-              style={locale === tag ? 'soft' : 'outline'}
-              onClick={() => (locale = tag)}
-              text={tag}
-            />
-          {/each}
-        </div>
-        <DisplayTemplateEditor
-          value={draft.locales[locale] ?? ''}
-          onChange={source => {
-            if (draft)
-              draft = { ...draft, locales: { ...draft.locales, [locale]: source } }
-            saved = false
-          }}
-          {properties}
-        />
+<Main.Root class="px-0 pt-0">
+  <FormSurface>
+    <div class="grid min-w-0 gap-8 p-4 lg:grid-cols-[15rem_minmax(0,1fr)] lg:p-8">
+      <aside class="min-w-0 space-y-3">
         <Button
           type="button"
-          disabled={!valid || busy}
-          onClick={save}
-          text={m.display_templates_save()}
+          style="outline"
+          iconComponent={Plus}
+          disabled={busy || loading || dirty}
+          onClick={() => edit(null)}
+          text={m.display_templates_new()}
         />
-      </fieldset>
-    {/if}
-    {#if saved}
-      <p role="status" class="text-sm">{m.display_templates_saved()}</p>
-    {/if}
-  </div>
-</div>
+        {#if loading}
+          <div
+            role="status"
+            aria-label={m.display_templates_loading()}
+            class="bg-muted h-32 animate-pulse rounded-lg"
+          ></div>
+        {/if}
+        {#each records as record (record.id)}
+          <button
+            type="button"
+            disabled={busy || dirty}
+            onclick={() => edit(record)}
+            class="border-border hover:bg-primary/10 aria-pressed:border-primary/40 aria-pressed:bg-primary/10 w-full rounded-lg border p-4 text-left disabled:cursor-default"
+            aria-pressed={selected?.id === record.id}
+          >
+            <span class="block text-sm font-semibold break-words">{record.name}</span>
+            <span class="text-muted-foreground mt-1 block text-xs break-words"
+              >{record.code}
+              · {m.display_templates_version({ version: String(record.version) })}</span
+            >
+          </button>
+        {/each}
+      </aside>
+      <div class="grid min-w-0 content-start gap-8">
+        {#if failed}
+          <p role="alert" class="text-destructive text-sm">
+            {m.display_templates_failed()}
+          </p>
+          {#if !draft}
+            <Button style="outline" onClick={() => refresh++} text={m.retry()} />
+          {/if}
+        {/if}
+        {#if draft}
+          <section
+            class="border-border bg-panel min-w-0 overflow-hidden rounded-xl border"
+          >
+            <SectionHeader
+              title={m.display_templates_title()}
+              icon={Braces}
+              description={selected
+                ? m.display_templates_version({ version: String(selected.version) })
+                : m.display_templates_new()}
+            />
+            <div class="grid gap-6 p-6">
+              <div class="grid gap-6 sm:grid-cols-2">
+                <TextInput
+                  id="template-name"
+                  label={m.display_templates_name()}
+                  issues={dirty
+                    ? issues
+                        .filter(issue => issue.path[0] === 'name')
+                        .map(issue => issue.message)
+                    : []}
+                  bind:value={draft.name}
+                  {isEditing}
+                  disabled={busy}
+                  required
+                  variant="resource"
+                />
+                <TextInput
+                  id="template-code"
+                  label={m.display_templates_code()}
+                  issues={dirty
+                    ? issues
+                        .filter(issue => issue.path[0] === 'code')
+                        .map(issue => issue.message)
+                    : []}
+                  bind:value={draft.code}
+                  isEditing={isEditing && !selected}
+                  disabled={busy}
+                  required
+                  variant="resource"
+                />
+              </div>
+              <SelectField
+                id="template-target"
+                triggerAttrs={{
+                  id: 'template-target',
+                  'aria-label': m.display_templates_target(),
+                }}
+                label={m.display_templates_target()}
+                bind:value={draft.target}
+                {isEditing}
+                disabled={busy}
+                items={[
+                  { value: 'feature', label: m.display_templates_feature() },
+                  { value: 'location', label: m.display_templates_location() },
+                ]}
+              />
+            </div>
+          </section>
+          <section
+            class="border-border bg-panel min-w-0 overflow-hidden rounded-xl border"
+          >
+            <SectionHeader
+              title={m.display_templates_expression()}
+              icon={Braces}
+              showControlLabels
+            >
+              {#snippet right()}
+                <fieldset
+                  class="flex min-w-max gap-1"
+                  aria-label={m.display_templates_expression()}
+                >
+                  {#each Object.keys(draft?.locales ?? {}) as tag (tag)}
+                    <Button
+                      type="button"
+                      size="sm"
+                      style={locale === tag ? 'soft' : 'ghost'}
+                      onClick={() => (locale = tag)}
+                      text={tag}
+                      attrs={{ 'aria-pressed': locale === tag }}
+                    />
+                  {/each}
+                </fieldset>
+              {/snippet}
+            </SectionHeader>
+            <div class="p-6">
+              <DisplayTemplateEditor
+                value={draft.locales[locale] ?? ''}
+                onChange={source => {
+                  if (draft)
+                    draft = {
+                      ...draft,
+                      locales: { ...draft.locales, [locale]: source },
+                    }
+                  saved = false
+                }}
+                {properties}
+                disabled={busy}
+                {isEditing}
+              />
+            </div>
+          </section>
+        {/if}
+        {#if selected && featureState}
+          <Button
+            text={m.display_templates_apply()}
+            style="outline"
+            disabled={busy || dirty}
+            onClick={applyTemplate}
+          />
+        {/if}
+        {#if saved && !dirty}
+          <p role="status" class="text-sm">{m.display_templates_saved()}</p>
+        {/if}
+        {#if selected && organisationId && !featureId}
+          {#key `${organisationId}:${selected.id}:${selected.version}`}
+            <TemplateConsumers {organisationId} template={selected} />
+          {/key}
+        {/if}
+        {#if organisationId && !featureId && !loading}
+          <OrganisationTemplateDefaults {organisationId} templates={records} />
+        {/if}
+      </div>
+    </div>
+  </FormSurface>
+</Main.Root>

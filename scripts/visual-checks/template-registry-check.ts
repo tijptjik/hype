@@ -33,7 +33,7 @@ for (const [name, engine] of [
           .getByRole('textbox', { name: 'Expression', exact: true })
           .fill('{{ pair(format.name ?? brand.name, branch, " - ") ?? source.name }}')
       }
-      await page.getByRole('button', { name: 'Save version', exact: true }).click()
+      await page.getByRole('button', { name: 'Save', exact: true }).click()
       await page.getByText('Version saved', { exact: true }).waitFor()
       await page.reload()
     }
