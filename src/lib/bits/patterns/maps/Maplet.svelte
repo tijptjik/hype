@@ -409,7 +409,6 @@ $effect(() => {
     editingCandidateIds = ''
     if (sameReview) return
   }
-  if (!review && candidates.some(candidate => candidate.selected)) return
   if (
     review &&
     new Set(candidates.map(candidate => candidate.coordinates.join(','))).size < 2
@@ -441,12 +440,20 @@ $effect(() => {
       duration: animate && !prefersReducedMotion.current ? 350 : 0,
     })
   }
-  fitComparisonBounds(true)
-  const resized = (): void => fitComparisonBounds()
+  // Selection owns the initial preview camera, but never disables fitting after a resize.
+  if (review || !candidates.some(candidate => candidate.selected))
+    fitComparisonBounds(true)
+  let resizeFrame = 0
+  const resized = (): void => {
+    cancelAnimationFrame(resizeFrame)
+    // Fit after resize listeners and frozen-container restoration have finished.
+    resizeFrame = requestAnimationFrame(() => fitComparisonBounds())
+  }
   // Discovery markers must stay in view after the map/results divider changes height.
   target.on('resize', resized)
   return () => {
     target.off('resize', resized)
+    cancelAnimationFrame(resizeFrame)
   }
 })
 
