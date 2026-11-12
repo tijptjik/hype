@@ -33,7 +33,7 @@ afterEach(() => {
 /** Build source evidence and real immutable curation/catalogue tables.
  * @returns Isolated SQLite database and the untouched imported facts.
  */
-function fixture() {
+function fixture(applyHierarchy = true) {
   const f = publicationSqlite({})
   connections.push(f)
   f.sqlite.exec(`CREATE TABLE location(id TEXT PRIMARY KEY,kind TEXT,state TEXT,matchingType TEXT GENERATED ALWAYS AS(kind));
@@ -55,6 +55,8 @@ function fixture() {
       .split('DROP VIEW featureAcceptedNamingLocation;')[0]
       .replace(/^/, 'DROP TRIGGER identity_catalogue_i18n_revision;'),
   )
+  if (applyHierarchy)
+    f.sqlite.exec(readFileSync('migrations/0245_catalogue_group_hierarchy.sql', 'utf8'))
   f.sqlite.exec('CREATE VIEW locationRevisionContent AS SELECT * FROM locationRevision')
   const facts = {
     names: { en: 'AROME Central' },
@@ -262,4 +264,154 @@ it('searches only the selected catalogue revision while retaining old translatio
       )
       .get()?.n,
   ).toBe(0)
+})
+
+it('retains optional nested group membership in history and projects the current foreign key', async () => {
+  const f = fixture()
+  for (const [id, groupId] of [
+    ['root', null],
+    ['middle', 'root'],
+    ['leaf', 'middle'],
+  ] as const) {
+    await saveIdentityCatalogue(f.db, {
+      id,
+      kind: 'group',
+      expectedVersion: 0,
+      content: { ...seedIdentityCatalogue({ en: id }), groupId },
+      actorId: 'editor',
+      guard: sql`1`,
+    })
+  }
+  expect(
+    f.sqlite.prepare("SELECT groupId FROM identityCatalogue WHERE id='leaf'").get(),
+  ).toEqual({ groupId: 'middle' })
+  expect(
+    (await searchIdentityCatalogue(f.db, 'group', '', 'middle')).map(row => row.id),
+  ).toEqual(['root'])
+  expect(await searchIdentityCatalogue(f.db, 'group', 'leaf', 'root')).toEqual([])
+  const saved = await saveIdentityCatalogue(f.db, {
+    id: 'leaf',
+    kind: 'group',
+    expectedVersion: 1,
+    content: { ...seedIdentityCatalogue({ en: 'leaf' }), groupId: null },
+    actorId: 'editor',
+    guard: sql`1`,
+  })
+  expect(saved?.groupId).toBeNull()
+  expect((await readIdentityCatalogue(f.db, 'leaf', 1))?.groupId).toBe('middle')
+  expect(
+    f.sqlite.prepare("SELECT groupId FROM identityCatalogue WHERE id='leaf'").get(),
+  ).toEqual({ groupId: null })
+})
+
+it('rejects self links, missing parents, brand parents and indirect group cycles', async () => {
+  const f = fixture()
+  for (const [id, kind, groupId] of [
+    ['root', 'group', null],
+    ['child', 'group', 'root'],
+    ['brand', 'brand', null],
+  ] as const) {
+    await saveIdentityCatalogue(f.db, {
+      id,
+      kind,
+      expectedVersion: 0,
+      content: { ...seedIdentityCatalogue({ en: id }), groupId },
+      actorId: 'editor',
+      guard: sql`1`,
+    })
+  }
+  for (const [groupId, error] of [
+    ['root', 'CATALOGUE_GROUP_CYCLE'],
+    ['child', 'CATALOGUE_GROUP_CYCLE'],
+    ['missing', 'CATALOGUE_GROUP_REQUIRED'],
+    ['brand', 'CATALOGUE_GROUP_REQUIRED'],
+  ]) {
+    await expect(
+      saveIdentityCatalogue(f.db, {
+        id: 'root',
+        kind: 'group',
+        expectedVersion: 1,
+        content: { ...seedIdentityCatalogue({ en: 'root' }), groupId },
+        actorId: 'editor',
+        guard: sql`1`,
+      }),
+    ).rejects.toThrow(error)
+  }
+  expect((await readIdentityCatalogue(f.db, 'root'))?.version).toBe(1)
+  // Database checks also protect writes that bypass the service or race its preflight read.
+  expect(() =>
+    f.sqlite.exec("UPDATE identityCatalogue SET groupId='child' WHERE id='root'"),
+  ).toThrow('CATALOGUE_GROUP_CYCLE')
+  expect(() =>
+    f.sqlite.exec("UPDATE identityCatalogue SET groupId='brand' WHERE id='root'"),
+  ).toThrow('CATALOGUE_GROUP_REQUIRED')
+  expect(() =>
+    f.sqlite.exec(
+      "INSERT INTO identityCatalogue(id,kind,version,groupId) VALUES('self','group',1,'self')",
+    ),
+  ).toThrow('CATALOGUE_GROUP_CYCLE')
+  expect(
+    f.sqlite.prepare("SELECT groupId FROM identityCatalogue WHERE id='root'").get(),
+  ).toEqual({ groupId: null })
+})
+
+it('creates an optional parent inline atomically and rejects stale group edits', async () => {
+  const f = fixture()
+  const input = {
+    id: 'child',
+    kind: 'group' as const,
+    expectedVersion: 0,
+    content: { ...seedIdentityCatalogue({ en: 'Child' }), groupId: 'parent' },
+    newGroup: { id: 'parent', i18n: seedIdentityCatalogue({ en: 'Parent' }).i18n },
+    actorId: 'editor',
+    guard: sql`1`,
+  }
+  expect((await saveIdentityCatalogue(f.db, input))?.groupId).toBe('parent')
+  expect(
+    f.sqlite.prepare("SELECT groupId FROM identityCatalogue WHERE id='child'").get(),
+  ).toEqual({ groupId: 'parent' })
+  expect(
+    await saveIdentityCatalogue(f.db, {
+      ...input,
+      content: { ...input.content, groupId: 'unused' },
+      newGroup: { ...input.newGroup, id: 'unused' },
+    }),
+  ).toBeNull()
+  expect(await readIdentityCatalogue(f.db, 'unused')).toBeNull()
+})
+
+it('backfills existing memberships without rewriting revisions', () => {
+  const f = fixture(false)
+  f.sqlite.exec(
+    `INSERT INTO identityCatalogue(id,kind,version) VALUES('parent','group',1),('legacy','brand',1)`,
+  )
+  const insert = f.sqlite.prepare(
+    "INSERT INTO identityCatalogueRevisionContent(catalogueId,version,content,actorId,createdAt) VALUES(?,1,?,'editor','now')",
+  )
+  insert.run('parent', JSON.stringify(seedIdentityCatalogue({ en: 'Parent' })))
+  insert.run(
+    'legacy',
+    JSON.stringify({ ...seedIdentityCatalogue({ en: 'Legacy' }), groupId: 'parent' }),
+  )
+  const before = f.sqlite
+    .prepare('SELECT * FROM identityCatalogueRevision ORDER BY catalogueId')
+    .all()
+  f.sqlite.exec(readFileSync('migrations/0245_catalogue_group_hierarchy.sql', 'utf8'))
+  expect(
+    f.sqlite.prepare("SELECT groupId FROM identityCatalogue WHERE id='legacy'").get(),
+  ).toEqual({ groupId: 'parent' })
+  expect(
+    f.sqlite
+      .prepare('SELECT * FROM identityCatalogueRevision ORDER BY catalogueId')
+      .all(),
+  ).toEqual(before)
+  expect(f.sqlite.prepare('PRAGMA foreign_key_list(identityCatalogue)').all()).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        table: 'identityCatalogue',
+        from: 'groupId',
+        to: 'id',
+      }),
+    ]),
+  )
 })

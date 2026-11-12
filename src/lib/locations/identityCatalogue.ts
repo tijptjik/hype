@@ -5,6 +5,8 @@ import { canonicalContentTag } from '#lib/i18n/contentRecords.js'
 import { seedCurationNames } from './curationIdentity'
 
 export const IdentityCatalogueContentSchema = z.strictObject({
+  // Optional containing group for both brands and groups; revisions retain membership history.
+  groupId: z.string().min(1).max(200).nullable().optional(),
   i18n: z
     .record(
       z.string().min(2).max(32),

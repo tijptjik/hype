@@ -1,6 +1,7 @@
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 import {
+  type AnySQLiteColumn,
   foreignKey,
   index,
   integer,
@@ -12,11 +13,17 @@ import {
 import type { IdentityCatalogueContent } from '#lib/locations/identityCatalogue.js'
 
 /** Shared corporate groups and storefront brand families; never Location source facts. */
-export const identityCatalogue = sqliteTable('identityCatalogue', {
-  id: text('id').primaryKey(),
-  kind: text('kind', { enum: ['brand', 'group'] }).notNull(),
-  version: integer('version').notNull(),
-})
+export const identityCatalogue = sqliteTable(
+  'identityCatalogue',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind', { enum: ['brand', 'group'] }).notNull(),
+    version: integer('version').notNull(),
+    // Current membership mirrors the head revision; groups may themselves belong to a group.
+    groupId: text('groupId').references((): AnySQLiteColumn => identityCatalogue.id),
+  },
+  table => [index('identity_catalogue_group').on(table.groupId)],
+)
 /** Immutable localized catalogue evidence retained by community curation references. */
 export const identityCatalogueRevisionStorage = sqliteTable(
   'identityCatalogueRevision',

@@ -35,10 +35,19 @@ async function authorize(
  * @param input Kind and typed text. @returns At most fifty localized records.
  */
 export const findIdentityCatalogue = guardedQuery(
-  z.strictObject({ kind: z.enum(['brand', 'group']), search: z.string().max(200) }),
+  z.strictObject({
+    kind: z.enum(['brand', 'group']),
+    search: z.string().max(200),
+    excludeDescendantsOf: z.string().min(1).max(200).optional(),
+  }),
   async (input, ctx) => {
     if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
-    return searchIdentityCatalogue(ctx.db, input.kind, input.search)
+    return searchIdentityCatalogue(
+      ctx.db,
+      input.kind,
+      input.search,
+      input.excludeDescendantsOf,
+    )
   },
 )
 /** Read a current catalogue identity for its localized details page.
@@ -63,6 +72,12 @@ export const publishIdentityCatalogue = guardedCommand(
     kind: z.enum(['brand', 'group']),
     expectedVersion: z.number().int().nonnegative(),
     content: IdentityCatalogueContentSchema,
+    newGroup: z
+      .strictObject({
+        id: z.string().uuid(),
+        i18n: IdentityCatalogueContentSchema.shape.i18n,
+      })
+      .optional(),
     organisationId: z.string().optional(),
   }),
   async (input, ctx) => {

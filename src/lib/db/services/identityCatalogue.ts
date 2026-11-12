@@ -51,12 +51,14 @@ export async function readIdentityCatalogue(
 
 /** Search names in every locale without expanding an unbounded identifier list.
  * @param db Database. @param kind Brand or corporate group. @param search Typed substring.
+ * @param excludeDescendantsOf Optional group whose subtree cannot be selected as its parent.
  * @returns At most fifty current records for autocomplete.
  */
 export async function searchIdentityCatalogue(
   db: Database,
   kind: 'brand' | 'group',
   search: string,
+  excludeDescendantsOf?: string,
 ): Promise<IdentityCatalogueRecord[]> {
   const rows = await db.all<{
     id: string
@@ -64,7 +66,7 @@ export async function searchIdentityCatalogue(
     version: number
     content: string
   }>(
-    sql`SELECT c.id,c.kind,c.version,r.content FROM identityCatalogue c JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version WHERE c.kind=${kind} AND (${search}='' OR EXISTS(SELECT 1 FROM identityCatalogueI18n names WHERE names.catalogueId=c.id AND names.version=c.version AND instr(lower(names.name),lower(${search}))>0)) ORDER BY json_extract(r.content,'$.i18n.en.name'),c.id LIMIT 50`,
+    sql`SELECT c.id,c.kind,c.version,r.content FROM identityCatalogue c JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version WHERE c.kind=${kind} AND c.id NOT IN (WITH RECURSIVE descendants(id) AS (SELECT id FROM identityCatalogue WHERE id=${excludeDescendantsOf ?? null} UNION SELECT child.id FROM identityCatalogue child JOIN descendants parent ON child.groupId=parent.id) SELECT id FROM descendants) AND (${search}='' OR EXISTS(SELECT 1 FROM identityCatalogueI18n names WHERE names.catalogueId=c.id AND names.version=c.version AND instr(lower(names.name),lower(${search}))>0)) ORDER BY json_extract(r.content,'$.i18n.en.name'),c.id LIMIT 50`,
   )
   return rows.map(row => ({
     id: row.id,
@@ -77,6 +79,7 @@ export async function searchIdentityCatalogue(
 /** Publish a version under an authorized guard; accepted Location references remain pinned.
  * @param db Database. @param input Identity, inspected version, localized values and actor.
  * @returns Saved version, or null for a concurrent edit.
+ * @remarks An optional inline parent and its membership link are committed atomically.
  */
 export async function saveIdentityCatalogue(
   db: Database,
@@ -87,15 +90,57 @@ export async function saveIdentityCatalogue(
     content: IdentityCatalogueContent
     actorId: string
     guard: SQL
+    newGroup?: { id: string; i18n: IdentityCatalogueContent['i18n'] }
   },
 ): Promise<IdentityCatalogueRecord | null> {
   const content = IdentityCatalogueContentSchema.parse(input.content)
+  const newGroup = input.newGroup
+    ? IdentityCatalogueContentSchema.parse({ i18n: input.newGroup.i18n, logo: null })
+    : null
+  if (
+    input.newGroup &&
+    (content.groupId !== input.newGroup.id || input.id === input.newGroup.id)
+  )
+    throw new Error('CATALOGUE_GROUP_REQUIRED')
+  if (content.groupId && !newGroup) {
+    const group = await readIdentityCatalogue(db, content.groupId)
+    if (group?.kind !== 'group') throw new Error('CATALOGUE_GROUP_REQUIRED')
+  }
+  // Reject cycles before writing; database triggers repeat this check atomically at publication.
+  if (content.groupId) {
+    const cycle = await db.get<{ id: string }>(sql`
+      WITH RECURSIVE ancestors(id) AS (
+        SELECT ${content.groupId}
+        UNION
+        SELECT c.groupId FROM identityCatalogue c JOIN ancestors a ON c.id=a.id
+        WHERE c.groupId IS NOT NULL
+      ) SELECT id FROM ancestors WHERE id=${input.id}`)
+    if (cycle) throw new Error('CATALOGUE_GROUP_CYCLE')
+  }
   const version = input.expectedVersion + 1
   const guard =
     input.expectedVersion === 0
       ? sql`(${input.guard}) AND NOT EXISTS(SELECT 1 FROM identityCatalogue WHERE id=${input.id})`
       : sql`(${input.guard}) AND EXISTS(SELECT 1 FROM identityCatalogue WHERE id=${input.id} AND kind=${input.kind} AND version=${input.expectedVersion})`
-  const result = await executeRevisionBatch(db, guard, [
+  // Creating an inline group and linking its member is one guarded commit; failed saves leave no orphan.
+  const groupGuard = input.newGroup
+    ? sql`(${guard}) AND NOT EXISTS(SELECT 1 FROM identityCatalogue WHERE id=${input.newGroup.id})`
+    : guard
+  const result = await executeRevisionBatch(db, groupGuard, [
+    ...(input.newGroup && newGroup
+      ? [
+          db
+            .insert(identityCatalogue)
+            .values({ id: input.newGroup.id, kind: 'group', version: 1 }),
+          db.insert(identityCatalogueRevision).values({
+            catalogueId: input.newGroup.id,
+            version: 1,
+            content: newGroup,
+            actorId: input.actorId,
+            createdAt: new Date().toISOString(),
+          }),
+        ]
+      : []),
     ...(input.expectedVersion === 0
       ? [
           db

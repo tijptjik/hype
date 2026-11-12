@@ -3817,3 +3817,18 @@ The reproducible local rebuild and approved media recovery workflow is documente
 [Local database rebuild](../../../docs/refactor-guides/Local-Database-Rebuild.md). It
 retains export hashes and stage receipts, verifies exact recovery evidence, and backs up
 the previous local database before installation. Production remains read-only.
+
+### Optional corporate group hierarchy (Refs #178)
+
+A brand or group's optional `groupId` references a group catalogue record. Groups can
+have one parent group, or none. Migration `0245_catalogue_group_hierarchy.sql` adds the
+indexed self-referencing foreign key to `identityCatalogue`, backfills existing
+memberships, and projects each published revision's link into that column. Immutable
+revisions retain historical membership. Database triggers reject missing or wrong-kind
+parents, self-links and indirect cycles within the publication transaction. Search can
+exclude a group's subtree before limiting results. An optional inline parent and its
+member are published atomically; failed or stale saves leave no orphan group. Ancestor
+membership does not automatically propagate to Location curation.
+
+`src/tests/identity-catalogue.test.ts` covers nested saves, clearing, retained history,
+migration backfill, invalid parents, cycle rejection and stale-save rollback.
