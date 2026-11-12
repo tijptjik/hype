@@ -1,0 +1,49 @@
+[
+  {
+    "code": "maxims-group",
+    "id": "bl-group-maxims-group",
+    "logo": "/api/identity-catalogue/logos/bc1a9125-baf5-4c5b-ace4-7fc183eb2741",
+    "uploaded": true,
+    "previousLogo": "/api/identity-catalogue/logos/9c6cb793-b460-46a3-8f6b-cd89ae0b72c0"
+  },
+  {
+    "code": "dfi",
+    "id": "bl-group-dfi",
+    "logo": "/api/identity-catalogue/logos/a98f8f93-a4af-4206-b9da-a9efebd9d7ec",
+    "uploaded": false
+  },
+  {
+    "code": "cra",
+    "id": "bl-group-cra",
+    "logo": "/api/identity-catalogue/logos/b1f47090-50ca-49f6-9a8c-d579d41e5ba9",
+    "uploaded": true,
+    "previousLogo": "/api/identity-catalogue/logos/07959ec3-7fec-4923-b16f-67c0bfbf4864"
+  },
+  {
+    "code": "yamazaki-group",
+    "id": "bl-group-yamazaki-group",
+    "logo": "/api/identity-catalogue/logos/81c3c744-191d-4d71-8d7e-46fc82322fda",
+    "uploaded": true,
+    "previousLogo": "/api/identity-catalogue/logos/18a64d60-1c61-4de6-9055-7d96fcb048fe"
+  },
+  {
+    "code": "hsh",
+    "id": "bl-group-hsh",
+    "logo": "/api/identity-catalogue/logos/568adc55-f789-480f-bf16-d962fa232ab3",
+    "uploaded": true,
+    "previousLogo": "/api/identity-catalogue/logos/a014c4ff-1052-45e5-8e9b-6f56f9f942e3"
+  },
+  {
+    "code": "wooloomooloo-group",
+    "id": "bl-group-wooloomooloo-group",
+    "logo": "/api/identity-catalogue/logos/ad3ea424-f575-48ca-be5b-27e7a0547387",
+    "uploaded": false
+  },
+  {
+    "code": "jc",
+    "id": "bl-group-jc",
+    "logo": "/api/identity-catalogue/logos/266e71cb-96a0-45b7-9479-c3640b72906e",
+    "uploaded": true,
+    "previousLogo": "/api/identity-catalogue/logos/ddffd50c-ffcb-40c9-9666-e8d88c76c943"
+  }
+]

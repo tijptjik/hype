@@ -1,0 +1,58 @@
+[
+  {
+    "code": "maxims-group",
+    "name": "Maxim's Group",
+    "src": "/api/identity-catalogue/logos/9c6cb793-b460-46a3-8f6b-cd89ae0b72c0",
+    "changedChannels": 0,
+    "maxChannelDelta": 0,
+    "visiblePixels": 193952
+  },
+  {
+    "code": "dfi",
+    "name": "DFI Retail Group",
+    "src": "/api/identity-catalogue/logos/a98f8f93-a4af-4206-b9da-a9efebd9d7ec",
+    "changedChannels": 0,
+    "maxChannelDelta": 0,
+    "visiblePixels": 193952
+  },
+  {
+    "code": "cra",
+    "name": "Convenience Retail Asia",
+    "src": "/api/identity-catalogue/logos/07959ec3-7fec-4923-b16f-67c0bfbf4864",
+    "changedChannels": 0,
+    "maxChannelDelta": 0,
+    "visiblePixels": 193952
+  },
+  {
+    "code": "yamazaki-group",
+    "name": "Yamazaki Baking Co., Ltd.",
+    "src": "/api/identity-catalogue/logos/18a64d60-1c61-4de6-9055-7d96fcb048fe",
+    "changedChannels": 2,
+    "maxChannelDelta": 1,
+    "visiblePixels": 193952
+  },
+  {
+    "code": "hsh",
+    "name": "The Hongkong and Shanghai Hotels, Limited",
+    "src": "/api/identity-catalogue/logos/a014c4ff-1052-45e5-8e9b-6f56f9f942e3",
+    "changedChannels": 7,
+    "maxChannelDelta": 1,
+    "visiblePixels": 193952
+  },
+  {
+    "code": "wooloomooloo-group",
+    "name": "Wooloomooloo Group",
+    "src": "/api/identity-catalogue/logos/ad3ea424-f575-48ca-be5b-27e7a0547387",
+    "changedChannels": 0,
+    "maxChannelDelta": 0,
+    "visiblePixels": 193952
+  },
+  {
+    "code": "jc",
+    "name": "JC Group",
+    "src": "/api/identity-catalogue/logos/ddffd50c-ffcb-40c9-9666-e8d88c76c943",
+    "changedChannels": 0,
+    "maxChannelDelta": 0,
+    "visiblePixels": 193952
+  }
+]
