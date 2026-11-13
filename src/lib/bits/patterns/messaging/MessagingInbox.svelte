@@ -242,6 +242,7 @@ import MessagingInboxSkeleton from '#lib/bits/patterns/messaging/MessagingInboxS
                   >
                     <Avatar
                       name={conversation.recipient.name}
+                      fallbackSeed={conversation.chatId}
                       src={conversation.recipient.image ||
                         model.runtimes[conversation.accountId]?.profiles[
                           model.runtimes[conversation.accountId]?.canonicalChat(

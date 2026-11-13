@@ -1,3 +1,5 @@
+// SHARED FALLBACK ARTWORK
+import { getFeatureIdenticonUrl } from '#lib/utils/identicon.js'
 // I18N
 import { resolveContentField } from '#lib/i18n/automatic.js'
 // TYPES
@@ -14,11 +16,14 @@ const groupArtwork: Readonly<Record<string, string>> = {
 }
 
 /** Supply approved artwork when an environment lacks an uploaded group image.
- * @param record Catalogue identity. @returns Bundled fallback URLs for known groups.
+ * @param record Catalogue identity. @returns Artwork followed by a stable identicon.
  */
 export function catalogueLogoFallbacks(record: IdentityCatalogueRecord): string[] {
   const code = record.kind === 'group' ? groupArtwork[record.id] : undefined
-  return code ? [`/groups/breadline/${code}.svg`] : []
+  return [
+    ...(code ? [`/groups/breadline/${code}.svg`] : []),
+    getFeatureIdenticonUrl(record.id),
+  ]
 }
 
 /** Keep legal suffixes out of English group labels without altering source names.

@@ -394,7 +394,7 @@ function reactions(target: WhatsAppMessage): { emoji: string; count: number }[] 
       <header
         class="border-border bg-panel flex shrink-0 flex-wrap items-center gap-3 border-b px-4 py-3"
       >
-        <Avatar name={chatName} src={chatPhoto} />
+        <Avatar name={chatName} src={chatPhoto} fallbackSeed={model.selectedChat} />
         <div class="min-w-0 flex-1 basis-24">
           <h3 class="font-semibold [overflow-wrap:anywhere] break-words">{chatName}</h3>
           <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">

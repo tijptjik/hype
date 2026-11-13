@@ -1,5 +1,6 @@
 <script lang="ts">
 import { Avatar } from 'bits-ui'
+import { getFeatureIdenticonUrl } from '#lib/utils/identicon.js'
 import { resolveAvatarImageSrc } from '#lib/utils/avatar.js'
 // TYPES
 import type { AvatarProps } from './avatar.types'
@@ -9,6 +10,7 @@ let {
   src = null,
   alt = '',
   fallback = '',
+  fallbackSeed,
   shape = 'circle',
   fitHeight = false,
   class: className = '',
@@ -53,6 +55,14 @@ const rootClass = $derived(
   <Avatar.Fallback
     class="bg-base-200 text-base-content flex h-full w-full items-center justify-center text-sm font-semibold uppercase"
   >
-    {resolvedFallback}
+    {#if fallbackSeed}
+      <img
+        src={getFeatureIdenticonUrl(fallbackSeed)}
+        alt=""
+        class="size-full object-cover"
+      >
+    {:else}
+      {resolvedFallback}
+    {/if}
   </Avatar.Fallback>
 </Avatar.Root>
