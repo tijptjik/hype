@@ -8,6 +8,8 @@ import { sql } from 'drizzle-orm'
 // SERVICES
 import {
   ensureImportedBrand,
+  listGroupBrands,
+  listSubgroups,
   readIdentityCatalogue,
   readIdentityCatalogueByCode,
   saveIdentityCatalogue,
@@ -619,4 +621,118 @@ it('accepts blank lines while editing discovery terms and normalizes them on sav
     discovery: { terms: [' AROME Bakery ', '', '東海堂', '  '] },
   })
   expect(record.discovery?.terms).toEqual(['AROME Bakery', '東海堂'])
+})
+
+it('saves a reviewed Wikidata mapping atomically and reuses it for upstream imports', async () => {
+  const f = fixture()
+  const content = seedIdentityCatalogue({ en: 'Reviewed Bakery' })
+  const saved = await saveIdentityCatalogue(f.db, {
+    id: 'reviewed',
+    kind: 'brand',
+    expectedVersion: 0,
+    content,
+    wikidataId: 'Q12345',
+    actorId: 'editor',
+    guard: sql`1`,
+  })
+  expect(saved?.wikidataId).toBe('Q12345')
+  const imported = await ensureImportedBrand(
+    f.db,
+    {
+      identifiers: { wikidata: 'Q12345' },
+      names: { en: 'Upstream Bakery' },
+    },
+    'import',
+  )
+  expect(imported.id).toBe('reviewed')
+  expect(imported.i18n.en.name).toBe('Reviewed Bakery')
+  await expect(
+    saveIdentityCatalogue(f.db, {
+      id: 'duplicate',
+      kind: 'brand',
+      expectedVersion: 0,
+      content,
+      wikidataId: 'Q12345',
+      actorId: 'editor',
+      guard: sql`1`,
+    }),
+  ).rejects.toThrow('WIKIDATA_BRAND_ALREADY_LINKED')
+  expect(await readIdentityCatalogue(f.db, 'duplicate')).toBeNull()
+})
+
+it('does not persist a source mapping when the catalogue revision is stale', async () => {
+  const f = fixture()
+  const content = seedIdentityCatalogue({ en: 'Reviewed Bakery' })
+  expect(
+    await saveIdentityCatalogue(f.db, {
+      id: 'missing',
+      kind: 'brand',
+      expectedVersion: 5,
+      content,
+      wikidataId: 'Q12345',
+      actorId: 'editor',
+      guard: sql`1`,
+    }),
+  ).toBeNull()
+  expect(f.sqlite.prepare('SELECT * FROM identityCatalogueSource').all()).toEqual([])
+})
+
+it('finds sibling brands across intermediate groups while group pages stay within their subtree', async () => {
+  const f = fixture()
+  const entries = [
+    ['root', 'group', null],
+    ['middle', 'group', 'root'],
+    ['nested', 'group', 'middle'],
+    ['other', 'group', 'root'],
+    ['unrelated', 'group', null],
+    ['direct', 'brand', 'root'],
+    ['cakes', 'brand', 'middle'],
+    ['arome', 'brand', 'middle'],
+    ['deep', 'brand', 'nested'],
+    ['cousin', 'brand', 'other'],
+    ['outside', 'brand', 'unrelated'],
+    ['ungrouped', 'brand', null],
+  ] as const
+  for (const [id, kind, groupId] of entries) {
+    await saveIdentityCatalogue(f.db, {
+      id,
+      kind,
+      expectedVersion: 0,
+      actorId: 'admin',
+      guard: sql`1`,
+      content: { ...seedIdentityCatalogue({ en: id }), groupId },
+    })
+  }
+  const ids = async (id: string, ancestors = false) =>
+    (await listGroupBrands(f.db, id, ancestors)).map(row => row.id)
+  expect((await listSubgroups(f.db, 'root')).map(row => row.id)).toEqual([
+    'middle',
+    'other',
+  ])
+  expect((await listSubgroups(f.db, 'middle')).map(row => row.id)).toEqual(['nested'])
+  expect(await listSubgroups(f.db, 'cakes')).toEqual([])
+  expect(await listSubgroups(f.db, 'missing')).toEqual([])
+  expect(await ids('middle')).toEqual(['arome', 'cakes', 'deep'])
+  expect(await ids('middle', true)).toEqual([
+    'arome',
+    'cakes',
+    'cousin',
+    'deep',
+    'direct',
+  ])
+  expect(await ids('other', true)).toEqual(await ids('middle', true))
+  expect(await ids('root')).toEqual(await ids('middle', true))
+  expect(await ids('missing', true)).toEqual([])
+  expect(await ids('cakes', true)).toEqual([])
+  const cakes = await readIdentityCatalogue(f.db, 'cakes')
+  if (!cakes) throw new Error('Missing cakes fixture')
+  await saveIdentityCatalogue(f.db, {
+    id: 'cakes',
+    kind: 'brand',
+    expectedVersion: cakes.version,
+    actorId: 'admin',
+    guard: sql`1`,
+    content: { ...seedIdentityCatalogue({ en: 'cakes' }), groupId: 'unrelated' },
+  })
+  expect(await ids('middle', true)).toEqual(['arome', 'cousin', 'deep', 'direct'])
 })

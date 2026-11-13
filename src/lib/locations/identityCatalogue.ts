@@ -62,6 +62,20 @@ export const IdentityCatalogueContentSchema = z.strictObject({
         Object.keys(value).every(locale => canonicalContentTag(locale) === locale),
       'Use canonical locale tags',
     ),
+  logoAttribution: z
+    .object({
+      sourceUrl: z
+        .string()
+        .url()
+        .refine(
+          value =>
+            new URL(value).protocol === 'https:' &&
+            new URL(value).hostname === 'commons.wikimedia.org',
+        ),
+      attribution: z.string().max(2000),
+      license: z.string().max(200),
+    })
+    .optional(),
   logo: z
     .string()
     .regex(/^\/api\/identity-catalogue\/logos\/[a-f0-9-]+$/)
@@ -73,6 +87,7 @@ export type IdentityCatalogueRecord = IdentityCatalogueContent & {
   id: string
   kind: 'brand' | 'group'
   version: number
+  wikidataId?: string
 }
 
 /** Seed canonical, locale-first names while preserving upstream evidence outside the catalogue.

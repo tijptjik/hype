@@ -36,14 +36,16 @@ export async function readIdentityCatalogue(
     kind: 'brand' | 'group'
     version: number
     content: string
+    wikidataId: string | null
   }>(
-    sql`SELECT c.id,c.kind,r.version,r.content FROM identityCatalogue c JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=coalesce(${version ?? null},c.version) WHERE c.id=${id}`,
+    sql`SELECT c.id,c.kind,r.version,r.content,(SELECT sourceId FROM identityCatalogueSource WHERE catalogueId=c.id AND source='brand:wikidata' LIMIT 1) wikidataId FROM identityCatalogue c JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=coalesce(${version ?? null},c.version) WHERE c.id=${id}`,
   )
   return row
     ? {
         id: row.id,
         kind: row.kind,
         version: row.version,
+        ...(row.wikidataId ? { wikidataId: row.wikidataId } : {}),
         ...IdentityCatalogueContentSchema.parse(JSON.parse(row.content)),
       }
     : null
@@ -91,20 +93,64 @@ export async function searchIdentityCatalogue(
   }))
 }
 
-/** List current brands directly assigned to a corporate group.
+/** List current brands throughout a corporate group hierarchy.
  * @param db Database. @param groupId Persisted group identity.
- * @returns All linked brands ordered by their English fallback name.
+ * @param includeAncestors Include the wider family sharing an ancestor, for sibling discovery.
+ * @returns Unique linked brands ordered by their English fallback name.
+ * @remarks Group profiles remain scoped to their subtree; sibling discovery spans the family.
  */
 export async function listGroupBrands(
   db: Database,
   groupId: string,
+  includeAncestors = false,
 ): Promise<IdentityCatalogueRecord[]> {
+  // Traverse groups only; UNION deduplicates paths and terminates even on legacy cycles.
   const rows = await db.all<{ id: string; version: number; content: string }>(
-    sql`SELECT c.id,c.version,r.content FROM identityCatalogue c JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version WHERE c.kind='brand' AND c.groupId=${groupId} ORDER BY json_extract(r.content,'$.i18n.en.name'),c.id`,
+    sql`WITH RECURSIVE activeGroups AS (
+      SELECT c.id,c.groupId FROM identityCatalogue c
+      JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version
+      WHERE c.kind='group'
+    ), ancestors(id) AS (
+      SELECT id FROM activeGroups WHERE id=${groupId}
+      UNION
+      SELECT parent.id FROM activeGroups child JOIN ancestors a ON child.id=a.id
+      JOIN activeGroups parent ON parent.id=child.groupId
+      WHERE ${includeAncestors ? 1 : 0}=1
+    ), family(id) AS (
+      SELECT id FROM ancestors
+      UNION
+      SELECT child.id FROM activeGroups child JOIN family parent ON child.groupId=parent.id
+    )
+    SELECT c.id,c.version,r.content FROM identityCatalogue c
+    JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version
+    WHERE c.kind='brand' AND c.groupId IN (SELECT id FROM family)
+    ORDER BY json_extract(r.content,'$.i18n.en.name'),c.id`,
   )
   return rows.map(row => ({
     id: row.id,
     kind: 'brand',
+    version: row.version,
+    ...IdentityCatalogueContentSchema.parse(JSON.parse(row.content)),
+  }))
+}
+
+/** List direct child groups without conflating them with descendant brands.
+ * @param db Database. @param groupId Parent group identity.
+ * @returns Current child groups ordered by English fallback name.
+ */
+export async function listSubgroups(
+  db: Database,
+  groupId: string,
+): Promise<IdentityCatalogueRecord[]> {
+  const rows = await db.all<{ id: string; version: number; content: string }>(
+    sql`SELECT c.id,c.version,r.content FROM identityCatalogue c
+    JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version
+    WHERE c.kind='group' AND c.groupId=${groupId}
+    ORDER BY json_extract(r.content,'$.i18n.en.name'),c.id`,
+  )
+  return rows.map(row => ({
+    id: row.id,
+    kind: 'group',
     version: row.version,
     ...IdentityCatalogueContentSchema.parse(JSON.parse(row.content)),
   }))
@@ -125,9 +171,21 @@ export async function saveIdentityCatalogue(
     actorId: string
     guard: SQL
     newGroup?: { id: string; i18n: IdentityCatalogueContent['i18n'] }
+    wikidataId?: string
   },
 ): Promise<IdentityCatalogueRecord | null> {
   const content = IdentityCatalogueContentSchema.parse(input.content)
+  if (
+    input.wikidataId &&
+    (input.kind !== 'brand' || !/^Q[1-9]\d{0,15}$/.test(input.wikidataId))
+  )
+    throw new Error('INVALID_WIKIDATA_BRAND')
+  if (input.wikidataId) {
+    const conflict = await db.get<{ id: string }>(
+      sql`SELECT catalogueId id FROM identityCatalogueSource WHERE source='brand:wikidata' AND ((sourceId=${input.wikidataId} AND catalogueId<>${input.id}) OR (catalogueId=${input.id} AND sourceId<>${input.wikidataId})) LIMIT 1`,
+    )
+    if (conflict) throw new Error('WIKIDATA_BRAND_ALREADY_LINKED')
+  }
   const newGroup = input.newGroup
     ? IdentityCatalogueContentSchema.parse({ i18n: input.newGroup.i18n, logo: null })
     : null
@@ -164,7 +222,11 @@ export async function saveIdentityCatalogue(
   const groupGuard = input.newGroup
     ? sql`(${codeGuard}) AND NOT EXISTS(SELECT 1 FROM identityCatalogue WHERE id=${input.newGroup.id})`
     : codeGuard
-  const result = await executeRevisionBatch(db, groupGuard, [
+  // Reserve the reviewed upstream identity in the same batch as the catalogue revision.
+  const sourceGuard = input.wikidataId
+    ? sql`(${groupGuard}) AND NOT EXISTS(SELECT 1 FROM identityCatalogueSource WHERE source='brand:wikidata' AND ((sourceId=${input.wikidataId} AND catalogueId<>${input.id}) OR (catalogueId=${input.id} AND sourceId<>${input.wikidataId})))`
+    : groupGuard
+  const result = await executeRevisionBatch(db, sourceGuard, [
     ...(input.newGroup && newGroup
       ? [
           db
@@ -193,6 +255,18 @@ export async function saveIdentityCatalogue(
       actorId: input.actorId,
       createdAt: new Date().toISOString(),
     }),
+    ...(input.wikidataId
+      ? [
+          db
+            .insert(identityCatalogueSource)
+            .values({
+              source: 'brand:wikidata',
+              sourceId: input.wikidataId,
+              catalogueId: input.id,
+            })
+            .onConflictDoNothing(),
+        ]
+      : []),
     ...(input.expectedVersion
       ? [
           db
@@ -202,7 +276,7 @@ export async function saveIdentityCatalogue(
         ]
       : []),
   ])
-  return result ? { id: input.id, kind: input.kind, version, ...content } : null
+  return result ? readIdentityCatalogue(db, input.id, version) : null
 }
 
 /** Register an imported brand once; later imports never overwrite curated translations.

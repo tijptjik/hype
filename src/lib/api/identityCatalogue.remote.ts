@@ -12,11 +12,17 @@ import { IdentityCatalogueContentSchema } from '#lib/locations/identityCatalogue
 // SERVICES
 import {
   listGroupBrands,
+  listSubgroups,
   readIdentityCatalogue,
   readIdentityCatalogueByCode,
   searchIdentityCatalogue,
   saveIdentityCatalogue,
 } from '#lib/db/services/identityCatalogue.js'
+import {
+  WikidataIdSchema,
+  searchWikidataBrands,
+  readWikidataBrand,
+} from './services/wikidataBrands'
 // TYPES
 import type { GuardedBaseContext } from './guarded.types'
 
@@ -53,13 +59,27 @@ export const findIdentityCatalogue = guardedQuery(
   },
 )
 /** Read the current brands belonging to a group profile.
- * @param input Persisted group identity. @returns Linked localized brands.
+ * @param input Group identity and optional wider-family sibling discovery.
+ * @returns Linked localized brands, including intermediate groups.
  */
 export const getGroupBrands = guardedQuery(
+  z.strictObject({
+    groupId: z.string().min(1).max(200),
+    includeAncestors: z.boolean().optional(),
+  }),
+  async (input, ctx) => {
+    if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
+    return listGroupBrands(ctx.db, input.groupId, input.includeAncestors)
+  },
+)
+/** Read direct subgroups for a group profile.
+ * @param input Parent group identity. @returns Current localized child groups.
+ */
+export const getSubgroups = guardedQuery(
   z.strictObject({ groupId: z.string().min(1).max(200) }),
   async (input, ctx) => {
     if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
-    return listGroupBrands(ctx.db, input.groupId)
+    return listSubgroups(ctx.db, input.groupId)
   },
 )
 /** Read a current catalogue identity for its localized details page.
@@ -92,6 +112,7 @@ export const publishIdentityCatalogue = guardedCommand(
     id: z.string().min(1),
     kind: z.enum(['brand', 'group']),
     expectedVersion: z.number().int().nonnegative(),
+    wikidataId: WikidataIdSchema.optional(),
     content: IdentityCatalogueContentSchema,
     newGroup: z
       .strictObject({
@@ -103,10 +124,22 @@ export const publishIdentityCatalogue = guardedCommand(
   }),
   async (input, ctx) => {
     await authorize(ctx, input.organisationId)
+    if (input.wikidataId) {
+      if (input.kind !== 'brand')
+        error(400, 'Wikidata linking is available for brands.')
+      await readWikidataBrand(input.wikidataId, fetch, false)
+    }
     const record = await saveIdentityCatalogue(ctx.db, {
       ...input,
       actorId: ctx.user.id,
       guard: sql`1`,
+    }).catch(cause => {
+      if (cause instanceof Error && cause.message === 'WIKIDATA_BRAND_ALREADY_LINKED')
+        error(
+          409,
+          'This Wikidata identity or brand already has a different link. Review the existing catalogue brand.',
+        )
+      throw cause
     })
     if (!record) error(409, 'CATALOGUE_VERSION_CHANGED')
     return record
@@ -190,5 +223,27 @@ export const publishIdentityCatalogueLocations = guardedCommand(
       '#lib/db/services/identityCatalogueImport.js'
     )
     return publishCatalogueLocationPage(ctx.db, input.id, input.after, ctx.user.id)
+  },
+)
+
+/** Search public Wikidata entities for an explicit catalogue identity choice.
+ * @param input Brand search text. @returns Candidate labels and descriptions.
+ */
+export const findWikidataBrands = guardedQuery(
+  z.strictObject({ search: z.string().trim().min(2).max(200) }),
+  async (input, ctx) => {
+    if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
+    return searchWikidataBrands(input.search)
+  },
+)
+
+/** Preview a selected entity and its available Commons logo without saving anything.
+ * @param input Exact Wikidata identifier. @returns Entity and optional logo attribution.
+ */
+export const getWikidataBrand = guardedQuery(
+  z.strictObject({ id: WikidataIdSchema }),
+  async (input, ctx) => {
+    if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
+    return readWikidataBrand(input.id)
   },
 )
