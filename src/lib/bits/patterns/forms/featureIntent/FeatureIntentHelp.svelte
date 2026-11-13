@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 // ICONS
@@ -31,101 +33,101 @@ const sections = $derived(
     kind: [
       {
         icon: BoxIcon,
-        title: 'Object',
-        body: 'An individual item, such as a sign or drinking fountain. It can be located at a larger place.',
+        title: m.feature_model_object(),
+        body: m.feature_model_help_object(),
       },
       {
         icon: StoreIcon,
-        title: 'Place',
-        body: 'A destination, such as a shop or community venue. The feature can represent that location itself.',
+        title: m.feature_model_place(),
+        body: m.feature_model_help_place(),
       },
       {
         icon: MapIcon,
-        title: 'Area · Forthcoming',
+        title: m.feature_model_area_soon(),
         body: 'A wider space. This kind is not available yet.',
       },
       {
         icon: RouteIcon,
-        title: 'Route · Forthcoming',
+        title: m.feature_model_route_soon(),
         body: 'A path to follow. This kind is not available yet.',
       },
     ],
     relation: [
       {
         icon: PinIcon,
-        title: 'Located at',
-        body: 'The feature is distinct from its host. Use this for an object, such as a sign located at a building.',
+        title: m.feature_model_located_at(),
+        body: m.feature_model_help_located(),
       },
       {
         icon: LinkIcon,
-        title: 'Represents',
-        body: 'The feature is the location itself. Use this for a place, such as a bookstore representing that establishment.',
+        title: m.feature_model_represents(),
+        body: m.feature_model_help_represents(),
       },
     ],
     start: [
       {
         icon: SearchIcon,
-        title: 'Find a location',
-        body: 'Start by searching existing places and addresses. Useful when the author knows the place or its address.',
+        title: m.feature_model_find_location(),
+        body: m.feature_model_help_search(),
       },
       {
         icon: PinIcon,
-        title: 'Place on the map',
-        body: 'Start with a precise pin and optionally link a location afterward. Useful for objects or places without an address.',
+        title: m.feature_model_place_on_map(),
+        body: m.feature_model_help_pin(),
       },
     ],
     missing: [
       {
         icon: PlusIcon,
-        title: 'Offer local creation',
-        body: 'Ask the author whether to create a location when none is selected. Use this when missing places should be added.',
+        title: m.feature_model_offer_creation(),
+        body: m.feature_model_help_create(),
       },
       {
         icon: ArrowIcon,
-        title: 'Continue silently',
-        body: 'Proceed without the creation prompt. Use this when a map position is enough.',
+        title: m.feature_model_continue_silently(),
+        body: m.feature_model_help_silent(),
       },
     ],
     naming: [
       {
         icon: TypeIcon,
-        title: 'Choose the inputs',
-        body: 'Use feature name and properties, and linked location name and attributes. Either name can be omitted; a template can use properties alone.',
+        title: m.feature_model_help_inputs_title(),
+        body: m.feature_model_help_inputs(),
       },
       {
         icon: ListIcon,
-        title: 'Reusable templates',
-        body: 'Select an existing template or create one here with the shared template editor. Saved templates can also be edited in Display templates. Existing assignments keep their accepted version.',
+        title: m.feature_model_help_templates_title(),
+        body: m.feature_model_help_templates(),
       },
       {
         icon: ToggleIcon,
-        title: 'True, false and unset',
-        body: 'Choose separate text for each value. Unset means no answer was provided; it is different from false. Empty text adds nothing. Short-text conditions insert the property’s value in that language. Configure fallback text only when it has no value.',
+        title: m.feature_model_help_values_title(),
+        body: m.feature_model_help_values(),
       },
       {
         icon: LanguagesIcon,
-        title: 'Localized titles',
-        body: 'Configure text for each language. A feature-level title override takes precedence for that language.',
+        title: m.feature_model_help_localized_title(),
+        body: m.feature_model_help_localized(),
       },
     ],
     fields: [
       {
         icon: ToggleIcon,
-        title: 'Boolean, toggle and short-text fields',
-        body: 'Boolean fields use true, false or unset. Short-text fields insert their own value. Has no value supplies optional fallback text; blank text counts as no value.',
+        title: m.feature_model_help_fields_title(),
+        body: m.feature_model_help_fields(),
       },
       {
         icon: PlusIcon,
-        title: 'Set up project fields',
+        title: m.feature_model_help_project_fields_title(),
         body:
           scopeType === 'hub'
-            ? 'Conditional fields belong to projects. Define conditions on a project or layer using that project’s saved fields.'
-            : 'Add and save a boolean, toggle or short-text field in the project’s Fields tab, then return here to add a condition.',
+            ? m.feature_model_help_hub_fields()
+            : m.feature_model_help_project_fields(),
       },
       {
         icon: TypeIcon,
-        title: 'Scope follows the properties',
-        body: 'System fields can be used across the organisation. A template using a project-owned property is only available in that project, including its layers.',
+        title: m.feature_model_help_scope_title(),
+        body: m.feature_model_help_scope(),
       },
     ],
   }[topic],

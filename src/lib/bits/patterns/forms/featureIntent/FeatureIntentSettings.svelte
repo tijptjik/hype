@@ -31,7 +31,7 @@ import Plus from 'virtual:icons/proicons/add'
 import Trash from 'virtual:icons/proicons/delete'
 
 // I18N
-import { getLocaleKey } from '#lib/i18n.js'
+import { m, getLocaleKey } from '#lib/i18n.js'
 import { normalizeContentLocales } from '#lib/content-locales/model.js'
 import { contentLocaleOptions } from '../contentLocaleDefaults/contentLocaleOptions.js'
 import { displayedLocales } from '#lib/bits/custom/localeControls/localeControls.js'
@@ -279,6 +279,7 @@ function addType(): void {
     ...catalogue,
     {
       id: `type-${index}`,
+      // Draft content uses the canonical English label; UI language must not change its identity.
       label: 'New feature type',
       kind: 'object',
       targetContexts: ['building_part', 'building', 'premises', 'address'],
@@ -455,23 +456,23 @@ async function finishReview(accept: boolean): Promise<void> {
     use:fitSectionHeader
   >
     <SectionHeader
-      title="Data Model"
+      title={m.feature_model_data_model()}
       icon={DataModelIcon}
       showControlLabels
-      description="Feature types and location rules"
+      description={m.feature_model_model_description()}
     >
       {#snippet left()}
         <div class="flex min-w-0 items-center gap-4">
           <Header
-            text="Data Model"
+            text={m.feature_model_data_model()}
             icon={DataModelIcon}
-            description="Feature types and location rules"
+            description={m.feature_model_model_description()}
             size="sm"
             class="bits-form__section-header-heading w-auto! min-w-0"
           />
           <Button
-            text="New"
-            attrs={{ 'aria-label': 'New' }}
+            text={m.feature_model_new()}
+            attrs={{ 'aria-label': m.feature_model_new() }}
             iconComponent={Plus}
             color="neutral"
             style="ghost"
@@ -502,10 +503,10 @@ async function finishReview(accept: boolean): Promise<void> {
         <div class="border-border ms-3 flex shrink-0 items-center gap-2 border-s ps-4">
           <span class="text-sm font-medium whitespace-nowrap">
             {scopeType === 'layer'
-              ? 'Project Defaults'
+              ? m.feature_model_project_defaults()
               : scopeType === 'project'
-                ? 'Hub Defaults'
-                : 'Application Defaults'}
+                ? m.feature_model_hub_defaults()
+                : m.feature_model_application_defaults()}
           </span>
           <Switch
             id={customSwitchId}
@@ -523,11 +524,11 @@ async function finishReview(accept: boolean): Promise<void> {
             }}
           />
           <label for={customSwitchId} class="text-sm font-medium whitespace-nowrap"
-            >Custom</label
+            >{m.feature_model_custom()}</label
           >
           <button
             type="button"
-            aria-label="Remove Type"
+            aria-label={m.feature_model_remove_type()}
             aria-pressed={removeMode}
             disabled={!editable}
             onclick={() => (removeMode = !removeMode)}
@@ -541,13 +542,13 @@ async function finishReview(accept: boolean): Promise<void> {
   </div>
   {#if loadError}
     <div class="grid gap-3 p-6">
-      <p role="alert">Unable to load feature type settings.</p>
-      <button type="button" onclick={() => (reload += 1)}>Retry</button>
+      <p role="alert">{m.feature_model_load_failed()}</p>
+      <button type="button" onclick={() => (reload += 1)}>{m.retry()}</button>
     </div>
   {:else if !policy}
     <!-- Both resource loading and policy loading reserve the actual initial editor geometry. -->
     <ContentSkeleton
-      label="Loading feature types…"
+      label={m.feature_model_loading()}
       class="[&_label]:text-muted-foreground! [&_label_*]:text-muted-foreground! [&_[data-type-editor]_span]:text-muted-foreground! [&_button]:bg-transparent! [&_input]:placeholder:text-transparent! [&_svg]:bg-transparent! [&_svg_*]:fill-transparent!"
     >
       {#each DEFAULT_FEATURE_TYPES as type, index (type.id)}
@@ -695,10 +696,9 @@ async function finishReview(accept: boolean): Promise<void> {
 {/if}
 <DestructiveDialog bind:open={confirmRemove} onConfirm={removeType}>
   {#snippet title()}
-    Remove type?
+    {m.feature_model_remove_title()}
   {/snippet}
   {#snippet description()}
-    Remove this type from the configuration draft. Existing features keep their accepted
-    type.
+    {m.feature_model_remove_description()}
   {/snippet}
 </DestructiveDialog>

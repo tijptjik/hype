@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { untrack } from 'svelte'
+// I18N
+import { m } from '#lib/i18n.js'
 // API
 import {
   getFeatureNamingTemplates,
@@ -81,12 +83,35 @@ function ruleLabel(value: FeatureNameRule): string {
       item =>
         item.id === value.registry?.id && item.version === value.registry?.version,
     )
-    return `${template?.name ?? 'Assigned template'} · v${value.registry.version}`
+    return `${template?.name ?? m.feature_model_assigned_template()} · v${value.registry.version}`
   }
-  const base = value.base === 'location' ? 'Linked location name' : 'Feature name'
-  return value.conditions.length ? `${base} with naming rules` : base
+  const base =
+    value.base === 'location'
+      ? m.feature_model_linked_name()
+      : m.feature_model_feature_name()
+  return value.conditions.length ? m.feature_model_with_rules({ name: base }) : base
 }
-const properties = $derived([...FEATURE_TEMPLATE_FIELDS, ...fields])
+const properties = $derived([
+  ...FEATURE_TEMPLATE_FIELDS.map(field => ({
+    ...field,
+    label:
+      (
+        {
+          'feature.name': m.feature_model_feature_name(),
+          'location.name': m.feature_model_linked_name(),
+          'brand.name': m.feature_model_field_brand(),
+          'group.name': m.feature_model_field_group(),
+          'format.name': m.feature_model_field_format(),
+          branch: m.feature_model_field_branch(),
+          address: m.feature_model_field_address(),
+          accessHint: m.feature_model_field_access(),
+          phoneNumber: m.feature_model_field_phone(),
+          website: m.feature_model_field_website(),
+        } as Record<string, string>
+      )[field.path] ?? field.label,
+  })),
+  ...fields,
+])
 const valid = $derived(
   DisplayTemplateDefinitionSchema.safeParse({
     name,
@@ -111,11 +136,11 @@ $effect(() => {
       fields = available.map(field => ({
         ...field,
         path: `properties.${field.id}`,
-        label: `Feature property · ${field.label}`,
+        label: m.feature_model_property_label({ name: field.label }),
       }))
     })
     .catch(() => {
-      if (!cancelled) failed = 'Unable to load naming templates and properties.'
+      if (!cancelled) failed = m.feature_model_templates_load_failed()
     })
     .finally(() => {
       if (!cancelled) loading = false
@@ -134,7 +159,7 @@ function create(editExisting = false): void {
   name = editingTemplate
     ? editingTemplate.name
     : selected
-      ? `${selected.name} copy`
+      ? m.feature_model_copy_name({ name: selected.name })
       : ''
   const tags = [
     ...new Set([
@@ -177,8 +202,7 @@ async function save(): Promise<void> {
     await getFeatureNamingTemplates({ type: scopeType, id: scopeId }).refresh()
     reload++
   } catch {
-    failed =
-      'Unable to save this template. Check that every property is available in this scope.'
+    failed = m.feature_model_template_save_failed()
   } finally {
     busy = false
   }
@@ -189,8 +213,8 @@ async function save(): Promise<void> {
   <SelectField
     {...typeSelectAppearance}
     contentClass="z-[1010]!"
-    label="Naming template"
-    triggerAttrs={{ 'aria-label': 'Naming template' }}
+    label={m.feature_model_naming_template()}
+    triggerAttrs={{ 'aria-label': m.feature_model_naming_template() }}
     value={inheriting
       ? 'scope-default'
       : rule.registry
@@ -200,7 +224,7 @@ async function save(): Promise<void> {
     items={[
       {
         value: 'scope-default',
-        label: `${ruleLabel(defaultRule)} · inherited default`,
+        label: m.feature_model_inherited_option({ name: ruleLabel(defaultRule) }),
       },
       ...(!inheriting && !rule.registry
         ? [{ value: 'current-rule', label: ruleLabel(rule) }]
@@ -209,7 +233,7 @@ async function save(): Promise<void> {
         ? [
             {
               value: `${rule.registry.id}:${rule.registry.version}`,
-              label: `Assigned template · v${rule.registry.version}`,
+              label: `${m.feature_model_assigned_template()} · v${rule.registry.version}`,
             },
           ]
         : []),
@@ -236,18 +260,16 @@ async function save(): Promise<void> {
     }}
   />
   <details class="text-muted-foreground text-xs">
-    <summary class="cursor-pointer">Template scope and naming inputs</summary>
+    <summary class="cursor-pointer">{m.feature_model_template_scope()}</summary>
     <p class="mt-2">
-      Names are optional. Templates using project properties are only available in that
-      project. Use a Feature template here, even when all its inputs come from the
-      linked Location.
+      {m.feature_model_template_scope_help()}
     </p>
   </details>
   {#if failed}
     <p role="alert" class="text-destructive text-sm">{failed}</p>
     <Button
       type="button"
-      text="Reload templates"
+      text={m.feature_model_reload_templates()}
       style="ghost"
       onClick={() => reload++}
     />
@@ -257,7 +279,7 @@ async function save(): Promise<void> {
       {#if selected?.canEdit}
         <Button
           type="button"
-          text="Edit template"
+          text={m.feature_model_edit_template()}
           style="outline"
           disabled={loading || busy}
           onClick={() => create(true)}
@@ -265,7 +287,9 @@ async function save(): Promise<void> {
       {/if}
       <Button
         type="button"
-        text={selected ? 'Create a template from this one' : 'Create template'}
+        text={selected
+          ? m.feature_model_copy_template()
+          : m.feature_model_create_template()}
         style="outline"
         disabled={loading || busy}
         onClick={() => create()}
@@ -278,7 +302,7 @@ async function save(): Promise<void> {
         {...typeInputAppearance}
         id={`${uid}-name`}
         name=""
-        label="Template name"
+        label={m.feature_model_template_name()}
         value={name}
         onValueChange={value => (name = value)}
         disabled={busy}
@@ -286,8 +310,8 @@ async function save(): Promise<void> {
       <SelectField
         {...typeSelectAppearance}
         contentClass="z-[1010]!"
-        label="Language"
-        triggerAttrs={{ 'aria-label': 'Language' }}
+        label={m.feature_model_language()}
+        triggerAttrs={{ 'aria-label': m.feature_model_language() }}
         value={locale}
         items={Object.keys(expressions).map(tag => ({ value: tag, label: tag }))}
         onValueChange={value => (locale = value)}
@@ -302,19 +326,18 @@ async function save(): Promise<void> {
       disabled={busy}
     />
     <p class="text-muted-foreground text-xs">
-      Save the template, then accept it here. Existing assignments keep their accepted
-      version.
+      {m.feature_model_save_template_help()}
     </p>
     <div class="flex flex-wrap gap-2">
       <Button
         type="button"
-        text="Save template"
+        text={m.feature_model_save_template()}
         disabled={!valid || busy}
         onClick={save}
       />
       <Button
         type="button"
-        text="Cancel template"
+        text={m.feature_model_cancel_template()}
         style="ghost"
         disabled={busy}
         onClick={() => (creating = false)}
@@ -331,7 +354,7 @@ async function save(): Promise<void> {
     <a
       class="text-sm underline"
       href={`/admin/templates?${new URLSearchParams({ ...(selected.organisationId ? { organisation: selected.organisationId } : {}), scope: scopeType, scopeId, template: selected.id })}`}
-      >Edit in template editor</a
+      >{m.feature_model_edit_in_editor()}</a
     >
   {/if}
 </div>

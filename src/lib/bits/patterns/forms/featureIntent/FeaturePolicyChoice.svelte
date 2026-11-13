@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import FeatureIntentHelp from './FeatureIntentHelp.svelte'
 import FeaturePolicyIllustration from './FeaturePolicyIllustration.svelte'
@@ -33,7 +35,7 @@ const id = $props.id()
     <span class="flex items-center justify-between gap-2">
       <span class="text-muted-foreground text-xs font-medium">{label}</span>
       {#if help}
-        <FeatureIntentHelp topic={help} label={`About ${label.toLowerCase()}`} />
+        <FeatureIntentHelp topic={help} label={m.feature_model_about({ label })} />
       {/if}
     </span>
   </legend>
@@ -49,7 +51,7 @@ const id = $props.id()
         <span
           class="text-muted-foreground flex items-center justify-center text-xs"
           aria-hidden="true"
-          >or</span
+          >{m.or()}</span
         >
       {/if}
       <label
@@ -86,7 +88,7 @@ const id = $props.id()
           <span
             class="text-muted-foreground text-xs leading-relaxed break-words whitespace-normal"
           >
-            {option.forthcoming ? 'Forthcoming' : option.description}
+            {option.forthcoming ? m.feature_model_forthcoming() : option.description}
           </span>
         </span>
         <span

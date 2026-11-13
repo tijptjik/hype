@@ -102,7 +102,7 @@ async function translate(source: string): Promise<void> {
       }),
     )
   } catch {
-    error = 'Unable to translate display names. Please try again.'
+    error = m.feature_model_translate_failed()
   } finally {
     busy = undefined
   }
@@ -177,7 +177,7 @@ async function generate(
       progress?.()
     }
   } catch {
-    error = 'Unable to translate display names. Please try again.'
+    error = m.feature_model_translate_failed()
   } finally {
     busy = undefined
   }
@@ -212,7 +212,7 @@ $effect(() => {
 })
 </script>
 <div bind:this={reviewElement} class="grid min-w-0" data-type-names>
-  <Label text="Display name" />
+  <Label text={m.feature_model_display_name()} />
   <FormI18nSourceBar
     visible={multilingual && !disabled && sources.length > 0}
     {sources}
@@ -239,7 +239,7 @@ $effect(() => {
           {#if current(locale)}
             <TranslationSuggestion
               value={proposals[locale]?.text ?? ''}
-              label={`Display name ${locale}`}
+              label={m.feature_model_localized_display_name({ locale })}
               prefix={multilingual ? shortLocaleLabel(locale) : ''}
               onChange={text => {
                 if (proposals[locale]) proposals[locale].text = text
@@ -252,7 +252,9 @@ $effect(() => {
           {:else}
             <FormI18nInlineRow
               value={value(locale)}
-              label={multilingual ? `Display name ${locale}` : 'Display name'}
+              label={multilingual
+                ? m.feature_model_localized_display_name({ locale })
+                : m.feature_model_display_name()}
               prefix={multilingual ? shortLocaleLabel(locale) : ''}
               editable={!disabled}
               showVerification={false}

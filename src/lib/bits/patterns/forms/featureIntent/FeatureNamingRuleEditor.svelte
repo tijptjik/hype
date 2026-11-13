@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { untrack } from 'svelte'
+// I18N
+import { m } from '#lib/i18n.js'
 // BITS
 import { Dialog } from 'bits-ui'
 // COMPONENTS
@@ -56,15 +58,16 @@ let isOverriding = $state(untrack(() => override !== undefined))
       >
         <div class="min-w-0">
           <Dialog.Title id={`${id}-title`} class="text-lg font-semibold"
-            >Feature naming</Dialog.Title
+            >{m.feature_model_feature_naming()}</Dialog.Title
           >
           <Dialog.Description class="text-muted-foreground mt-1 text-xs"
-            >Choose a template or create one using Feature properties and linked
-            Location attributes.</Dialog.Description
+            >{m.feature_model_naming_description()}</Dialog.Description
           >
         </div>
         <span class="text-muted-foreground shrink-0 pt-1 text-xs"
-          >{isOverriding ? 'Custom rule' : 'Inherited default'}</span
+          >{isOverriding
+            ? m.feature_model_custom_rule()
+            : m.feature_model_inherited_default()}</span
         >
       </header>
       <div class="min-h-0 overflow-y-auto px-4 py-4 sm:px-5" data-naming-scroll>
@@ -90,10 +93,14 @@ let isOverriding = $state(untrack(() => override !== undefined))
       <footer
         class="border-border/50 flex shrink-0 flex-wrap items-center justify-end gap-2 border-t px-4 py-3 sm:px-5"
       >
-        <Button text={disabled ? 'Close' : 'Cancel'} style="ghost" onClick={onCancel} />
+        <Button
+          text={disabled ? m.guest__close() : m.cancel()}
+          style="ghost"
+          onClick={onCancel}
+        />
         {#if !disabled}
           <Button
-            text="Accept naming rule"
+            text={m.feature_model_accept_rule()}
             disabled={editingTemplate}
             onClick={() =>
               onAccept(

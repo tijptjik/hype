@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { tick } from 'svelte'
+// I18N
+import { m } from '#lib/i18n.js'
 // UTILITIES
 import { propertyKeyFromLabel } from '#lib/utils/nameIdentifier.js'
 // COMPONENTS
@@ -55,12 +57,12 @@ let {
   onNamingChange?: (rule: FeatureNameRule | undefined) => void
   onIdChange?: (before: string, after: string) => void
 } = $props()
-const examples: Record<string, string> = {
-  building_part: 'floor, lobby, wing, flat',
-  premises: 'complex, campus, park, site',
-  structure: 'tunnel, bridge, retaining wall',
-  street: 'street',
-}
+const examples: Record<string, string> = $derived({
+  building_part: m.feature_model_building_part_examples(),
+  premises: m.feature_model_premises_examples(),
+  structure: m.feature_model_structure_examples(),
+  street: m.feature_model_street_example(),
+})
 const orderedTargets = [
   'building_part',
   'building',
@@ -144,7 +146,7 @@ function updateEnglishName(before: string, after: string): void {
 >
   <section
     class="lg:border-border/50 grid min-w-0 content-start gap-3 lg:border-r lg:pr-6"
-    aria-label="Type settings"
+    aria-label={m.feature_model_type_settings()}
   >
     <FeatureTypeNames
       bind:type
@@ -156,8 +158,8 @@ function updateEnglishName(before: string, after: string): void {
       onEnglishChange={updateEnglishName}
     />
     <TextInput
-      label="Stable identifier"
-      inputAttrs={{ 'aria-label': 'Stable identifier' }}
+      label={m.feature_model_identifier()}
+      inputAttrs={{ 'aria-label': m.feature_model_identifier() }}
       required
       value={type.id}
       isEditing={!disabled}
@@ -169,23 +171,31 @@ function updateEnglishName(before: string, after: string): void {
       }}
     />
     <FeaturePolicyChoice
-      label="Feature kind"
+      label={m.setup_feature_kind()}
       help="kind"
       value={type.kind ?? 'object'}
       {disabled}
       options={[
-        { value: 'object', title: 'Object', description: 'An individual item' },
-        { value: 'place', title: 'Place', description: 'A destination' },
+        {
+          value: 'object',
+          title: m.feature_model_object(),
+          description: m.feature_model_item_description(),
+        },
+        {
+          value: 'place',
+          title: m.feature_model_place(),
+          description: m.feature_model_destination_description(),
+        },
         {
           value: 'area',
-          title: 'Area',
-          description: 'A wider space',
+          title: m.address_division_area(),
+          description: m.feature_model_area_description(),
           forthcoming: true,
         },
         {
           value: 'route',
-          title: 'Route',
-          description: 'A path to follow',
+          title: m.feature_model_route(),
+          description: m.feature_model_route_description(),
           forthcoming: true,
         },
       ]}
@@ -206,68 +216,71 @@ function updateEnglishName(before: string, after: string): void {
   </section>
   <section
     class="lg:border-border/50 grid min-w-0 content-start gap-4 lg:border-r lg:pr-6"
-    aria-label="Location behavior"
+    aria-label={m.feature_model_location_behavior()}
   >
     <FeaturePolicyChoice
-      label="Association relation"
+      label={m.feature_model_relation()}
       help="relation"
       value={type.relation ?? 'locatedAt'}
       {disabled}
       options={[
         {
           value: 'locatedAt',
-          title: 'Located at',
-          description: 'An item at a location',
+          title: m.feature_model_located_at(),
+          description: m.feature_model_host_description(),
         },
         {
           value: 'represents',
-          title: 'Represents',
-          description: 'The location itself',
+          title: m.feature_model_represents(),
+          description: m.feature_model_represents_description(),
         },
       ]}
       onChange={value => (type.relation = value as FeatureType['relation'])}
     />
     <FeaturePolicyChoice
-      label="Suggested starting point"
+      label={m.feature_model_starting_point()}
       help="start"
       value={type.start}
       {disabled}
       options={[
         {
           value: 'search',
-          title: 'Find a location',
-          description: 'Match by search',
+          title: m.feature_model_find_location(),
+          description: m.feature_model_search_description(),
         },
         {
           value: 'pin',
-          title: 'Place on the map',
-          description: 'Start with a precise pin',
+          title: m.feature_model_place_on_map(),
+          description: m.feature_model_pin_description(),
         },
       ]}
       onChange={value => (type.start = value as FeatureType['start'])}
     />
     <FeaturePolicyChoice
-      label="When no location is found"
+      label={m.feature_model_missing_location()}
       help="missing"
       value={type.unresolvedMode ?? 'prompt'}
       {disabled}
       options={[
         {
           value: 'prompt',
-          title: 'Offer local creation',
-          description: 'List new place',
+          title: m.feature_model_offer_creation(),
+          description: m.feature_model_list_place(),
         },
         {
           value: 'silent',
-          title: 'Continue silently',
-          description: 'Keep it unlisted',
+          title: m.feature_model_continue_silently(),
+          description: m.feature_model_keep_unlisted(),
         },
       ]}
       onChange={value => (type.unresolvedMode = value as FeatureType['unresolvedMode'])}
     />
   </section>
-  <section class="grid min-w-0 content-start gap-4" aria-label="Location targets">
-    <Label text="Where can features be located?" />
+  <section
+    class="grid min-w-0 content-start gap-4"
+    aria-label={m.feature_model_location_targets()}
+  >
+    <Label text={m.feature_model_allowed_locations()} />
     {#each LOCATION_ENTITY_KINDS.filter(family => family !== 'unknown') as family}
       <fieldset class="grid min-w-0 gap-1">
         <legend
@@ -287,9 +300,9 @@ function updateEnglishName(before: string, after: string): void {
             <label class="min-w-0 text-sm font-normal" for={`${id}-${kind}`}>
               <span
                 >{kind === 'structure'
-                  ? 'Structure'
+                  ? m.feature_model_structure()
                   : kind === 'premises'
-                    ? 'Premises'
+                    ? m.feature_model_premises()
                     : locationTaxonomyLabel(
                         locationTaxonomy(kind).class ?? locationTaxonomy(kind).kind,
                       )}</span

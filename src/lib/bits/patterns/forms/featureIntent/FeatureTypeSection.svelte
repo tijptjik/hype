@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { m } from '#lib/i18n.js'
 // COMPONENTS
 import Switch from '#lib/bits/custom/switch/Switch.svelte'
 // ICONS
@@ -88,8 +90,8 @@ function reorderKey(event: KeyboardEvent): void {
       <button
         type="button"
         data-type-drag-handle
-        aria-label={`Reorder ${title}`}
-        title="Drag to reorder. Use Alt + Up or Down with the keyboard."
+        aria-label={m.feature_model_reorder_named({ name: title })}
+        title={m.feature_model_reorder_hint()}
         disabled={disabled || removeMode || (!canMoveUp && !canMoveDown)}
         onkeydown={reorderKey}
         class="text-foreground/60 hover:bg-foreground/5 focus-visible:outline-primary flex size-10 cursor-grab touch-none items-center justify-center rounded-md focus-visible:outline-2 active:cursor-grabbing disabled:cursor-default disabled:opacity-30"
@@ -113,7 +115,7 @@ function reorderKey(event: KeyboardEvent): void {
             ? 'text-red-600/75!'
             : ''}"
         >
-          {title || 'New feature type'}
+          {title || m.feature_model_new_type()}
         </h3>
         <ChevronDown
           class={`bits-project-field-card__collapse-icon absolute top-1/2 -right-3 -translate-y-1/2 ${collapsed ? 'bits-project-field-card__collapse-icon--collapsed' : ''}`}
@@ -124,7 +126,9 @@ function reorderKey(event: KeyboardEvent): void {
       bind:clientWidth={rightWidth}
       class="bits-project-field-card__header-right-rail static! w-max transform-none! gap-2 justify-self-end"
     >
-      <label for={`${bodyId}-enabled`} class="sr-only">Enable {title}</label>
+      <label for={`${bodyId}-enabled`} class="sr-only"
+        >{m.feature_model_enable_named({ name: title })}</label
+      >
       <Switch
         id={`${bodyId}-enabled`}
         size="sm"
@@ -135,12 +139,12 @@ function reorderKey(event: KeyboardEvent): void {
       {#if removeMode && !disabled}
         <button
           type="button"
-          aria-label={`Remove ${title}`}
+          aria-label={m.feature_model_remove_named({ name: title })}
           disabled={!canRemove}
           onclick={onRemove}
           class="text-destructive hover:bg-destructive/10 focus-visible:outline-primary inline-flex min-h-10 items-center gap-2 rounded-md px-3 text-xs focus-visible:outline-2 disabled:opacity-30"
         >
-          <Trash class="size-4" /><span>Remove</span>
+          <Trash class="size-4" /><span>{m.admin__forms_common_remove()}</span>
         </button>
       {/if}
     </div>
