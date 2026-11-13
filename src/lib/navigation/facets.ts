@@ -170,9 +170,9 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
 > = {
   hub: [
     ADMIN_FACETS.core,
-    ADMIN_FACETS.location,
     ADMIN_FACETS.layers,
     ADMIN_FACETS.fields,
+    ADMIN_FACETS.location,
     ADMIN_FACETS.policies,
     ADMIN_FACETS.images,
     ADMIN_FACETS.updates,
@@ -193,11 +193,11 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
   ],
   project: [
     ADMIN_FACETS.core,
-    ADMIN_FACETS.location,
     ADMIN_FACETS.features,
     ADMIN_FACETS.capabilities,
     ADMIN_FACETS.layers,
     ADMIN_FACETS.fields,
+    ADMIN_FACETS.location,
     ADMIN_FACETS.images,
     ADMIN_FACETS.advanced,
     ADMIN_FACETS.updates,
@@ -205,17 +205,17 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
   ],
   layer: [
     ADMIN_FACETS.core,
-    ADMIN_FACETS.location,
     ADMIN_FACETS.features,
     ADMIN_FACETS.fields,
+    ADMIN_FACETS.location,
     ADMIN_FACETS.advanced,
     ADMIN_FACETS.updates,
     ADMIN_FACETS.share,
   ],
   feature: [
     ADMIN_FACETS.core,
-    ADMIN_FACETS.location,
     ADMIN_FACETS.fields,
+    ADMIN_FACETS.location,
     ADMIN_FACETS.images,
     ADMIN_FACETS.updates,
   ],
