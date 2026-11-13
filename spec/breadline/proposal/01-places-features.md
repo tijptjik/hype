@@ -4206,6 +4206,26 @@ remaining missing development logo objects. Deployment is deferred.
 
 ### Brand Location discovery (Refs #194)
 
+The release data migration `0247_seed_active_identity_catalogue.sql` (Refs #194) seeds
+the 2026-11-13 active snapshot: 14 brands and 7 groups. It excludes three archived
+identities and omits DFI's link to the archived Blossom group; it preserves Maxim's
+Group → DFI and the active brand memberships. Existing target identities, including
+their revisions, archive state and source mappings, remain untouched. Missing identities
+retain their IDs, current version numbers, names, categories, logo references and source
+mappings. This is a current-head snapshot, not a copy of local revision history. The
+source snapshot currently has no Wikidata mappings; future exports preserve them when
+present.
+
+Run this SQL through the transactional D1 migration runner after the catalogue schema
+migrations. Identity-kind, code and source collisions abort instead of merging records.
+The authoritative revision view writes translations and validates group relationships.
+The migration is safe to rerun. R2 objects must separately exist at the exact referenced
+keys in the target environment; the SQL does not upload assets. Regenerate a reviewed
+snapshot with `scripts/catalogue/export-release-seed.py --database PATH --output PATH`.
+Rehearsal:
+`dev-check python3 -m unittest discover -s scripts/catalogue -p test_release_seed.py -v`.
+No production database application is implied by generating or testing the migration.
+
 Brand profiles expose Locations beside the read-only Features header action, before
 search. Locations uses the existing three-state filter control: Hype (not added / all /
 added), Upstream (community only / all / backed), and Linked Features (unlinked / all /
