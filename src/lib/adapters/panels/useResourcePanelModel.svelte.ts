@@ -138,6 +138,24 @@ export function useResourcePanelModel(
   }
 
   /**
+   * Matches detail routes against the row's identity, including code-based URLs.
+   * @param type - Resource level represented by the row.
+   * @param id - Row identity from the authorised panel collection.
+   * @returns Whether this row owns the current detail view.
+   */
+  function isActiveResource(type: PanelResourceType, id: string): boolean {
+    if (navigation.getActiveResourceType() !== type) return false
+    if (navigation.getActiveResourceId() === id) return true
+    // Panel collections carry codes even before the separate detail cache indexes them.
+    const resource = lists[types.indexOf(type)].rows.find(row => row.id === id)
+    return Boolean(
+      resource &&
+        'code' in resource &&
+        resource.code === navigation.getActiveResourceRef(),
+    )
+  }
+
+  /**
    * Executes the resource's primary map-selection or administration action.
    * @param type - Resource level whose defaults or layer selection should change.
    * @param id - Selected resource identity.
@@ -150,9 +168,11 @@ export function useResourcePanelModel(
       return
     }
     if (mode === 'admin') {
+      // Compact dots remove an existing prism even when another detail page is open.
       if (
-        navigation.getActiveResourceType() === type &&
-        navigation.getActiveResourceId() === id
+        (app.panels.isPanelNarrow(Panel.admin) &&
+          app.scope.prisms[type].includes(id)) ||
+        isActiveResource(type, id)
       )
         await toggle(type, id)
       else if (admin)
@@ -239,10 +259,7 @@ export function useResourcePanelModel(
           (label): label is string => Boolean(label),
         )
         const pinned = selected.includes(resource.id)
-        const active = messaging
-          ? pinned
-          : navigation.getActiveResourceType() === type &&
-            navigation.getActiveResourceId() === resource.id
+        const active = messaging ? pinned : isActiveResource(type, resource.id)
         const enabled =
           mode === 'admin'
             ? pinned
@@ -263,7 +280,7 @@ export function useResourcePanelModel(
           primaryLabel: messaging
             ? `Select ${name} messaging inbox`
             : mode === 'admin'
-              ? active
+              ? active || (app.panels.isPanelNarrow(Panel.admin) && pinned)
                 ? pinned
                   ? m.panel__unpin({ name })
                   : m.panel__pin({ name })
