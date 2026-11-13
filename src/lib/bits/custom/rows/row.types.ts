@@ -10,6 +10,8 @@ export type RowRootProps = {
   entityId?: string
   isSelected?: boolean
   selectionState?: ResourceIndexRowSelectionState | null
+  /** Whether the row itself is an action; nested buttons remain interactive. */
+  interactive?: boolean
   isFocusable?: boolean
   variant?: RowVariant
   onclick: (event: MouseEvent) => void

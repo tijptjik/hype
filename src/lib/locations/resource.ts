@@ -14,6 +14,8 @@ export type LocationResource = {
     releaseId: string | null
     snapshotId: string | null
   }
+  /** Organisation-scoped association presence, when requested by a directory read. */
+  hasLinkedFeatures?: boolean
   canManageCommunityLocks?: boolean
   communityLocks?: import('./curationLocks').CurationLocks
   canEditShared?: boolean

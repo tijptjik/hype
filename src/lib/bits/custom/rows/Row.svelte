@@ -8,6 +8,7 @@ let {
   isSelected = false,
   selectionState = null,
   isFocusable = true,
+  interactive = true,
   variant,
   onclick,
   onkeydown,
@@ -32,6 +33,7 @@ let {
   {isSelected}
   {selectionState}
   {isFocusable}
+  {interactive}
   {variant}
   {onclick}
   {onkeydown}

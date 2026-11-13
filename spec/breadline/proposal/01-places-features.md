@@ -4169,6 +4169,26 @@ seeds these catalogue relationships without replacing authored links; its
 `--catalogue-only` mode leaves donor location fields and pending format decisions
 untouched.
 
+The release data migration `0247_seed_active_identity_catalogue.sql` (Refs #194) seeds
+the 2026-11-13 active snapshot: 14 brands and 7 groups. It excludes three archived
+identities and omits DFI's link to the archived Blossom group; it preserves Maxim's
+Group → DFI and the active brand memberships. Existing target identities, including
+their revisions, archive state and source mappings, remain untouched. Missing identities
+retain their IDs, current version numbers, names, categories, logo references and source
+mappings. This is a current-head snapshot, not a copy of local revision history. The
+source snapshot currently has no Wikidata mappings; future exports preserve them when
+present.
+
+Run this SQL through the transactional D1 migration runner after the catalogue schema
+migrations. Identity-kind, code and source collisions abort instead of merging records.
+The authoritative revision view writes translations and validates group relationships.
+The migration is safe to rerun. R2 objects must separately exist at the exact referenced
+keys in the target environment; the SQL does not upload assets. Regenerate a reviewed
+snapshot with `scripts/catalogue/export-release-seed.py --database PATH --output PATH`.
+Rehearsal:
+`dev-check python3 -m unittest discover -s scripts/catalogue -p test_release_seed.py -v`.
+No production database application is implied by generating or testing the migration.
+
 Catalogue Identity displays the immediate group followed by indented, linked ancestors
 in nearest-first order. The connector says “Part of” because group membership does not
 encode ownership percentage. The ancestor chain follows the draft's selected group and
@@ -4182,13 +4202,19 @@ uploads are repaired in the shared development bucket using
 `scripts/catalogue/sync-dev-logos.py`; bundled artwork is not a substitute for uploading
 the assets. Code edits finish pending link writes and await the new detail URL before
 refreshing. `scripts/visual-checks/catalogue-identicon-code-check.ts` covers creation,
-code changes, reloads and consistent list/profile identicons. First-load catalogue
-profiles use a shared Brand/Group skeleton with the image/name header, identity fields
-and related-card rows. Record, index and group-picker errors are separate, with explicit
-retries that refresh failed remote queries. Read-only details skip list/autocomplete
-searches so those background failures cannot masquerade as a failed record or save. The
-managed `catalogue-loading-check.ts` exercises delayed responses, record retry and
-group-search failure recovery.
+code changes, reloads and consistent list/profile identicons. Location discovery
+skeletons reuse the same Row component as loaded results, including the panel surface,
+64px image area, text lines, status rail and action placeholders. Status marks use 20px
+geometry with a 32px gap before actions; the compact Hype mark is an open square spiral
+with a clear central counter. Managed browser coverage lives in
+`scripts/visual-checks/catalogue-artwork-rows-check.ts`.
+
+First-load catalogue profiles use a shared Brand/Group skeleton with the image/name
+header, identity fields and related-card rows. Record, index and group-picker errors are
+separate, with explicit retries that refresh failed remote queries. Read-only details
+skip list/autocomplete searches so those background failures cannot masquerade as a
+failed record or save. The managed `catalogue-loading-check.ts` exercises delayed
+responses, record retry and group-search failure recovery.
 
 Catalogue detail navigation between brands and groups keeps the route viewport, form and
 profile card mounted; record values update in place. Resource-specific discovery and
@@ -4247,26 +4273,6 @@ remaining missing development logo objects. Deployment is deferred.
 
 ### Brand Location discovery (Refs #194)
 
-The release data migration `0247_seed_active_identity_catalogue.sql` (Refs #194) seeds
-the 2026-11-13 active snapshot: 14 brands and 7 groups. It excludes three archived
-identities and omits DFI's link to the archived Blossom group; it preserves Maxim's
-Group → DFI and the active brand memberships. Existing target identities, including
-their revisions, archive state and source mappings, remain untouched. Missing identities
-retain their IDs, current version numbers, names, categories, logo references and source
-mappings. This is a current-head snapshot, not a copy of local revision history. The
-source snapshot currently has no Wikidata mappings; future exports preserve them when
-present.
-
-Run this SQL through the transactional D1 migration runner after the catalogue schema
-migrations. Identity-kind, code and source collisions abort instead of merging records.
-The authoritative revision view writes translations and validates group relationships.
-The migration is safe to rerun. R2 objects must separately exist at the exact referenced
-keys in the target environment; the SQL does not upload assets. Regenerate a reviewed
-snapshot with `scripts/catalogue/export-release-seed.py --database PATH --output PATH`.
-Rehearsal:
-`dev-check python3 -m unittest discover -s scripts/catalogue -p test_release_seed.py -v`.
-No production database application is implied by generating or testing the migration.
-
 Brand profiles expose Locations beside the read-only Features header action, before
 search. Locations uses the existing three-state filter control: Hype (not added / all /
 added), Upstream (community only / all / backed), and Linked Features (unlinked / all /
@@ -4296,6 +4302,12 @@ Focused verification lives in `brand-locations.remote.test.ts`,
 `brand-location-directory.test.ts`, and the catalogue persistence test;
 `brand-locations-check.ts` verifies authenticated header placement and filter
 interactions.
+
+Catalogue group links and the group picker use the same uploaded-logo then
+bundled-artwork fallback as catalogue cards. Failed uploads advance to the fallback;
+failed fallback artwork becomes the stable catalogue identicon instead of a broken
+image. `scripts/visual-checks/catalogue-group-logo-check.ts` exercises the
+missing-upload case in both Profile and edit mode (Refs #194).
 
 ### Reviewed Wikidata brand links (Refs #194)
 

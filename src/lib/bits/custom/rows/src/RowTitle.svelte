@@ -29,6 +29,8 @@ let {
   />
   <div class={rowTitleContentClass}>
     <TextTitle text={title} onClick={onTitleClick} tabIndex={-1} />
-    <TextDescription text={description} onClick={onDescriptionClick} tabIndex={-1} />
+    {#if description}
+      <TextDescription text={description} onClick={onDescriptionClick} tabIndex={-1} />
+    {/if}
   </div>
 </div>

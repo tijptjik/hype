@@ -121,6 +121,7 @@ export async function listLocationResources(
   const rows = await db
     .select({
       id: locationTable.id,
+      hasLinkedFeatures: sql<boolean>`${linked}`.mapWith(Boolean),
       ssId: locationTable.ssId,
       kind: locationTable.kind,
       state: locationTable.state,

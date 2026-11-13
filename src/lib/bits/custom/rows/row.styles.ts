@@ -4,6 +4,7 @@ import type { ResourceIndexRowSelectionState } from '#lib/client/services/bulkEd
 import type { RowVariant } from './row.types'
 
 type RowRootClassParams = {
+  interactive?: boolean
   variant?: RowVariant
   isSelected?: boolean
   selectionState?: ResourceIndexRowSelectionState | null
@@ -34,6 +35,7 @@ export const rowShellClass =
 
 export function getRowRootClass({
   variant,
+  interactive = true,
   isSelected = false,
   selectionState,
   className = '',
@@ -43,21 +45,26 @@ export function getRowRootClass({
   return cx(
     'bits-theme overflow-hidden relative grid items-center gap-4 rounded-lg py-1 pl-1.5 caret-transparent shadow-[inset_0_0_0_1px_var(--theme-border),0_2px_4px_-2px_rgb(0_0_0/0.25)] transition-[box-shadow,background,transform] duration-200',
     // Opaque surfaces keep every palette distinct from the tinted index canvas.
-    'cursor-pointer bg-[var(--theme-panel)] text-base-content',
-    'hover:bg-[var(--theme-surface)]',
-    'hover:border-[color-mix(in_oklab,var(--color-base-content)_5%,transparent)]',
-    'hover:shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-primary)_18%,transparent),0_0_1.1rem_color-mix(in_oklab,var(--color-primary)_16%,transparent),0_0_2.2rem_color-mix(in_oklab,var(--color-primary)_10%,transparent)]',
-    'focus-visible:outline-none',
-    'focus-visible:border-[color-mix(in_oklab,var(--color-base-content)_5%,transparent)]',
-    'focus-visible:-translate-y-px',
-    'focus-visible:bg-[color-mix(in_oklab,var(--color-base-200)_78%,var(--color-primary)_6%)]',
-    'focus-visible:shadow-[0_1.2rem_2.6rem_color-mix(in_oklab,black_18%,transparent),0_0_0_1px_color-mix(in_oklab,white_8%,transparent),0_0_0_3px_color-mix(in_oklab,var(--color-secondary)_92%,transparent),0_0_0_6px_color-mix(in_oklab,var(--color-primary)_28%,transparent)]',
-    'focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-transparent',
-    'focus-within:border-[color-mix(in_oklab,var(--color-base-content)_5%,transparent)]',
-    'focus-within:-translate-y-px',
-    'focus-within:bg-[color-mix(in_oklab,var(--color-base-200)_78%,var(--color-primary)_6%)]',
-    'focus-within:shadow-[0_1.2rem_2.6rem_color-mix(in_oklab,black_18%,transparent),0_0_0_1px_color-mix(in_oklab,white_8%,transparent),0_0_0_3px_color-mix(in_oklab,var(--color-secondary)_92%,transparent),0_0_0_6px_color-mix(in_oklab,var(--color-primary)_28%,transparent)]',
-    'focus-within:outline-3 focus-within:outline-offset-3 focus-within:outline-transparent',
+    'bg-[var(--theme-panel)] text-base-content',
+    !interactive && 'cursor-default',
+    interactive &&
+      cx(
+        'cursor-pointer',
+        'hover:bg-[var(--theme-surface)]',
+        'hover:border-[color-mix(in_oklab,var(--color-base-content)_5%,transparent)]',
+        'hover:shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-primary)_18%,transparent),0_0_1.1rem_color-mix(in_oklab,var(--color-primary)_16%,transparent),0_0_2.2rem_color-mix(in_oklab,var(--color-primary)_10%,transparent)]',
+        'focus-visible:outline-none',
+        'focus-visible:border-[color-mix(in_oklab,var(--color-base-content)_5%,transparent)]',
+        'focus-visible:-translate-y-px',
+        'focus-visible:bg-[color-mix(in_oklab,var(--color-base-200)_78%,var(--color-primary)_6%)]',
+        'focus-visible:shadow-[0_1.2rem_2.6rem_color-mix(in_oklab,black_18%,transparent),0_0_0_1px_color-mix(in_oklab,white_8%,transparent),0_0_0_3px_color-mix(in_oklab,var(--color-secondary)_92%,transparent),0_0_0_6px_color-mix(in_oklab,var(--color-primary)_28%,transparent)]',
+        'focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-transparent',
+        'focus-within:border-[color-mix(in_oklab,var(--color-base-content)_5%,transparent)]',
+        'focus-within:-translate-y-px',
+        'focus-within:bg-[color-mix(in_oklab,var(--color-base-200)_78%,var(--color-primary)_6%)]',
+        'focus-within:shadow-[0_1.2rem_2.6rem_color-mix(in_oklab,black_18%,transparent),0_0_0_1px_color-mix(in_oklab,white_8%,transparent),0_0_0_3px_color-mix(in_oklab,var(--color-secondary)_92%,transparent),0_0_0_6px_color-mix(in_oklab,var(--color-primary)_28%,transparent)]',
+        'focus-within:outline-3 focus-within:outline-offset-3 focus-within:outline-transparent',
+      ),
     resolvedSelectionState === 'selected' &&
       // Retain the original selection stripe and spacing with a flat, theme-coloured edge.
       'border-l-4 border-l-primary/70 hover:border-l-primary transition-all pl-3 shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--color-primary)_20%,var(--theme-border)),0_2px_4px_-2px_rgb(0_0_0/0.15)]',
