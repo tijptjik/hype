@@ -2505,7 +2505,7 @@
   "feature_model_translate_failed": "无法翻译显示名称，请重试。",
   "feature_model_loading": "正在加载地图项类型…",
   "feature_model_accept_rule": "确认命名规则",
-  "feature_model_data_model": "数据模型",
+  "feature_model_data_model": "新建地图项目流程",
   "feature_model_template_scope": "模板范围及命名输入",
   "feature_model_custom_rules": "自定义规则",
   "feature_model_search_description": "通过搜索匹配",

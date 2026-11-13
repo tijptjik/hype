@@ -2505,7 +2505,7 @@
   "feature_model_translate_failed": "無法翻譯顯示名稱，請重試。",
   "feature_model_loading": "正在載入地圖項目類型…",
   "feature_model_accept_rule": "確認命名規則",
-  "feature_model_data_model": "資料模型",
+  "feature_model_data_model": "新增地圖項目流程",
   "feature_model_template_scope": "範本範圍及命名輸入",
   "feature_model_custom_rules": "自訂規則",
   "feature_model_search_description": "透過搜尋配對",

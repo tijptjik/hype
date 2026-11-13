@@ -2505,7 +2505,7 @@
   "feature_model_translate_failed": "Unable to translate display names. Please try again.",
   "feature_model_loading": "Loading feature types…",
   "feature_model_accept_rule": "Accept naming rule",
-  "feature_model_data_model": "Data Model",
+  "feature_model_data_model": "New Feature Flow",
   "feature_model_template_scope": "Template scope and naming inputs",
   "feature_model_custom_rules": "Custom rules",
   "feature_model_search_description": "Match by search",
@@ -2569,7 +2569,7 @@
   "feature_model_remove_title": "Remove type?",
   "feature_model_find_location": "Find a location",
   "feature_model_street_example": "street",
-  "feature_model_model_description": "Feature types and location rules",
+  "feature_model_model_description": "Feature types and their location rules",
   "feature_model_field_address": "Address",
   "feature_model_continue_silently": "Continue silently",
   "feature_model_help_templates_title": "Reusable templates"

@@ -3352,7 +3352,7 @@ $effect(() => {
       <FormSurface>
         <section class="flex min-h-0 flex-col gap-6 pb-6">
           <SectionHeader
-            title="Data Model"
+            title="New Feature Flow"
             icon={DataModelIcon}
             description="Configure feature addresses, names, descriptions and historical layers."
           />

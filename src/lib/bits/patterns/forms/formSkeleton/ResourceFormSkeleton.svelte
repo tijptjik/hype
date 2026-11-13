@@ -347,7 +347,7 @@ const fieldActions = {
         </div>
       {:else if facet === 'advanced'}
         <SectionHeader
-          title={resource === 'project' ? 'Data Model' : m.project_advanced()}
+          title={resource === 'project' ? 'New Feature Flow' : m.project_advanced()}
         />
         <div
           class="mx-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,max(480px,calc((100%_-_2rem)/2))),1fr))] gap-8 py-6"

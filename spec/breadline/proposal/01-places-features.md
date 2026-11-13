@@ -3483,7 +3483,7 @@ the complete definition; older layer ID subsets remain readable. Null resets
 inheritance. Versioned policy writes retain actor history and check the complete
 ancestry version.
 
-Data Model is a staged `data.featureIntentSettings` field in the centralized Hub,
+New Feature Flow is a staged `data.featureIntentSettings` field in the centralized Hub,
 Project or Layer form. Main Save commits the parent, policy and policy history in one
 revision-guarded transaction; main Discard restores the staged model. There are no
 independent model Save, Discard or Reset actions. The Location facet reserves 320px of
@@ -3521,7 +3521,7 @@ addresses. Geographic target classes are off in these defaults until datasets su
 them. Location groups use distinct headings; classes list physical examples in the order
 building part, building, premises, structure, thoroughfare.
 
-The Data Model editor uses the Fields toolbar and card layout: New, Multilingual,
+The New Feature Flow editor uses the Fields toolbar and card layout: New, Multilingual,
 Collapse/Expand, Remove Type, and the Custom switch. Type bars have a six-dot drag
 handle, kind icon and collapsible title. Reordering supports pointer dragging and
 Alt+Up/Down; saving persists catalogue order. Remove Type enables removal mode, with

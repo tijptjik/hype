@@ -363,7 +363,7 @@ const reviewGroup: TranslationReviewGroup = {
 }
 setContext(translationReviewGroupKey, reviewGroup)
 /** Identify empty active display-name locales, including pending suggestions.
- * @param type Data Model section. @returns Whether its title should indicate review is needed.
+ * @param type New Feature Flow section. @returns Whether its title should indicate review is needed.
  */
 function typeMissingTranslations(type: FeatureType): boolean {
   return selectedLocales.some(locale => !featureTypeLabelValue(type, locale).trim())

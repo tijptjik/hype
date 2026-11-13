@@ -180,7 +180,7 @@ export function validateModelTabs(
     ctx.addIssue({
       code: 'custom',
       path: ['data', 'featureIntentSettings'],
-      message: 'Create the parent before configuring its Data Model.',
+      message: 'Create the parent before configuring its New Feature Flow.',
     })
   }
   if (
