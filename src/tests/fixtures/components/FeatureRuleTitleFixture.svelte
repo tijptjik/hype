@@ -1,4 +1,6 @@
 <script lang="ts">
+// SVELTE
+import { untrack } from 'svelte'
 let { multilingual = false }: { multilingual?: boolean } = $props()
 import FeatureTitleSource from '#lib/bits/patterns/forms/featureIntent/FeatureTitleSource.svelte'
 import type { FeatureNameRule } from '#lib/features/locationPolicy.js'
@@ -25,12 +27,15 @@ const rule: FeatureNameRule = {
     },
   ],
 }
-let localeState = $state({
-  ...restoreProfileLocales(multilingual ? ['en', 'zh-Hant'] : ['en'], {
-    en: { title: 'Garden — donor' },
-  }),
-  expanded: multilingual,
-})
+// Seed editable locale state once; subsequent toolbar edits own this state.
+let localeState = $state(
+  untrack(() => ({
+    ...restoreProfileLocales(multilingual ? ['en', 'zh-Hant'] : ['en'], {
+      en: { title: 'Garden — donor' },
+    }),
+    expanded: multilingual,
+  })),
+)
 const fields = {
   title: {
     as: (_type: 'hidden', value: string) => ({
