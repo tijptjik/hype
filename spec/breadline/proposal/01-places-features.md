@@ -4169,6 +4169,47 @@ seeds these catalogue relationships without replacing authored links; its
 `--catalogue-only` mode leaves donor location fields and pending format decisions
 untouched.
 
+Catalogue Identity displays the immediate group followed by indented, linked ancestors
+in nearest-first order. The connector says “Part of” because group membership does not
+encode ownership percentage. The ancestor chain follows the draft's selected group and
+ignores superseded requests. Wikidata is a field below Group, alongside Categories; read
+mode shows the linked value (or None), while editing exposes search and logo review.
+
+Catalogue profile images try the saved upload before the approved bundled group artwork,
+then the shared deterministic identicon seeded by catalogue ID. Lists, profiles,
+related-brand cards and group links share that fallback sequence. Missing development
+uploads are repaired in the shared development bucket using
+`scripts/catalogue/sync-dev-logos.py`; bundled artwork is not a substitute for uploading
+the assets. Code edits finish pending link writes and await the new detail URL before
+refreshing. `scripts/visual-checks/catalogue-identicon-code-check.ts` covers creation,
+code changes, reloads and consistent list/profile identicons. First-load catalogue
+profiles use a shared Brand/Group skeleton with the image/name header, identity fields
+and related-card rows. Record, index and group-picker errors are separate, with explicit
+retries that refresh failed remote queries. Read-only details skip list/autocomplete
+searches so those background failures cannot masquerade as a failed record or save. The
+managed `catalogue-loading-check.ts` exercises delayed responses, record retry and
+group-search failure recovery.
+
+Catalogue detail navigation between brands and groups keeps the route viewport, form and
+profile card mounted; record values update in place. Resource-specific discovery and
+feature facets remain keyed, as does transient Wikidata search state. Group profiles
+also list direct child groups in a separate Subgroups section. The identity field label
+is “Parent group” in both view and edit modes; the relationship remains optional.
+
+Group profiles list brands throughout their descendant groups. Brand profiles discover
+sibling brands across the family sharing an ancestor, including intervening groups,
+while excluding the selected brand. Traversal uses current catalogue links, deduplicates
+results and excludes unrelated or ungrouped brands. These catalogue affiliations do not
+encode ownership percentages: DFI's reported 50% interest in Maxim's Group must not be
+interpreted as full ownership. Maxim's Cakes and Arome belong to Maxim's Group; the DFI
+affiliation is at group level. See
+[DFI's business profile](https://www.dfiretailgroup.com/en/our-businesses/restaurants/)
+and
+[Maxim's company report](https://www2.hkma.org.hk/program/qa/pdf/qa/2014-RS-Maxims.pdf).
+`scripts/visual-checks/catalogue-family-check.ts` verifies the hierarchy and sibling
+navigation; its explicit `--apply` option saves the reviewed local corrections through
+the authenticated catalogue editor.
+
 Hierarchy verification: `src/tests/identity-catalogue.test.ts` covers nested saves,
 clearing, immutable history, migration backfill, invalid parents, cycles and stale-save
 rollback (15 tests passed, managed job `job-OLTSPfT16o`).
@@ -4255,3 +4296,20 @@ Focused verification lives in `brand-locations.remote.test.ts`,
 `brand-location-directory.test.ts`, and the catalogue persistence test;
 `brand-locations-check.ts` verifies authenticated header placement and filter
 interactions.
+
+### Reviewed Wikidata brand links (Refs #194)
+
+The brand profile editor searches Wikidata labels and descriptions for explicit entity
+selection. Save atomically registers the selected `brand:wikidata` source mapping with
+the catalogue revision. Existing source ownership cannot be reassigned or merged by this
+action; duplicate mappings and stale revisions fail without partial writes. Subsequent
+upstream imports carrying the same Wikidata identifier reuse this brand. Existing links
+remain usable when Wikidata is offline.
+
+A selected entity can offer its `P154` Commons logo. “Use this logo” imports the raster
+thumbnail through the existing PNG upload path and stages it in the profile draft. The
+immutable catalogue content retains the Commons file URL, author text, and license.
+Selection does not overwrite names or automatically adopt the logo. Reset discards the
+pending profile and identity changes. Unit coverage lives in
+`identity-catalogue.test.ts` and `wikidata-brands.test.ts`; the authenticated
+live-provider interaction check is `scripts/visual-checks/wikidata-brand-check.ts`.

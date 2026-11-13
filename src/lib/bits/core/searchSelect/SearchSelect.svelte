@@ -8,7 +8,7 @@ import { Combobox } from 'bits-ui'
 // ICONS
 import Search from 'virtual:icons/lucide/search'
 import X from 'virtual:icons/lucide/x'
-import Building from 'virtual:icons/lucide/building-2'
+import ResourceIcon from '#lib/bits/custom/resourceIcon/ResourceIcon.svelte'
 import Check from 'virtual:icons/lucide/check'
 let {
   label,
@@ -28,6 +28,8 @@ let {
     value: string
     label: string
     keywords?: string
+    imageFramed?: boolean
+    imageFallbackSrcs?: string[]
     image?: string
     href?: string
   }[]
@@ -77,19 +79,21 @@ const canCreate = $derived(Boolean(onCreate && query.trim() && matches.length ==
         href={selectedItem.href}
         class="hover:text-primary focus-visible:outline-primary flex min-w-0 flex-1 items-center gap-3 rounded-md"
       >
-        {#if selectedItem.image}
-          <img src={selectedItem.image} alt="" class="size-7 object-contain">
-        {:else}
-          <Building class="text-muted-foreground size-5 shrink-0" />
-        {/if}
+        <ResourceIcon
+          src={selectedItem.image}
+          fallbackSrcs={selectedItem.imageFallbackSrcs}
+          framed={selectedItem.imageFramed}
+          class={selectedItem.imageFramed ? 'size-12' : 'size-7'}
+        />
         <span class="min-w-0 text-sm">{selectedItem.label}</span>
       </a>
     {:else}
-      {#if selectedItem?.image}
-        <img src={selectedItem.image} alt="" class="size-7 object-contain">
-      {:else}
-        <Building class="text-muted-foreground size-5 shrink-0" />
-      {/if}
+      <ResourceIcon
+        src={selectedItem?.image}
+        fallbackSrcs={selectedItem?.imageFallbackSrcs}
+        framed={selectedItem?.imageFramed}
+        class={selectedItem?.imageFramed ? 'size-12' : 'size-7'}
+      />
       <span class="min-w-0 flex-1 text-sm">{selectedItem?.label ?? value}</span>
     {/if}
     <button
@@ -167,11 +171,11 @@ const canCreate = $derived(Boolean(onCreate && query.trim() && matches.length ==
               >
                 <span class="flex min-w-0 items-center gap-3">
                   {#if selectedDisplay}
-                    {#if item.image}
-                      <img src={item.image} alt="" class="size-6 object-contain">
-                    {:else}
-                      <Building class="size-5 shrink-0" />
-                    {/if}
+                    <ResourceIcon
+                      src={item.image}
+                      fallbackSrcs={item.imageFallbackSrcs}
+                      class="size-6"
+                    />
                   {/if}
                   {item.label}
                 </span>

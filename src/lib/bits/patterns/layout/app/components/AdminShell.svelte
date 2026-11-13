@@ -37,9 +37,18 @@ let {
   children,
 }: AdminShellProps = $props()
 
+/** Keep catalogue detail instances mounted while their identity parameters change.
+ * @param pathname Destination pathname. @returns View identity for route transitions.
+ */
+function viewportKey(pathname: string): string {
+  return /^\/admin\/catalog\/(brand|group)\/[^/]+\/?$/.test(pathname)
+    ? '/admin/catalog/[kind]/[code]'
+    : pathname
+}
 let routeViewport = $state<ReturnType<typeof RouteViewport> | undefined>()
 onNavigate(({ from, to }) => {
-  if (from?.url.pathname !== to?.url.pathname) routeViewport?.prepareNavigation()
+  if (viewportKey(from?.url.pathname ?? '') !== viewportKey(to?.url.pathname ?? ''))
+    routeViewport?.prepareNavigation()
 })
 
 let mainElement = $state<HTMLElement | null>(null)
@@ -115,7 +124,10 @@ const footerConfig = $derived(headerProps.footer ?? null)
           >
             {#if isContentReady}
               <HeaderControlBar controlBar={headerProps.controlBar} />
-              <RouteViewport bind:this={routeViewport} routeKey={page.url.pathname}>
+              <RouteViewport
+                bind:this={routeViewport}
+                routeKey={viewportKey(page.url.pathname)}
+              >
                 {@render children()}
               </RouteViewport>
             {:else if pending}

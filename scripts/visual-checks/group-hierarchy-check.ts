@@ -23,7 +23,7 @@ try {
     (await (await page.request.get(`${origin}/api/auth/get-session`)).json()).user.id,
   ).toBe('hype-local-agent-admin')
   expect(new URL(page.url()).pathname).toBe('/admin/catalog/group/jc')
-  await expect(page.getByText('Parent group (optional)', { exact: true })).toBeVisible()
+  await expect(page.getByText('Parent group', { exact: true })).toBeVisible()
   const nativePicker = page.getByRole('combobox', { name: 'Select group', exact: true })
   if (await nativePicker.count()) {
     await expect(nativePicker.locator('option[value="bl-group-dfi"]')).toHaveCount(1)
@@ -67,7 +67,7 @@ try {
   }
   // Exercise draft interactions without recording a fictional corporate affiliation.
   await page.reload()
-  await expect(page.getByText('Parent group (optional)', { exact: true })).toBeVisible()
+  await expect(page.getByText('Parent group', { exact: true })).toBeVisible()
   await page.screenshot({ path: resolve(artifacts, 'group-parent-desktop.png') })
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(page.getByText('Window Too Small', { exact: true })).toBeVisible()
