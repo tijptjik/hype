@@ -2427,5 +2427,21 @@
   "location_sync_policy_resolved": "Accept newly resolved addresses",
   "feature_search_fetching_saanseoi": "Fetching additional records from SaanSeoi",
   "feature_search_source_hype": "Hype Location",
-  "feature_search_source_saanseoi": "SaanSeoi candidate"
+  "feature_search_source_saanseoi": "SaanSeoi candidate",
+  "locale_controls_search": "Search languages",
+  "locale_controls_multilingual": "Multilingual",
+  "locale_controls_hidden_content": "Hidden multilingual content",
+  "locale_controls_added": "{name}: added.",
+  "locale_controls_move_earlier": "Move {name} earlier",
+  "locale_controls_no_results": "No languages found",
+  "locale_controls_move_later": "Move {name} later",
+  "locale_controls_moved": "{name} moved to position {position} of {total}.",
+  "locale_controls_selected": "Selected",
+  "locale_controls_remove": "Remove {name}",
+  "locale_controls_add": "Add language",
+  "locale_controls_revealed": "{name}: revealed.",
+  "locale_controls_visibility_changed": "{name}: visibility changed.",
+  "locale_controls_at_least_one": "Keep at least one language visible.",
+  "locale_controls_close": "Close language search",
+  "locale_controls_removed": "{name}: removed."
 }

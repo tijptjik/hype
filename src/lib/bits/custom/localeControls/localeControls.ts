@@ -1,3 +1,5 @@
+// I18N
+import * as m from '#lib/paraglide/messages.js'
 // TYPES
 import type {
   LocaleControlLabels,
@@ -5,21 +7,42 @@ import type {
   LocaleSelection,
 } from './localeControls.types.js'
 
+// Resolve labels when read so request-local and changing UI locales remain isolated.
 export const defaultLocaleControlLabels: LocaleControlLabels = {
-  multilingual: 'Multilingual',
-  add: 'Add language',
-  search: 'Search languages',
-  noResults: 'No languages found',
-  close: 'Close language search',
-  selected: 'Selected',
-  moveEarlier: name => `Move ${name} earlier`,
-  moveLater: name => `Move ${name} later`,
-  remove: name => `Remove ${name}`,
-  atLeastOne: 'Keep at least one language visible.',
+  get multilingual() {
+    return m.locale_controls_multilingual()
+  },
+  get add() {
+    return m.locale_controls_add()
+  },
+  get search() {
+    return m.locale_controls_search()
+  },
+  get noResults() {
+    return m.locale_controls_no_results()
+  },
+  get close() {
+    return m.locale_controls_close()
+  },
+  get selected() {
+    return m.locale_controls_selected()
+  },
+  moveEarlier: name => m.locale_controls_move_earlier({ name }),
+  moveLater: name => m.locale_controls_move_later({ name }),
+  remove: name => m.locale_controls_remove({ name }),
+  get atLeastOne() {
+    return m.locale_controls_at_least_one()
+  },
   changed: (name, action) =>
-    `${name}: ${action === 'reveal' ? 'revealed' : action === 'add' ? 'added' : action === 'remove' ? 'removed' : 'visibility changed'}.`,
+    action === 'reveal'
+      ? m.locale_controls_revealed({ name })
+      : action === 'add'
+        ? m.locale_controls_added({ name })
+        : action === 'remove'
+          ? m.locale_controls_removed({ name })
+          : m.locale_controls_visibility_changed({ name }),
   moved: (name, position, total) =>
-    `${name} moved to position ${position} of ${total}.`,
+    m.locale_controls_moved({ name, position: String(position), total: String(total) }),
 }
 
 /**

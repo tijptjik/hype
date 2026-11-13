@@ -2427,5 +2427,21 @@
   "location_sync_policy_resolved": "接受新近解析的地址",
   "feature_search_fetching_saanseoi": "正在從 SaanSeoi 載入更多記錄",
   "feature_search_source_hype": "Hype 地點",
-  "feature_search_source_saanseoi": "SaanSeoi 候選地點"
+  "feature_search_source_saanseoi": "SaanSeoi 候選地點",
+  "locale_controls_search": "搜尋語言",
+  "locale_controls_multilingual": "多語言",
+  "locale_controls_hidden_content": "隱藏的多語言內容",
+  "locale_controls_added": "{name}：已新增。",
+  "locale_controls_move_earlier": "將{name}前移",
+  "locale_controls_no_results": "找不到語言",
+  "locale_controls_move_later": "將{name}後移",
+  "locale_controls_moved": "{name}已移至第{position}位，共{total}種語言。",
+  "locale_controls_selected": "已選擇",
+  "locale_controls_remove": "移除{name}",
+  "locale_controls_add": "新增語言",
+  "locale_controls_revealed": "{name}：已顯示。",
+  "locale_controls_visibility_changed": "{name}：已變更顯示狀態。",
+  "locale_controls_at_least_one": "請保留至少一種可見語言。",
+  "locale_controls_close": "關閉語言搜尋",
+  "locale_controls_removed": "{name}：已移除。"
 }

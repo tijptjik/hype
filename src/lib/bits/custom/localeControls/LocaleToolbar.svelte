@@ -454,8 +454,8 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
         <EditModeReveal visible={hasHiddenContent} reserveSpace>
           <span
             role="img"
-            aria-label="Hidden multilingual content"
-            title="Hidden multilingual content"
+            aria-label={m.locale_controls_hidden_content()}
+            title={m.locale_controls_hidden_content()}
             class="ml-2 size-1.5 shrink-0 rounded-full bg-current"
           ></span>
         </EditModeReveal>
