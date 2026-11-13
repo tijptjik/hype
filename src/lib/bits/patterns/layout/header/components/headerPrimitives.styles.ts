@@ -115,7 +115,7 @@ function resolveHeaderActionVariantClasses(className?: string): string {
 export function getHeaderActionClasses(className?: string, hideLabel = false): string {
   return cx(
     // Form actions keep their geometry while pointer-down changes Edit into Cancel/Save.
-    'active:scale-100',
+    'active:scale-100 transition-[width,background-color,border-color,color,transform,gap,padding-inline] duration-180 motion-reduce:transition-none',
     resolveHeaderActionVariantClasses(className),
     hideLabel && HEADER_HIDE_LABEL_ACTION_CLASSES,
   )

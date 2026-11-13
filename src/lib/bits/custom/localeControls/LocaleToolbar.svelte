@@ -3,6 +3,7 @@
 import { onMount, tick } from 'svelte'
 import type { TransitionConfig } from 'svelte/transition'
 import { flip } from 'svelte/animate'
+import { cubicOut } from 'svelte/easing'
 import { Popover } from 'bits-ui'
 import { m } from '#lib/i18n.js'
 // DRAG AND DROP
@@ -78,13 +79,27 @@ onMount(() => {
   return () => preference.removeEventListener?.('change', update)
 })
 
-/** Reveal from the right-hand trigger without resizing/reflowing the locale chips.
- * @param _node Mounted locale strip.
- * @returns A clipped reveal, or an immediate change for reduced motion/settings.
+/** Reveal from the right-hand trigger while moving adjacent toolbar controls.
+ * @param node Mounted locale strip, measured at its natural width.
+ * @returns A layout-width reveal for horizontal bars, or a clipped form reveal.
+ * @remarks Animate the flex gap too so mounting and removal do not add a final jump.
  */
-function revealLocales(_node: Element): TransitionConfig {
+function revealLocales(node: Element): TransitionConfig {
+  const duration = reducedMotion || alwaysExpanded ? 0 : 180
+  if (horizontal && !stacked) {
+    const width = node.getBoundingClientRect().width
+    const gap = node.parentElement
+      ? Number.parseFloat(getComputedStyle(node.parentElement).columnGap) || 0
+      : 0
+    return {
+      duration,
+      easing: cubicOut,
+      css: t =>
+        `width: ${t * width}px; flex: none; margin-right: ${(t - 1) * gap}px; overflow: clip; opacity: ${t};`,
+    }
+  }
   return {
-    duration: reducedMotion || alwaysExpanded ? 0 : 180,
+    duration,
     css: t => `clip-path: inset(0 0 0 ${(1 - t) * 100}%); opacity: ${t};`,
   }
 }
@@ -308,7 +323,7 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
         <div
           use:localeOverflow={horizontal}
           class={horizontal
-            ? 'min-w-0 [scrollbar-width:thin] overflow-x-auto overscroll-x-contain'
+            ? 'min-w-0 [scrollbar-width:none] overflow-x-auto overscroll-x-contain [&::-webkit-scrollbar]:hidden'
             : 'min-w-0 overflow-hidden'}
           data-locale-scroll={horizontal || undefined}
         >
@@ -432,18 +447,18 @@ function keydown(event: KeyboardEvent, tag: string, index: number): void {
           searching = false
           onExpandedChange(!expanded)
         }}
-        class="text-muted-foreground hover:bg-muted focus-visible:outline-primary inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 py-2 text-xs focus-visible:outline-2 disabled:opacity-50"
+        class="text-muted-foreground hover:bg-muted focus-visible:outline-primary inline-flex h-9 shrink-0 items-center rounded-md px-3 py-2 text-xs focus-visible:outline-2 disabled:opacity-50"
       >
-        <LanguagesIcon class="size-4" />
+        <LanguagesIcon class="mr-2 size-4" />
         <span data-control-label>{labels.multilingual}</span>
-        {#if hasHiddenContent}
+        <EditModeReveal visible={hasHiddenContent} reserveSpace>
           <span
             role="img"
             aria-label="Hidden multilingual content"
             title="Hidden multilingual content"
-            class="size-1.5 shrink-0 rounded-full bg-current"
+            class="ml-2 size-1.5 shrink-0 rounded-full bg-current"
           ></span>
-        {/if}
+        </EditModeReveal>
       </button>
     {/if}
   </div>

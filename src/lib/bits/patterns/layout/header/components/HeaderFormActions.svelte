@@ -154,7 +154,6 @@ function resolveIconClasses(icon?: unknown): string {
       labelClasses={HEADER_BUTTON_LABEL_CLASSES}
       class={resolveActionClass(deleteAction?.class)}
       {hideLabel}
-      hideLabelInstantly
       disabled={deleteAction?.disabled ?? !deleteAction}
       onClick={() => deleteAction?.onClick?.()}
     />
@@ -172,7 +171,6 @@ function resolveIconClasses(icon?: unknown): string {
         primaryAction?.style === 'soft' && HEADER_EDIT_ACTION_CLASSES,
       )}
       {hideLabel}
-      hideLabelInstantly
       disabled={primaryAction?.disabled ?? !primaryAction}
       onClick={() => primaryAction?.onClick?.()}
     />
@@ -193,7 +191,6 @@ function resolveIconClasses(icon?: unknown): string {
         saveAction?.color === 'primary' && HEADER_PRIMARY_ACTION_CLASSES,
       )}
       {hideLabel}
-      hideLabelInstantly
       disabled={saveAction?.disabled ?? !saveAction}
       onClick={() => saveAction?.onClick?.()}
     />
@@ -250,7 +247,6 @@ function resolveIconClasses(icon?: unknown): string {
       labelClasses={HEADER_BUTTON_LABEL_CLASSES}
       class={resolveActionClass(previewAction?.class)}
       {hideLabel}
-      hideLabelInstantly
       disabled={previewAction?.disabled ?? !previewAction}
       onClick={() => previewAction?.onClick?.()}
     />
