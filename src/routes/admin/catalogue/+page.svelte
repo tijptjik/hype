@@ -663,7 +663,7 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
 {/snippet}
 
 <Main.Root
-  class="px-0 pt-0"
+  class="overflow-y-auto! px-0 pt-0"
   onDimensionsChange={(width, height) =>
     admin.view.layout.setMainDimensions(width, height)}
 >
