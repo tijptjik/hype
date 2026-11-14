@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "status": "deferred_pending_upstream_premises",
+  "policy": {
+    "preferredClassification": "premises",
+    "fallbackClassification": "building",
+    "acceptedFallbackClassification": "premises",
+    "duplicateBuildingAction": "propose_blacklist_after_review",
+    "retainGenuineContainedBuildings": true,
+    "preserveHypeLocationId": true,
+    "scope": "future_typed_upstream_reconciliation",
+    "stationPois": "retain_as_unlinked_evidence",
+    "createServicePointsFromPoiCategory": false
+  },
+  "stations": [
+    {
+      "code": "KET",
+      "hypeLocationId": "fCrC6I7ziH9W",
+      "status": "draft_premises_with_unlinked_poi_evidence",
+      "candidates": [
+        {
+          "family": "places",
+          "id": "ss-3cf18cd2-3e76-54de-98de-cacbdb8dbf4d",
+          "category": "train_station",
+          "structuralClassification": null,
+          "assessment": "strong_station_candidate_not_confirmed_premises"
+        },
+        {
+          "family": "places",
+          "id": "ss-01732739-beea-5207-bfd1-2559902ab709",
+          "category": "travel_and_transportation",
+          "structuralClassification": null,
+          "assessment": "possible_duplicate_station_poi"
+        },
+        {
+          "family": "places",
+          "id": "ss-8d7b9b3a-043e-59d8-91b6-b177fdf79730",
+          "category": "train_station",
+          "structuralClassification": null,
+          "assessment": "reject_spatial_mismatch_approximately_4_8_km"
+        }
+      ],
+      "publication": {
+        "releaseSet": "data-hk-places-2026-09-23.0",
+        "catalogRevision": "catalog-hk-places-v0.1-2026-10-18.11"
+      },
+      "selectedUpstreamIdentity": null,
+      "searchCompleteness": {
+        "placesNameQueryComplete": true,
+        "buildingFamilySearched": false,
+        "premisesAbsenceEstablished": false
+      }
+    }
+  ],
+  "proposedBlacklist": [],
+  "appliedBlacklist": []
+}

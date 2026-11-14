@@ -335,3 +335,74 @@ warnings outside the draft additions (including duplicate MapLibre style types a
 existing UI/test typing). The initial default-heap run exhausted Node's heap; the retry
 used a 5 GiB heap within the runner's 6 GiB limit. Full validation is therefore not
 green; focused draft lint, service tests and Chrome checks pass.
+
+## Kennedy Town upstream review (15 November 2026)
+
+Hosted Places API searches for `Kennedy Town MTR` returned three records, all verified
+through the full collection response in `data-hk-places-2026-09-23.0`, catalog revision
+`catalog-hk-places-v0.1-2026-10-18.11`. No identity links were written.
+
+- `ss-3cf18cd2-3e76-54de-98de-cacbdb8dbf4d`: 港鐵堅尼地城站 MTR Kennedy Town Station,
+  train_station, point [114.1284531, 22.2815463], freeform address 堅尼地城士美菲路.
+  Strong station candidate, still requiring duplicate/identity review.
+- `ss-01732739-beea-5207-bfd1-2559902ab709`: New Kennedy Town Mtr Station, broad
+  travel_and_transportation category, point [114.128602, 22.281523]. Possible duplicate.
+- `ss-8d7b9b3a-043e-59d8-91b6-b177fdf79730`: MTR Kennedy Town Station, point
+  [114.17455,
+  22.27374],
+  roughly 4.8 km away. Do not match by name alone.
+
+All three have null identifiers and structured address/unit links. Their source evidence
+is Meta through Overture, not an MTR station-code register. The complete `KET` search
+returned only the unrelated 間 MA.KET shop. These station candidates do not establish
+shop occupancy relationships. Individual occupant searches remain a separate review.
+
+Local admin basemaps at `localhost:4173` were failing tile authentication: that origin
+is absent from the hosted tile service's first-party exemption, although CORS permits
+it. Development now requests TileJSON/vector tiles through a restricted same-origin
+endpoint using the existing server credential. The credential stays server-side;
+production retains direct tile URLs.
+
+Authenticated real Chrome verification passed on the actual Kennedy Town Location page
+(`job-mXztoeUtFP`): TileJSON and vector-tile requests returned 200, and the screenshot
+shows rendered roads/buildings. Eight focused source/proxy tests passed.
+
+## Station upstream reconciliation policy (15 November 2026, Refs #194)
+
+Current decision: station premises remain proper upstream drafts with null `ssId`. The
+Places candidates below are unlinked evidence; they are not confirmed upstream premises.
+No station identity merge, service-point creation or blacklist is applied. A station POI
+category alone does not establish a separate transport operation. A verified
+passenger-service operation may later be modelled as an operational service_point; shops
+remain establishments occupying station units.
+
+The following policy is deferred until typed upstream premises/building records and
+family-aware reconciliation are available. Reconcile existing station drafts against
+those identities before creating another canonical station record. Prefer an explicitly
+classified premises representing the same station. If no premises is available after an
+adequate source search, a reviewed building representing that same station may be
+accepted and corrected to built/premises. Preserve the original source classification
+and evidence alongside the correction. Subsequent source refreshes must not silently
+undo an accepted classification correction.
+
+If upstream supplies both premises and building candidates, require review. A building
+that duplicates the same station identity becomes a proposed SaanSeoi blacklist entry,
+with source family, ID, publication, retained identity, reason and evidence. A genuine
+physical building within the station remains a separate member of the premises. No
+blacklist is applied merely because names or coordinates coincide. Approved exclusions
+must cover discovery and ingestion consistently, without removing retained history.
+
+Keep the existing Hype station ID and all unit memberships when accepting an upstream
+identity. If that upstream record already exists in Hype, require an explicit local
+identity merge plan covering references and history; never attach the same upstream ID
+to two Hype Locations. Existing-upstream reconciliation is distinct from an upload
+receipt: do not fabricate a publication receipt for a record discovered through search.
+
+The current Places projection exposes POI categories such as train_station, not a
+confirmed built/premises classification. Buildings use a distinct source-family ID. A
+train_station POI is review evidence, not proof that the premises preference was
+satisfied. Family-aware identity acceptance and durable classification correction are
+required before applying cross-family station reconciliations.
+
+The initial Kennedy Town review is in `scripts/indoor/mtr-station-reconciliation.json`.
+Its blacklist is deliberately empty: no building-family duplicate has been verified.
