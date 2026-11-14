@@ -163,3 +163,111 @@ it('toggles the history surface without intercepting tree controls, profile link
   await fireEvent.click(screen.getByText('1 hour since previous version'))
   expect(disclosure.getAttribute('aria-expanded')).toBe('false')
 })
+
+it.each(['hub', 'project'] as const)(
+  'loads staff changes when selecting the third %s tab',
+  async resource => {
+    query.mockResolvedValue({ available: true, entries: [], nextCursor: null })
+    render(AdminResourceHistory, { resource, resourceId: 'id' })
+    await waitFor(() => expect(query).toHaveBeenCalled())
+    await fireEvent.click(screen.getByRole('button', { name: 'Staff roles' }))
+    await waitFor(() =>
+      expect(query).toHaveBeenLastCalledWith({
+        resource,
+        id: 'id',
+        before: undefined,
+        kind: 'staff',
+      }),
+    )
+    await fireEvent.click(screen.getByRole('button', { name: 'Profile and settings' }))
+    await waitFor(() =>
+      expect(query).toHaveBeenLastCalledWith({ resource, id: 'id', before: undefined }),
+    )
+  },
+)
+
+it('shows recorded staff baseline values without implying an earlier grant', async () => {
+  query.mockImplementation(async (input: { kind?: string }) => ({
+    available: true,
+    nextCursor: null,
+    entries:
+      input.kind === 'staff'
+        ? [
+            {
+              id: 'baseline',
+              actorId: 'system:staff-role-baseline',
+              actor: null,
+              origin: 'migration',
+              reason: 'Staff assignments at start of tracking',
+              createdAt: '2026-11-14T00:00:00Z',
+              initial: true,
+              fieldLabels: { subject: '@Staff' },
+              changes: [
+                {
+                  path: ['subject'],
+                  before: { present: false },
+                  after: { present: true, value: { role: 'admin' } },
+                },
+              ],
+            },
+          ]
+        : [],
+  }))
+  render(AdminResourceHistory, { resource: 'hub', resourceId: 'id' })
+  await fireEvent.click(screen.getByRole('button', { name: 'Staff roles' }))
+  expect(await screen.findByText('Staff assignments at start of tracking')).toBeTruthy()
+  expect(await screen.findByText('admin')).toBeTruthy()
+  expect(screen.getByText('Author unknown')).toBeTruthy()
+})
+
+it('links every staff subject without expanding its revision', async () => {
+  query.mockImplementation(async (input: { kind?: string }) => ({
+    available: true,
+    nextCursor: null,
+    entries:
+      input.kind === 'staff'
+        ? [
+            {
+              id: 'staff-change',
+              actorId: 'editor',
+              actor: null,
+              origin: 'user',
+              reason: 'Staff roles updated',
+              createdAt: '2026-11-14T00:00:00Z',
+              initial: false,
+              fieldLabels: { one: '@OldName', two: '@Second' },
+              staffProfiles: {
+                one: { username: 'current.name' },
+                two: { username: 'second' },
+              },
+              changes: [
+                {
+                  path: ['one', 'role'],
+                  before: { present: true, value: 'member' },
+                  after: { present: true, value: 'owner' },
+                },
+                {
+                  path: ['two'],
+                  before: { present: false },
+                  after: { present: true, value: { role: 'admin' } },
+                },
+              ],
+            },
+          ]
+        : [],
+  }))
+  render(AdminResourceHistory, { resource: 'hub', resourceId: 'id' })
+  await fireEvent.click(screen.getByRole('button', { name: 'Staff roles' }))
+  const first = await screen.findByRole('link', { name: '@OldName' })
+  expect(first.getAttribute('href')).toBe('/admin/users/current.name')
+  expect(screen.getByRole('link', { name: '@Second' }).getAttribute('href')).toBe(
+    '/admin/users/second',
+  )
+  first.addEventListener('click', event => event.preventDefault())
+  await fireEvent.click(first)
+  expect(
+    screen
+      .getByRole('button', { name: /changed fields/ })
+      .getAttribute('aria-expanded'),
+  ).toBe('false')
+})

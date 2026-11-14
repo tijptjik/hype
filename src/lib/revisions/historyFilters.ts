@@ -13,7 +13,7 @@ import type { RevisionDifference } from './diff'
 export function resourceHistoryFilterEntry(
   entry: OrganisationHistoryPage['entries'][number],
   resourceType: ChangelogEntry['resourceType'],
-  category: 'profile' | 'fields',
+  category: 'profile' | 'fields' | 'staff',
 ): ChangelogEntry {
   return {
     ...entry,

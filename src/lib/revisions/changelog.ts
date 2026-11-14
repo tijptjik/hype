@@ -18,7 +18,7 @@ export type ChangelogEntry = {
   name: string
   /** Property key from this revision, or its predecessor when the property was removed. */
   propertyKey?: string
-  category: 'profile' | 'fields' | 'publication' | 'maintenance'
+  category: 'profile' | 'fields' | 'staff' | 'publication' | 'maintenance'
   createdAt: string
   actorId: string
   actorName: string | null

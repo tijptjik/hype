@@ -188,11 +188,13 @@ export type HistoryGroup = {
 /** Groups shared path prefixes with translated fields shown as locale rows.
  * @param changes Immutable comparison evidence in server order.
  * @param fieldLabels Optional property identity labels retained with catalogue evidence.
+ * @param staff Whether identities name staff rather than catalogue fields.
  * @returns Ordered groups with field labels relative to their heading.
  */
 export function groupChanges(
   changes: readonly RevisionDifference[],
   fieldLabels?: Record<string, string>,
+  staff = false,
 ): HistoryGroup[] {
   const groups = new Map<string, HistoryGroup>()
   for (const localized of groupHistoryLocales(changes)) {
@@ -209,7 +211,15 @@ export function groupChanges(
       }
       groups.set(key, group)
     }
-    const operation = historyOperation(change, fieldLabels !== undefined)
+    const operation = staff
+      ? {
+          label:
+            change.path.length === 1
+              ? `${changeKind(change)} staff assignment`
+              : `${changeKind(change)} ${fieldLabel(change.path.slice(1)).toLowerCase()}`,
+          wholeEntity: change.path.length === 1,
+        }
+      : historyOperation(change, fieldLabels !== undefined)
     group.fields.push({
       label: operation.wholeEntity
         ? null

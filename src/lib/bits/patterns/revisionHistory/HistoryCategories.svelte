@@ -8,16 +8,18 @@ import ProfileIcon from 'virtual:icons/proicons/person-multiple'
 import FieldsIcon from 'virtual:icons/proicons/text'
 
 let {
+  showStaff = false,
   showFields = true,
   historyKind = 'profile',
   pending = false,
   onSelect,
 }: {
+  showStaff?: boolean
   showFields?: boolean
-  historyKind?: 'profile' | 'fields'
+  historyKind?: 'profile' | 'fields' | 'staff'
   allExpanded?: boolean
   pending?: boolean
-  onSelect?: (kind: 'profile' | 'fields') => void
+  onSelect?: (kind: 'profile' | 'fields' | 'staff') => void
   onToggle?: (collapsed: boolean) => void
 } = $props()
 </script>
@@ -51,6 +53,18 @@ let {
         >
           <FieldsIcon class="size-4 shrink-0" aria-hidden="true" />
           <span class="min-w-0 whitespace-normal">Field definitions</span>
+        </button>
+      {/if}
+      {#if showStaff}
+        <button
+          type="button"
+          class={styles.tab}
+          aria-pressed={historyKind === 'staff'}
+          disabled={pending}
+          onclick={() => onSelect?.('staff')}
+        >
+          <ProfileIcon class="size-4 shrink-0" aria-hidden="true" />
+          <span class="min-w-0 whitespace-normal">Staff roles</span>
         </button>
       {/if}
     </fieldset>

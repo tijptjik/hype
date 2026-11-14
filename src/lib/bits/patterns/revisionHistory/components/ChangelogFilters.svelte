@@ -21,6 +21,7 @@ import type {
 } from '#lib/revisions/changelog.js'
 
 let {
+  showStaff = false,
   label = 'Changelog filters',
   filters,
   options,
@@ -28,6 +29,7 @@ let {
   count = null,
   countLoading = false,
 }: {
+  showStaff?: boolean
   label?: string
   count?: number | null
   countLoading?: boolean
@@ -248,6 +250,7 @@ function changeDates(values: number[]): void {
               items={[
                 { value: 'profile', label: 'Profile' },
                 { value: 'fields', label: 'Fields' },
+                ...(showStaff ? [{ value: 'staff', label: 'Staff roles' }] : []),
                 { value: 'publication', label: 'Publication' },
                 { value: 'maintenance', label: 'Maintenance' },
               ]}

@@ -14,11 +14,13 @@ import type {
 } from '#lib/revisions/changelog.js'
 
 let {
+  showStaff = false,
   entries,
   count = null,
   loading = false,
   onChange,
 }: {
+  showStaff?: boolean
   entries: ChangelogEntry[]
   count?: number | null
   loading?: boolean
@@ -31,6 +33,7 @@ const options = $derived(historyFilterOptions(entries))
 {#if headerCtrl?.historyFiltersVisible}
   <ChangelogFilters
     label="History filters"
+    {showStaff}
     filters={{
       ...headerCtrl.historyFilters,
       search: headerCtrl.historyQuery || undefined,

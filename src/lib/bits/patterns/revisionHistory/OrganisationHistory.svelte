@@ -11,18 +11,18 @@ let { organisationId }: { organisationId: string } = $props()
 /**
  * Loads the existing organisation history categories through the shared viewer.
  * @param before Optional continuation cursor.
- * @param kind Profile or field-definition history.
+ * @param kind Profile, field-definition, or staff-assignment history.
  * @returns A freshly authorized history page.
  */
 async function loadPage(
   before?: number,
-  kind?: 'profile' | 'fields',
+  kind?: 'profile' | 'fields' | 'staff',
 ): Promise<OrganisationHistoryPage> {
   return await refreshRemoteQuery(
     getOrganisationHistory({
       organisationId,
       before,
-      ...(kind === 'fields' ? { kind } : {}),
+      ...(kind && kind !== 'profile' ? { kind } : {}),
     }),
   )
 }
@@ -33,4 +33,5 @@ async function loadPage(
   resourceLabel="organisation"
   {loadPage}
   showFields
+  showStaff
 />

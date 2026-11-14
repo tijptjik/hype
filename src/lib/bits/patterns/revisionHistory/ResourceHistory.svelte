@@ -40,6 +40,7 @@ let {
   resourceId,
   resourceLabel,
   loadPage,
+  showStaff = false,
   showFields = false,
 }: {
   resourceId: string
@@ -48,11 +49,12 @@ let {
     | Capitalize<ChangelogEntry['resourceType']>
   loadPage: (
     before?: number,
-    kind?: 'profile' | 'fields',
+    kind?: 'profile' | 'fields' | 'staff',
   ) => Promise<OrganisationHistoryPage>
+  showStaff?: boolean
   showFields?: boolean
 } = $props()
-let historyKind = $state<'profile' | 'fields'>('profile')
+let historyKind = $state<'profile' | 'fields' | 'staff'>('profile')
 let entries = $state<OrganisationHistoryPage['entries']>([])
 let available = $state(true)
 let recordingEnabled = $state<boolean | undefined>()
@@ -258,19 +260,22 @@ $effect(() => {
   data-history-surface
 >
   <HistoryFilters
+    {showStaff}
     entries={filterEntries}
     count={nextCursor === null ? visibleEntries.size : null}
     {loading}
     onChange={filters => {
       if (
         filters.category === 'profile' ||
-        (showFields && filters.category === 'fields')
+        (showFields && filters.category === 'fields') ||
+        (showStaff && filters.category === 'staff')
       )
         historyKind = filters.category
     }}
   />
   <HistoryCategories
     {showFields}
+    {showStaff}
     {historyKind}
     {allExpanded}
     onSelect={kind => {
@@ -323,10 +328,12 @@ $effect(() => {
       {@const groups = groupChanges(
         entry.changes.filter(change => !hasLogo || !isLogoChange(change)),
         entry.fieldLabels,
+        historyKind === 'staff',
       )}
       {@const logoGroups = groupChanges(
         entry.changes.filter(change => hasLogo && isLogoChange(change)),
         entry.fieldLabels,
+        historyKind === 'staff',
       )}
       {@const fields = [
         ...new Set(
@@ -386,17 +393,35 @@ $effect(() => {
                   : (entry.reason ??
                     (entry.initial
                       ? 'Initial recorded state'
-                      : 'Profile and settings updated'))}
+                      : historyKind === 'staff'
+                        ? 'Staff roles updated'
+                        : 'Profile and settings updated'))}
               </h3>
             </div>
             <dl class={styles.metadata}>
               <div class="max-w-[min(100%,480px)] min-w-0 space-y-1">
-                <dt class={styles.label}>Field</dt>
+                <dt class={styles.label}>
+                  {historyKind === 'staff' ? 'Staff member' : 'Field'}
+                </dt>
                 <dd
                   class="text-foreground text-sm break-words whitespace-normal"
                   data-tooltip={fields.length > 2 ? fields.join(', ') : undefined}
                 >
-                  {fieldSummary}
+                  {#if historyKind === 'staff'}
+                    {#each Object.entries(
+                      entry.fieldLabels ?? {},
+                    ) as [id, label], index (id)}
+                      {#if index > 0}
+                        <span>, </span>
+                      {/if}
+                      <HistoryActorIdentity
+                        username={entry.staffProfiles?.[id]?.username}
+                        {label}
+                      />
+                    {/each}
+                  {:else}
+                    {fieldSummary}
+                  {/if}
                 </dd>
               </div>
               <div class="min-w-0 space-y-1">
@@ -433,7 +458,9 @@ $effect(() => {
                       {entry.origin === 'migration'
                         ? 'Author unknown'
                         : entry.origin === 'system'
-                          ? 'System'
+                          ? entry.actorId === 'system:unattributed-role-write'
+                            ? 'Actor not recorded'
+                            : 'System'
                           : 'User unavailable'}
                     </span>
                   {/if}
@@ -476,7 +503,9 @@ $effect(() => {
               <dl class={styles.fieldHeading}>
                 {#if field.label}
                   <div class="min-w-0 space-y-1">
-                    <dt class={styles.label}>Field</dt>
+                    <dt class={styles.label}>
+                      {historyKind === 'staff' ? 'Setting' : 'Field'}
+                    </dt>
                     <dd
                       class="text-sm font-medium break-words"
                       title={field.change.path.join(' › ')}
@@ -602,6 +631,29 @@ $effect(() => {
                 No earlier comparison is available.
               </p>
               {@render logoComparison()}
+              {#if historyKind === 'staff'}
+                <dl class="grid min-w-0 gap-4">
+                  {#each groups as group (group.key)}
+                    <div class="min-w-0">
+                      <dt class="text-sm font-medium break-words">
+                        <HistoryActorIdentity
+                          username={entry.staffProfiles?.[JSON.parse(group.key)[0]]
+                            ?.username}
+                          label={group.label}
+                        />
+                      </dt>
+                      <dd class="mt-2 min-w-0">
+                        {#each group.fields as field}
+                          <HistoryValue
+                            slot={field.change.after}
+                            path={field.change.path}
+                          />
+                        {/each}
+                      </dd>
+                    </div>
+                  {/each}
+                </dl>
+              {/if}
             </div>
           {:else}
             <div
@@ -619,7 +671,15 @@ $effect(() => {
                         class="bg-primary/50 h-3 w-0.5 shrink-0 rounded-full"
                         aria-hidden="true"
                       ></span>
-                      {group.label}
+                      {#if historyKind === 'staff'}
+                        <HistoryActorIdentity
+                          username={entry.staffProfiles?.[JSON.parse(group.key)[0]]
+                            ?.username}
+                          label={group.label}
+                        />
+                      {:else}
+                        {group.label}
+                      {/if}
                       <span
                         class="text-muted-foreground text-xs font-normal tabular-nums"
                         >{group.fields.length}</span

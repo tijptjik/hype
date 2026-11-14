@@ -47,7 +47,7 @@ const latest = {
  */
 async function loadPage(
   before?: number,
-  kind?: 'profile' | 'fields',
+  kind?: 'profile' | 'fields' | 'staff',
 ): Promise<OrganisationHistoryPage> {
   if (kind === 'fields')
     return {

@@ -13,19 +13,19 @@ let { resource, resourceId }: { resource: AdminRevisionResource; resourceId: str
 /**
  * Loads profile evidence using the resource's current editor authorization.
  * @param before Optional continuation cursor.
- * @param kind Profile evidence or owned field definitions.
+ * @param kind Profile, owned field definitions, or staff-assignment history.
  * @returns Fresh attributed history, including migration availability.
  */
 async function loadPage(
   before?: number,
-  kind?: 'profile' | 'fields',
+  kind?: 'profile' | 'fields' | 'staff',
 ): Promise<OrganisationHistoryPage> {
   return await refreshRemoteQuery(
     getAdminResourceHistory({
       resource,
       id: resourceId,
       before,
-      ...(kind === 'fields' ? { kind } : {}),
+      ...(kind && kind !== 'profile' ? { kind } : {}),
     }),
   )
 }
@@ -37,5 +37,6 @@ async function loadPage(
     resourceLabel={resource}
     {loadPage}
     showFields={resource !== 'layer'}
+    showStaff={resource !== 'layer'}
   />
 {/key}

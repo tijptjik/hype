@@ -9,7 +9,9 @@ export const changelogQueryFields = {
       resourceType: z
         .enum(['hub', 'organisation', 'project', 'layer', 'feature', 'property'])
         .optional(),
-      category: z.enum(['profile', 'fields', 'publication', 'maintenance']).optional(),
+      category: z
+        .enum(['profile', 'fields', 'staff', 'publication', 'maintenance'])
+        .optional(),
       action: z
         .enum([
           'created',
