@@ -2706,6 +2706,19 @@ $effect(() => {
 
 // Keep entity header metadata (title/icon/facets) aligned with loaded organisation data.
 $effect(() => {
+  // Native project queries own their ancestor labels independently of the index cache.
+  const organisation = optimisticProjectHierarchy?.organisation
+  const crumbs =
+    !isNewProjectRef && organisation
+      ? [
+          {
+            name:
+              adminCtx.view.getContextualOrganisationName(organisation, false, false) ||
+              organisation.code,
+            href: `/admin/organisations/${organisation.code}`,
+          },
+        ]
+      : []
   const title =
     (isNewProjectRef ? `${NEW_TITLE} ${m.deft_mealy_ant_vent()}` : undefined) ??
     headerCtrl.resolveEntityTitle(
@@ -2726,15 +2739,20 @@ $effect(() => {
         )
         .join('|')
   const headerKey = `${projectRef}:${title}:${facetKey}`
-  if (headerKey === lastHeaderKey) return
+  if (headerKey === lastHeaderKey) {
+    headerCtrl.setCrumbs(crumbs)
+    return
+  }
   lastHeaderKey = headerKey
   if (Array.isArray(displayFacets)) {
     headerCtrl.setHeaderForEntity(title, ProjectIcon, new Map())
     headerCtrl.setFacets(displayFacets)
+    headerCtrl.setCrumbs(crumbs)
     headerCtrl.setTitleMenuItems(projectTitleMenuItems)
     return
   }
   headerCtrl.setHeaderForEntity(title, ProjectIcon, displayFacets)
+  headerCtrl.setCrumbs(crumbs)
   headerCtrl.setTitleMenuItems(projectTitleMenuItems)
 })
 

@@ -29,6 +29,7 @@ import { getThemeModel } from '#lib/themes/theme.svelte.js'
 import { useAdminHeaderModel } from '#lib/adapters/header/index.js'
 // NAVIGATION
 import { getAdminMapHref } from '#lib/navigation/adminMapLink.js'
+import { resolveAdminTitle, resolveTitle } from '#lib/navigation/title.js'
 import {
   resetAdminIndexResourceRef,
   shouldClearAdminFeatureCacheOnNavigate,
@@ -257,6 +258,25 @@ $effect(() => {
   if (isShareFacet && canShare) visitedShareTarget = shareKey
 })
 const baseHeaderProps = $derived(headerModel.getHeaderProps())
+// Specialized views can show an item title while their breadcrumb names the owning resource.
+const documentTitle = $derived.by(() => {
+  const crumbs = baseHeaderProps.title?.crumbs ?? []
+  const viewCrumb = crumbs.at(-1)
+  const isNamedView = Boolean(viewCrumb && !viewCrumb.href)
+  const activeFacet = baseHeaderProps.facets?.items?.find(
+    facet => facet.ref === baseHeaderProps.facets?.active,
+  )
+  return resolveAdminTitle(
+    resolveTitle('HYPE.HK', page.data.titleEnvironmentLabel),
+    page.url.pathname,
+    {
+      name: isNamedView
+        ? (crumbs.at(-2)?.name ?? baseHeaderProps.title?.text)
+        : baseHeaderProps.title?.text,
+      view: isNamedView ? viewCrumb?.name : activeFacet?.label,
+    },
+  )
+})
 const shareAction = $derived<HeaderButtonActionConfig | null>(
   canShare
     ? {
@@ -368,6 +388,8 @@ afterNavigate(({ shallow }) => {
   resetAdminIndexResourceRef(adminCtx, page.url.pathname)
 })
 </script>
+
+<svelte:head><title>{documentTitle}</title></svelte:head>
 
 <AdminShell
   minWidth={1200}

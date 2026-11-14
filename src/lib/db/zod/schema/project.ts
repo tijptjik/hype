@@ -283,6 +283,7 @@ export const ProjectDetailProfileAPI = ProjectCardProfileAPI.extend({
 })
 
 export const ProjectAdminProfileAPI = ProjectBase.extend({
+  ancestors: CompactAncestorsSchema.optional(),
   i18n: getLocales(ProjectI18nBase),
   userRoles: z.array(ProjectRoleWithUser).default([]),
   properties: z.array(PropertyAdminProfileAPI).nullish(),

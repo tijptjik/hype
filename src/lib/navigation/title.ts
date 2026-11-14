@@ -34,11 +34,17 @@ export const resolveTitle = (
   return environmentLabel ? `${environmentLabel} ${normalizedTitle}` : normalizedTitle
 }
 
-/** Append the current admin resource to the shared application/environment title.
+/** Place the current admin resource and view before the shared application name.
  * @param title Existing shared title, including its environment prefix.
- * @param pathname Current route path. @returns Shared title with an admin resource suffix.
+ * @param pathname Current route path.
+ * @param context Resolved resource name and optional active view label.
+ * @returns Shared title with the current resource and view, falling back to the index label.
  */
-export const resolveAdminTitle = (title: string, pathname: string): string => {
+export const resolveAdminTitle = (
+  title: string,
+  pathname: string,
+  context?: { name?: string; view?: string },
+): string => {
   const [, area, section] = pathname.split('/')
   if (area !== 'admin') return title
   const labels: Record<string, string> = {
@@ -61,5 +67,10 @@ export const resolveAdminTitle = (title: string, pathname: string): string => {
     styles: 'Styles',
   }
   const resource = section ? (labels[section] ?? section.replaceAll('-', ' ')) : 'Admin'
-  return `${title} - ${resource}`
+  const name = context?.name?.trim() || resource
+  const view = context?.view?.trim()
+  // Keep environment markers at the front while moving the application name to the end.
+  const prefix = title.match(/^(?:ᴰᴱⱽ|ᴾᴿᴱⱽᴵᴱᵂ|\[(?:DEV|PREVIEW)\])\s*/)?.[0] ?? ''
+  const siteName = title.slice(prefix.length).trim()
+  return `${prefix}${name}${view && view !== name ? ` · ${view}` : ''} · ${siteName}`
 }

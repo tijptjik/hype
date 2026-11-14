@@ -145,6 +145,7 @@ const projectListWithRelations = {
  * Includes role assignments and local properties required by mutation flows.
  */
 const projectEntityWithRelations = {
+  organisation: compactAncestorRelations,
   i18n: true,
   mapStyleAssignment: {
     with: {
