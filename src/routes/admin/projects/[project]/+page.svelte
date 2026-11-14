@@ -22,6 +22,7 @@ import { ProjectFlagsSchema, show3dAddressOptions } from '#lib/projects/flags.js
 import { Card, Switch } from '#lib/bits/custom/index.js'
 import { SimpleTooltip } from '#lib/bits/core/index.js'
 import InfoIcon from 'virtual:icons/proicons/info'
+import MatchLocationIcon from 'virtual:icons/proicons/location'
 import { getLocationUpdatePolicy } from '#lib/api/location.remote.js'
 import LocationPolicyPanel from '#lib/bits/patterns/forms/locationUpdatePolicy/LocationPolicyPanel.svelte'
 import FormMarkerStyleSection from '#lib/bits/patterns/forms/formMarkerStyleSection/FormMarkerStyleSection.svelte'
@@ -29,6 +30,7 @@ import { isMarkerStyleCode, type MarkerStyleCode } from '#lib/features/markerSty
 // PRESENTATION
 import { DEFAULT_CARD_STYLE } from '#lib/features/cardStyle.js'
 // SVELTE
+import { goto } from '$app/navigation'
 import { page } from '$app/state'
 import { tick, untrack } from 'svelte'
 // ENUMS
@@ -1868,6 +1870,17 @@ const canEditImageDropzone = $derived(
 const projectTitleMenuItems = $derived.by(() =>
   activeProjectData?.id
     ? [
+        ...(canEditProject
+          ? [
+              {
+                label: 'Match locations',
+                icon: MatchLocationIcon,
+                onSelect: () => {
+                  void goto(`/admin/projects/${activeProjectData.id}/match-locations`)
+                },
+              },
+            ]
+          : []),
         createMapRenderTitleMenuItem({
           isRefreshing: isRefreshingMapRender,
           onSelect: () => {

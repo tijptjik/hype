@@ -284,6 +284,13 @@ export class HeaderCtrl {
     this.state.meta.titleMenuItems = [...items]
   }
 
+  /** Update the visible title without resetting mounted route controls.
+   * @param title Current route title. @returns Nothing.
+   */
+  setTitle(title: string): void {
+    this.state.meta.title = title
+  }
+
   /**
    * Configure header for index/list routes.
    * @param title - Header title.

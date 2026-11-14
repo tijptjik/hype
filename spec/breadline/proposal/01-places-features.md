@@ -4361,3 +4361,103 @@ marker, then a general logo or generic icon with a white ring. Candidates stay i
 review. Corporate ownership evidence is separate from local franchise operation;
 imported artwork does not change pinned Location identity revisions. See
 [the artwork contract and local MTR import](../../../docs/catalogue/mtr-artwork.md).
+
+### Project Location reconciliation (Refs #194)
+
+The project title menu opens **Match locations** at
+`/admin/projects/[project]/match-locations`. The queue excludes archived Features and
+counts only upstream-linked Locations as matched; skipping never marks a record
+complete. Search defaults to the curated Brand and a 50 m radius, with Feature name or a
+project field available as the automation source. Search text remains editable. Search
+spans all upstream locales: an English brand can occur in a Chinese-labelled source
+record. The interface language affects presentation, not candidate eligibility. Provider
+radius constraints apply before pagination, and changing the record, query, radius or
+authority invalidates prior candidates and reviews.
+
+Selecting a result on the map or candidate list displays canonical details below it.
+**Link Location** imports or reuses the selected SaanSeoi Location and associates the
+current Feature with it, then advances. An existing association uses the guarded
+reassociation command; it does not change or merge the old Location identity or move
+other Features. Features without a Location use the initial association command. Both
+paths adopt the shared upstream facts without copying the old Location values into
+Organisation corrections. Custom Feature name overrides remain on the Feature, and
+generated names continue through its naming rules.
+
+The comparison starts collapsed. The selected shop’s top-right expand icon opens a
+full-height review; the collapse icon returns to the map. The control appears only when
+there are details to review. The single Link action imports/reuses the immutable
+upstream snapshot and atomically accepts the Feature association. If upstream has no
+phone, the current Feature phone becomes a shared community curation authored by the
+server-resolved, authorized `hkfoodworks` Organisation, with the signed-in user retained
+as audit actor. Existing community phone choices, including explicit clears, take
+precedence. Names, addresses, websites and other old values are not carried into new
+Organisation overrides. Shared phone curation, policy-governed propagation, Feature
+projection/history and association commit together or roll back together; source
+snapshots are never edited. Curation locks and source/head/Feature/association
+concurrency checks remain enforced. No match is accepted merely because its name or
+distance ranks first. Existing Feature values and their accepted Location revision
+remain subject to the existing reconciliation policy. Source failures retain search
+settings and expose retry controls.
+
+Focused tests are `location-reconciliation.test.ts` and
+`location-reconciliation.remote.test.ts`; the managed Chrome interaction check is
+`scripts/visual-checks/location-reconciliation-check.ts`.
+
+#### Accepted unavailable Locations
+
+`location.lastManualMatchAttemptAt` is nullable operational review state, separate from
+publisher `sourceAvailability` and immutable Location facts. **Mark location as
+unavailable** writes a server-generated UTC timestamp only after an explicit manual
+decision. Searching, empty results, provider errors and **Skip for now** do not write
+it. Migration `0249_location_manual_match_attempt.sql` leaves all existing Locations
+unattempted. The action requires an existing Location and rechecks its ownership,
+current Feature association, active Project membership and unmatched state atomically;
+retries preserve the accepted timestamp.
+
+An unmatched Location with a timestamp is excluded from the default queue. The header
+shows a large reviewed percentage and count to the left of the action buttons. A small
+legend sits above the segmented bar: green matched, amber skipped this session, blue
+unavailable, and gray remaining. Skips are deduplicated and do not count as completed.
+Counts are per active Feature, so one shared Location can resolve multiple queue
+entries. A subsequently linked Location counts as matched only, even if its historical
+manual-attempt timestamp remains. The no-Location path continues to require a Location
+before it can store this disposition. The search source uses the standard Select
+dropdown rather than an editable search picker.
+
+Persistence and race coverage lives in `location-reconciliation-state.test.ts`, with
+permission coverage in `location-reconciliation.remote.test.ts`. The managed Chrome
+check additionally exercises the dropdown, unavailable-action failure/retry and progress
+after reload using simulated writes, leaving real shop dispositions intact.
+
+Reconciliation discovery now downloads all pages for the chosen search text before
+applying the selected radius locally. Completed cohorts are cached in browser storage
+for 24 hours, scoped by role context and exact query; radius and Feature changes reuse
+the same cohort. A progress bar reports the downloaded count (the search API supplies no
+total). Failed or partial downloads are not persisted as complete. Canonical details and
+identity acceptance remain separately verified. Refs #194.
+
+The accepted-unavailable count opens the shared row display with a **Reset** action.
+Reset checks Project and Location authority and clears only the manual-attempt
+timestamp, rechecking ownership and association atomically. All active Features sharing
+that Location return to review. The matching header owns **Skip for now**, blue
+**Location unavailable**, and green **Link Location** actions; deletion uses the current
+Feature's title dropdown rather than an inherited form callback. Feature address
+components remain in a bottom comparison card beside the selected upstream Location,
+with both cards centered clear of the map legend. The compact radius control sits at the
+far right of the filter bar. Refs #194.
+
+Both matched and unavailable counts open sortable row lists, with Name, Address and Date
+sorting and inline relative timestamps. Matching filters are hidden in either list.
+Matched dates use recorded association and identity history; imported baselines without
+reliable dates show “Date unavailable”. Reset is available only for unavailable records.
+
+The header retains confirmed values while loading and keeps Link visible but disabled
+without a valid selection. Location options have a selected outline; list selection and
+the card’s bottom-right Previous/Next controls center the chosen marker. Locations
+already linked to active Features in this Project use square markers and remain in the
+option sequence. Websites and social profiles live in the shop’s overflow popover.
+Address labels use the shared structured formatter and wrap without truncation.
+
+Reset persistence and authorization regressions and the updated Chrome interaction
+fixture are prepared. Runtime verification of this UI revision remains outstanding: the
+managed runner could not reach Li over SSH on 2026-11-14.
