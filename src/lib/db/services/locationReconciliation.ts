@@ -1,7 +1,6 @@
 // TABLE OF CONTENTS
 // 1. Queue progress
-// 2. Saved Feature skips
-// 3. Explicit unavailable disposition
+// 2. Explicit unavailable disposition
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // TYPES
@@ -10,13 +9,12 @@ import type { Database } from '#lib/types.js'
 /** Shared unpublished Locations are already reviewed identities, not failed source matches. */
 const canonicalDraft = sql`(l.state='unresolved' AND l.ssId IS NULL AND l.ownerOrganisationId IS NULL)`
 
-/** Unresolved Location predicate for the Location table joined with alias l. */
+/** Pending queue predicate for the Location table joined with alias l. */
 export const pendingLocationReconciliation = sql`(l.id IS NULL OR ((l.state!='linked' OR l.ssId IS NULL) AND l.lastManualMatchAttemptAt IS NULL AND NOT ${canonicalDraft}))`
-/** Pending queue predicate for Feature alias f and Location alias l. */
 
 /** Count Feature outcomes without treating skips or unavailable Locations as matches.
  * @param db Request-local database. @param projectId Authorized persisted Project ID.
- * @returns Disjoint matched, draft, skipped, accepted-unavailable and remaining Feature counts.
+ * @returns Disjoint matched, draft, accepted-unavailable and remaining Feature counts.
  * @remarks A shared Location disposition affects every associated Feature; archived Features are excluded.
  */
 export async function readLocationReconciliationProgress(
@@ -40,8 +38,7 @@ export async function readLocationReconciliationProgress(
       coalesce(sum(${canonicalDraft}),0) drafts,
       coalesce(sum(l.state='linked' AND l.ssId IS NOT NULL),0) matched,
       coalesce(sum((l.state!='linked' OR l.ssId IS NULL) AND NOT ${canonicalDraft} AND l.lastManualMatchAttemptAt IS NOT NULL),0) unavailable,
-      coalesce(sum(${pendingLocationReconciliation}),0) remaining,
-      coalesce(sum(${unresolvedLocationReconciliation} AND f.reconciliationSkippedAt IS NOT NULL),0) skipped
+      coalesce(sum(${pendingLocationReconciliation}),0) remaining
     FROM feature f LEFT JOIN featureLocation fl ON fl.featureId=f.id
       LEFT JOIN location l ON l.id=fl.locationId
     WHERE f.projectId=${projectId} AND f.isArchived=0
