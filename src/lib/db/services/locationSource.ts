@@ -24,6 +24,7 @@ import {
   readLocationFacts,
   serializeLocationFacts,
 } from '#lib/locations/factsSnapshot.js'
+import { locationTaxonomy } from '#lib/locations/taxonomy.js'
 import { deriveLocationId } from '#lib/locations/id.server.js'
 import { equalLocationSourceRecord } from '#lib/locations/sourceEvidence.js'
 import {
@@ -118,7 +119,7 @@ export async function persistSaanSeoiPlace(
   guard: SQL = sql`1`,
 ): Promise<{ locationId: string; revisionId: string }> {
   const existing = await db
-    .select({ id: locationTable.id })
+    .select({ id: locationTable.id, kind: locationTable.kind })
     .from(locationTable)
     .where(eq(locationTable.ssId, projection.ssId))
     .get()
@@ -130,6 +131,13 @@ export async function persistSaanSeoiPlace(
     .get()
   if (!existing && retired) throw new Error('Retired source identity requires review')
   // Deterministic first identity makes concurrent first ingestion converge without orphan rows.
+  // Published premises and units retain their classification during later source refreshes.
+  const kind = existing?.kind ?? projection.facts.entity?.kind ?? 'establishment'
+  if (projection.facts.entity && projection.facts.entity.kind !== kind)
+    throw new LocationSourceReviewError(
+      'Source classification differs from retained Location',
+    )
+  const taxonomy = locationTaxonomy(kind)
   const locationId = existing?.id ?? deriveLocationId('saanseoi', projection.ssId)
   const latest = await db
     .select({
@@ -171,13 +179,13 @@ export async function persistSaanSeoiPlace(
   await db.batch([
     db
       .insert(locationTable)
-      .select(sql`SELECT ${locationId},${projection.ssId},'operational','establishment',NULL,'linked','current',
+      .select(sql`SELECT ${locationId},${projection.ssId},${taxonomy.kind},${taxonomy.class},NULL,'linked','current',
         NULL, NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${creationGuard}`)
       .onConflictDoNothing({ target: locationTable.id }),
     db.insert(locationRevisionInput).select(sql`SELECT ${revisionId},${locationId},
         (SELECT coalesce(max(version),0)+1 FROM locationRevisionContent AS locationRevision WHERE locationId=${locationId}),
         'saanseoi',${projection.ssId},${projection.apiVersion},${projection.releaseId},
-        ${projection.snapshotId},${contentHash},${JSON.stringify(rawSource)},${serializeLocationFacts(facts, 'establishment')},
+        ${projection.snapshotId},${contentHash},${JSON.stringify(rawSource)},${serializeLocationFacts(facts, kind)},
         strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard} AND ${identityGuard}
         AND NOT EXISTS(SELECT 1 FROM locationRevision WHERE id=${revisionId})`),
     db

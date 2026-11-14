@@ -11,7 +11,12 @@ import { createHash } from 'node:crypto'
  * precedence; subsequent SaanSeoi identity changes must retain the HYPE identity.
  */
 export function deriveLocationId(
-  origin: 'breadline-donor' | 'breadline-dropoff' | 'feature-baseline' | 'saanseoi',
+  origin:
+    | 'breadline-donor'
+    | 'breadline-dropoff'
+    | 'feature-baseline'
+    | 'saanseoi'
+    | 'canonical-draft',
   sourceId: string,
 ): string {
   if (!sourceId) throw new Error('Location identity requires a nonempty source ID')

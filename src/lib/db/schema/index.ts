@@ -68,3 +68,5 @@ export * from './locationRevisionI18n'
 export * from './fieldResearch'
 
 export * from './staffRoleHistory'
+
+export * from './locationCanonicalDraft'

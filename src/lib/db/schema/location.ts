@@ -64,7 +64,7 @@ export const location = sqliteTable(
         'service_point',
       ],
     }),
-    // Ownership grants baseline authority. Only manual Locations are private; unmatched are shared.
+    // Only manual Locations are private. Ownerless unresolved Locations are canonical drafts.
     ownerOrganisationId: text('ownerOrganisationId').references(() => organisation.id, {
       onDelete: 'restrict',
     }),
@@ -99,7 +99,7 @@ export const location = sqliteTable(
     ),
     check(
       'location_identity_check',
-      sql`(${table.state} = 'linked' AND ${table.ssId} IS NOT NULL) OR (${table.state} IN ('unresolved','manual') AND ${table.ssId} IS NULL AND ${table.ownerOrganisationId} IS NOT NULL) OR (${table.state}='redirect' AND ${table.ssId} IS NULL)`,
+      sql`(${table.state} = 'linked' AND ${table.ssId} IS NOT NULL) OR (${table.state}='unresolved' AND ${table.ssId} IS NULL) OR (${table.state}='manual' AND ${table.ssId} IS NULL AND ${table.ownerOrganisationId} IS NOT NULL) OR (${table.state}='redirect' AND ${table.ssId} IS NULL)`,
     ),
     check(
       'location_availability_check',
