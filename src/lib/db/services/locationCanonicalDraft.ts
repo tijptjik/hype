@@ -24,6 +24,7 @@ import type { SaanSeoiPlaceProjection } from '#lib/locations/saanseoi.js'
 
 // TABLE OF CONTENTS
 // - createCanonicalLocationDraft: trusted, idempotent shared baseline ingestion
+// - updateCanonicalLocationDraft: mutable working facts without history
 // - publishCanonicalLocationDraft: explicit upload receipt promotes the same identity
 
 /** Create one shared canonical draft; existing source keys never overwrite reviewed data.
@@ -122,6 +123,7 @@ export async function publishCanonicalLocationDraft(
   input: {
     sourceKey: string
     expectedRevisionId: string
+    expectedDraftVersion: string
     kind: 'premises' | 'building_part' | 'establishment'
     projection: SaanSeoiPlaceProjection
     actorId: string
@@ -152,6 +154,7 @@ export async function publishCanonicalLocationDraft(
   // Reject stale local edits, reused upstream IDs and retired source identities inside the write batch.
   const guard = sql`EXISTS(SELECT 1 FROM location WHERE id=${current.id} AND state='unresolved' AND ssId IS NULL AND ownerOrganisationId IS NULL AND matchingType=${input.kind})
     AND (SELECT id FROM locationRevisionContent WHERE locationId=${current.id} ORDER BY version DESC LIMIT 1)=${input.expectedRevisionId}
+    AND (SELECT contentHash FROM locationRevisionContent WHERE id=${input.expectedRevisionId})=${input.expectedDraftVersion}
     AND NOT EXISTS(SELECT 1 FROM location WHERE ssId=${projection.ssId})
     AND NOT EXISTS(SELECT 1 FROM locationIdentityHistory WHERE ssId=${projection.ssId} OR previousSsId=${projection.ssId})`
   const result = await executeRevisionBatch(db, guard, [
@@ -172,4 +175,53 @@ export async function publishCanonicalLocationDraft(
   ])
   if (!result) throw new Error('Canonical draft publication conflict')
   return current.id
+}
+
+/** Replace a canonical draft's working facts without appending Location history.
+ * @param db Request database.
+ * @param input Validated facts and the exact version displayed by the editor.
+ * @returns New concurrency token, or null if edited or published concurrently.
+ * @remarks The caller must authorize SuperAdmin access. Published records are immutable.
+ */
+export async function updateCanonicalLocationDraft(
+  db: Database,
+  input: {
+    locationId: string
+    sourceRevisionId: string
+    expectedDraftVersion: string
+    facts: LocationFacts
+  },
+): Promise<string | null> {
+  const current = await db.get<{ kind: string; rawSource: string }>(
+    sql`SELECT l.matchingType kind,r.rawSource FROM location l
+      JOIN locationCanonicalDraft d ON d.locationId=l.id
+      JOIN locationRevisionContent r ON r.locationId=l.id
+      WHERE l.id=${input.locationId} AND r.id=${input.sourceRevisionId}
+        AND l.state='unresolved' AND l.ssId IS NULL AND l.ownerOrganisationId IS NULL`,
+  )
+  if (!current) return null
+  const facts = LocationFactsSchema.parse(input.facts)
+  const serialized = serializeLocationFacts(
+    facts,
+    current.kind as import('#lib/locations/kinds.js').LocationKind,
+  )
+  const contentHash = createHash('sha256')
+    .update(JSON.stringify({ rawSource: JSON.parse(current.rawSource), serialized }))
+    .digest('hex')
+  // Hash fencing detects edits even though the working baseline retains its stable ID.
+  const guard = sql`EXISTS(SELECT 1 FROM location l JOIN locationCanonicalDraft d ON d.locationId=l.id
+    JOIN locationRevisionContent r ON r.locationId=l.id
+    WHERE l.id=${input.locationId} AND l.state='unresolved' AND l.ssId IS NULL
+      AND l.ownerOrganisationId IS NULL AND r.id=${input.sourceRevisionId}
+      AND r.contentHash=${input.expectedDraftVersion}
+      AND r.version=(SELECT max(version) FROM locationRevision WHERE locationId=l.id))`
+  const result = await executeRevisionBatch(db, guard, [
+    db
+      .update(locationRevisionInput)
+      .set({ facts: sql`${serialized}`, contentHash })
+      .where(
+        sql`${locationRevisionInput.id}=${input.sourceRevisionId} AND ${locationRevisionInput.locationId}=${input.locationId}`,
+      ),
+  ])
+  return result ? contentHash : null
 }

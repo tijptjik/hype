@@ -35,6 +35,8 @@ export type LocationResource = {
   ownerOrganisationId: string | null
   ownerOrganisationNames?: Record<string, string>
   editingOrganisationNames?: Record<string, string>
+  /** Mutable draft concurrency token; absent after upstream publication. */
+  draftVersion?: string | null
   revisionId: string | null
   facts: LocationFacts | null
 }

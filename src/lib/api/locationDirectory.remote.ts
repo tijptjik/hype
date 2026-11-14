@@ -9,6 +9,7 @@ import { guardedCommand, guardedQuery } from '#lib/api/server/guarded.js'
 // AUTHORIZATION
 import { requireLocationOrganisationManager } from '#lib/api/services/locationOwnership.js'
 // DOMAIN
+import { isCanonicalLocationDraft } from '#lib/locations/canonicalDraft.js'
 import { LocalizedCurationTextSchema } from '#lib/locations/curationIdentity.js'
 import {
   LIFECYCLE_STATUSES,
@@ -60,6 +61,7 @@ async function requireDirectoryAccess(
  */
 export const getLocations = guardedQuery(
   z.strictObject({
+    publication: z.enum(['published', 'draft']).optional(),
     includeCount: z.boolean().default(true),
     scope: z.string().max(4000).optional(),
     organisationId: z.string().min(1).max(200).optional(),
@@ -70,8 +72,11 @@ export const getLocations = guardedQuery(
   }),
   async (input, ctx) => {
     await requireDirectoryAccess(ctx, input.organisationId)
+    if (input.publication === 'draft' && !ctx.user.superAdmin)
+      error(403, 'SUPER_ADMIN_REQUIRED')
     return listLocationResources(ctx.db, {
       ...input,
+      excludeCanonicalDrafts: !ctx.user.superAdmin,
       restrictToOrganisation: Boolean(input.organisationId),
     })
   },
@@ -112,6 +117,8 @@ export const getLocation = guardedQuery(
     const scope = await probeLocationIdentityScope(ctx.db, input.id)
     if (!scope) return null
     const identity = scope
+    if (isCanonicalLocationDraft(identity) && !ctx.user.superAdmin)
+      error(403, 'SUPER_ADMIN_REQUIRED')
     await requireDirectoryAccess(
       ctx,
       identity.state === 'manual'
@@ -135,7 +142,9 @@ export const getLocation = guardedQuery(
     })
     const resource = result.data[0]
     const canEditShared = Boolean(
-      (ctx.user.superAdmin || editingOrganisationId !== null) &&
+      (isCanonicalLocationDraft(identity)
+        ? ctx.user.superAdmin
+        : ctx.user.superAdmin || editingOrganisationId !== null) &&
         !ctx.user.isAnonymous &&
         ['linked', 'unresolved'].includes(identity.state),
     )
@@ -155,6 +164,7 @@ export const getLocation = guardedQuery(
           canEditShared,
           canManageCommunityLocks: Boolean(
             ctx.user.superAdmin &&
+              !isCanonicalLocationDraft(identity) &&
               !ctx.user.isAnonymous &&
               ['linked', 'unresolved'].includes(identity.state),
           ),

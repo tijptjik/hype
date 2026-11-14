@@ -1311,6 +1311,34 @@ vi.mock('#lib/db/services/locationDirectory.js', () => ({
 import { getLocations, getLocation } from '#lib/api/locationDirectory.remote.js'
 
 describe('standalone Location reads', () => {
+  it('restricts draft browsing and direct detail reads to SuperAdmins', async () => {
+    mocks.probeIdentity.mockResolvedValue({
+      id: 'draft',
+      state: 'unresolved',
+      ssId: null,
+      ownerOrganisationId: null,
+    })
+    await expect(getLocations({ publication: 'draft' })).rejects.toMatchObject({
+      status: 403,
+    })
+    await expect(getLocation({ id: 'draft' })).rejects.toMatchObject({ status: 403 })
+    expect(mocks.directory).not.toHaveBeenCalled()
+    Object.assign(mocks.context.user, { superAdmin: true })
+    try {
+      mocks.directory.mockResolvedValue({ data: [], nextCursor: null })
+      await getLocations({ publication: 'draft' })
+      expect(mocks.directory).toHaveBeenCalledWith(
+        mocks.context.db,
+        expect.objectContaining({
+          publication: 'draft',
+          excludeCanonicalDrafts: false,
+        }),
+      )
+    } finally {
+      Reflect.deleteProperty(mocks.context.user, 'superAdmin')
+    }
+  })
+
   it('denies anonymous directory and detail reads before querying facts', async () => {
     mocks.context.user.isAnonymous = true
     await expect(getLocations({})).rejects.toMatchObject({ status: 403 })
@@ -1326,6 +1354,7 @@ describe('standalone Location reads', () => {
       includeCount: true,
       scope: 'client-cache-only',
       restrictToOrganisation: false,
+      excludeCanonicalDrafts: true,
     })
   })
   it('forwards kind and lifecycle filters and narrows authorized organisation indexes', async () => {
@@ -1344,6 +1373,7 @@ describe('standalone Location reads', () => {
       after: 'cursor',
       includeCount: true,
       restrictToOrganisation: true,
+      excludeCanonicalDrafts: true,
     })
   })
   it('rejects project discovery and private details before reading facts', async () => {

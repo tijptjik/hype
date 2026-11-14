@@ -18,7 +18,7 @@ function fixture() {
   const f = publicationSqlite({}, 100)
   stores.push(f)
   f.sqlite.exec(`CREATE TABLE location(id TEXT PRIMARY KEY,ssId TEXT,kind TEXT,state TEXT,sourceAvailability TEXT,ownerOrganisationId TEXT,createdAt TEXT);
-    CREATE TABLE locationRevisionContent(id TEXT,locationId TEXT,version INTEGER,origin TEXT,createdAt TEXT,apiVersion TEXT,releaseId TEXT,snapshotId TEXT,facts TEXT);
+    CREATE TABLE locationRevisionContent(id TEXT,locationId TEXT,version INTEGER,origin TEXT,createdAt TEXT,apiVersion TEXT,releaseId TEXT,snapshotId TEXT,facts TEXT,contentHash TEXT);
     CREATE TABLE locationSharedHead(locationId TEXT,corrections TEXT);
     CREATE TABLE organisationLocationHead(locationId TEXT,organisationId TEXT,overrides TEXT,revision TEXT);
     CREATE TABLE organisationI18n(organisationId TEXT,locale TEXT,name TEXT,nameShort TEXT);
@@ -108,4 +108,23 @@ it('does not match superseded or cleared brand assignments', async () => {
   expect(
     (await listLocationResources(f.db, { brandId: 'brand' })).data.map(row => row.id),
   ).toEqual(['current'])
+})
+
+it('separates upstream published records from ownerless canonical drafts before counting', async () => {
+  const f = fixture()
+  f.add('draft')
+  f.add('published', 'ss-published', 'linked')
+  f.add('private', null, 'manual')
+  const drafts = await listLocationResources(f.db as Database, {
+    publication: 'draft',
+    includeCount: true,
+  })
+  expect(drafts.data.map(row => row.id)).toEqual(['draft'])
+  expect(drafts.totalCount).toBe(1)
+  const published = await listLocationResources(f.db as Database, {
+    publication: 'published',
+    includeCount: true,
+  })
+  expect(published.data.map(row => row.id)).toEqual(['published'])
+  expect(published.totalCount).toBe(1)
 })

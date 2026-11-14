@@ -13,6 +13,9 @@ import { m } from '#lib/i18n.js'
 import FunnelIcon from 'virtual:icons/proicons/filter'
 
 let {
+  publication = 'published',
+  showPublication = false,
+  onPublicationChange,
   count,
   countLoading = false,
   kind,
@@ -29,6 +32,9 @@ let {
   onMoreOrganisations,
   onRetryOrganisations,
 }: {
+  publication?: 'published' | 'draft'
+  showPublication?: boolean
+  onPublicationChange?: (value: string) => void
   kind: LocationKind | ''
   onKindChange: (value: string) => void
   count: number | null
@@ -55,14 +61,17 @@ let {
   showSort={false}
   {count}
   {countLoading}
-  resetDisabled={!organisationId && !kind && !lifecycleStatus}
+  resetDisabled={!organisationId &&
+    !kind &&
+    !lifecycleStatus &&
+    publication === 'published'}
   {onReset}
 >
   {#snippet filterActiveContent()}
-    <div class="flex h-16 items-center gap-4">
+    <div class="flex h-16 items-center gap-2">
       <ControlBar.FilterSelect
         label={m.field_organisation()}
-        class="[&>div:last-child]:w-52 [&>div:last-child]:min-w-0"
+        class="max-2xl:flex-col max-2xl:items-start max-2xl:gap-0 max-2xl:[&>div:first-child]:min-h-4 [&>div:last-child]:w-44 [&>div:last-child]:min-w-0"
         tooltip={m.location_directory_help()}
         value={organisationId}
         placeholder={m.location_directory_shared()}
@@ -71,7 +80,7 @@ let {
       />
       <ControlBar.FilterSelect
         label={m.filters__type()}
-        class="[&>div:last-child]:w-40 [&>div:last-child]:min-w-0"
+        class="max-2xl:flex-col max-2xl:items-start max-2xl:gap-0 max-2xl:[&>div:first-child]:min-h-4 [&>div:last-child]:w-28 [&>div:last-child]:min-w-0"
         value={kind}
         placeholder={m.filters__all()}
         items={LOCATION_KINDS.map(value => ({
@@ -82,7 +91,7 @@ let {
       />
       <ControlBar.FilterSelect
         label={m.location_lifecycle_filter()}
-        class="[&>div:last-child]:w-44 [&>div:last-child]:min-w-0"
+        class="max-2xl:flex-col max-2xl:items-start max-2xl:gap-0 max-2xl:[&>div:first-child]:min-h-4 [&>div:last-child]:w-36 [&>div:last-child]:min-w-0"
         value={lifecycleStatus}
         placeholder={m.location_lifecycle_all()}
         items={lifecycleStatusesForKind(kind).map(value => ({
@@ -91,6 +100,19 @@ let {
         }))}
         onValueChange={onLifecycleChange}
       />
+      {#if showPublication}
+        <ControlBar.FilterSelect
+          label={m.location_publication_filter()}
+          class="max-2xl:flex-col max-2xl:items-start max-2xl:gap-0 max-2xl:[&>div:first-child]:min-h-4 [&>div:last-child]:w-28 [&>div:last-child]:min-w-0"
+          value={publication}
+          allowDeselect={false}
+          items={[
+            { value: 'published', label: m.published() },
+            { value: 'draft', label: m.location_publication_draft() },
+          ]}
+          onValueChange={value => onPublicationChange?.(value)}
+        />
+      {/if}
       {#if hasMoreOrganisations}
         <Button
           text={m.location_directory_more_organisations()}

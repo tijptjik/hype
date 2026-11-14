@@ -1,4 +1,6 @@
 {
+  "location_publication_filter": "Publication",
+  "location_publication_draft": "Draft",
   "catalogue_brand_saved": "Brand saved",
   "catalogue_group_saved": "Group saved",
   "translation_review_single_field": "1 field",

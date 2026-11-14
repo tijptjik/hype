@@ -4,10 +4,18 @@ import { beforeEach, expect, it, vi } from 'vitest'
 import { withRemoteMeta } from './remote-function-mock'
 const mocks = vi.hoisted(() => ({
   superAdmin: false,
+  probe: vi.fn(),
+  draftSave: vi.fn(),
   prepare: vi.fn(),
   batch: vi.fn(),
   propagate: vi.fn(),
   authorize: vi.fn(),
+}))
+vi.mock('#lib/db/services/locationIdentityReview.js', () => ({
+  probeLocationIdentityScope: mocks.probe,
+}))
+vi.mock('#lib/db/services/locationCanonicalDraft.js', () => ({
+  updateCanonicalLocationDraft: mocks.draftSave,
 }))
 vi.mock('#lib/api/server/guarded.js', () => {
   const remote = (
@@ -47,8 +55,18 @@ const input = {
 }
 beforeEach(() => {
   vi.resetAllMocks()
+  mocks.probe.mockResolvedValue({
+    state: 'linked',
+    ssId: 'upstream',
+    ownerOrganisationId: null,
+  })
   mocks.superAdmin = false
-  mocks.prepare.mockResolvedValue({ id: 'shared', guard: {}, queries: [] })
+  mocks.prepare.mockResolvedValue({
+    id: 'shared',
+    guard: {},
+    queries: [],
+    fields: ['names'],
+  })
   mocks.batch.mockResolvedValue([])
   mocks.propagate.mockResolvedValue({
     guard: {},
@@ -106,4 +124,46 @@ it('rejects an unauthorized Organisation before preparing community writes', asy
     saveSharedLocationDirectoryCorrection({ ...input, organisationId: 'other' }),
   ).rejects.toThrow('INSUFFICIENT_ROLE')
   expect(mocks.prepare).not.toHaveBeenCalled()
+})
+
+it('rejects draft writes by Organisation managers and requires a fresh draft token', async () => {
+  mocks.probe.mockResolvedValue({
+    state: 'unresolved',
+    ssId: null,
+    ownerOrganisationId: null,
+  })
+  await expect(
+    saveSharedLocationDirectoryCorrection({
+      ...input,
+      organisationId: 'org',
+      expectedDraftVersion: 'hash',
+    }),
+  ).rejects.toMatchObject({ status: 403 })
+  mocks.superAdmin = true
+  await expect(saveSharedLocationDirectoryCorrection(input)).rejects.toMatchObject({
+    status: 409,
+  })
+  expect(mocks.prepare).not.toHaveBeenCalled()
+})
+
+it('saves draft facts without retaining shared or Feature history', async () => {
+  mocks.superAdmin = true
+  mocks.probe.mockResolvedValue({
+    state: 'unresolved',
+    ssId: null,
+    ownerOrganisationId: null,
+  })
+  mocks.draftSave.mockResolvedValue('next-hash')
+  expect(
+    await saveSharedLocationDirectoryCorrection({
+      ...input,
+      expectedDraftVersion: 'hash',
+    }),
+  ).toEqual({ revisionId: 'source', draftVersion: 'next-hash' })
+  expect(mocks.draftSave).toHaveBeenCalledWith(
+    {},
+    expect.objectContaining({ expectedDraftVersion: 'hash' }),
+  )
+  expect(mocks.batch).not.toHaveBeenCalled()
+  expect(mocks.propagate).not.toHaveBeenCalled()
 })

@@ -148,6 +148,11 @@ const brandNames = $derived(
       </div>
     {/if}
   {/if}
+  {#if isCanonicalLocationDraft(place)}
+    <p class="text-muted-foreground text-sm">
+      Draft edits replace the working record. History starts when it is published.
+    </p>
+  {/if}
   <dl class="border-border space-y-4 border-t pt-4">
     {#if !isEditing}
       <div>
@@ -217,7 +222,7 @@ const brandNames = $derived(
         </dd>
       </div>
     {/if}
-    {#if place.metadata?.version}
+    {#if place.metadata?.version && !isCanonicalLocationDraft(place)}
       <div>
         <dt class="text-muted-foreground mb-1 text-xs">
           {m.location_record_baseline_version()}
@@ -242,7 +247,10 @@ const brandNames = $derived(
       {#each [
         { label: 'HYPE ID', value: place.id },
         { label: 'SaanSeoi ID', value: place.ssId },
-        { label: m.location_record_revision_id(), value: place.revisionId },
+        {
+          label: m.location_record_revision_id(),
+          value: isCanonicalLocationDraft(place) ? null : place.revisionId,
+        },
         {
           label: m.location_record_correction_revision(),
           value: place.organisationRevision,

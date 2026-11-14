@@ -1,4 +1,6 @@
 {
+  "location_publication_filter": "发布状态",
+  "location_publication_draft": "草稿",
   "catalogue_brand_saved": "品牌已保存",
   "catalogue_group_saved": "集团已保存",
   "translation_review_single_field": "1 个字段",

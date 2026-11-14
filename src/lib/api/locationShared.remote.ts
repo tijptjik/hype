@@ -11,6 +11,9 @@ import { guardedCommand, guardedQuery } from './server/guarded'
 import { probeFeatureForUpdate } from '#lib/db/services/feature.js'
 import { buildFeatureCommandScopeGuard } from '#lib/db/services/featureCommandScope.js'
 // DOMAIN / SERVICES
+import { isCanonicalLocationDraft } from '#lib/locations/canonicalDraft.js'
+import { probeLocationIdentityScope } from '#lib/db/services/locationIdentityReview.js'
+import { updateCanonicalLocationDraft } from '#lib/db/services/locationCanonicalDraft.js'
 import {
   SharedCorrectionPatchSchema,
   resolveSharedCorrections,
@@ -186,9 +189,10 @@ export const saveSharedLocationCorrection = guardedCommand(
   },
 )
 
-/** Save authorized community curations from the standalone Location editor without changing publisher snapshots.
+/** Save directory edits as mutable draft facts or attributed published-record corrections.
  * @param input Location identity and displayed source/shared pins with explicit field choices.
- * @returns New shared revision, atomically propagated to linked Features with attributed history.
+ * @returns Draft content token, or a shared revision propagated with attributed Feature history.
+ * @remarks Canonical drafts require SuperAdmin access and never persist the prepared correction history.
  */
 export const saveSharedLocationDirectoryCorrection = guardedCommand(
   z.strictObject({
@@ -196,21 +200,38 @@ export const saveSharedLocationDirectoryCorrection = guardedCommand(
     organisationId: z.string().min(1).optional(),
     sourceRevisionId: z.string().min(1),
     expectedRevision: z.string().nullable(),
+    expectedDraftVersion: z.string().min(1).optional(),
     patch: SharedCorrectionPatchSchema,
   }),
   async (input, ctx) => {
     if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
+    const identity = await probeLocationIdentityScope(ctx.db, input.locationId)
+    const draft = identity && isCanonicalLocationDraft(identity)
+    if (draft && !ctx.user.superAdmin) error(403, 'SUPER_ADMIN_REQUIRED')
+    if (draft && !input.expectedDraftVersion) error(409, 'DRAFT_VERSION_REQUIRED')
     if (!ctx.user.superAdmin) {
       if (!input.organisationId) error(403, 'ORGANISATION_CONTEXT_REQUIRED')
       await requireLocationOrganisationManager(ctx, input.organisationId)
     }
     const shared = await prepareSharedLocationCorrection(ctx.db, {
       ...input,
+      draftWorkingCopy: Boolean(draft),
       actorId: ctx.user.id,
       rights: { canEdit: true, superAdmin: Boolean(ctx.user.superAdmin) },
       guard: sql`EXISTS(SELECT 1 FROM location WHERE id=${input.locationId} AND state IN ('linked','unresolved'))`,
       provenance: { kind: 'location-editor' },
     })
+    if (draft) {
+      // Validate normal field choices, but persist only the mutable working facts.
+      const version = await updateCanonicalLocationDraft(ctx.db, {
+        locationId: input.locationId,
+        sourceRevisionId: input.sourceRevisionId,
+        expectedDraftVersion: input.expectedDraftVersion!,
+        facts: shared.facts,
+      })
+      if (!version) error(409, 'SHARED_LOCATION_CHANGED')
+      return { revisionId: input.sourceRevisionId, draftVersion: version }
+    }
     const propagation = await prepareStaffLocationPropagation(ctx.db, {
       locationId: input.locationId,
       sourceRevisionId: input.sourceRevisionId,

@@ -7,6 +7,7 @@ import { openSqliteDomain } from '../locations/lib/sqlite-domain'
 import {
   createCanonicalLocationDraft,
   publishCanonicalLocationDraft,
+  updateCanonicalLocationDraft,
 } from '../../src/lib/db/services/locationCanonicalDraft'
 import { appendLocationRelationship } from '../../src/lib/db/services/locationRelationships'
 import { persistSaanSeoiPlace } from '../../src/lib/db/services/locationSource'
@@ -95,9 +96,52 @@ async function main(): Promise<void> {
       },
       input.actorId,
     )
+    const draftHash = (id: string): string =>
+      (
+        domain.sqlite
+          .query(
+            'SELECT contentHash FROM locationRevision WHERE locationId=? ORDER BY version DESC LIMIT 1',
+          )
+          .get(id) as { contentHash: string }
+      ).contentHash
+    const initialHash = draftHash(created.locationId)
+    const editedFacts = {
+      ...facts,
+      names: { en: 'Cleaned draft shop', 'zh-hant': '草稿店' },
+    }
+    const edit = {
+      locationId: created.locationId,
+      sourceRevisionId: `${created.locationId}_draft`,
+      expectedDraftVersion: initialHash,
+      facts: editedFacts,
+    }
+    const updatedHash = await updateCanonicalLocationDraft(domain.db, edit)
+    assert(updatedHash && updatedHash !== initialHash)
+    assert.equal(await updateCanonicalLocationDraft(domain.db, edit), null)
+    assert.equal(
+      (
+        domain.sqlite
+          .query('SELECT count(*) n FROM locationRevision WHERE locationId=?')
+          .get(created.locationId) as { n: number }
+      ).n,
+      1,
+    )
+    assert.equal(
+      (
+        domain.sqlite
+          .query('SELECT count(*) n FROM locationSharedRevision WHERE locationId=?')
+          .get(created.locationId) as { n: number }
+      ).n,
+      0,
+    )
+    const translated = domain.sqlite
+      .query('SELECT name FROM locationRevisionI18n WHERE revisionId=? AND locale=?')
+      .get(edit.sourceRevisionId, 'en') as { name: string }
+    assert.equal(translated.name, 'Cleaned draft shop')
     const publish = {
       sourceKey: input.sourceKey,
       expectedRevisionId: `${created.locationId}_draft`,
+      expectedDraftVersion: draftHash(created.locationId),
       kind: input.kind,
       actorId: input.actorId,
       projection: {
@@ -110,6 +154,13 @@ async function main(): Promise<void> {
         issues: [],
       },
     }
+    await assert.rejects(
+      publishCanonicalLocationDraft(domain.db, {
+        ...publish,
+        expectedDraftVersion: initialHash,
+      }),
+      /conflict/,
+    )
     await assert.rejects(
       publishCanonicalLocationDraft(domain.db, {
         ...publish,
@@ -153,6 +204,20 @@ async function main(): Promise<void> {
       ).n,
       2,
     )
+    assert.equal(
+      await updateCanonicalLocationDraft(domain.db, {
+        ...edit,
+        expectedDraftVersion: updatedHash!,
+      }),
+      null,
+    )
+    assert.throws(
+      () =>
+        domain.sqlite
+          .query('UPDATE locationRevisionContent SET contentHash=? WHERE id=?')
+          .run('forbidden', edit.sourceRevisionId),
+      /mutable/,
+    )
     const other = await createCanonicalLocationDraft(domain.db, {
       ...input,
       sourceKey: `${input.sourceKey}:other`,
@@ -162,6 +227,7 @@ async function main(): Promise<void> {
         ...publish,
         sourceKey: `${input.sourceKey}:other`,
         expectedRevisionId: `${other.locationId}_draft`,
+        expectedDraftVersion: draftHash(other.locationId),
       }),
       /conflict/,
     )
@@ -205,6 +271,7 @@ async function main(): Promise<void> {
       sourceKey: 'test:canonical-draft:premises',
       kind: 'premises',
       expectedRevisionId: `${premises.locationId}_draft`,
+      expectedDraftVersion: draftHash(premises.locationId),
       projection: premisesProjection,
     })
     await persistSaanSeoiPlace(domain.db, {

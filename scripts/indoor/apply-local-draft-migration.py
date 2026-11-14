@@ -9,7 +9,7 @@ def main():
     """Restrict writes to local development state; back up before taking the migration write lock."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('database', type=Path)
-    parser.add_argument('--migration', choices=['0250_location_canonical_drafts.sql', '0251_location_draft_reconciliation.sql'], default='0250_location_canonical_drafts.sql')
+    parser.add_argument('--migration', choices=['0250_location_canonical_drafts.sql', '0251_location_draft_reconciliation.sql', '0252_location_mutable_drafts.sql'], default='0250_location_canonical_drafts.sql')
     args = parser.parse_args()
     path = args.database.resolve(strict=True)
     if not path.is_relative_to(Path('.wrangler/state/v3/d1').resolve()) or path.suffix != '.sqlite':

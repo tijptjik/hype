@@ -276,6 +276,13 @@ private manual Locations remain distinct. Null `ssId` by itself does not mean dr
 Draft revisions use local provenance without fabricated upstream publication metadata.
 The UI identifies them as Upstream draft / Not yet published.
 
+Migration 0252 makes the draft working baseline mutable through the SuperAdmin Location
+editor. Repeated profile saves update its facts and locale rows without appending
+correction history. Content hashes fence edits and publication; promotion requires both
+the displayed baseline ID and content hash. Published baselines retain the immutable
+guards. The Locations index has a SuperAdmin-only Published/Draft selector; Draft does
+not include Organisation-owned unmatched records.
+
 `createCanonicalLocationDraft` is a trusted idempotent importer. An existing source key
 never overwrites reviewed facts. `publishCanonicalLocationDraft` requires an explicit
 upload correlation, exact latest revision and a real upstream publication. It retains

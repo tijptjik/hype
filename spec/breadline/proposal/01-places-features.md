@@ -1,3 +1,26 @@
+Mutable upstream drafts (15 November 2026, Refs #194, parent #180): the Locations index
+exposes Published/Draft publication filtering to SuperAdmins only. Published selects
+records with an upstream ID; Draft selects ownerless unresolved canonical drafts, not
+Organisation-owned unmatched records. Ordinary directory users cannot browse canonical
+drafts or open their standalone editor.
+
+Draft profile saves validate the existing field choices, then replace the single working
+baseline and its locale rows through migration `0252_location_mutable_drafts.sql`. They
+do not append shared corrections or Feature history. An expected content hash fences
+concurrent draft edits and publication; the stable baseline ID alone is insufficient.
+Raw import evidence and source correlation remain intact. Once a real upstream
+publication is accepted, both the retained working baseline and the published snapshot
+are immutable. Publication does not fabricate an upstream identity or upload receipt. UI
+metadata omits draft revision numbers and explains that history begins at publication.
+
+Establishment onboarding must use reviewed source identities for the selected
+convenience-store/bakery brands. MTR tenancy requires an identified physical unit and
+its station membership; names or approximate station coordinates are insufficient.
+Non-MTR containment remains unset until reviewed. Import the complete relevant
+parent-company branch inventories as draft establishment records and draft Locations,
+then match Breadline Features to those records. Do not seed establishments from the
+eight unmatched Breadline donor Features.
+
 Canonical indoor drafts (15 November 2026, Refs #194, parent #180): MTR stations are
 built/premises Locations; physical units are built/building_part members of their
 station, and establishments occupy those units through reviewed `locationOccupancy`

@@ -27,6 +27,8 @@ import type { LocationResource } from '#lib/locations/resource.js'
 export async function listLocationResources(
   db: Database,
   input: {
+    publication?: 'published' | 'draft'
+    excludeCanonicalDrafts?: boolean
     includeCount?: boolean
     organisationId?: string
     /** Narrow index results without changing detail-read authorization scope. */
@@ -58,7 +60,14 @@ export async function listLocationResources(
     sql`${locationRevision.version} = (SELECT max(r.version) FROM locationRevisionContent r WHERE r.locationId=${locationTable.id} AND (${locationTable.state}!='linked' OR r.origin='saanseoi'))`,
   )
   const linked = sql`EXISTS(SELECT 1 FROM featureLocation fl JOIN feature f ON f.id=fl.featureId JOIN project p ON p.id=f.projectId WHERE fl.locationId=${locationTable.id} AND (${input.organisationId ?? null} IS NULL OR p.organisationId=${input.organisationId ?? null}))`
+  const canonicalDraft = sql`${locationTable.state}='unresolved' AND ${locationTable.ssId} IS NULL AND ${locationTable.ownerOrganisationId} IS NULL`
   const match = and(
+    input.excludeCanonicalDrafts ? sql`NOT (${canonicalDraft})` : undefined,
+    input.publication === 'draft'
+      ? canonicalDraft
+      : input.publication === 'published'
+        ? sql`${locationTable.ssId} IS NOT NULL`
+        : undefined,
     sql`${locationTable.state} != 'redirect'`,
     input.brandId
       ? sql`EXISTS(SELECT 1 FROM locationSharedHead h WHERE h.locationId=${locationTable.id} AND json_extract(h.corrections,'$.brandId.supersededBy') IS NULL AND json_extract(h.corrections,'$.brandId.choice.mode')='override' AND json_extract(h.corrections,'$.brandId.choice.value')=${input.brandId})`
@@ -121,6 +130,9 @@ export async function listLocationResources(
   const rows = await db
     .select({
       id: locationTable.id,
+      draftVersion: sql<
+        string | null
+      >`CASE WHEN ${canonicalDraft} THEN ${locationRevision.contentHash} END`,
       hasLinkedFeatures: sql<boolean>`${linked}`.mapWith(Boolean),
       ssId: locationTable.ssId,
       kind: locationTable.kind,

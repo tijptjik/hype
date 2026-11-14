@@ -33,6 +33,7 @@ const admin = getAdminCtx()
 const header = getHeaderCtrl()
 admin.setFacet(false, false, FirstClassResource.location)
 const organisations = usePanelResources(admin.view, 'organisation', () => '')
+let publication = $state<'published' | 'draft'>('published')
 let query = $state('')
 let organisationId = $state('')
 let kind = $state<LocationKind | ''>('')
@@ -65,7 +66,14 @@ let activeSearch = $state<{
   q: string
   organisationId: string
   lifecycleStatus: LifecycleStatus | ''
-}>({ kind: '', q: '', organisationId: '', lifecycleStatus: '' })
+  publication: 'published' | 'draft'
+}>({
+  kind: '',
+  q: '',
+  organisationId: '',
+  lifecycleStatus: '',
+  publication: 'published',
+})
 
 /**
  * Load one server-authorized page, clearing stale rows when replacing the search.
@@ -81,6 +89,7 @@ async function load(more = false): Promise<void> {
       q: query.trim().slice(0, 200),
       organisationId,
       lifecycleStatus,
+      publication: admin.view.isSuperAdmin() ? publication : 'published',
     }
     totalCount = null
     cursor = null
@@ -91,6 +100,7 @@ async function load(more = false): Promise<void> {
     const result = await runRemoteQuery(
       getLocations({
         includeCount: !more,
+        publication: admin.view.isSuperAdmin() ? activeSearch.publication : undefined,
         scope: admin.view.getRoleScopeQueryKey(),
         q: activeSearch.q,
         kind: activeSearch.kind || undefined,
@@ -116,11 +126,16 @@ async function load(more = false): Promise<void> {
 let previousScope = ''
 // Account and filter changes invalidate private rows before another authorized read.
 $effect(() => {
-  const scope = JSON.stringify([admin.view.getRoleScopeQueryKey(), organisationId])
+  const scope = JSON.stringify([
+    admin.view.getRoleScopeQueryKey(),
+    organisationId,
+    publication,
+  ])
   query
   kind
   organisationId
   lifecycleStatus
+  publication
   untrack(() => {
     version++
     if (previousScope !== scope) rows = []
@@ -147,6 +162,10 @@ $effect(() => {
   header.setControlBar(
     LocationControlBar,
     {
+      publication,
+      showPublication: admin.view.isSuperAdmin(),
+      onPublicationChange: (value: string) =>
+        (publication = value as 'published' | 'draft'),
       count: totalCount,
       countLoading: loading && totalCount === null,
       kind,
@@ -171,6 +190,7 @@ $effect(() => {
       onLifecycleChange: (value: string) =>
         (lifecycleStatus = value as LifecycleStatus | ''),
       onReset: () => {
+        publication = 'published'
         organisationId = ''
         kind = ''
         lifecycleStatus = ''

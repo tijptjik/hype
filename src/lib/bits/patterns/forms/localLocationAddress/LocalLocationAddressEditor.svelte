@@ -487,6 +487,7 @@ async function save(): Promise<void> {
           locationId: place.id,
           organisationId: place.editingOrganisationId ?? undefined,
           sourceRevisionId: expectedRevisionId,
+          expectedDraftVersion: place.draftVersion ?? undefined,
           expectedRevision: place.sharedRevision ?? null,
           patch,
         })

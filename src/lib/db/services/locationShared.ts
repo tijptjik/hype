@@ -136,6 +136,8 @@ export async function prepareSharedLocationCorrection(
     sourceRevisionId: string
     expectedRevision: string | null
     actorId: string
+    /** Directory draft editor validates a patch without retaining its correction plan. */
+    draftWorkingCopy?: boolean
     patch: SharedCorrectionPatch
     guard: SQL
     rights: { canEdit: boolean; superAdmin: boolean }
@@ -143,6 +145,10 @@ export async function prepareSharedLocationCorrection(
   },
 ) {
   const patch = SharedCorrectionPatchSchema.parse(input.patch)
+  const draft = await db.get(sql`SELECT 1 FROM location WHERE id=${input.locationId}
+    AND state='unresolved' AND ssId IS NULL AND ownerOrganisationId IS NULL`)
+  if (draft && (!input.draftWorkingCopy || !input.rights.superAdmin))
+    throw new Error('Edit upstream drafts in the SuperAdmin Location editor')
   authorizeSharedCorrection(patch, input.rights)
   const cataloguePins: Partial<Record<'brandId' | 'groupId', IdentityCatalogueRecord>> =
     {}
