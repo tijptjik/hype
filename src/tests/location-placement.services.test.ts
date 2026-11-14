@@ -46,7 +46,11 @@ const stores: ReturnType<typeof setupLifecycleDatabase>[] = []
 afterEach(() => {
   for (const s of stores.splice(0)) s.sqlite.close()
 })
-async function setup(policy: 'follow' | 'fixed' | 'review' = 'review', hints = false) {
+async function setup(
+  policy: 'follow' | 'fixed' | 'review' = 'review',
+  hints = false,
+  brands: import('#lib/locations/model.js').LocationBrand[] = [],
+) {
   const s = setupLifecycleDatabase(true)
   stores.push(s)
   const columns = new Set(
@@ -77,7 +81,7 @@ async function setup(policy: 'follow' | 'fixed' | 'review' = 'review', hints = f
   const facts = {
     names: { en: 'Shop' },
     phoneNumber: [],
-    brands: [],
+    brands,
     location: {
       geometry: { type: 'Point' as const, coordinates: [114, 22] as [number, number] },
       address: emptyFeatureAddress().source,
@@ -374,7 +378,14 @@ describe('Feature revisions during placement acceptance', () => {
     },
   )
   it('records detachment while retaining materialized fields and the earlier Location pins', async () => {
-    const s = await setup()
+    const brands = [
+      {
+        identifiers: { brand: '7-eleven' },
+        names: { en: '7-Eleven' },
+        logo: '/api/identity-catalogue/logos/12345678-abcd',
+      },
+    ]
+    const s = await setup('review', false, brands)
     const baseline = await enroll(s)
     expect(
       (
@@ -398,6 +409,11 @@ describe('Feature revisions during placement acceptance', () => {
     expect(row.previousRevisionId).toBe(baseline)
     expect(row.actorId).toBe('unlink-editor')
     expect(content.placement.location).toBeNull()
+    expect(content.detachedBrands).toEqual(brands)
+    const detached = required(
+      s.sqlite.prepare("SELECT localLocationBrands FROM feature WHERE id='f'").get(),
+    )
+    expect(JSON.parse(String(detached.localLocationBrands)).brands).toEqual(brands)
     expect(content.placement.geometry.coordinates).toEqual([114, 22])
     expect(content.translations.en.title.value).toBe('Shop')
     const old = required(

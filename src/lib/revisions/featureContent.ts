@@ -14,6 +14,7 @@ import { ImageIntentIdSchema } from '#lib/images/intents.js'
 // VALIDATION
 import { z } from 'zod'
 // DOMAIN
+import { LocationBrandsSchema } from '#lib/locations/factsDetails.js'
 import { validateRevisionGallery } from './gallery'
 // TYPES
 import type { RevisionMergePolicy, RevisionValue } from './merge'
@@ -59,12 +60,8 @@ const translation = z.strictObject({
     properties: jsonObject.nullable(),
   }),
 })
-const brands = z.array(
-  z.strictObject({
-    identifiers: z.record(z.string(), z.string()),
-    names: z.record(z.string(), z.string()),
-  }),
-)
+// Detached Features retain the same complete brand values as their former Location.
+const brands = LocationBrandsSchema
 
 // Geometry remains a complete value; validation does not silently normalize legacy coordinates.
 const position = z
