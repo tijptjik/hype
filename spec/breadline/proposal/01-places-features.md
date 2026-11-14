@@ -1,3 +1,16 @@
+Canonical indoor drafts (15 November 2026, Refs #194, parent #180): MTR stations are
+built/premises Locations; physical units are built/building_part members of their
+station, and establishments occupy those units through reviewed `locationOccupancy`
+assertions. Shared unpublished records retain normal Hype IDs, NULL `ssId`, unresolved
+state and NULL owner, with immutable correlation in `locationCanonicalDraft`. They
+remain distinct from organisation-owned unmatched and private manual Locations. Source
+revisions remain local until a real upstream publication is accepted through an exact
+submission mapping; publication retains the Hype identity and relationship/history
+references. No upstream release IDs are synthesized. Unit source IDs, original names,
+floors and paid/unpaid section metadata remain independent of occupants. See
+[the indoor onboarding contract](../../../docs/maps/indoor-handoff.md#location-onboarding-contract-15-november-2026-refs-194)
+for source ambiguities, migration, importer and verification boundaries.
+
 Feature naming review (14 November 2026, Refs #194, parent #180): template creation is a
 separate modal step with fixed selectable expression blocks and persistent component
 options. Saving a template publishes its reusable definition and opens the application

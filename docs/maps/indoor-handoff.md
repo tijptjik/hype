@@ -248,3 +248,83 @@ Lands Department adapter. `IndoorFloorLayer` and `IndoorRoutePlanner` are reusab
 components; both stations use the planner without Kennedy Town-specific default IDs.
 Paid fallback requires explicit fare-gate edges; current raw gate points are not enough
 to create them. The station views continue to use the original six-layer snapshots.
+
+## Location onboarding contract (15 November 2026, Refs #194)
+
+The agreed model is a built/premises Location per MTR station and built/building_part
+Locations for source units. Each unit has a `locationMembership` to its station.
+Establishment Locations occupy those units through `locationOccupancy`; addresses
+support placement but do not replace identity or containment relationships.
+
+Preserve source venue, unit, level and section IDs. Unit display names retain the
+supplied MTR code, including combined codes such as HOK 43-44, without splitting a
+single source polygon. Retain uncoded source names without inventing codes. Retain floor
+names, short names and ordinals separately from section names. Paid area and Unpaid area
+are source section labels, not floors or inferred intermediate Locations.
+
+`scripts/indoor/plan-mtr-onboarding.py OUTPUT.json` prepares a database-free review
+artifact from the station roster and hash-verified LandsD snapshots. Current coverage is
+98 proposed station premises, 337 units and memberships across KET/HOK, and 93 occupant
+evidence records. Other stations do not acquire invented units or footprints. Roster
+points retain their OSM provenance; LandsD geometry keeps its own manifest and raw
+source. Plan references are not canonical SaanSeoi or Hype IDs.
+
+Shared canonical drafts now use normal Hype Location IDs, `state='unresolved'`,
+`ssId=NULL` and no owning organisation. `locationCanonicalDraft` retains the unique
+provider source key and author; ordinary organisation-owned unresolved Locations and
+private manual Locations remain distinct. Null `ssId` by itself does not mean draft.
+Draft revisions use local provenance without fabricated upstream publication metadata.
+The UI identifies them as Upstream draft / Not yet published.
+
+`createCanonicalLocationDraft` is a trusted idempotent importer. An existing source key
+never overwrites reviewed facts. `publishCanonicalLocationDraft` requires an explicit
+upload correlation, exact latest revision and a real upstream publication. It retains
+the Hype ID, accepted Feature pins, occupancy and membership references, adds identity
+history and attaches the real `ssId`. Reused upstream IDs and stale drafts are rejected.
+Later source refreshes retain premises/building-part classification.
+
+`0250_location_canonical_drafts.sql` permits ownerless shared drafts and direct
+building-part membership in premises. The durable single-root ownership constraint
+continues to prevent reassignment or suppression of a unit's owning station/building.
+The migration is rehearsed against an isolated full copy before any local application.
+
+`scripts/indoor/apply-mtr-drafts.ts` imports premises and units with their memberships;
+source-key replay is idempotent and the complete import is atomic. Default use requires
+an offline database copy. `--apply-local` explicitly permits the managed local D1
+folder; production and remote databases are unsupported. The separate local migration
+script retains a full backup and applies only the selected migration (0250 or 0251).
+Migration 0251 excludes shared drafts from automatic source rematching. Reconciliation
+shows drafts separately from matched, unavailable and remaining records. Optional
+reviewed occupancy mappings contain `sourceOccupantId`, `establishmentLocationId` and
+`expectedRevisionId`; they link an existing shared establishment only after that exact
+revision is verified. The importer does not create businesses from names or unit codes.
+The featured-shop filter remains pending reviewed establishment/occupancy links.
+
+Occupancy audit: all 93 source occupant points lie inside their referenced units and
+agree on floor ID. They occupy 87 of 337 physical units. Seven records contain only shop
+codes (not business identities); seven named records reference shared lobby or concourse
+polygons. Four of those have repeated names at different coordinates and remain separate
+source identities. KET 9 combines a code-only row with Original Taste Workshop. All
+other unoccupied geometry includes infrastructure and vacant/unnamed rooms; absence of
+an occupant record is not proof of vacancy. Source categories such as
+transportationservices are also too broad to establish business identity.
+
+Validation: eight Python onboarding checks passed through `dev-check`, covering source
+integrity, duplicate identities, containment, combined codes and floor/section
+separation. Full-copy migration rehearsal preserved all 163 original table counts,
+external schema and the foreign-key baseline. The service rehearsal verifies draft
+replay, occupancy, publication with stable identity, stale/reused-source rejection and
+later premises refresh; all mutations roll back. Local onboarding contains 435 drafts
+and 337 memberships. Establishment identities and featured-shop filtering remain pending
+review.
+
+Focused reconciliation validation passes all 10 tests. Targeted authenticated Chrome
+checks pass on desktop/mobile for draft metadata, simulated publication and editing the
+actual Kennedy Town draft. The progress display wraps without horizontal overflow at
+390px. No establishment occupancy was applied from unreviewed evidence.
+
+Full Svelte validation completed in managed job `job-aDJfnqHnFf` with 32 errors and four
+warnings outside the draft additions (including duplicate MapLibre style types and
+existing UI/test typing). The initial default-heap run exhausted Node's heap; the retry
+used a 5 GiB heap within the runner's 6 GiB limit. Full validation is therefore not
+green; focused draft lint, service tests and Chrome checks pass.
