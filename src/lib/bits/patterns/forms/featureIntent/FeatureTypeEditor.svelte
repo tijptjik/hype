@@ -203,6 +203,7 @@ function updateEnglishName(before: string, after: string): void {
     />
     <div>
       <FeatureNamingPolicySettings
+        {scopeId}
         {scopeType}
         expanded={namingEditorOpen}
         editorId={namingEditorId}
@@ -328,6 +329,7 @@ function updateEnglishName(before: string, after: string): void {
   </section>
   {#if namingEditorOpen && !namingDisabled}
     <FeatureNamingRuleEditor
+      featureType={type.id}
       id={namingEditorId}
       {scopeType}
       {scopeId}

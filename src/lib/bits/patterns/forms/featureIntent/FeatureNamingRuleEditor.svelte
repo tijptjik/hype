@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { untrack } from 'svelte'
+import { untrack, type Snippet } from 'svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // BITS
@@ -14,6 +14,7 @@ let {
   id,
   scopeType,
   scopeId,
+  featureType,
   inheritedRule,
   override,
   locales,
@@ -24,6 +25,7 @@ let {
   id: string
   scopeType: 'hub' | 'organisation' | 'project' | 'layer'
   scopeId: string
+  featureType?: string
   inheritedRule: FeatureNameRule
   override?: FeatureNameRule
   locales: string[]
@@ -38,6 +40,26 @@ let draftRule = $state<FeatureNameRule>(
 let editingTemplate = $state(false)
 let isOverriding = $state(untrack(() => override !== undefined))
 </script>
+{#snippet footer(templateActions: Snippet, creating: boolean)}
+  <footer
+    class="border-border/50 flex shrink-0 flex-wrap items-center justify-end gap-2 border-t px-4 py-3 sm:px-5"
+  >
+    {@render templateActions()}
+    {#if disabled}
+      <Button text={m.guest__close()} style="ghost" onClick={onCancel} />
+    {/if}
+    {#if !disabled && !creating}
+      <Button
+        text={m.feature_model_accept_rule()}
+        disabled={editingTemplate}
+        onClick={() =>
+          onAccept(
+            isOverriding ? structuredClone($state.snapshot(draftRule)) : undefined,
+          )}
+      />
+    {/if}
+  </footer>
+{/snippet}
 <Dialog.Root
   open={true}
   onOpenChange={open => {
@@ -54,61 +76,56 @@ let isOverriding = $state(untrack(() => override !== undefined))
       data-naming-editor
     >
       <header
-        class="border-border/50 flex shrink-0 items-start justify-between gap-4 border-b px-4 py-3 sm:px-5"
+        class="border-border/50 flex shrink-0 flex-wrap items-start justify-between gap-4 border-b px-4 py-3 sm:px-5"
       >
         <div class="min-w-0">
           <Dialog.Title id={`${id}-title`} class="text-lg font-semibold"
-            >{m.feature_model_feature_naming()}</Dialog.Title
+            >{editingTemplate
+              ? m.feature_model_create_template()
+              : m.feature_model_feature_naming({
+                  level: {
+                    hub: m.resource__hub_singular(),
+                    organisation: m.resource__organisation_singular(),
+                    project: m.resource__project_singular(),
+                    layer: m.resource__layer_singular(),
+                  }[scopeType],
+                })}</Dialog.Title
           >
           <Dialog.Description class="text-muted-foreground mt-1 text-xs"
-            >{m.feature_model_naming_description()}</Dialog.Description
+            >{editingTemplate
+              ? m.feature_model_create_description()
+              : m.feature_model_naming_description()}</Dialog.Description
           >
         </div>
-        <span class="text-muted-foreground shrink-0 pt-1 text-xs"
-          >{isOverriding
-            ? m.feature_model_custom_rule()
-            : m.feature_model_inherited_default()}</span
-        >
-      </header>
-      <div class="min-h-0 overflow-y-auto px-4 py-4 sm:px-5" data-naming-scroll>
-        <FeatureNamingSettings
-          {scopeType}
-          {scopeId}
-          {locales}
-          rule={draftRule}
-          {disabled}
-          {inheritedRule}
-          inheriting={!isOverriding}
-          onUseDefault={() => {
-            draftRule = structuredClone($state.snapshot(inheritedRule))
-            isOverriding = false
-          }}
-          onChange={rule => {
-            draftRule = rule
-            isOverriding = true
-          }}
-          onEditingChange={editing => (editingTemplate = editing)}
-        />
-      </div>
-      <footer
-        class="border-border/50 flex shrink-0 flex-wrap items-center justify-end gap-2 border-t px-4 py-3 sm:px-5"
-      >
-        <Button
-          text={disabled ? m.guest__close() : m.cancel()}
-          style="ghost"
-          onClick={onCancel}
-        />
-        {#if !disabled}
-          <Button
-            text={m.feature_model_accept_rule()}
-            disabled={editingTemplate}
-            onClick={() =>
-              onAccept(
-                isOverriding ? structuredClone($state.snapshot(draftRule)) : undefined,
-              )}
-          />
+        {#if !editingTemplate}
+          <span class="text-muted-foreground shrink-0 pt-1 text-xs"
+            >{isOverriding
+              ? m.feature_model_custom_rule()
+              : m.feature_model_inherited_default()}</span
+          >
         {/if}
-      </footer>
+      </header>
+      <FeatureNamingSettings
+        {scopeType}
+        {scopeId}
+        {featureType}
+        {locales}
+        rule={draftRule}
+        {disabled}
+        {inheritedRule}
+        inheriting={!isOverriding}
+        onUseDefault={() => {
+          draftRule = structuredClone($state.snapshot(inheritedRule))
+          isOverriding = false
+        }}
+        onChange={rule => {
+          draftRule = rule
+          isOverriding = true
+        }}
+        onEditingChange={editing => (editingTemplate = editing)}
+        onSaved={rule => onAccept(rule)}
+        {footer}
+      />
     </Dialog.Content>
   </Dialog.Portal>
 </Dialog.Root>

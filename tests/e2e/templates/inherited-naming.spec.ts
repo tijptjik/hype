@@ -21,16 +21,14 @@ test('project naming shows its inherited default before overriding', async ({
     .getByRole('button', { name: 'Define custom rules', exact: true })
     .first()
     .click()
-  const editor = page.getByRole('dialog', { name: 'Feature naming', exact: true })
+  const editor = page.locator('[data-naming-editor]')
   await expect(editor).toBeVisible()
   expect(await editor.evaluate(element => Boolean(element.closest('form')))).toBe(false)
-  await expect(editor.getByText('Inherited default', { exact: true })).toBeVisible()
+  await expect(editor.getByText('Using default naming', { exact: true })).toBeVisible()
   const selector = editor.getByRole('combobox', { name: 'Naming template' })
-  await expect(selector).toContainText(
-    /(Feature name|Linked location name).*inherited default/,
-  )
+  await expect(selector).toContainText(/(Feature name|Linked location name).*default/)
   await selector.click()
-  await expect(page.getByRole('option', { name: /inherited default/ })).toHaveAttribute(
+  await expect(page.getByRole('option', { name: /· default/ })).toHaveAttribute(
     'aria-selected',
     'true',
   )
@@ -43,8 +41,19 @@ test('project naming shows its inherited default before overriding', async ({
   await editor
     .getByRole('textbox', { name: 'Template name' })
     .fill('Unsaved modal test')
-  const expression = editor.getByRole('textbox', { name: 'Expression', exact: true })
-  await expression.fill('{{ feature.name }}{{ optional(brand.name, " - ", "") }}')
+  await expect(editor.getByRole('combobox', { name: 'Naming template' })).toHaveCount(0)
+  await expect(editor.getByRole('button', { name: 'Accept naming rule' })).toHaveCount(
+    0,
+  )
+  await editor.getByRole('button', { name: 'Select {{ feature.name }}' }).click()
+  await expect(
+    editor.getByRole('group', { name: 'Options', exact: true }),
+  ).toBeVisible()
+  await editor
+    .getByRole('button', { name: 'Insert Optional text', exact: true })
+    .click()
+  await editor.getByRole('textbox', { name: 'Prefix', exact: true }).fill(' (')
+  await editor.getByRole('textbox', { name: 'Suffix', exact: true }).fill(')')
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 700 })
     await expect(editor).toBeVisible()
@@ -59,7 +68,7 @@ test('project naming shows its inherited default before overriding', async ({
       )
       .toBe(true)
     await expect(
-      editor.getByRole('button', { name: 'Accept naming rule' }),
+      editor.getByRole('button', { name: 'Save template', exact: true }),
     ).toBeInViewport()
     const box = await editor.boundingBox()
     expect(box?.width).toBeLessThanOrEqual(width)
@@ -70,15 +79,12 @@ test('project naming shows its inherited default before overriding', async ({
     await expect(
       editor.getByRole('button', { name: 'Save template', exact: true }),
     ).toBeInViewport()
-    await expect(expression).toHaveValue(
-      '{{ feature.name }}{{ optional(brand.name, " - ", "") }}',
-    )
     await page.screenshot({ path: path.join(artifacts, `naming-modal-${width}.png`) })
   }
   await page.setViewportSize({ width: 1440, height: 1000 })
-  await editor.getByRole('button', { name: 'Cancel template', exact: true }).click()
+  await editor.getByRole('button', { name: 'Cancel', exact: true }).click()
   await editor.getByRole('button', { name: 'Accept naming rule' }).click()
   await expect(
-    page.getByRole('button', { name: 'Define custom rules', exact: true }).first(),
+    page.getByRole('dialog', { name: 'Where should this naming rule apply?' }),
   ).toBeVisible()
 })

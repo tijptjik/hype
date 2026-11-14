@@ -1,10 +1,13 @@
 <script lang="ts">
+// API
+import { getFeatureNamingTemplates } from '#lib/api/featureIntents.remote.js'
 // I18N
 import { m } from '#lib/i18n.js'
 // TYPES
 import type { FeatureNameRule } from '#lib/features/locationPolicy.js'
 let {
   scopeType,
+  scopeId,
   override,
   onChange,
   disabled = false,
@@ -13,6 +16,7 @@ let {
   triggerId,
   onConfigure,
 }: {
+  scopeId: string
   scopeType: 'hub' | 'organisation' | 'project' | 'layer'
   override?: FeatureNameRule
   onChange: (rule: FeatureNameRule | undefined) => void
@@ -22,6 +26,27 @@ let {
   triggerId: string
   onConfigure: () => void
 } = $props()
+let templateName = $state<string | undefined>()
+$effect(() => {
+  const registry = override?.registry
+  const scope = { type: scopeType, id: scopeId }
+  templateName = undefined
+  if (!registry) return
+  let cancelled = false
+  getFeatureNamingTemplates(scope)
+    .then(rows => {
+      if (!cancelled)
+        templateName = rows.find(
+          row => row.id === registry.id && row.version === registry.version,
+        )?.name
+    })
+    .catch(() => {
+      // Retain the accepted-version fallback if the catalogue cannot be loaded.
+    })
+  return () => {
+    cancelled = true
+  }
+})
 const parent = $derived(
   scopeType === 'layer'
     ? m.feature_model_scope_project()
@@ -44,7 +69,12 @@ const parent = $derived(
     <div class="flex flex-wrap items-center justify-between gap-2">
       <p class="text-sm">
         {#if override.registry}
-          {m.display_templates_pinned({ version: String(override.registry.version) })}
+          {#if templateName}
+            {templateName}
+            · v{override.registry.version}
+          {:else}
+            {m.display_templates_pinned({ version: String(override.registry.version) })}
+          {/if}
         {:else if override.conditions.length}
           {m.feature_model_custom_rules()}
           <span class="text-muted-foreground"

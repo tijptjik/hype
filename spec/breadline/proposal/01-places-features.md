@@ -1,3 +1,20 @@
+Feature naming review (14 November 2026, Refs #194, parent #180): template creation is a
+separate modal step with fixed selectable expression blocks and persistent component
+options. Saving a template publishes its reusable definition and opens the application
+review directly. The parent resource form remains the persistence owner for its naming
+default and reviewed Feature changes. Review choices independently preserve/reset
+descendant naming rules and preserve/reset custom title overrides. Only selected feature
+types are affected. Before/after names and descendant rule resets are fenced by the
+reviewed choices, accepted Feature revisions, hierarchy membership and policy versions;
+all changes and attributed history commit together. Unrelated type rules and authored
+base-name inputs are preserved. Empty descendant scopes are included when resetting
+rules. No production data changes are implied by editing or testing this workflow.
+
+Naming preview examples (Refs #194): previews select real accepted Features within the
+authorized scope, using each record's own accepted linked-Location inputs and marking
+missing values explicitly. A bounded 64-record scan prefers a populated example and a
+distinct incomplete example; it never combines inputs from different Features.
+
 Discovery result sources and map resizing (Refs #194, parent #180): existing Hype
 Locations and external SaanSeoi candidates display their respective source marks.
 Pending Place discovery names SaanSeoi beneath the available results. Resizing the
@@ -3564,6 +3581,16 @@ only to templated names. A Location-based rule reads the accepted Location name 
 locale, without copying it over the Feature's authored base. Missing Location
 translations remain unresolved (empty title) unless explicitly overridden; conditional
 fragments cannot supply a missing base.
+
+Naming-default adoption offers a reviewed update of existing Features (Refs #178, #241).
+Review independently controls resetting descendant custom rules and custom titles; both
+are preserved by default. The parent Save commits the policy and attributed accepted
+Feature revisions atomically. Organisation catalogue defaults use the same review.
+Retired identities and records without usable accepted content or an identifiable
+feature type remain excluded. Records and policy ancestry are rechecked at save; a stale
+preview must be reviewed again. Tests live in `src/tests/feature-naming-update.test.ts`,
+`src/tests/feature-naming-update-dialog.test.ts`, and
+`tests/e2e/templates/naming-update.spec.ts`.
 
 Project and layer naming rules inherit independently of the type catalogue. Migration
 `0221_feature_naming_policy.sql` moves current embedded rules into the policy’s

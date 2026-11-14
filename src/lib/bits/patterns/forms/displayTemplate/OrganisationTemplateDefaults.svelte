@@ -8,6 +8,11 @@ import { getFeatureNamingTemplates } from '#lib/api/featureIntents.remote.js'
 // COMPONENTS
 import { Button } from '#lib/bits/core/index.js'
 // DOMAIN
+import FeatureNamingUpdateDialog from '../featureIntent/FeatureNamingUpdateDialog.svelte'
+import {
+  FeatureTypesSchema,
+  type FeatureNamingUpdateOptions,
+} from '#lib/features/intents.js'
 import { featureTypeLabel } from '#lib/features/intents.js'
 import { getLocaleKey } from '#lib/i18n.js'
 // TYPES
@@ -27,6 +32,7 @@ let selected = $state<Record<string, string>>({})
 let busy = $state(false)
 let failed = $state(false)
 let refresh = $state(0)
+let pendingType = $state<string | null>(null)
 $effect(() => {
   refresh
   templates
@@ -57,9 +63,14 @@ $effect(() => {
   }
 })
 /** Save one inspected default, preserving all other type defaults.
- * @param featureType Selected type. @returns Completion after the policy refresh.
+ * @param featureType Selected type. @param namingUpdateToken Reviewed preview.
+ * @param namingUpdateOptions Reviewed reset choices. @returns Completion after the policy refresh.
  */
-async function save(featureType: string): Promise<void> {
+async function save(
+  featureType: string,
+  namingUpdateToken?: string,
+  namingUpdateOptions?: FeatureNamingUpdateOptions,
+): Promise<void> {
   if (!policy || busy) return
   busy = true
   failed = false
@@ -69,12 +80,15 @@ async function save(featureType: string): Promise<void> {
   try {
     await setOrganisationTemplateDefault({
       organisationId,
+      namingUpdateToken,
+      namingUpdateOptions,
       featureType,
       version: policy.version,
       fingerprint: policy.fingerprint,
       reference: template ? { id: template.id, version: template.version } : null,
     })
     await getOrganisationTemplateDefaults({ organisationId }).refresh()
+    pendingType = null
     refresh++
   } catch {
     failed = true
@@ -90,8 +104,8 @@ async function save(featureType: string): Promise<void> {
 >
   <h2 class="text-sm font-medium">Organisation naming defaults</h2>
   <p class="text-muted-foreground text-sm">
-    Used by new features unless the Project or Layer defines its own rule. Existing
-    feature names stay unchanged.
+    Used unless a Project or Layer defines its own rule. When changing a default, choose
+    whether to update existing Features too.
   </p>
   {#if failed}
     <p role="alert" class="text-destructive text-sm">
@@ -135,9 +149,43 @@ async function save(featureType: string): Promise<void> {
           style="outline"
           disabled={busy ||
             selected[type.id] === (pinned ? `${pinned.id}:${pinned.version}` : '')}
-          onClick={() => save(type.id)}
+          onClick={() => (pendingType = type.id)}
         />
       </div>
     {/each}
   {/if}
 </section>
+
+{#if pendingType && policy && !busy}
+  {@const featureType = pendingType}
+  {@const template = availableTemplates.find(
+    value => `${value.id}:${value.version}` === selected[featureType],
+  )}
+  {@const rules = { ...policy.namingRules }}
+  {@const type = policy.types.find(type => type.id === featureType)}
+  <FeatureNamingUpdateDialog
+    policyScope={{ type: 'organisation', id: organisationId }}
+    typeIds={[featureType]}
+    saveOnConfirm
+    patch={{
+      definition:
+        policy.definition === null ? null : FeatureTypesSchema.parse(policy.definition),
+      namingRules: template
+        ? {
+            ...rules,
+            [pendingType]: {
+              base: type?.nameRule?.base ?? 'location',
+              conditions: [],
+              registry: { id: template.id, version: template.version },
+            },
+          }
+        : Object.fromEntries(
+            Object.entries(rules).filter(([id]) => id !== pendingType),
+          ),
+      version: policy.version,
+      fingerprint: policy.fingerprint,
+    }}
+    onCancel={() => (pendingType = null)}
+    onChoose={(token, options) => save(featureType, token, options)}
+  />
+{/if}

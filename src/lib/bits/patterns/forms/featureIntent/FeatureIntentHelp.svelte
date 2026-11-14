@@ -24,12 +24,51 @@ let {
   label,
   scopeType = 'project',
 }: {
-  topic: 'kind' | 'relation' | 'start' | 'missing' | 'naming' | 'fields'
+  topic: 'model' | 'kind' | 'relation' | 'start' | 'missing' | 'naming' | 'fields'
   label: string
   scopeType?: 'hub' | 'organisation' | 'project' | 'layer'
 } = $props()
 const sections = $derived(
   {
+    model: [
+      {
+        icon: ToggleIcon,
+        title: m.feature_model_help_inheritance_title(),
+        body: m.feature_model_help_inheritance({
+          defaults:
+            scopeType === 'layer'
+              ? m.feature_model_project_defaults()
+              : scopeType === 'project'
+                ? m.feature_model_hub_defaults()
+                : m.feature_model_application_defaults(),
+        }),
+      },
+      {
+        icon: PlusIcon,
+        title: m.feature_model_help_actions_title(),
+        body: m.feature_model_help_actions(),
+      },
+      {
+        icon: LanguagesIcon,
+        title: m.feature_model_help_identity_title(),
+        body: m.feature_model_help_identity(),
+      },
+      {
+        icon: BoxIcon,
+        title: m.feature_model_help_kind_title(),
+        body: m.feature_model_help_kind(),
+      },
+      {
+        icon: PinIcon,
+        title: m.feature_model_help_location_title(),
+        body: m.feature_model_help_location(),
+      },
+      {
+        icon: TypeIcon,
+        title: m.feature_model_naming_rules(),
+        body: m.feature_model_help_naming(),
+      },
+    ],
     kind: [
       {
         icon: BoxIcon,
@@ -44,12 +83,12 @@ const sections = $derived(
       {
         icon: MapIcon,
         title: m.feature_model_area_soon(),
-        body: 'A wider space. This kind is not available yet.',
+        body: m.feature_model_help_area(),
       },
       {
         icon: RouteIcon,
         title: m.feature_model_route_soon(),
-        body: 'A path to follow. This kind is not available yet.',
+        body: m.feature_model_help_route(),
       },
     ],
     relation: [
@@ -138,13 +177,14 @@ const sections = $derived(
   showArrow
   triggerClass="inline-flex"
   triggerProps={{ 'aria-label': label, role: 'button' }}
-  contentClass="w-[24rem] max-w-[calc(100vw-2rem)] p-4 text-left"
+  contentProps={topic === 'model' ? { side: 'bottom', align: 'end' } : {}}
+  contentClass={`${topic === 'model' ? 'w-[38rem]' : 'w-[24rem]'} max-w-[calc(100vw-2rem)] p-4 text-left`}
 >
   {#snippet trigger()}
     <span
-      class="text-muted-foreground hover:text-foreground inline-flex size-6 items-center justify-center rounded"
+      class={`text-muted-foreground hover:text-foreground inline-flex ${topic === 'model' ? 'size-10' : 'size-6'} items-center justify-center rounded`}
     >
-      <InfoIcon class="size-3.5" aria-hidden="true" />
+      <InfoIcon class={topic === 'model' ? 'size-5' : 'size-3.5'} aria-hidden="true" />
     </span>
   {/snippet}
   <div
@@ -155,6 +195,11 @@ const sections = $derived(
       <InfoIcon class="text-primary size-5 shrink-0" aria-hidden="true" />
       <h3 class="text-[15px] leading-snug font-semibold">{label}</h3>
     </div>
+    {#if topic === 'model'}
+      <p class="text-muted-foreground mt-4 text-sm leading-relaxed">
+        {m.feature_model_help_intro()}
+      </p>
+    {/if}
     <ul class="mt-4 space-y-4">
       {#each sections as item}
         <li class="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-2.5">

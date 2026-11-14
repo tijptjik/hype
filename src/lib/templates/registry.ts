@@ -14,8 +14,39 @@ export const DisplayTemplateDefinitionSchema = z
     code: z.string().regex(/^[a-z][a-z0-9-]{0,79}$/),
     target: z.enum(['feature', 'location']),
     locales: z.record(z.string().min(2).max(30), z.string().min(1).max(4096)),
+    localeSync: z
+      .strictObject({
+        sharedExpression: z.string().min(1).max(4096),
+        customLocales: z.array(z.string().min(2).max(30)).max(30),
+      })
+      .optional(),
   })
   .superRefine((definition, ctx) => {
+    if (definition.localeSync) {
+      const { sharedExpression, customLocales } = definition.localeSync
+      try {
+        parseDisplayTemplate(sharedExpression)
+      } catch {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['localeSync'],
+          message: 'Invalid shared expression',
+        })
+      }
+      if (
+        customLocales.some(tag => !Object.hasOwn(definition.locales, tag)) ||
+        Object.entries(definition.locales).some(
+          ([tag, expression]) =>
+            !customLocales.includes(tag) && expression !== sharedExpression,
+        )
+      ) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['localeSync'],
+          message: 'Linked languages must use the shared expression',
+        })
+      }
+    }
     const seen = new Set<string>()
     if (!Object.keys(definition.locales).length)
       ctx.addIssue({

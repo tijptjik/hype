@@ -45,6 +45,8 @@ import DataModelIcon from 'virtual:icons/lucide/network'
 import { getFeatureIntentSettings } from '#lib/api/featureIntents.remote.js'
 import FeatureTypeSection from './FeatureTypeSection.svelte'
 import FeatureTypeEditor from './FeatureTypeEditor.svelte'
+import FeatureIntentHelp from './FeatureIntentHelp.svelte'
+import FeatureNamingUpdateDialog from './FeatureNamingUpdateDialog.svelte'
 import { TARGET_CONTEXTS } from '#lib/features/locationPolicy.js'
 // DOMAIN
 import {
@@ -92,6 +94,12 @@ let policy = $state<FeatureIntentPolicy | null>(null)
 let catalogue = $state<FeatureType[]>([])
 let namingRules = $state<FeatureNamingRules>({})
 let baselineNamingRules: FeatureNamingRules = {}
+let namingUpdateToken = $state<string | undefined>()
+let namingUpdateOptions = $state<
+  import('#lib/features/intents.js').FeatureNamingUpdateOptions | undefined
+>()
+let pendingNamingTypeIds = $state<string[]>([])
+let pendingNaming = $state<FeatureNamingRules | null>(null)
 const customSwitchId = $props.id()
 // Keep editor scroll targets clear of the responsive sticky toolbar.
 let toolbarHeight = $state(0)
@@ -135,6 +143,8 @@ $effect(() => {
       if (cancelled) return
       policy = value
       namingRules = structuredClone(value.namingRules ?? {})
+      namingUpdateToken = undefined
+      namingUpdateOptions = undefined
       catalogue = structuredClone(value.types).map(type => ({
         ...type,
         nameRule: undefined,
@@ -180,6 +190,8 @@ $effect(() => {
         inherits = parsed.definition === null
         if (parsed.definition) catalogue = parsed.definition
         namingRules = parsed.namingRules ?? baselineNamingRules
+        namingUpdateToken = parsed.namingUpdateToken
+        namingUpdateOptions = parsed.namingUpdateOptions
         lastEmitted = retained
       }
     })
@@ -201,11 +213,16 @@ $effect(() => {
       catalogue = structuredClone(baselineCatalogue)
       inherits = baselineInherits
       namingRules = structuredClone(baselineNamingRules)
+      namingUpdateToken = undefined
+      namingUpdateOptions = undefined
+      pendingNaming = null
     } else {
       const parsed = JSON.parse(incoming)
       inherits = parsed.definition === null
       if (parsed.definition) catalogue = parsed.definition
       namingRules = parsed.namingRules ?? baselineNamingRules
+      namingUpdateToken = parsed.namingUpdateToken
+      namingUpdateOptions = parsed.namingUpdateOptions
     }
   })
 })
@@ -215,11 +232,13 @@ $effect(() => {
   const rules = $state.snapshot(namingRules)
   const serialized = JSON.stringify({ definition, namingRules: rules })
   const next =
-    serialized === baseline
+    serialized === baseline && !namingUpdateToken
       ? undefined
       : JSON.stringify({
           definition,
           namingRules: rules,
+          namingUpdateToken,
+          namingUpdateOptions,
           version: policy.version,
           fingerprint: policy.fingerprint,
         })
@@ -236,7 +255,8 @@ function changeNaming(id: string, rule: FeatureNamingRules[string] | undefined):
   const next = { ...namingRules }
   if (rule) next[id] = rule
   else delete next[id]
-  namingRules = next
+  pendingNamingTypeIds = [...new Set([...(namingUpdateOptions?.typeIds ?? []), id])]
+  pendingNaming = next
 }
 /** Carry a local naming override with an explicitly renamed feature type.
  * @param before Previous key. @param after New key. @returns Nothing.
@@ -536,6 +556,11 @@ async function finishReview(accept: boolean): Promise<void> {
           >
             <Trash class="size-5" />
           </button>
+          <FeatureIntentHelp
+            topic="model"
+            label={m.feature_model_data_model()}
+            {scopeType}
+          />
         </div>
       {/snippet}
     </SectionHeader>
@@ -702,3 +727,44 @@ async function finishReview(accept: boolean): Promise<void> {
     {m.feature_model_remove_description()}
   {/snippet}
 </DestructiveDialog>
+
+{#if pendingNaming && policy}
+  <FeatureNamingUpdateDialog
+    policyScope={{ type: scopeType, id: scopeId }}
+    typeIds={pendingNamingTypeIds}
+    typeNames={pendingNamingTypeIds.map(
+      id => catalogue.find(type => type.id === id)?.label ?? id,
+    )}
+    initialOptions={namingUpdateOptions}
+    patch={{
+      definition: inherits ? null : catalogue,
+      namingRules: pendingNaming,
+      version: policy.version,
+      fingerprint: policy.fingerprint,
+    }}
+    onCancel={() => (pendingNaming = null)}
+    onChoose={(token, options) => {
+      if (!pendingNaming) return
+      namingRules = pendingNaming
+      namingUpdateToken = token
+      namingUpdateOptions = options
+      pendingNaming = null
+    }}
+  />
+{/if}
+
+{#if namingUpdateToken && !disabled}
+  <div class="mt-4 flex flex-wrap items-center gap-3">
+    <p class="text-muted-foreground text-sm">
+      {m.feature_model_updates_pending()}
+    </p>
+    <Button
+      text={m.feature_model_review_updates()}
+      style="outline"
+      onClick={() => {
+        pendingNamingTypeIds = namingUpdateOptions?.typeIds ?? Object.keys(namingRules)
+        pendingNaming = { ...namingRules }
+      }}
+    />
+  </div>
+{/if}
