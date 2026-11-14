@@ -659,9 +659,4 @@ $effect(() => {
       </button>
     </div>
   {/if}
-  {#if entries.length}
-    <p class="border-border/40 text-muted-foreground mx-6 border-t pt-4 text-xs">
-      Read-only history · Staff role assignments are not included.
-    </p>
-  {/if}
 </section>
