@@ -8,6 +8,7 @@ import { flip } from 'svelte/animate'
 import ReplaceIcon from 'virtual:icons/lucide/replace'
 import BackIcon from 'virtual:icons/lucide/arrow-left'
 import PencilIcon from 'virtual:icons/lucide/pencil'
+import UnlinkIcon from 'virtual:icons/lucide/unlink'
 import SearchIcon from 'virtual:icons/proicons/search'
 // LOCATION
 import DraftFeatureLocationSearch from './DraftFeatureLocationSearch.svelte'
@@ -60,6 +61,7 @@ import {
   importFeatureLocationCandidate,
   linkFeatureLocation,
   relinkFeatureLocation,
+  unlinkFeatureLocation,
   searchFeatureLocations,
   searchFeatureLocalLocations,
 } from '#lib/api/location.remote.js'
@@ -793,6 +795,31 @@ function addressDisplay(facts: LocationFacts): string {
   return getAddressDisplay(address, getLocaleKey())
 }
 
+/** Cut the saved association while retaining the Feature's current effective values.
+ * @returns Nothing; refreshes the editor after a successful unlink.
+ * @remarks Unsaved edits must be saved or discarded; concurrency is checked by the server.
+ */
+async function unlink(): Promise<void> {
+  const association = accepted.current
+  if (busy || !isEditing || isDirty || !association) return
+  busy = true
+  failed = false
+  try {
+    // Use the accepted association version so a stale editor cannot cut a newer link.
+    await unlinkFeatureLocation({
+      featureId,
+      expectedFeatureModifiedAt: modifiedAt,
+      expectedRevision: association.version,
+    })
+    await accepted.refresh()
+    await onSourceUpdate()
+  } catch {
+    failed = true
+  } finally {
+    busy = false
+  }
+}
+
 /** Link only a persisted clean Feature; the server preserves its existing effective values. */
 async function link(): Promise<void> {
   if (busy || !isEditing || isDirty || selected?.status !== 'ready') return
@@ -965,6 +992,17 @@ async function link(): Promise<void> {
               {/snippet}
               {m.association_change()}</SimpleTooltip
             >
+            <button
+              type="button"
+              aria-label={m.feature_location_unlink()}
+              title={m.feature_updates_unlink_help()}
+              data-location-unlink
+              class="text-primary hover:bg-primary/10 focus-visible:outline-primary inline-flex size-8 shrink-0 items-center justify-center rounded focus-visible:outline-2 disabled:opacity-40"
+              disabled={busy || isDirty}
+              onclick={unlink}
+            >
+              <UnlinkIcon class="size-4" aria-hidden="true" />
+            </button>
           {/if}
         {/if}
       {:catch}
