@@ -1,11 +1,30 @@
 // VALIDATION
 import { z } from 'zod'
+import { CatalogueArtworkSchema } from './catalogueArtwork'
 // I18N
 import { canonicalContentTag } from '#lib/i18n/contentRecords.js'
 import { placeTaxonomyPath } from './placeTaxonomy'
 import { seedCurationNames } from './curationIdentity'
 
 export const IdentityCatalogueContentSchema = z.strictObject({
+  artwork: CatalogueArtworkSchema.optional(),
+  evidence: z
+    .array(
+      z.strictObject({
+        kind: z.enum(['directory', 'website', 'ownership', 'operator']),
+        url: z
+          .string()
+          .url()
+          .max(2000)
+          .refine(
+            value => /^https?:\/\//i.test(value),
+            'Use an HTTP or HTTPS source URL',
+          ),
+        note: z.string().max(2000),
+      }),
+    )
+    .max(100)
+    .optional(),
   // Optional containing group for both brands and groups; revisions retain membership history.
   groupId: z.string().min(1).max(200).nullable().optional(),
   code: z
