@@ -17,6 +17,7 @@ import {
 import {
   getFeatureNameFieldsProject,
   getFeatureNameProperties,
+  getFeatureNamingExamples,
 } from '#lib/api/featureIntents.remote.js'
 // COMPONENTS
 import TemplateConsumers from '#lib/bits/patterns/forms/displayTemplate/TemplateConsumers.svelte'
@@ -26,6 +27,8 @@ import { Button } from '#lib/bits/core/index.js'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import * as Main from '#lib/bits/custom/main/index.js'
 import { SectionHeader, TextInput, SelectField } from '#lib/bits/custom/form/index.js'
+// TYPES
+import type { FeatureIntentScope } from '#lib/db/services/featureIntentPolicy.js'
 import type { TemplateProperty } from '#lib/templates/propertyPresentation.js'
 // I18N
 import { m } from '#lib/i18n.js'
@@ -62,6 +65,27 @@ let busy = $state(false)
 let saved = $state(false)
 type CatalogueTemplate = DisplayTemplateRecord | SystemDisplayTemplate
 let selected = $state<CatalogueTemplate | null>(null)
+const exampleScope = $derived.by((): FeatureIntentScope | undefined => {
+  const type = page.url.searchParams.get('scope')
+  const id = page.url.searchParams.get('scopeId')
+  if (
+    id &&
+    (type === 'hub' ||
+      type === 'organisation' ||
+      type === 'project' ||
+      type === 'layer')
+  )
+    return { type, id }
+  const project =
+    selected && !('system' in selected)
+      ? (selected.projectId ?? contextProjectId)
+      : contextProjectId
+  return project
+    ? { type: 'project' as const, id: project }
+    : organisationId
+      ? { type: 'organisation' as const, id: organisationId }
+      : undefined
+})
 const catalogue = $derived([...SYSTEM_DISPLAY_TEMPLATES, ...records])
 const isSystem = $derived(selected !== null && 'system' in selected)
 const canCreate = $derived(
@@ -446,6 +470,11 @@ async function save(): Promise<void> {
                 that project; system fields can be used across projects.
               </p>
               <DisplayTemplateEditor
+                exampleScope={draft.target === 'feature' ? exampleScope : undefined}
+                loadExamples={input =>
+                  exampleScope
+                    ? getFeatureNamingExamples({ ...input, scope: exampleScope })
+                    : Promise.resolve([])}
                 value={draft.locales[locale] ?? ''}
                 onChange={source => {
                   if (draft)

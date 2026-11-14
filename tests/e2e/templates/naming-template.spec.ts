@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import path from 'node:path'
 
-test('inserts and edits components at the cursor without saving test records', async ({
+test('edits fixed blocks and keeps options visible while editing surrounding text', async ({
   page,
 }) => {
   const artifacts = process.env.DEV_RUNNER_ARTIFACTS
@@ -18,55 +18,84 @@ test('inserts and edits components at the cursor without saving test records', a
     }),
   )
   await page.goto('/__template-check.html')
-  const expression = page.getByRole('textbox', { name: 'Expression', exact: true })
-  await expression.fill('Before  after')
-  await expression.evaluate((element: HTMLTextAreaElement) => {
-    element.focus()
-    element.setSelectionRange(7, 7)
-    element.dispatchEvent(new Event('select', { bubbles: true }))
-  })
-  await page.getByRole('button', { name: 'Insert Optional text', exact: true }).click()
-  await expect(expression).toHaveValue(
-    'Before {{ optional(source.name, "", "") }} after',
+  const block = '{{ pair(brand.name, branch, " - ") ?? source.name }}'
+  await expect(page.getByRole('group', { name: 'Options', exact: true })).toBeVisible()
+  const token = page.getByRole('button', { name: `Select ${block}`, exact: true })
+  const beforeHover = await token.locator('..').boundingBox()
+  await token.hover()
+  const afterHover = await token.locator('..').boundingBox()
+  expect(afterHover?.width).toBe(beforeHover?.width)
+  const remove = page.getByRole('button', { name: `Remove ${block}`, exact: true })
+  await expect(remove).toHaveCSS('opacity', '1')
+  for (const theme of ['breadline-light', 'hype-black']) {
+    await page.evaluate(
+      theme => document.documentElement.setAttribute('data-theme', theme),
+      theme,
+    )
+    await page.screenshot({
+      path: path.join(artifacts, `token-remove-overlay-${theme}.png`),
+    })
+  }
+  await page.evaluate(() =>
+    document.documentElement.setAttribute('data-theme', 'breadline-light'),
   )
-  await expect(page.getByRole('group', { name: 'Component fields' })).toBeVisible()
-  await page.getByRole('textbox', { name: 'Prefix', exact: true }).fill('Hello ')
-  await expect(expression).toHaveValue(
-    'Before {{ optional(source.name, "Hello ", "") }} after',
+  const removeBox = await remove.boundingBox()
+  expect(removeBox!.x + removeBox!.width).toBeLessThanOrEqual(
+    afterHover!.x + afterHover!.width,
   )
-  await expression.fill('{{ pair(brand.name, branch, " - ") ?? source.name }}')
-  await expression.evaluate((element: HTMLTextAreaElement) => {
-    element.setSelectionRange(5, 5)
-    element.dispatchEvent(new Event('select', { bubbles: true }))
-  })
+  await page.getByRole('button', { name: `Select ${block}`, exact: true }).click()
+  await expect(page.getByRole('group', { name: 'Options', exact: true })).toContainText(
+    'fallback',
+  )
   await page.getByRole('textbox', { name: 'Separator', exact: true }).fill(' / ')
-  await expect(expression).toHaveValue(
-    '{{ pair(brand.name, branch, " / ") ?? source.name }}',
-  )
   await expect(page.locator('output')).toHaveText('Sample Brand / Sample Branch')
-  const firstProperty = page.getByRole('group', { name: 'First property', exact: true })
-  await firstProperty
-    .getByRole('button', { name: 'Name Provided name text', exact: true })
-    .click()
-  await expect(expression).toHaveValue(
-    '{{ pair(source.name, branch, " / ") ?? source.name }}',
+  await page.getByRole('textbox', { name: 'Text 1', exact: true }).fill('Hello ')
+  await expect(
+    page.getByRole('textbox', { name: 'Separator', exact: true }),
+  ).toHaveValue(' / ')
+  await expect(page.locator('output')).toHaveText('Hello Sample Brand / Sample Branch')
+  await page.getByRole('textbox', { name: 'Text 3', exact: true }).click()
+  await page.getByRole('button', { name: 'Insert Optional text', exact: true }).click()
+  await page.getByRole('textbox', { name: 'Prefix', exact: true }).fill(' (')
+  await page.getByRole('textbox', { name: 'Suffix', exact: true }).fill(')')
+  await expect(page.locator('output')).toContainText('(Sample Name)')
+  const optionalBlock = page.getByRole('button', {
+    name: 'Select {{ optional(source.name, " (", ")") }}',
+    exact: true,
+  })
+  const pairBlock = page.getByRole('button', {
+    name: 'Select {{ pair(brand.name, branch, " / ") ?? source.name }}',
+    exact: true,
+  })
+  await optionalBlock.dragTo(pairBlock)
+  await expect(page.locator('output')).toHaveText(
+    'Hello  (Sample Name)Sample Brand / Sample Branch',
   )
-  await expect(page.locator('output')).toHaveText('Sample Name / Sample Branch')
-  await expression.fill('')
-  await expression.focus()
-  await page.getByRole('button', { name: 'Insert Join', exact: true }).click()
-  await expect(expression).toHaveValue(/join\(/)
-  await page.getByRole('textbox', { name: 'Separator', exact: true }).fill(' + ')
-  await expect(expression).toHaveValue(/, " \+ "\)/)
-  await expect(page.getByText('Sample values', { exact: true })).toHaveCount(0)
+  await optionalBlock.focus()
+  await optionalBlock.press('Alt+ArrowRight')
+  await expect(page.locator('output')).toHaveText(
+    'Hello Sample Brand / Sample Branch (Sample Name)',
+  )
+  const optional = page.getByRole('button', {
+    name: 'Remove {{ optional(source.name, " (", ")") }}',
+    exact: true,
+  })
+  await optional.focus()
+  await optional.press('Enter')
+  await expect(optional).toHaveCount(0)
+  await expect(page.getByRole('group', { name: 'Options', exact: true })).toContainText(
+    'Select a component block',
+  )
   for (const width of [1440, 390]) {
-    await page.setViewportSize({ width, height: 1000 })
+    await page.setViewportSize({ width, height: 900 })
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
     ).toBe(true)
     await page.screenshot({
-      path: path.join(artifacts, `shared-naming-editor-${width}.png`),
+      path: path.join(artifacts, `template-blocks-${width}.png`),
       fullPage: true,
     })
   }
+  await page.getByRole('button', { name: 'About template components' }).hover()
+  await expect(page.getByText('Build a name with components')).toBeVisible()
 })

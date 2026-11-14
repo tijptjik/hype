@@ -34,11 +34,11 @@ test('system templates remain inspectable and read only in the catalogue', async
     ]) {
       await page.getByRole('button', { name: new RegExp(`${name} system-`) }).click()
       await expect(
-        page.getByRole('textbox', { name: 'Expression', exact: true }),
-      ).toHaveValue(property)
+        page.getByRole('group', { name: 'Expression', exact: true }),
+      ).toContainText(property)
       await expect(
-        page.getByRole('textbox', { name: 'Expression', exact: true }),
-      ).not.toBeEditable()
+        page.getByRole('button', { name: `Select ${property}`, exact: true }),
+      ).toBeDisabled()
       await expect(page.getByRole('button', { name: 'Edit', exact: true })).toHaveCount(
         0,
       )

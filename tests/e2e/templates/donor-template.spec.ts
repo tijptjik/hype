@@ -12,8 +12,8 @@ test('installed donor template exposes the approved expression', async ({ page }
   const response = await page.goto('/admin/templates')
   expect(response?.ok()).toBe(true)
   await page.getByRole('button', { name: /Breadline Donor breadline-donor/ }).click()
-  const expression = page.getByRole('textbox', { name: 'Expression', exact: true })
-  await expect(expression).toHaveValue(
+  const expression = page.getByRole('group', { name: 'Expression', exact: true })
+  await expect(expression).toContainText(
     /optional\(join\(accessHint, cases\(properties\.4ql4aG0vBWsc, "Paid", "", ""\), " - "\), " \(", "\)"\)/,
   )
   await page.screenshot({
