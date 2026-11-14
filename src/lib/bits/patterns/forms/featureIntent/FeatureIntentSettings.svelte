@@ -532,7 +532,7 @@ async function finishReview(accept: boolean): Promise<void> {
             aria-pressed={removeMode}
             disabled={!editable}
             onclick={() => (removeMode = !removeMode)}
-            class="text-muted-foreground enabled:hover:bg-muted focus-visible:outline-primary inline-flex size-10 shrink-0 items-center justify-center rounded-md focus-visible:outline-2 disabled:opacity-50"
+            class="text-muted-foreground enabled:hover:text-destructive focus-visible:outline-primary inline-flex size-10 shrink-0 items-center justify-center rounded-md focus-visible:outline-2 disabled:opacity-50"
           >
             <Trash class="size-5" />
           </button>
