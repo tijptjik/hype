@@ -8,6 +8,7 @@ import PanelRoot from '#lib/bits/patterns/panels/components/PanelRoot.svelte'
 import Info from '#lib/bits/patterns/panels/components/info/Maps.svelte'
 import X from 'virtual:icons/proicons/cancel-circle'
 import ChevronLeft from 'virtual:icons/proicons/chevron-left'
+import RetryIcon from 'virtual:icons/proicons/arrow-sync'
 // I18N
 import { m } from '#lib/i18n.js'
 // TYPES
@@ -160,17 +161,30 @@ onDestroy(cancelLabelHide)
       {/each}
     </div>
     {#if model.loadingMessage}
-      <p role="status" class="text-muted-foreground px-4 py-3 text-xs">
+      <p
+        role="status"
+        class={model.panel.isNarrow
+          ? 'sr-only'
+          : 'text-muted-foreground px-4 py-3 text-xs'}
+      >
         {model.loadingMessage}
       </p>
     {/if}
     {#if model.loadError}
       <button
         type="button"
-        class="text-primary p-3 text-sm"
+        class={model.panel.isNarrow
+          ? 'text-primary focus-override hover:bg-surface mx-auto flex size-8 shrink-0 items-center justify-center rounded-md'
+          : 'text-primary p-3 text-sm'}
+        aria-label={m.resource_retry()}
+        title={model.panel.isNarrow ? m.resource_retry() : undefined}
         onclick={model.onRetryFeatures}
       >
-        {m.resource_retry()}
+        {#if model.panel.isNarrow}
+          <RetryIcon class="size-4" aria-hidden="true" />
+        {:else}
+          {m.resource_retry()}
+        {/if}
       </button>
     {/if}
     {#if footer}

@@ -298,10 +298,13 @@ it('keeps initial loading sections compact until rows arrive, then preserves exp
 
 it('reveals the initial error so a compact loading section can be retried', async () => {
   const model = { ...section(0), loading: true }
-  const view = render(ResourceSection, { section: model })
+  const view = render(ResourceSection, { section: model, narrow: true })
   await view.rerender({ section: { ...model, loading: false, error: true } })
   expect(screen.getByRole('button', { name: 'Collapse Layers' })).toBeTruthy()
-  expect(screen.getByRole('button', { name: /retry/i })).toBeTruthy()
+  const retry = screen.getByRole('button', { name: /retry/i })
+  expect(retry.textContent?.trim()).toBe('')
+  await fireEvent.click(retry)
+  expect(model.onRetry).toHaveBeenCalledOnce()
 })
 
 it('waits for sibling results before expanding an already loaded section', async () => {

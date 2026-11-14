@@ -3,6 +3,9 @@
 import { untrack, type Snippet } from 'svelte'
 import { flip } from 'svelte/animate'
 import { prefersReducedMotion } from 'svelte/motion'
+// ICONS
+import RetryIcon from 'virtual:icons/proicons/arrow-sync'
+import EmptyIcon from 'virtual:icons/proicons/subtract'
 // VIRTUALIZATION
 import { createVirtualizer } from '@tanstack/svelte-virtual'
 // I18N
@@ -17,6 +20,7 @@ let {
   onVisibleItems,
   loading = false,
   error = false,
+  compact = false,
   onRetry,
   viewKey = '',
   animateRows = false,
@@ -29,6 +33,8 @@ let {
   onVisibleItems?: (items: T[]) => void
   loading?: boolean
   error?: boolean
+  /** Icon-only status controls for collapsed navigation rails. */
+  compact?: boolean
   onRetry?: () => void
   animateRows?: boolean
   /** Intrinsic list height, including padding and status rows, for content-capped layouts. */
@@ -143,11 +149,35 @@ function animateRow(
         aria-label={m.resource_loading()}
       ></div>
     {:else if error}
-      <button type="button" class="w-full px-3 py-2 text-sm" onclick={onRetry}>
-        {m.resource_retry()}
+      <button
+        type="button"
+        class={compact
+          ? 'focus-override hover:bg-surface mx-auto flex size-8 items-center justify-center rounded-md'
+          : 'w-full px-3 py-2 text-sm'}
+        aria-label={m.resource_retry()}
+        title={compact ? m.resource_retry() : undefined}
+        onclick={onRetry}
+      >
+        {#if compact}
+          <RetryIcon class="size-4" aria-hidden="true" />
+        {:else}
+          {m.resource_retry()}
+        {/if}
       </button>
     {:else if items.length === 0}
-      <p class="px-3 py-2 text-sm opacity-60">{m.resource_no_results()}</p>
+      <p
+        class={compact
+          ? 'flex h-8 items-center justify-center opacity-60'
+          : 'px-3 py-2 text-sm opacity-60'}
+        title={compact ? m.resource_no_results() : undefined}
+      >
+        {#if compact}
+          <EmptyIcon class="size-4" aria-hidden="true" />
+          <span class="sr-only">{m.resource_no_results()}</span>
+        {:else}
+          {m.resource_no_results()}
+        {/if}
+      </p>
     {/if}
   </div>
 </div>

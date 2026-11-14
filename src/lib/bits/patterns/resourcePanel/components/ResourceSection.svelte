@@ -267,6 +267,7 @@ const reorder = $derived(
       <VirtualResourceList
         {items}
         bind:contentHeight
+        compact={narrow}
         loading={section.loading}
         error={section.error}
         onNearEnd={section.onNext}
