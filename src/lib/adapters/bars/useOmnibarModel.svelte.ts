@@ -1,3 +1,4 @@
+import { searchStations } from '#lib/indoor/registry.js'
 // CONTEXT
 import { usePanelResources } from '#lib/context/panel-resources.svelte.js'
 // SEARCH
@@ -48,6 +49,7 @@ export function useOmnibarModel(
 ): {
   getOmnibarProps: () => OmnibarProps
 } {
+  let stationExpanded = $state(false)
   const resourceTypes = ['layer', 'project', 'organisation'] as const
   const resourceLists = resourceTypes.map(type =>
     usePanelResources(
@@ -199,6 +201,7 @@ export function useOmnibarModel(
   }
 
   function handleSearchTermChange(value: string): void {
+    stationExpanded = false
     omniCtx.setSearchTerm(value)
 
     if (value !== '' && !omniCtx.state.isTrayOpen) {
@@ -324,6 +327,22 @@ export function useOmnibarModel(
   function getSearchSections(): OmnibarResultSection[] {
     const sections: Omit<OmnibarResultSection, 'limit'>[] = [
       {
+        collectionType: 'station',
+        onLoadMore: () => {
+          stationExpanded = !stationExpanded
+        },
+        results: searchStations(omniCtx.state.searchTerm).map(s => ({
+          ref: s.id,
+          name: `${s.name} · ${s.nameZh} · ${s.id}`,
+          count: 0,
+          collectionType: 'station' as const,
+        })),
+        onSelection: (code: string) => {
+          void appCtx.station.open(code)
+          omniCtx.closeTray()
+        },
+      },
+      {
         collectionType: OmniCollection.feature,
         results: omniCtx.searchResults.feature ?? [],
         totalCount: appCtx.view.resources.featureQueries.search.totalCount,
@@ -356,15 +375,18 @@ export function useOmnibarModel(
         ...sections.find(section => section.collectionType === policy.type)!,
         limit: policy.limit as number,
       }))
-      .filter(
-        section =>
-          !omniCtx.searchSection || section.collectionType === omniCtx.searchSection,
+      .filter(section =>
+        stationExpanded
+          ? section.collectionType === 'station'
+          : !omniCtx.searchSection || section.collectionType === omniCtx.searchSection,
       )
       .map(section => ({
         ...section,
-        limit: omniCtx.searchSection
-          ? Math.max(section.limit, omniCtx.searchSectionLimit)
-          : section.limit,
+        limit: stationExpanded
+          ? 98
+          : omniCtx.searchSection
+            ? Math.max(section.limit, omniCtx.searchSectionLimit)
+            : section.limit,
       }))
   }
 
@@ -391,7 +413,7 @@ export function useOmnibarModel(
             height: responsiveCtx.visibleWindowHeight,
             offsetTop: responsiveCtx.viewport?.offsetTop ?? 0,
           },
-          expanded: Boolean(omniCtx.searchSection),
+          expanded: stationExpanded || Boolean(omniCtx.searchSection),
           term: omniCtx.state.searchTerm,
           updating:
             omniCtx.state.searchTerm !== omniCtx.searchQueryTerm ||
@@ -404,6 +426,14 @@ export function useOmnibarModel(
           onSelectFirstResult: () => {
             const sections = getSearchSections()
             // Pending rows still display the previous search, not these incoming matches.
+            const localStation = sections.find(
+              section =>
+                section.collectionType === 'station' && section.results.length > 0,
+            )
+            if (localStation) {
+              localStation.onSelection(localStation.results[0].ref)
+              return
+            }
             if (sections.some(section => section.loading)) return
             const section = sections.find(section => section.results.length > 0)
             if (section) section.onSelection(section.results[0].ref)

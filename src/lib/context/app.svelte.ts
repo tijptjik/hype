@@ -12,6 +12,7 @@ import { mapResourceProviders } from '#lib/resources/mapProviders.js'
 // NAVIGATION
 import { navigate } from '#lib/navigation/index.js'
 // MAP
+import { StationState } from '#lib/indoor/station.svelte.js'
 import { isFeaturePointWithinBounds } from '#lib/map/featureSpatial.js'
 import { isMobile, PANEL_WIDTH } from '#lib/constants.js'
 // ENUMS
@@ -32,6 +33,7 @@ import type { Id } from '#lib/types.js'
 
 /** Public map application orchestration. Admin and dashboard routes do not construct it. */
 export class AppCtx {
+  readonly station = new StationState()
   readonly view: ResourceViewCtx
   readonly selection = new AppSelection(
     id => this.view.cache.feature.get(id) ?? this.view.features.get(id),
@@ -93,6 +95,7 @@ export class AppCtx {
 
   /** Drops the camera capability and releases the resource view. @returns Nothing. */
   dispose(): void {
+    this.station.dispose()
     this.resetActiveCollection()
     this.mapController = null
     this.view.dispose()

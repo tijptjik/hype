@@ -3,6 +3,7 @@ import type { OmniSearchCollection } from '#lib/context/omni.types.js'
 
 /** Ordered preview quotas; lower priorities receive only the space left by earlier ones. */
 export const OMNIBAR_SEARCH_POLICY = [
+  { type: 'station', limit: 3 },
   { type: 'feature', limit: 5 },
   { type: 'walk', limit: 2 },
   { type: 'project', limit: 2 },
@@ -13,6 +14,7 @@ export const OMNIBAR_SEARCH_POLICY = [
 
 /** Visual reading order, independent of the preview allocation priority above. */
 export const OMNIBAR_SEARCH_DISPLAY_ORDER: readonly OmniSearchCollection[] = [
+  'station',
   'feature',
   'neighbourhood',
   'layer',

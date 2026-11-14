@@ -6,6 +6,7 @@ export type OmniSearchCollection =
   | 'layer'
   | 'project'
   | 'organisation'
+  | 'station'
 
 export type SearchResult = {
   name: string

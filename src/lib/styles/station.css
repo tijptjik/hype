@@ -1,0 +1,70 @@
+/* Shared cartographic tokens keep the map and its separate legend in sync. */
+@layer components {
+  :root {
+    --station-canvas: #e5e8e9;
+    --station-paid: #b8d8e8;
+    --station-unpaid: #faf8f2;
+    --station-room: #cbd0d2;
+    --station-edge: #78868d;
+    --station-paper: #ffffff;
+    --station-ink: #263d49;
+    --station-connector: #467078;
+    --station-connector-fill: #c5d9d7;
+    --station-accent: #a42f70;
+  }
+
+  /* Dark floors use luminance and a restrained blue tint to separate access areas. */
+  [data-theme="hype-dark"],
+  [data-theme="hype-black"] {
+    --station-canvas: #151b22;
+    --station-paid: #304e63;
+    --station-unpaid: #383f49;
+    --station-room: #252c35;
+    --station-edge: #75838e;
+    --station-paper: #202832;
+    --station-ink: #e5edf2;
+    --station-connector: #91b5be;
+    --station-connector-fill: #3e555c;
+    --station-accent: #f18ab6;
+  }
+
+  /* Oblivion keeps the pale architectural floors against charcoal. */
+  [data-theme="hype-light"] {
+    --station-canvas: #242c32;
+  }
+
+  /* Milque and Rye retain their own semantic indoor palettes. */
+  [data-theme="breadline-light"],
+  [data-theme="breadline-dark"] {
+    --station-canvas: var(--theme-canvas);
+    --station-paid: color-mix(in srgb, var(--theme-info) 25%, var(--theme-panel));
+    --station-unpaid: color-mix(in srgb, var(--theme-warning) 23%, var(--theme-panel));
+    --station-room: var(--theme-surface);
+    --station-edge: var(--theme-border);
+    --station-paper: var(--theme-panel);
+    --station-ink: var(--theme-text);
+    --station-connector: var(--theme-tertiary);
+    --station-connector-fill: color-mix(
+      in srgb,
+      var(--theme-tertiary) 22%,
+      var(--theme-panel)
+    );
+    --station-accent: var(--theme-primary);
+  }
+
+  /* Rye needs stronger floor separation against its deep teal canvas. */
+  [data-theme="breadline-dark"] {
+    --station-paid: color-mix(in srgb, var(--theme-info) 38%, var(--theme-surface));
+    --station-unpaid: color-mix(
+      in srgb,
+      var(--theme-warning) 42%,
+      var(--theme-surface)
+    );
+    --station-room: color-mix(
+      in srgb,
+      var(--theme-secondary) 20%,
+      var(--theme-surface)
+    );
+    --station-edge: color-mix(in srgb, var(--theme-muted) 60%, var(--theme-border));
+  }
+}

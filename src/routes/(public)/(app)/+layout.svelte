@@ -51,6 +51,8 @@ import {
   getActiveMapStyleIdentity,
 } from '#lib/client/services/map.js'
 import MapCanvas from '#lib/bits/patterns/maps/MapCanvas.svelte'
+import StationSurface from '#lib/bits/patterns/station/StationSurface.svelte'
+import StationPanel from '#lib/bits/patterns/station/StationPanel.svelte'
 import { useResourcePanelModel } from '#lib/adapters/panels/useResourcePanelModel.svelte.js'
 // import Plan from '#lib/bits/patterns/planPanel/PlanPanel.svelte'
 // import Passport from '#lib/bits/patterns/passportPanel/PassportPanel.svelte'
@@ -640,18 +642,23 @@ $effect(() => {
           appCtx.mapController = controller
         }}
       />
+      <StationSurface />
       <!-- Panels -->
-      <DeferredPanel
-        active={prismsModel.open}
-        load={() => import('#lib/bits/patterns/resourcePanel/ResourcePanel.svelte')}
-      >
-        {#snippet pending()}
-          <PanelLoadingState panel={prismsModel.panel} />
-        {/snippet}
-        {#snippet children(ResourcePanel)}
-          <ResourcePanel model={prismsModel} />
-        {/snippet}
-      </DeferredPanel>
+      {#if appCtx.station.active}
+        <StationPanel model={prismsModel} />
+      {:else}
+        <DeferredPanel
+          active={prismsModel.open}
+          load={() => import('#lib/bits/patterns/resourcePanel/ResourcePanel.svelte')}
+        >
+          {#snippet pending()}
+            <PanelLoadingState panel={prismsModel.panel} />
+          {/snippet}
+          {#snippet children(ResourcePanel)}
+            <ResourcePanel model={prismsModel} />
+          {/snippet}
+        </DeferredPanel>
+      {/if}
       <DeferredPanel
         active={starsShell.open}
         load={() => import('#lib/bits/patterns/starsPanel/StarsPanel.svelte')}

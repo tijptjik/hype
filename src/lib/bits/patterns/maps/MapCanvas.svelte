@@ -48,6 +48,7 @@ import {
 } from '#lib/map/styles/runtime.js'
 import { createMapController, type MapController } from '#lib/map/controller.js'
 import DivisionHighlightLayer from './DivisionHighlightLayer.svelte'
+import StationFootprintLayer from './StationFootprintLayer.svelte'
 import NavigationRouteLayer from './NavigationRouteLayer.svelte'
 import MapSurface from '#lib/bits/custom/map/MapSurface.svelte'
 import { GeolocateControl, NavigationControl } from 'svelte-maplibre-gl'
@@ -500,6 +501,18 @@ const setupMap = (map: MaplibreMap): void => {
       })
       return
     }
+    const indoorLayers = [
+      'hype-station-footprint-fill',
+      'hype-station-footprint-label',
+    ].filter(id => map.getLayer(id))
+    const indoorFeature = indoorLayers.length
+      ? map.queryRenderedFeatures(event.point, { layers: indoorLayers })[0]
+      : undefined
+    if (typeof indoorFeature?.properties?.stationCode === 'string') {
+      void appCtx.station.open(indoorFeature.properties.stationCode)
+      return
+    }
+
     if (omniCtx.state.isCardOpen) omniCtx.close()
     else if (omniCtx.state.mode === 'search' && omniCtx.state.isTrayOpen)
       omniCtx.closeTray()
@@ -940,6 +953,8 @@ $effect(() => {
 
 <div
   id="map"
+  inert={appCtx.station.active}
+  aria-hidden={appCtx.station.active}
   class="map absolute! inset-0 overflow-hidden caret-transparent {shouldFadeOnFirstFrame
     ? 'transition-opacity duration-420 ease-out motion-reduce:transition-none'
     : ''}"
@@ -953,6 +968,10 @@ $effect(() => {
   use:bridgeNativeTooltips
 >
   {#if activeMapInstance}
+    <StationFootprintLayer
+      map={activeMapInstance}
+      theme={getMapStyleDefinition(resolvedMapStyleCode).markerTheme}
+    />
     {#if journey}
       <NavigationRouteLayer
         map={activeMapInstance}
@@ -1040,6 +1059,7 @@ $effect(() => {
     </MapSurface>
   {/if}
   {#if showControls &&
+    !appCtx.station.active &&
     appCtx.view.user &&
     activeMapInstance &&
     appCtx.view.queries.rows.layer.length > 0 &&

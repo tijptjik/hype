@@ -15,6 +15,7 @@ describe('shared Omni Search budget', () => {
 
   it('allocates quotas in priority order, charging headers as well as rows', () => {
     expect(OMNIBAR_SEARCH_POLICY.map(policy => policy.type)).toEqual([
+      'station',
       'feature',
       'walk',
       'project',
@@ -26,8 +27,11 @@ describe('shared Omni Search budget', () => {
       chrome: 48,
       rows: Array(policy.limit).fill(36),
     }))
-    expect(allocateSearchRows(sections, 432)).toEqual([5, 2, 1, 0, 0, 0])
-    expect(allocateSearchRows(sections, 132)).toEqual([2, 0, 0, 0, 0, 0])
+    expect(allocateSearchRows(sections, 432)).toEqual([3, 5, 0, 0, 0, 0, 0])
+    expect(
+      allocateSearchRows([{ chrome: 48, rows: [] }, ...sections.slice(1)], 432),
+    ).toEqual([0, 5, 2, 1, 0, 0, 0])
+    expect(allocateSearchRows(sections, 132)).toEqual([2, 0, 0, 0, 0, 0, 0])
   })
 
   it('never leaves an orphan header and treats wrapped rows by measured height', () => {

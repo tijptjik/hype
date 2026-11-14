@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./bits.css";
 @import "./themes.css";
+@import "./station.css";
 
 /* Plugins */
 @plugin "tailwindcss-animate";
