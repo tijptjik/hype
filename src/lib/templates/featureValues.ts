@@ -27,6 +27,53 @@ function localized(
   )?.[1]
 }
 
+/** Resolve one real record's naming inputs without mixing values from other records.
+ * @param content Accepted Feature snapshot. @param locale Preview language.
+ * @param location Accepted linked Location facts. @returns Flat values used by the naming renderer.
+ */
+export function featureTemplateValues(
+  content: FeatureRevisionContent,
+  locale: string,
+  location?: EffectiveLocationFacts,
+): Record<string, TemplateScalar> {
+  const resolvedLocale = Object.hasOwn(content.translations, locale)
+    ? locale
+    : (Object.keys(content.translations).find(
+        tag => canonicalContentTag(tag) === canonicalContentTag(locale),
+      ) ?? locale)
+  const base = featureRevisionBaseName(content, resolvedLocale)
+  const translation = content.translations[resolvedLocale]
+  const address = content.placement.addressMeta?.address as
+    | { accessHints?: Record<string, string | null> }
+    | undefined
+  const values: Record<string, TemplateScalar> = {
+    'source.name': localized(location?.names, locale) ?? base,
+    'location.name': localized(location?.names, locale),
+    'feature.name': base,
+    'group.name': location?.group?.i18n[canonicalContentTag(locale)]?.name,
+    'brand.name': localized(location?.brands?.[0]?.names, locale),
+    'format.name': localized(location?.format, locale),
+    branch: localized(location?.branch, locale),
+    address: translation?.address.value,
+    accessHint: localized(address?.accessHints, locale),
+    phoneNumber: location?.phoneNumber?.[0],
+    website: location?.websites?.[0],
+  }
+  // Property interpretation belongs to the captured definition, not today's mutable catalogue.
+  for (const [id, property] of Object.entries(content.properties)) {
+    const field = property.selection.definition
+    const translated = Object.entries(property.translations).find(
+      ([tag]) => canonicalContentTag(tag) === canonicalContentTag(locale),
+    )?.[1]?.value
+    const raw = translated ?? property.selection.value
+    values[`properties.${id}`] =
+      field.dataType === 'boolean' || field.component === 'ToggleField'
+        ? nameBooleanValue(raw)
+        : featureNameTextValue(raw, field.component)
+  }
+  return values
+}
+
 /** Generate display titles exclusively from accepted Feature content and accepted Location fields.
  * @param content Accepted or transactionally proposed Feature snapshot.
  * @param definition Immutable central definition. @param location Resolved accepted Location, never the current community head.
@@ -38,36 +85,9 @@ export function featureTemplateTitles(
   location?: EffectiveLocationFacts,
 ): Record<string, string> {
   return Object.fromEntries(
-    Object.entries(content.translations).map(([locale, translation]) => {
+    Object.keys(content.translations).map(locale => {
       const base = featureRevisionBaseName(content, locale)
-      const address = content.placement.addressMeta?.address as
-        | { accessHints?: Record<string, string | null> }
-        | undefined
-      const values: Record<string, TemplateScalar> = {
-        'source.name': localized(location?.names, locale) ?? base,
-        'location.name': localized(location?.names, locale),
-        'feature.name': base,
-        'group.name': location?.group?.i18n[canonicalContentTag(locale)]?.name,
-        'brand.name': localized(location?.brands?.[0]?.names, locale),
-        'format.name': localized(location?.format, locale),
-        branch: localized(location?.branch, locale),
-        address: translation.address.value,
-        accessHint: localized(address?.accessHints, locale),
-        phoneNumber: location?.phoneNumber?.[0],
-        website: location?.websites?.[0],
-      }
-      // Property interpretation belongs to the captured definition, not today's mutable catalogue.
-      for (const [id, property] of Object.entries(content.properties)) {
-        const field = property.selection.definition
-        const translated = Object.entries(property.translations).find(
-          ([tag]) => canonicalContentTag(tag) === canonicalContentTag(locale),
-        )?.[1]?.value
-        const raw = translated ?? property.selection.value
-        values[`properties.${id}`] =
-          field.dataType === 'boolean' || field.component === 'ToggleField'
-            ? nameBooleanValue(raw)
-            : featureNameTextValue(raw, field.component)
-      }
+      const values = featureTemplateValues(content, locale, location)
       return [
         locale,
         renderLocalizedDisplayTemplate(

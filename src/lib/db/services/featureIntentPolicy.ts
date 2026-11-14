@@ -74,13 +74,32 @@ async function readOverride(
 
 /** Resolve ownership through the stored hierarchy, including the core hub fallback.
  * @param db Request database. @param scope Settings owner or selected layer.
+ * @param proposal Optional unsaved policy used only to resolve an adoption preview.
  * @returns Effective catalogue, source configuration and hierarchy version fingerprint.
  */
 export async function readFeatureIntentPolicy(
   db: Database,
   scope: FeatureIntentScope,
+  proposal?: {
+    scope: FeatureIntentScope
+    patch: FeatureIntentSettingsPatch
+    resetNamingTypes?: string[]
+  },
 ): Promise<FeatureIntentPolicy> {
-  const own = await readOverride(db, scope)
+  const stored = await readOverride(db, scope)
+  const own =
+    proposal?.scope.type === scope.type && proposal.scope.id === scope.id
+      ? {
+          ...stored,
+          definition:
+            proposal.patch.definition === null
+              ? null
+              : JSON.stringify(proposal.patch.definition),
+          namingRules: JSON.stringify(
+            proposal.patch.namingRules ?? JSON.parse(stored.namingRules),
+          ),
+        }
+      : stored
   let inheritedTypes = DEFAULT_FEATURE_TYPES
   let parentFingerprint = ''
   let lineage: FeatureIntentPolicy['lineage'] = []
@@ -99,15 +118,19 @@ export async function readFeatureIntentPolicy(
             )
     if (!parent) throw new Error('Feature policy owner no longer exists')
     if (parent.id) {
-      const resolved = await readFeatureIntentPolicy(db, {
-        type:
-          scope.type === 'layer'
-            ? 'project'
-            : scope.type === 'project'
-              ? 'organisation'
-              : 'hub',
-        id: parent.id,
-      })
+      const resolved = await readFeatureIntentPolicy(
+        db,
+        {
+          type:
+            scope.type === 'layer'
+              ? 'project'
+              : scope.type === 'project'
+                ? 'organisation'
+                : 'hub',
+          id: parent.id,
+        },
+        proposal,
+      )
       inheritedTypes = resolved.types
       parentFingerprint = resolved.fingerprint
       lineage = resolved.lineage
@@ -136,6 +159,16 @@ export async function readFeatureIntentPolicy(
     ),
     ...JSON.parse(own.namingRules ?? '{}'),
   })
+  // Reviewed resets affect only descendants of the edited owner and only the selected types.
+  if (
+    proposal?.resetNamingTypes &&
+    lineage.some(
+      item =>
+        item.scope.type === proposal.scope.type && item.scope.id === proposal.scope.id,
+    )
+  ) {
+    for (const id of proposal.resetNamingTypes) delete namingRules[id]
+  }
   const types = catalogue.map(type => {
     const { nameRule: _stored, ...rest } = type
     const rule =
@@ -410,6 +443,16 @@ export async function prepareFeatureIntentPolicySave(
     )
     templateChecks.push(prepareRevisionCheck(db, guard))
   }
+  if (patch.namingUpdateOptions && !patch.namingUpdateToken)
+    throw new FeatureIntentPolicyError(
+      'Review the name changes before saving these choices.',
+    )
+  const namingUpdates = patch.namingUpdateToken
+    ? await (await import('./featureNamingUpdate')).prepareFeatureNamingUpdate(
+        db,
+        input,
+      )
+    : []
   const values = {
     scopeType: input.scope.type,
     scopeId: input.scope.id,
@@ -421,6 +464,7 @@ export async function prepareFeatureIntentPolicySave(
   }
   // Recheck every inherited revision within the same batch as the parent update.
   return [
+    ...namingUpdates,
     ...dependencyChecks,
     ...templateChecks,
     ...current.lineage.map(({ scope, version }) =>

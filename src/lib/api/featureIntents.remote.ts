@@ -23,6 +23,9 @@ import { DisplayTemplateDefinitionSchema } from '#lib/templates/registry.js'
 import { saveDisplayTemplate } from '#lib/db/services/displayTemplate.js'
 import { readFeatureNameExamples } from '#lib/db/services/featureNameExamples.js'
 // DOMAIN
+import { FEATURE_TEMPLATE_FIELDS } from '#lib/templates/namingRule.js'
+import { FeatureIntentSettingsPatchSchema } from '#lib/features/intents.js'
+import { previewFeatureNamingUpdate } from '#lib/db/services/featureNamingUpdate.js'
 import {
   isFeatureNameBooleanField,
   isFeatureNameTextField,
@@ -304,5 +307,55 @@ export const publishFeatureNamingTemplate = guardedCommand(
     })
     if (!result) error(409, 'TEMPLATE_VERSION_CHANGED')
     return result
+  },
+)
+
+/** Preview an authorized default change without modifying Features.
+ * @param input Owner and unsaved policy. @returns Names and exclusions fenced for the parent save.
+ */
+export const previewFeatureNamingDefault = guardedCommand(
+  z.strictObject({ scope: scopeSchema, patch: FeatureIntentSettingsPatchSchema }),
+  async (input, ctx) => {
+    await authorizeSettings(ctx, input.scope)
+    return previewFeatureNamingUpdate(ctx.db, input)
+  },
+)
+
+/** Read real naming examples within the owner's settings permissions.
+ * @param input Authorized scope, language and selected inputs. @returns Complete and incomplete saved examples.
+ */
+export const getFeatureNamingExamples = guardedQuery(
+  z.strictObject({
+    scope: scopeSchema,
+    paths: z
+      .array(
+        z
+          .string()
+          .min(1)
+          .max(160)
+          .regex(/^[A-Za-z_][A-Za-z0-9_.-]*$/)
+          .refine(
+            path =>
+              !path
+                .split('.')
+                .some(part =>
+                  ['__proto__', 'prototype', 'constructor'].includes(part),
+                ) &&
+              (path === 'source.name' ||
+                FEATURE_TEMPLATE_FIELDS.some(field => field.path === path) ||
+                /^properties\.[A-Za-z0-9_-]+$/.test(path)),
+            'Unknown naming input',
+          ),
+      )
+      .max(64),
+    locale: z.string().min(1).max(35),
+    featureType: z.string().min(1).optional(),
+  }),
+  async (input, ctx) => {
+    await authorizeSettings(ctx, input.scope)
+    const { readFeatureNamingExamples } = await import(
+      '#lib/db/services/featureNamingExamples.js'
+    )
+    return readFeatureNamingExamples(ctx.db, input)
   },
 )

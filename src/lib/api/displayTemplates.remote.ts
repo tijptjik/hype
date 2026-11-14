@@ -9,7 +9,10 @@ import { guardedCommand, guardedQuery } from './server/guarded'
 // AUTHORIZATION
 import { requireLocationOrganisationManager } from './services/locationOwnership'
 // DOMAIN
-import { FeatureTypesSchema } from '#lib/features/intents.js'
+import {
+  FeatureTypesSchema,
+  FeatureNamingUpdateOptionsSchema,
+} from '#lib/features/intents.js'
 import { DisplayTemplateDefinitionSchema } from '#lib/templates/registry.js'
 // SERVICES
 import {
@@ -199,13 +202,15 @@ export const getOrganisationTemplateDefaults = guardedQuery(
   },
 )
 
-/** Set or reset one Organisation default without rewriting accepted Feature names.
+/** Set or reset one Organisation default with optional reviewed Feature adoption.
  * @param input Inspected policy version, feature type and immutable template reference.
  * @returns Completion after an attributed, concurrency-fenced policy write.
- * @remarks Project and Layer overrides retain precedence. Existing Features retain their accepted versions.
+ * @remarks Project and Layer overrides retain precedence unless explicitly reset in the reviewed choices. Only an inspected adoption token permits existing Feature updates.
  */
 export const setOrganisationTemplateDefault = guardedCommand(
   z.strictObject({
+    namingUpdateToken: z.string().min(1).optional(),
+    namingUpdateOptions: FeatureNamingUpdateOptionsSchema.optional(),
     organisationId: z.string().min(1),
     featureType: z.string().min(1),
     version: z.number().int().min(0),
@@ -242,6 +247,8 @@ export const setOrganisationTemplateDefault = guardedCommand(
           ? null
           : FeatureTypesSchema.parse(current.definition),
       namingRules,
+      namingUpdateToken: input.namingUpdateToken,
+      namingUpdateOptions: input.namingUpdateOptions,
     })
     if (!statements || !(await executeRevisionBatch(ctx.db, guard, statements)))
       error(409, 'POLICY_VERSION_CHANGED')

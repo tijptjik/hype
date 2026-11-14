@@ -237,7 +237,18 @@ export const FeatureNamingRulesSchema = z.record(
 )
 export type FeatureNamingRules = z.infer<typeof FeatureNamingRulesSchema>
 
+export const FeatureNamingUpdateOptionsSchema = z.object({
+  typeIds: z.array(FeatureTypeIdSchema).min(1),
+  resetRules: z.boolean(),
+  resetTitles: z.boolean(),
+})
+export type FeatureNamingUpdateOptions = z.infer<
+  typeof FeatureNamingUpdateOptionsSchema
+>
+
 export const FeatureIntentSettingsPatchSchema = z.object({
+  namingUpdateOptions: FeatureNamingUpdateOptionsSchema.optional(),
+  namingUpdateToken: z.string().min(1).optional(),
   namingRules: FeatureNamingRulesSchema.optional(),
   definition: FeatureTypesSchema.nullable(),
   version: z.number().int().nonnegative(),

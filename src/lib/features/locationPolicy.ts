@@ -170,7 +170,7 @@ export function generateFeatureName(input: {
   return name
 }
 
-/** New features pin the reviewed naming rule; changing project defaults does not rewrite existing content. */
+/** Features pin the reviewed naming rule; default changes rewrite existing content only after explicit adoption review. */
 export const FeatureNameTemplateSchema = z.strictObject({
   rule: FeatureNameRuleSchema,
 })
