@@ -151,7 +151,7 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
   items.push({
     href: `${ADMIN_PATH}/locations`,
     label: m.location_policy_tab(),
-    compactLabel: 'Place',
+    compactLabel: 'Locs.',
     icon: StoreIcon,
     onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.location),
   })
