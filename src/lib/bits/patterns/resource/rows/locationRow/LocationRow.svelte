@@ -1,4 +1,5 @@
 <script lang="ts">
+import { isCanonicalLocationDraft } from '#lib/locations/canonicalDraft.js'
 // SVELTE
 import { goto } from '$app/navigation'
 // BITS
@@ -42,13 +43,15 @@ const owner = $derived(
     entity.ownerOrganisationId,
 )
 const state = $derived(
-  entity.state === 'manual'
-    ? m.location_state_private()
-    : entity.state === 'linked'
-      ? m.location_state_matched()
-      : entity.state === 'redirect'
-        ? m.location_state_redirect()
-        : m.location_state_unmatched(),
+  isCanonicalLocationDraft(entity)
+    ? 'Upstream draft'
+    : entity.state === 'manual'
+      ? m.location_state_private()
+      : entity.state === 'linked'
+        ? m.location_state_matched()
+        : entity.state === 'redirect'
+          ? m.location_state_redirect()
+          : m.location_state_unmatched(),
 )
 const source = $derived(
   entity.sourceAvailability === 'missing'

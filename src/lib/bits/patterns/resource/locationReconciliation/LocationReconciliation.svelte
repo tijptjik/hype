@@ -603,6 +603,7 @@ $effect(() => {
     onmatched: () => void openList('matched'),
     skipped,
     matched: progress?.matched ?? 0,
+    drafts: progress?.drafts ?? 0,
     total: progress?.total ?? 0,
     unavailable: progress?.unavailable ?? 0,
   })

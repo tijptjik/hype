@@ -1,6 +1,7 @@
 <script lang="ts">
 let {
   matched,
+  drafts = 0,
   skipped,
   total,
   unavailable,
@@ -8,6 +9,7 @@ let {
   onmatched,
 }: {
   matched: number
+  drafts?: number
   skipped: number
   total: number
   unavailable: number
@@ -19,16 +21,21 @@ const matchedCount = $derived(Math.min(total, Math.max(0, matched)))
 const unavailableCount = $derived(
   Math.min(total - matchedCount, Math.max(0, unavailable)),
 )
-const skippedCount = $derived(
-  Math.min(total - matchedCount - unavailableCount, Math.max(0, skipped)),
+const draftCount = $derived(
+  Math.min(total - matchedCount - unavailableCount, Math.max(0, drafts)),
 )
-const remaining = $derived(total - matchedCount - unavailableCount - skippedCount)
-const reviewed = $derived(matchedCount + unavailableCount)
+const skippedCount = $derived(
+  Math.min(total - matchedCount - unavailableCount - draftCount, Math.max(0, skipped)),
+)
+const remaining = $derived(
+  total - matchedCount - unavailableCount - skippedCount - draftCount,
+)
+const reviewed = $derived(matchedCount + unavailableCount + draftCount)
 const percent = $derived(total > 0 ? Math.round((reviewed / total) * 100) : 0)
 </script>
 
 <section
-  class="flex shrink-0 items-center gap-3 px-3"
+  class="flex shrink-0 flex-wrap items-center gap-3 px-3"
   aria-label="Reconciliation progress"
 >
   <div class="flex shrink-0 flex-col gap-1 tabular-nums">
@@ -38,8 +45,8 @@ const percent = $derived(total > 0 ? Math.round((reviewed / total) * 100) : 0)
       / {total} reviewed</span
     >
   </div>
-  <div class="flex min-w-64 flex-col gap-1.5">
-    <div class="flex items-center gap-2 text-[10px] whitespace-nowrap tabular-nums">
+  <div class="flex min-w-0 basis-64 flex-col gap-1.5">
+    <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] tabular-nums">
       <button
         type="button"
         onclick={onmatched}
@@ -63,6 +70,15 @@ const percent = $derived(total > 0 ? Math.round((reviewed / total) * 100) : 0)
         <span class="size-1.5 rounded-full bg-sky-500"></span>{unavailableCount}
         unavailable
       </button>
+      {#if draftCount}
+        <span
+          class="flex items-center gap-1"
+          title="Shared canonical records awaiting upstream publication"
+        >
+          <span class="size-1.5 rounded-full bg-violet-400"></span>{draftCount}
+          upstream drafts
+        </span>
+      {/if}
       <span class="text-muted-foreground flex items-center gap-1">
         <span class="size-1.5 rounded-full bg-slate-300"></span>{remaining}
         remaining
@@ -75,7 +91,7 @@ const percent = $derived(total > 0 ? Math.round((reviewed / total) * 100) : 0)
       aria-valuemin={0}
       aria-valuemax={Math.max(total, 1)}
       aria-valuenow={reviewed}
-      aria-valuetext={`${matchedCount} matched, ${skippedCount} skipped, ${unavailableCount} unavailable, ${remaining} remaining out of ${total}`}
+      aria-valuetext={`${matchedCount} matched, ${draftCount} upstream drafts, ${skippedCount} skipped, ${unavailableCount} unavailable, ${remaining} remaining out of ${total}`}
     >
       <span
         class="h-full bg-emerald-500"
@@ -88,6 +104,10 @@ const percent = $derived(total > 0 ? Math.round((reviewed / total) * 100) : 0)
       <span
         class="h-full bg-sky-500"
         style:width={`${(unavailableCount / Math.max(total, 1)) * 100}%`}
+      ></span>
+      <span
+        class="h-full bg-violet-400"
+        style:width={`${(draftCount / Math.max(total, 1)) * 100}%`}
       ></span>
     </div>
   </div>

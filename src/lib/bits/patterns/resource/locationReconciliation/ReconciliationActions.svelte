@@ -8,6 +8,7 @@ import LocationIcon from 'virtual:icons/proicons/location'
 import BackIcon from 'virtual:icons/proicons/arrow-left'
 let {
   matched,
+  drafts = 0,
   skipped,
   total,
   unavailable,
@@ -24,6 +25,7 @@ let {
 }: {
   skipped: number
   matched: number
+  drafts?: number
   total: number
   unavailable: number
   disabled: boolean
@@ -41,6 +43,7 @@ let {
 <div class="flex items-center gap-2">
   <ReconciliationProgress
     {matched}
+    {drafts}
     {skipped}
     {total}
     {unavailable}

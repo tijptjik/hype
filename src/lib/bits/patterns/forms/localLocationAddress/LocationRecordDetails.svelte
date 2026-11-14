@@ -1,4 +1,5 @@
 <script lang="ts">
+import { isCanonicalLocationDraft } from '#lib/locations/canonicalDraft.js'
 import { curationText } from '#lib/locations/curationIdentity.js'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
@@ -64,20 +65,24 @@ const brandNames = $derived(
     </h2>
     <div class="flex flex-wrap gap-2 text-xs">
       <span class="bg-primary/10 text-primary rounded-full px-3 py-1 font-medium"
-        >{place.state === 'unresolved'
-          ? m.location_state_unmatched()
-          : place.state === 'manual'
-            ? m.location_state_private()
-            : place.state === 'linked'
-              ? m.location_state_matched()
-              : m.location_state_redirect()}</span
+        >{isCanonicalLocationDraft(place)
+          ? 'Upstream draft'
+          : place.state === 'unresolved'
+            ? m.location_state_unmatched()
+            : place.state === 'manual'
+              ? m.location_state_private()
+              : place.state === 'linked'
+                ? m.location_state_matched()
+                : m.location_state_redirect()}</span
       >
       <span class="border-border rounded-full border px-3 py-1"
-        >{place.sourceAvailability === 'current'
-          ? m.location_source_current()
-          : place.sourceAvailability === 'missing'
-            ? m.location_source_missing()
-            : m.location_source_review()}</span
+        >{isCanonicalLocationDraft(place)
+          ? 'Not yet published'
+          : place.sourceAvailability === 'current'
+            ? m.location_source_current()
+            : place.sourceAvailability === 'missing'
+              ? m.location_source_missing()
+              : m.location_source_review()}</span
       >
     </div>
   </div>

@@ -216,3 +216,28 @@ it('resets a shared unavailable Location without changing its accepted associati
   ).toEqual(before)
   expect(await resetLocationUnavailable(db, input)).toEqual({ id: 'local' })
 })
+
+it('keeps shared canonical drafts out of unmatched and unavailable queues', async () => {
+  fixture.sqlite.exec(
+    "INSERT INTO location(id,state,ssId,ownerOrganisationId) VALUES ('draft','unresolved',NULL,NULL); INSERT INTO feature(id,projectId,isArchived,authoredName) VALUES ('draft-feature','p',0,'Draft'); INSERT INTO featureLocation(featureId,locationId,factsRevisionId) VALUES ('draft-feature','draft','draft-baseline');",
+  )
+  expect(await readLocationReconciliationProgress(db, 'p')).toEqual({
+    total: 5,
+    matched: 1,
+    unavailable: 0,
+    remaining: 3,
+    drafts: 1,
+  })
+  expect(
+    await markLocationUnavailable(db, {
+      projectId: 'p',
+      featureId: 'draft-feature',
+      locationId: 'draft',
+      ownerOrganisationId: null,
+    }),
+  ).toBeNull()
+  const rows = await db.all(
+    sql`SELECT l.id FROM feature f LEFT JOIN featureLocation fl ON fl.featureId=f.id LEFT JOIN location l ON l.id=fl.locationId WHERE ${pendingLocationReconciliation}`,
+  )
+  expect(rows).not.toContainEqual({ id: 'draft' })
+})
