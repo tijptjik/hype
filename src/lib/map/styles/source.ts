@@ -59,7 +59,10 @@ export const applyRuntimeBasemapSource = (
     return style
   }
 
-  const resolvedUrl = resolveBasemapTileJsonUrl(source.url, accessToken)
+  const resolvedUrl =
+    import.meta.env.DEV && source.url === SAANSEOI_HONG_KONG_TILEJSON_URL
+      ? '/api/dev-basemap/hongkong-latest.json'
+      : resolveBasemapTileJsonUrl(source.url, accessToken)
   if (resolvedUrl === source.url) {
     return style
   }
