@@ -13,6 +13,7 @@ import * as hubHistory from '../schema/hubRevision'
 import { revisionChangeSet } from '../schema/featureRevision'
 // REVISIONS
 // SERVICES
+import { prepareStaffRoleHistoryContext } from './staffRoleHistory'
 import {
   hasResourceLogoStorage,
   withResourceLogoSnapshot,
@@ -187,8 +188,8 @@ export async function prepareAdminResourceRevisionCapture(
 ): Promise<OrganisationRevisionCapture> {
   if (!actor) return { before: [], after: [] }
   if (!actor.actorId.trim()) throw new Error('Revision actor is required')
-  if (!(await isAdminResourceRevisionRecordingEnabled(db, resource)))
-    return { before: [], after: [] }
+  const staff = await prepareStaffRoleHistoryContext(db, actor)
+  if (!(await isAdminResourceRevisionRecordingEnabled(db, resource))) return staff
   const { table, revision, head, write } = contracts[resource]
   const owner = sql.identifier(`${resource}Id`)
   const token = crypto.randomUUID(),
@@ -279,7 +280,7 @@ export async function prepareAdminResourceRevisionCapture(
     ...window.after,
     db.delete(write).where(sql`${write.token}=${token}`),
   ]
-  return { before, after }
+  return { before: [...staff.before, ...before], after: [...after, ...staff.after] }
 }
 
 // HISTORY READS

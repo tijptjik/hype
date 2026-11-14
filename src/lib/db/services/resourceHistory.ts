@@ -110,6 +110,8 @@ export type OrganisationHistoryPage = {
     createdAt: string
     initial: boolean
     logo?: { before: HistoricalLogo | null; after: HistoricalLogo | null }
+    /** Current profile routes keyed by immutable staff identity; absent for deleted accounts. */
+    staffProfiles?: Record<string, { username: string | null }>
     fieldLabels?: Record<string, string>
     previousCreatedAt?: string | null
     changes: import('#lib/revisions/diff.js').RevisionDifference[]

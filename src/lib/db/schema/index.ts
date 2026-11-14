@@ -66,3 +66,5 @@ export * from './identityCatalogue'
 
 export * from './locationRevisionI18n'
 export * from './fieldResearch'
+
+export * from './staffRoleHistory'

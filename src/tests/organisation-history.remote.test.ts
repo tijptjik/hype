@@ -24,6 +24,10 @@ vi.mock('#lib/db/services/resourceHistory.js', () => ({
   listOrganisationHistory: history,
   listOrganisationPropertyHistory: fieldHistory,
 }))
+const staffHistory = vi.hoisted(() => vi.fn())
+vi.mock('#lib/db/services/staffRoleHistory.js', () => ({
+  listStaffRoleHistory: staffHistory,
+}))
 import { getOrganisationHistory } from '#lib/api/organisationHistory.remote.js'
 
 const read = getOrganisationHistory as unknown as (
@@ -99,4 +103,23 @@ it('authorizes field history with the same owner policy and persisted scope', as
     read({ organisationId: 'o', kind: 'fields' }, context(null)),
   ).rejects.toMatchObject({ status: 403 })
   expect(fieldHistory).toHaveBeenCalledTimes(1)
+})
+
+it('requires staff-assignment authority for organisation staff history', async () => {
+  await expect(
+    read(
+      { organisationId: 'o', kind: 'staff' },
+      context({ type: 'organisation', organisationId: 'o', role: 'member' }),
+    ),
+  ).rejects.toMatchObject({ status: 403 })
+  expect(staffHistory).not.toHaveBeenCalled()
+  await read(
+    { organisationId: 'o', kind: 'staff' },
+    context({ type: 'organisation', organisationId: 'o', role: 'owner' }),
+  )
+  expect(staffHistory).toHaveBeenCalledWith(
+    {},
+    { resource: 'organisation', id: 'o', before: undefined },
+    expect.anything(),
+  )
 })

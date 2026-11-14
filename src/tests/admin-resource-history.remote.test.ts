@@ -23,6 +23,10 @@ vi.mock('#lib/db/services/resourceHistory.js', () => ({
   listAdminResourceHistory: history,
   listPropertyCatalogHistory: vi.fn(),
 }))
+const staffHistory = vi.hoisted(() => vi.fn())
+vi.mock('#lib/db/services/staffRoleHistory.js', () => ({
+  listStaffRoleHistory: staffHistory,
+}))
 import { getAdminResourceHistory } from '#lib/api/adminResourceHistory.remote.js'
 const read = getAdminResourceHistory as unknown as (
   input: unknown,
@@ -93,3 +97,37 @@ it.each(['project', 'layer', 'hub'])(
     expect(history).not.toHaveBeenCalled()
   },
 )
+
+it.each(['hub', 'project'] as const)(
+  'protects %s staff history and passes persisted scope',
+  async resource => {
+    await expect(
+      read(
+        { resource, id: 'id', kind: 'staff' },
+        { db: {}, user: { id: 'u', isAnonymous: false }, userRoles: [] },
+      ),
+    ).rejects.toMatchObject({ status: 403 })
+    expect(staffHistory).not.toHaveBeenCalled()
+    const role =
+      resource === 'hub'
+        ? { type: 'hub', hubId: 'id', role: 'admin' }
+        : { type: 'organisation', organisationId: 'o', role: 'owner' }
+    await read(
+      { resource, id: 'id', kind: 'staff', before: 9 },
+      { db: {}, user: { id: 'u', isAnonymous: false }, userRoles: [role] },
+    )
+    expect(staffHistory).toHaveBeenCalledWith(
+      {},
+      expect.objectContaining({ resource, id: 'id', before: 9 }),
+      expect.anything(),
+    )
+  },
+)
+it('rejects staff history for layers', async () => {
+  await expect(
+    read(
+      { resource: 'layer', id: 'id', kind: 'staff' },
+      { db: {}, user: { id: 'u' }, userRoles: [] },
+    ),
+  ).rejects.toMatchObject({ status: 400 })
+})

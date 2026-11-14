@@ -17,6 +17,7 @@ import { probeLayerForUpdate } from '#lib/db/services/layer.js'
 import { probeHubForUpdate } from '#lib/db/services/hub.js'
 import { listAdminResourceHistory } from '#lib/db/services/resourceHistory.js'
 import { listPropertyCatalogHistory } from '#lib/db/services/resourceHistory.js'
+import { listStaffRoleHistory } from '#lib/db/services/staffRoleHistory.js'
 // TYPES
 import type { OrganisationHistoryPage } from '#lib/db/services/resourceHistory.js'
 import type { Id } from '#lib/types.js'
@@ -31,20 +32,31 @@ export const getAdminResourceHistory = guardedQuery(
   z.strictObject({
     resource: z.enum(['project', 'layer', 'hub']),
     id: z.string().min(1),
-    kind: z.enum(['profile', 'fields']).optional(),
+    kind: z.enum(['profile', 'fields', 'staff']).optional(),
     before: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
   }),
   async (input, ctx): Promise<OrganisationHistoryPage> => {
     const common = {
       user: ctx.user,
       userRoles: ctx.userRoles,
-      submittedData: input.kind === 'fields' ? { properties: [] } : { i18n: true },
+      submittedData:
+        input.kind === 'staff'
+          ? { userRoles: [] }
+          : input.kind === 'fields'
+            ? { properties: [] }
+            : { i18n: true },
     }
     if (input.resource === 'hub') {
       const probe = await probeHubForUpdate(ctx.db, input.id as Id)
       if (!probe) error(404, 'HUB_NOT_FOUND')
       const decision = authorizeHubUpdateForSubmission({ ...common, resource: probe })
       if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
+      if (input.kind === 'staff')
+        return listStaffRoleHistory(
+          ctx.db,
+          { ...input, resource: 'hub' },
+          sql`EXISTS(SELECT 1 FROM hub WHERE id=${input.id})`,
+        )
       if (input.kind === 'fields')
         return listPropertyCatalogHistory(
           ctx.db,
@@ -62,6 +74,12 @@ export const getAdminResourceHistory = guardedQuery(
         resource: probe,
       })
       if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
+      if (input.kind === 'staff')
+        return listStaffRoleHistory(
+          ctx.db,
+          { ...input, resource: 'project' },
+          sql`EXISTS(SELECT 1 FROM project p JOIN organisation o ON o.id=p.organisationId WHERE p.id=${input.id} AND p.organisationId=${probe.organisationId} AND o.hubId IS ${probe.hubId})`,
+        )
       if (input.kind === 'fields')
         return listPropertyCatalogHistory(
           ctx.db,
@@ -75,6 +93,7 @@ export const getAdminResourceHistory = guardedQuery(
         hubId: probe.hubId,
       })
     }
+    if (input.kind === 'staff') error(400, 'LAYER_HAS_NO_STAFF_ROLES')
     if (input.kind === 'fields') error(400, 'LAYER_FIELDS_HAVE_NO_OWNED_CATALOGUE')
     const probe = await probeLayerForUpdate(ctx.db, input.id as Id)
     if (!probe) error(404, 'LAYER_NOT_FOUND')

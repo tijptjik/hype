@@ -12,6 +12,7 @@ import {
 import { revisionChangeSet } from '../schema/featureRevision'
 // REVISIONS
 // SERVICES
+import { prepareStaffRoleHistoryContext } from './staffRoleHistory'
 import {
   hasResourceLogoStorage,
   withResourceLogoSnapshot,
@@ -138,7 +139,8 @@ export async function prepareOrganisationRevisionCapture(
 ): Promise<OrganisationRevisionCapture> {
   if (!actor) return { before: [], after: [] }
   if (!actor.actorId.trim()) throw new Error('Organisation revision actor is required')
-  if (!(await hasOrganisationRevisionStorage(db))) return { before: [], after: [] }
+  const staff = await prepareStaffRoleHistoryContext(db, actor)
+  if (!(await hasOrganisationRevisionStorage(db))) return staff
   const token = crypto.randomUUID(),
     baselineChangeId = crypto.randomUUID(),
     changeId = crypto.randomUUID(),
@@ -230,7 +232,7 @@ export async function prepareOrganisationRevisionCapture(
       .delete(organisationRevisionWrite)
       .where(eq(organisationRevisionWrite.token, token)),
   ]
-  return { before, after }
+  return { before: [...staff.before, ...before], after: [...after, ...staff.after] }
 }
 
 // HISTORY READS

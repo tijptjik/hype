@@ -1,5 +1,7 @@
 // SVELTE
 import { error } from '@sveltejs/kit'
+// DRIZZLE
+import { sql } from 'drizzle-orm'
 // VALIDATION
 import { z } from 'zod'
 // API
@@ -11,6 +13,7 @@ import { listOrganisationHistory } from '#lib/db/services/resourceHistory.js'
 
 import { listOrganisationPropertyHistory } from '#lib/db/services/resourceHistory.js'
 
+import { listStaffRoleHistory } from '#lib/db/services/staffRoleHistory.js'
 // TYPES
 import type { OrganisationHistoryPage } from '#lib/db/services/resourceHistory.js'
 
@@ -23,7 +26,7 @@ import type { OrganisationHistoryPage } from '#lib/db/services/resourceHistory.j
 export const getOrganisationHistory = guardedQuery(
   z.strictObject({
     organisationId: z.string().min(1),
-    kind: z.enum(['profile', 'fields']).optional(),
+    kind: z.enum(['profile', 'fields', 'staff']).optional(),
     before: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
   }),
   async (input, ctx): Promise<OrganisationHistoryPage> => {
@@ -36,9 +39,15 @@ export const getOrganisationHistory = guardedQuery(
       user: ctx.user,
       userRoles: ctx.userRoles,
       resource: probe,
-      submittedData: { i18n: true },
+      submittedData: input.kind === 'staff' ? { userRoles: [] } : { i18n: true },
     })
     if (!decision.allowed) error(403, decision.code ?? 'INSUFFICIENT_ROLE')
+    if (input.kind === 'staff')
+      return listStaffRoleHistory(
+        ctx.db,
+        { resource: 'organisation', id: input.organisationId, before: input.before },
+        sql`EXISTS(SELECT 1 FROM organisation WHERE id=${input.organisationId} AND hubId IS ${probe.hubId})`,
+      )
     const { kind, ...pagination } = input
     const read =
       kind === 'fields' ? listOrganisationPropertyHistory : listOrganisationHistory

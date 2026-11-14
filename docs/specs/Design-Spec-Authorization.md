@@ -616,8 +616,23 @@ administration and organisation ownership. Published-resource read access, organ
 membership, and project roles alone do not grant history access. The history API probes
 current ownership, authorizes the caller, and repeats the persisted nullable hub
 predicate in the history query. Callers cannot supply the hub scope or attribution.
-History contains profile/configuration comparisons, not staff role grants. Reparenting
-invalidates a read authorized against the former hub.
+Profile history contains profile/configuration comparisons. A separate **Staff roles**
+category on hubs, organisations and projects records assignment additions, removals,
+role changes, capability changes and independent organisation staff grants. Reading this
+category requires the corresponding staff-assignment update permission, with persisted
+ancestry rechecked in the query. Reparenting invalidates a read authorized against the
+former scope.
+
+Migration `0248_staff_role_history.sql` installs append-only role-table audit triggers
+and records existing staff assignments as unknown-author baselines. Audience-only `user`
+roles are excluded. Application revision batches supply transaction-local server
+attribution independently of profile-history rollout; indirect grant and capability
+changes inherit that attribution. Unconverted or direct SQL writers remain visible with
+an explicit “Actor not recorded” label. No historical actor is inferred. The reader
+consolidates each transaction and staff member to its first before and last after
+values, suppresses net no-ops, and paginates complete change groups. Audit rows and
+attribution contexts roll back with failed or stale saves. Recorded subject labels and
+identities survive subsequent account renames or deletion.
 
 Field-definition history uses that same organisation editor policy and current hub
 predicate. Independent organisation option appends carry the authenticated actor and the
