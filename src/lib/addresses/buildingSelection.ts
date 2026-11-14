@@ -6,7 +6,8 @@ import {
   getAddressLocale,
   setAddressOverride,
 } from './featureAddress'
-import { parseAddressContent, createPlaceAddressMatcher } from '@saanseoi/address'
+import { createPlaceAddressMatcher } from '@saanseoi/address'
+import { parseAddressContent } from '#lib/addresses/parseAddress.js'
 // TYPES
 import type { AddressField, FeatureAddress } from './featureAddress'
 import type { AddressName } from './nameCatalogue'

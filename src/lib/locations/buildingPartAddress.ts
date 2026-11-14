@@ -1,5 +1,5 @@
 // ADDRESS
-import { parseAddressContent } from '@saanseoi/address'
+import { parseAddressContent } from '#lib/addresses/parseAddress.js'
 import { localAddressContent } from '#lib/addresses/locationDraft.js'
 // TYPES
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'

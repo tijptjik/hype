@@ -1,5 +1,5 @@
 // SHARED ADDRESS CONTRACT
-import { parseAddressContent } from '@saanseoi/address'
+import { parseAddressContent } from '#lib/addresses/parseAddress.js'
 import { formatFloor, formatUnit } from './address3d'
 import { parseStreetNumber } from './streetNumber.js'
 import {

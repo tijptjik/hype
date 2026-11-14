@@ -1,5 +1,5 @@
 // ADDRESS CONTRACT
-import { parseAddressContent } from '@saanseoi/address'
+import { parseAddressContent } from '#lib/addresses/parseAddress.js'
 // TYPES
 import type { LocationFacts } from './model'
 import type { SaanSeoiPlaceProjection } from './saanseoi'

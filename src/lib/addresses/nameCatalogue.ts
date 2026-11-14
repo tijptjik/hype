@@ -1,5 +1,6 @@
 // SHARED ADDRESS PARSER
-import { createPlaceAddressMatcher, parseAddressContent } from '@saanseoi/address'
+import { createPlaceAddressMatcher } from '@saanseoi/address'
+import { parseAddressContent } from '#lib/addresses/parseAddress.js'
 // VALIDATION
 import { z } from 'zod'
 // SOURCES

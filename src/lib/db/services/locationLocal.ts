@@ -23,7 +23,7 @@ import {
 import { canOperateIn } from '#lib/features/locationPolicy.js'
 import { locationOccupancy, locationMembership } from '../schema/locationRelationships'
 // SHARED PARSER
-import { parseAddressContent } from '@saanseoi/address'
+import { parseAddressContent } from '#lib/addresses/parseAddress.js'
 // VALIDATION
 import { LocalizedCurationTextSchema } from '#lib/locations/curationIdentity.js'
 import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.js'

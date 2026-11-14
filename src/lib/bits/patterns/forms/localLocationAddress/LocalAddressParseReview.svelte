@@ -1,6 +1,6 @@
 <script lang="ts">
 // SHARED ADDRESS PACKAGE
-import { parseAddressContent } from '@saanseoi/address'
+import { parseAddressContent } from '#lib/addresses/parseAddress.js'
 import type { AddressParseResult, AddressContent } from '@saanseoi/address'
 // COMPONENTS
 import { Button } from '#lib/bits/core/index.js'

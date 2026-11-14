@@ -1,5 +1,8 @@
 // SHARED ADDRESS PARSER
-import { ADDRESS_PARSER_VERSION, parseAddressContent } from '@saanseoi/address'
+import {
+  ADDRESS_PARSER_VERSION,
+  parseAddressContent,
+} from '#lib/addresses/parseAddress.js'
 // DOMAIN
 import { deriveLocationId, deriveLocationBaselineId } from './id.server'
 import { LocalLocationInputSchema } from './local'
