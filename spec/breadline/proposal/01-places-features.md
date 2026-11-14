@@ -4162,6 +4162,16 @@ other layers are unchanged. The reviewed corrections select Domain Mall in Engli
 海港城 in Chinese. Access hints and paid status share a single parenthesis, such as
 `(D - Paid)`.
 
+For donors whose Location relink omitted the catalogue brand reference,
+`scripts/breadline/restore-donor-brands.ts` restores only the brand recorded in the
+donor's accepted naming revision. It appends attributed Location corrections and Feature
+acceptance revisions, retains matching Feature overrides, and regenerates template
+output without changing the template or branch fields. It refuses conflicting brand
+choices and locked fields, rehearses on a copy, and saves a local backup before an
+explicit `--apply`. Unlinked donors remain unlinked; this repair does not infer a
+Location association. `scripts/breadline/audit-donor-template.ts` independently compares
+stored titles with the template evaluated against accepted inputs.
+
 The Model naming panel selects shared immutable display templates or creates one using
 that same expression editor. Feature name and properties, and linked Location name and
 attributes, are available inputs; neither name is mandatory. Existing rule fragments can
