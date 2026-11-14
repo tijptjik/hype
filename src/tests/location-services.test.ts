@@ -6921,6 +6921,189 @@ describe('Feature-owned names on a linked Place', () => {
         .get()?.displayAddress,
     ).toBe('3/F, 35 Hollywood Road')
   })
+  it('reassociates to the selected source without promoting custom Feature names into Location corrections', async () => {
+    const { db, sqlite, local } = await namedFeature()
+    sqlite.exec(
+      "UPDATE featureI18n SET nameOverride='Custom branch name' WHERE featureId='f' AND locale='en'",
+    )
+    const linked = await linkInitialFeatureLocation(db, {
+      featureId: 'f',
+      projectId: 'p',
+      ...local,
+      expectedFeatureModifiedAt: 'original',
+      actorId: 'actor',
+      nameMode: 'inherit',
+    })
+    if (linked.status !== 'linked') throw Error('Expected linked')
+    const destination = await createLocalLocation(
+      db,
+      'p',
+      {
+        state: 'unresolved',
+        facts: {
+          ...facts,
+          names: { en: 'Selected source' },
+          phoneNumber: [],
+          brands: [],
+        },
+      },
+      'actor',
+    )
+    const moved = await relinkFeatureLocation(db, {
+      featureId: 'f',
+      projectId: 'p',
+      ...destination,
+      expectedFeatureModifiedAt: String(
+        sqlite.prepare("SELECT modifiedAt FROM feature WHERE id='f'").get()?.modifiedAt,
+      ),
+      expectedRevision: linked.revision,
+      actorId: 'actor',
+      nameMode: 'inherit',
+    })
+    expect(moved.status).toBe('linked')
+    expect(
+      sqlite
+        .prepare(
+          "SELECT nameOverride FROM featureI18n WHERE featureId='f' AND locale='en'",
+        )
+        .get()?.nameOverride,
+    ).toBe('Custom branch name')
+    expect((await getAcceptedFeatureLocation(db, 'f', 'p'))?.locationId).toBe(
+      destination.locationId,
+    )
+    const corrections = sqlite
+      .prepare('SELECT overrides FROM organisationLocationHead WHERE locationId=?')
+      .get(destination.locationId)
+    expect(JSON.parse(String(corrections?.overrides ?? '{}')).names).toBeUndefined()
+    expect(
+      sqlite.prepare('SELECT state FROM location WHERE id=?').get(local.locationId)
+        ?.state,
+    ).toBe('unresolved')
+  })
+  it.each([
+    [false, false],
+    [true, false],
+    [false, true],
+    [true, true],
+  ])(
+    'adopts upstream facts and curates only an absent upstream phone (source phone: %s, existing association: %s)',
+    async (sourceHasPhone, alreadyLinked) => {
+      const { acceptReconciliationLocation } = await import(
+        '#lib/db/services/locationReconciliationAcceptance.js'
+      )
+      const { db, sqlite, local } = await namedFeature()
+      sqlite.exec(
+        readFileSync('migrations/0209_shared_location_corrections.sql', 'utf8'),
+      )
+      sqlite.exec(
+        `UPDATE featureI18n SET nameOverride='Custom branch name' WHERE featureId='f' AND locale='en'; INSERT INTO featureProperty(featureId,propertyId,value) VALUES ('f','phone','["+85227743090"]')`,
+      )
+      const source = await persistSaanSeoiPlace(db, {
+        ssId: 'reconciliation-source',
+        apiVersion: 'api-places-v0.1',
+        releaseId: 'release',
+        snapshotId: 'snapshot',
+        issues: [],
+        rawSource: {},
+        facts: {
+          ...facts,
+          names: { en: 'Upstream shop' },
+          phoneNumber: sourceHasPhone ? ['+85221111111'] : [],
+        },
+      })
+      let expectedRevision: string | null = null
+      if (alreadyLinked) {
+        const old = prepareFeatureLocationAssociationWrite(db, {
+          featureId: 'f',
+          projectId: 'p',
+          locationId: local.locationId,
+          factsRevisionId: local.revisionId,
+          locationRevisionId: local.revisionId,
+          expectedFeatureModifiedAt: 'original',
+          expectedRevision: null,
+          actorId: 'old-editor',
+          overrides: {
+            websites: { mode: 'override', value: ['https://old.example.com'] },
+          },
+        })
+        await old.query
+        expectedRevision = old.version
+      }
+      const beforeSource = sqlite
+        .prepare('SELECT facts FROM locationRevisionContent WHERE id=?')
+        .get(source.revisionId)
+      let authorizations = 0
+      const input = {
+        featureId: 'f',
+        projectId: 'p',
+        locationId: source.locationId,
+        revisionId: source.revisionId,
+        expectedFeatureModifiedAt: 'original',
+        expectedRevision,
+        actorId: 'signed-in-editor',
+        scopeGuard: sql`1`,
+        authorizePhoneCuration: async () => {
+          authorizations++
+          return {
+            organisationId: 'hk-foodworks',
+            rights: { canEdit: true, superAdmin: false },
+          }
+        },
+      }
+      if (!sourceHasPhone) {
+        sqlite.exec(
+          `CREATE TRIGGER fail_reconciliation BEFORE ${alreadyLinked ? 'UPDATE' : 'INSERT'} ON featureLocation BEGIN SELECT RAISE(ABORT,'controlled reconciliation failure'); END`,
+        )
+        await expect(acceptReconciliationLocation(db, input)).rejects.toThrow()
+        expect(
+          sqlite.prepare('SELECT count(*) n FROM locationSharedRevision').get()?.n,
+        ).toBe(0)
+        expect(
+          sqlite
+            .prepare("SELECT version FROM featureLocation WHERE featureId='f'")
+            .get()?.version ?? null,
+        ).toBe(expectedRevision)
+        sqlite.exec('DROP TRIGGER fail_reconciliation')
+        authorizations = 0
+      }
+      const result = await acceptReconciliationLocation(db, input)
+      expect(result).not.toBeNull()
+      expect(authorizations).toBe(sourceHasPhone ? 0 : 1)
+      expect(
+        sqlite
+          .prepare('SELECT facts FROM locationRevisionContent WHERE id=?')
+          .get(source.revisionId),
+      ).toEqual(beforeSource)
+      expect(
+        sqlite
+          .prepare(
+            "SELECT nameOverride FROM featureI18n WHERE featureId='f' AND locale='en'",
+          )
+          .get()?.nameOverride,
+      ).toBe('Custom branch name')
+      const accepted = await getAcceptedFeatureLocation(db, 'f', 'p')
+      expect(accepted?.effective.names.en).toBe('Upstream shop')
+      expect(accepted?.effective.phoneNumber).toEqual(
+        sourceHasPhone ? ['+85221111111'] : ['+85227743090'],
+      )
+      const curation = sqlite
+        .prepare(
+          'SELECT corrections,provenance,actorId FROM locationSharedRevision WHERE locationId=?',
+        )
+        .get(source.locationId)
+      if (sourceHasPhone) expect(curation).toBeUndefined()
+      else {
+        expect(curation?.actorId).toBe('signed-in-editor')
+        expect(JSON.parse(String(curation?.provenance)).authorOrganisationId).toBe(
+          'hk-foodworks',
+        )
+        expect(Object.keys(JSON.parse(String(curation?.corrections)))).toEqual([
+          'phoneNumber',
+        ])
+      }
+      expect(await acceptReconciliationLocation(db, input)).toBeNull()
+    },
+  )
   it('explicitly links names and permits later source name projection', async () => {
     const { db, sqlite, local } = await namedFeature()
     const linked = await linkInitialFeatureLocation(db, {

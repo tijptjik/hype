@@ -34,6 +34,7 @@ export async function prepareFeatureDisplayTemplate(
     featureId: string
     previous: FeatureRevisionContent
     content: FeatureRevisionContent
+    preparedSharedCorrections?: readonly import('./locationShared').PreparedSharedCorrection[]
     acceptedLocation?: EffectiveLocationFacts
     creationScope?: { organisationId: string; projectId: string }
   },
@@ -68,7 +69,11 @@ export async function prepareFeatureDisplayTemplate(
   const association = input.content.placement.location
   const sources =
     association && !input.acceptedLocation
-      ? await readLocationResetSources(db, { ...association, projectId: row.projectId })
+      ? await readLocationResetSources(db, {
+          ...association,
+          projectId: row.projectId,
+          preparedSharedCorrections: input.preparedSharedCorrections,
+        })
       : undefined
   if (association && !sources && !input.acceptedLocation)
     throw new Error('ACCEPTED_TEMPLATE_LOCATION_UNAVAILABLE')

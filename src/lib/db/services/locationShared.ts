@@ -32,6 +32,13 @@ import type {
 } from '#lib/locations/sharedCorrection.js'
 import type { LocationFacts } from '#lib/locations/model.js'
 
+/** Trusted shared evidence whose insert is queued in the caller's atomic batch. */
+export type PreparedSharedCorrection = {
+  id: string
+  locationId: string
+  corrections: SharedCorrections
+}
+
 type SharedRow = {
   id: string
   locationId: string
@@ -67,6 +74,7 @@ export async function readSharedLocationCorrection(
  * @param db Database. @param locationId Scoped identity. @param facts Pinned source facts.
  * @param revision Exact accepted shared pin; undefined explicitly requests the latest shared record.
  * @param fieldPins Optional field-specific accepted corrections from direct staff saves.
+ * @param prepared Trusted corrections queued in the same atomic batch; exact identity matches only.
  * @returns Effective Hype facts and correction identity.
  */
 export async function sharedLocationFacts(
@@ -75,11 +83,19 @@ export async function sharedLocationFacts(
   facts: LocationFacts,
   revision?: string | null,
   fieldPins?: unknown,
+  prepared: readonly PreparedSharedCorrection[] = [],
 ): Promise<{ facts: LocationFacts; revision: string | null }> {
-  const row = await readSharedLocationCorrection(db, locationId, revision)
+  const pending = revision
+    ? prepared.find(row => row.id === revision && row.locationId === locationId)
+    : undefined
+  const row = pending ?? (await readSharedLocationCorrection(db, locationId, revision))
   if (revision && !row) throw new Error('SHARED_LOCATION_REVISION_UNAVAILABLE')
   const resolved = row
-    ? resolveSharedCorrections(facts, JSON.parse(row.corrections), false).facts
+    ? resolveSharedCorrections(
+        facts,
+        pending ? pending.corrections : JSON.parse((row as SharedRow).corrections),
+        false,
+      ).facts
     : structuredClone(facts)
   // Field pins allow a contact edit without implicitly accepting a pending name or address change.
   if (Array.isArray(fieldPins)) {
@@ -93,7 +109,14 @@ export async function sharedLocationFacts(
       )
         throw new Error('SHARED_LOCATION_PINS_INVALID')
       const field = pin.field as keyof LocationFacts
-      const pinned = await sharedLocationFacts(db, locationId, facts, pin.revision)
+      const pinned = await sharedLocationFacts(
+        db,
+        locationId,
+        facts,
+        pin.revision,
+        undefined,
+        prepared,
+      )
       Object.assign(resolved, { [field]: pinned.facts[field] })
       if (field === 'groupId') resolved.group = pinned.facts.group
     }

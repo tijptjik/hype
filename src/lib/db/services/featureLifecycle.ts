@@ -599,6 +599,8 @@ export async function prepareLifecycleCapture(
   db: Database,
   input: RevisionCommand & {
     featureId: string
+    /** Exact shared revisions inserted by this same atomic operation. */
+    preparedSharedCorrections?: readonly import('./locationShared').PreparedSharedCorrection[]
     unpublish?: boolean
     visibility?: boolean
     derive: (
@@ -624,6 +626,7 @@ export async function prepareLifecycleCapture(
     featureId: input.featureId,
     previous: current.content,
     content,
+    preparedSharedCorrections: input.preparedSharedCorrections,
   })
   const idle = await prepareFeatureIdleRevision(db, {
     ...input,

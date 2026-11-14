@@ -1,4 +1,4 @@
-import { sharedLocationFacts } from './locationShared'
+import { sharedLocationFacts, type PreparedSharedCorrection } from './locationShared'
 // DRIZZLE
 import { and, eq, isNull, or, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/sqlite-core'
@@ -36,6 +36,8 @@ export async function readLocationResetSources(
     projectId: string
     factsRevisionId: string
     locationRevisionId: string
+    /** Server-prepared corrections committed atomically with the consuming Feature. */
+    preparedSharedCorrections?: readonly PreparedSharedCorrection[]
     acceptancePolicy?: Record<string, unknown> | null
   },
 ): Promise<{ facts: LocationFacts; locationFacts: LocationFacts } | undefined> {
@@ -78,6 +80,7 @@ export async function readLocationResetSources(
     sources.facts,
     typeof policy?.factsSharedRevision === 'string' ? policy.factsSharedRevision : null,
     policy?.factsSharedFields,
+    input.preparedSharedCorrections,
   )
   const position = await sharedLocationFacts(
     db,
@@ -86,6 +89,8 @@ export async function readLocationResetSources(
     typeof policy?.locationSharedRevision === 'string'
       ? policy.locationSharedRevision
       : null,
+    undefined,
+    input.preparedSharedCorrections,
   )
   return { facts: facts.facts, locationFacts: position.facts }
 }

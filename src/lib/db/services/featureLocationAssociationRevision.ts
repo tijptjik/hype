@@ -37,6 +37,7 @@ export async function prepareFeatureLocationAssociationCapture(
     version: string
     projection?: ReturnType<typeof materializeEffectiveLocation>
     guard: SQL
+    preparedSharedCorrections?: readonly import('./locationShared').PreparedSharedCorrection[]
   },
 ): Promise<Awaited<ReturnType<typeof prepareFeatureAcceptedCapture>>> {
   const association = input.association
@@ -44,6 +45,7 @@ export async function prepareFeatureLocationAssociationCapture(
     featureId: association.featureId,
     actorId: association.actorId,
     guard: input.guard,
+    preparedSharedCorrections: input.preparedSharedCorrections,
     reason: association.expectedRevision
       ? 'Feature reassociated with Location'
       : 'Feature linked to Location',

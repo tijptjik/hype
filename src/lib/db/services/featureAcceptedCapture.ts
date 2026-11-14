@@ -44,6 +44,8 @@ export async function prepareFeatureAcceptedCapture(
     featureId: string
     /** Server-authorized destination for an atomic parent transfer. */
     resultingScope?: { organisationId: string; projectId: string; layerId: string }
+    /** Exact shared revisions inserted by this same atomic operation. */
+    preparedSharedCorrections?: readonly import('./locationShared').PreparedSharedCorrection[]
     unpublish?: boolean
     derive: (
       previous: FeatureRevisionContent,

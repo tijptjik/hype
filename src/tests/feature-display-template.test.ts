@@ -7,6 +7,10 @@ import {
   readCurrentFeatureRevision,
   saveFeatureEdit,
 } from '../lib/db/services/featureLifecycle'
+import { prepareFeatureAcceptedCapture } from '../lib/db/services/featureAcceptedCapture'
+import { featureRevisionLocationFixture } from './fixtures/featureRevisionContent'
+import { emptyFeatureAddress } from '../lib/addresses/featureAddress'
+import { amendSharedCorrections } from '../lib/locations/sharedCorrection'
 import { saveDisplayTemplate } from '../lib/db/services/displayTemplate'
 
 const connections: ReturnType<typeof lifecycleFixture>[] = []
@@ -257,4 +261,98 @@ it('rejects a stale inspected consumer before template regeneration', async () =
       .prepare("SELECT title FROM featureI18n WHERE featureId='f' AND locale='en'")
       .get(),
   ).toEqual({ title: '[New author value]' })
+})
+
+it('prepares a template after a Location edit using the exact shared revision queued in the same transaction', async () => {
+  const f = await fixture()
+  await edit(f, content => {
+    content.profile.nameTemplate = {
+      rule: {
+        base: 'feature',
+        conditions: [],
+        registry: { id: 'central', version: 1 },
+      },
+    }
+    return content
+  })
+  const association = featureRevisionLocationFixture()
+  const facts = {
+    names: { en: 'Accepted venue' },
+    phoneNumber: [],
+    brands: [],
+    location: {
+      geometry: { type: 'Point' as const, coordinates: [114, 22] as [number, number] },
+      address: emptyFeatureAddress().source,
+    },
+  }
+  f.sqlite.exec(`CREATE TABLE location(id TEXT PRIMARY KEY,state TEXT,ownerOrganisationId TEXT);
+    CREATE TABLE locationRevisionContent(id TEXT PRIMARY KEY,locationId TEXT,facts TEXT);
+    CREATE VIEW locationRevision AS SELECT * FROM locationRevisionContent;
+    CREATE TABLE locationSharedRevision(id TEXT PRIMARY KEY,locationId TEXT,previousRevisionId TEXT,corrections TEXT);`)
+  f.sqlite
+    .prepare("INSERT INTO location VALUES (?,'linked',NULL)")
+    .run(association.locationId)
+  for (const id of new Set([
+    association.factsRevisionId,
+    association.locationRevisionId,
+  ]))
+    f.sqlite
+      .prepare('INSERT INTO locationRevisionContent VALUES (?,?,?)')
+      .run(id, association.locationId, JSON.stringify(facts))
+  const corrections = amendSharedCorrections(
+    {},
+    {
+      location: {
+        mode: 'override',
+        value: {
+          ...facts.location,
+          geometry: { type: 'Point', coordinates: [114.1, 22.1] },
+        },
+      },
+      names: { mode: 'override', value: { en: 'Corrected venue' } },
+    },
+    facts,
+    {
+      actorId: 'author',
+      editedAt: '2026-11-14',
+      sourceRevisionId: association.factsRevisionId,
+    },
+  )
+  const input = {
+    featureId: 'f',
+    actorId: 'author',
+    guard: sql`1`,
+    derive: (content: Parameters<Parameters<typeof edit>[1]>[0]) => {
+      content.placement.location = {
+        ...association,
+        acceptancePolicy: {
+          locationSharedRevision: 'pending-shared',
+          factsSharedFields: [{ field: 'names', revision: 'pending-shared' }],
+        },
+      }
+      return content
+    },
+  }
+  await expect(prepareFeatureAcceptedCapture(f.db, input)).rejects.toThrow(
+    'SHARED_LOCATION_REVISION_UNAVAILABLE',
+  )
+  await expect(
+    prepareFeatureAcceptedCapture(f.db, {
+      ...input,
+      preparedSharedCorrections: [
+        { id: 'pending-shared', locationId: association.locationId, corrections },
+      ],
+    }),
+  ).resolves.toMatchObject({ revisionId: expect.any(String) })
+  await expect(
+    prepareFeatureAcceptedCapture(f.db, {
+      ...input,
+      preparedSharedCorrections: [
+        { id: 'pending-shared', locationId: 'another-location', corrections },
+      ],
+    }),
+  ).rejects.toThrow('SHARED_LOCATION_REVISION_UNAVAILABLE')
+  expect(
+    f.sqlite.prepare('SELECT count(*) AS n FROM locationSharedRevision').get()?.n,
+  ).toBe(0)
 })
