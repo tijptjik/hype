@@ -116,7 +116,7 @@ const isContributorAddVisible = $derived(
   ),
 )
 const trailingItems = $derived<AppMenuItem<AppNavMenuValue>[]>([
-  ...(!station.active
+  ...(!station.active && publicApp.showMtrStations
     ? [
         {
           value: STATION_MENU_VALUE,

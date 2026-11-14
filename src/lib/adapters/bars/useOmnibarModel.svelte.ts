@@ -331,7 +331,10 @@ export function useOmnibarModel(
         onLoadMore: () => {
           stationExpanded = !stationExpanded
         },
-        results: searchStations(omniCtx.state.searchTerm).map(s => ({
+        results: (appCtx.showMtrStations
+          ? searchStations(omniCtx.state.searchTerm)
+          : []
+        ).map(s => ({
           ref: s.id,
           name: `${s.name} · ${s.nameZh} · ${s.id}`,
           count: 0,

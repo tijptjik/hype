@@ -10,6 +10,8 @@ export const ProjectFlagsSchema = z
     allowFeatureDescriptions: z.boolean().optional(),
     locationBasedFeatureNames: z.boolean().optional(),
     show3dAddressOptions: z.boolean().optional(),
+    showMtrStations: z.boolean().optional(),
+    onlyFeaturedMtrShops: z.boolean().optional(),
   })
   .catchall(z.boolean())
 

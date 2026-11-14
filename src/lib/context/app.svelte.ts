@@ -101,6 +101,24 @@ export class AppCtx {
     this.view.dispose()
   }
 
+  /** Project policies follow selected layers; any enabled project may expose stations. */
+  mtrProjectFlags = $derived.by(() => {
+    const ids = new Set<string>()
+    for (const layer of this.view.scope.selectionLayers) {
+      if (this.view.scope.prisms.layer.includes(layer.id)) ids.add(layer.projectId)
+    }
+    if (!ids.size) for (const id of this.view.scope.prisms.project) ids.add(id)
+    return [...ids].map(id => this.view.cache.project.get(id)?.flags)
+  })
+  showMtrStations = $derived(
+    !this.mtrProjectFlags.length ||
+      this.mtrProjectFlags.some(flags => flags?.showMtrStations !== false),
+  )
+  onlyFeaturedMtrShops = $derived(
+    this.mtrProjectFlags.length > 0 &&
+      this.mtrProjectFlags.every(flags => flags?.onlyFeaturedMtrShops === true),
+  )
+
   // Public map visibility is a surface projection of resource query results.
   featuresVisible: Id[] = $derived.by(() =>
     this.getVisibleFeatures().map(row => row.id),

@@ -6,7 +6,11 @@ import type { Map as MapLibreMap } from 'maplibre-gl'
 import { indoorSnapshots, findStation, premisesPath } from '#lib/indoor/registry.js'
 import { bounds } from '#lib/indoor/model.js'
 import type { Collection } from '#lib/indoor/model.js'
-let { map, theme }: { map: MapLibreMap; theme: MapMarkerTheme } = $props()
+let {
+  map,
+  theme,
+  showMtrStations = true,
+}: { map: MapLibreMap; theme: MapMarkerTheme; showMtrStations?: boolean } = $props()
 let available = $state<string[]>([])
 let data = $state.raw<Collection | null>(null)
 $effect(() => {
@@ -37,7 +41,9 @@ $effect(() => {
   return () => controller.abort()
 })
 $effect(() => {
-  const source = data,
+  const source = data
+      ? { ...data, features: showMtrStations ? data.features : [] }
+      : null,
     colour = divisionHighlightColors[theme],
     target = map
   if (!source) return

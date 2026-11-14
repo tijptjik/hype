@@ -970,6 +970,7 @@ $effect(() => {
   {#if activeMapInstance}
     <StationFootprintLayer
       map={activeMapInstance}
+      showMtrStations={appCtx.showMtrStations}
       theme={getMapStyleDefinition(resolvedMapStyleCode).markerTheme}
     />
     {#if journey}
