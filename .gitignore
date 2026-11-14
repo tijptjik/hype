@@ -64,3 +64,6 @@ spec/breadline/Breadline v4 - Scope of Work.pdf
 **/target/
 **/dist/
 **/.turbo/
+
+# Local research evidence is synchronised with R2, never committed.
+/.research/

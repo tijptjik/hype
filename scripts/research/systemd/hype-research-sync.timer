@@ -1,0 +1,10 @@
+[Unit]
+Description=Synchronise Hype research with R2 every fifteen minutes
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+RandomizedDelaySec=30
+
+[Install]
+WantedBy=timers.target

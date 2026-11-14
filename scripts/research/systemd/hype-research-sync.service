@@ -1,0 +1,10 @@
+[Unit]
+Description=Synchronise Hype research evidence with R2
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/io/code/hype
+ExecStart=/usr/bin/bash /home/io/code/hype/scripts/research/sync.sh
+Nice=10
