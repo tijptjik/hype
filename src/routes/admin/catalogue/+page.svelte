@@ -64,6 +64,8 @@ import { contentLocaleOptions } from '#lib/bits/patterns/forms/contentLocaleDefa
 import { placeTaxonomy, type PlaceTaxonomyNode } from '#lib/locations/placeTaxonomy.js'
 import { placeCategoryLabel } from '#lib/locations/placeSearchFilters.js'
 import { getLocaleKey } from '#lib/i18n.js'
+import CatalogueArtworkEditor from '#lib/bits/patterns/forms/identityCatalogue/CatalogueArtworkEditor.svelte'
+import { catalogueGeneralLogo } from '#lib/locations/catalogueArtwork.js'
 import { canonicalContentTag } from '#lib/i18n/contentRecords.js'
 // DOMAIN
 import {
@@ -266,14 +268,16 @@ let logoInput: HTMLInputElement | undefined = $state()
 let logoFailed = $state(false)
 let logoSourceIndex = $state(0)
 const profileLogoSources = $derived(
-  [content?.logo, ...(selected ? catalogueLogoFallbacks(selected) : [])].filter(
-    (source): source is string => Boolean(source),
-  ),
+  [
+    content ? catalogueGeneralLogo(content, true) : null,
+    ...(selected ? catalogueLogoFallbacks(selected) : []),
+  ].filter((source): source is string => Boolean(source)),
 )
 const profileLogo = $derived(profileLogoSources[logoSourceIndex])
 let logoRetry = $state(0)
 $effect(() => {
   content?.logo
+  content?.artwork
   selected?.id
   logoSourceIndex = 0
   logoFailed = false
@@ -562,6 +566,8 @@ function edit(record: IdentityCatalogueRecord | null): void {
         $state.snapshot({
           i18n: record.i18n,
           logo: record.logo,
+          artwork: record.artwork,
+          evidence: record.evidence,
           logoAttribution: record.logoAttribution,
           code: record.code,
           categories: record.categories,
@@ -627,6 +633,8 @@ async function save(): Promise<void> {
     content = structuredClone({
       i18n: record.i18n,
       logo: record.logo,
+      artwork: record.artwork,
+      evidence: record.evidence,
       logoAttribution: record.logoAttribution,
       code: record.code,
       categories: record.categories,
@@ -674,10 +682,19 @@ async function upload(
     if (file.size > 8 * 1024 * 1024) throw Error('Logo too large')
     const bitmap = await createImageBitmap(file)
     const canvas = document.createElement('canvas'),
-      scale = Math.min(1, 512 / Math.max(bitmap.width, bitmap.height))
-    canvas.width = Math.max(1, Math.round(bitmap.width * scale))
-    canvas.height = Math.max(1, Math.round(bitmap.height * scale))
-    canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+      scale = 512 / Math.max(bitmap.width, bitmap.height)
+    canvas.width = canvas.height = 512
+    const context = canvas.getContext('2d')
+    if (!context) throw Error('Image conversion unavailable')
+    context.fillStyle = '#ffffff'
+    context.fillRect(0, 0, 512, 512)
+    context.drawImage(
+      bitmap,
+      (512 - bitmap.width * scale) / 2,
+      (512 - bitmap.height * scale) / 2,
+      bitmap.width * scale,
+      bitmap.height * scale,
+    )
     bitmap.close()
     const result = await uploadIdentityCatalogueLogo({
       data: canvas.toDataURL('image/png').split(',')[1],
@@ -685,14 +702,21 @@ async function upload(
     })
     content = {
       ...content,
-      logo: result.logo,
-      logoAttribution: sourceLogo
-        ? {
-            sourceUrl: sourceLogo.sourceUrl,
-            attribution: sourceLogo.attribution,
-            license: sourceLogo.license,
-          }
-        : undefined,
+      artwork: {
+        ...content.artwork,
+        logo: {
+          src: result.logo,
+          background: '#ffffff',
+          status: 'candidate',
+          ...(sourceLogo
+            ? {
+                sourceUrl: sourceLogo.sourceUrl,
+                attribution: sourceLogo.attribution,
+                license: sourceLogo.license,
+              }
+            : {}),
+        },
+      },
     }
     saved = false
   } catch {
@@ -830,7 +854,9 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
             <IndexCard
               title={catalogueDisplayName(record)}
               description={record.code ?? record.id}
-              imageSrc={record.logo ?? catalogueLogoFallbacks(record)[0] ?? ''}
+              imageSrc={catalogueGeneralLogo(record, true) ??
+                catalogueLogoFallbacks(record)[0] ??
+                ''}
               imageFallbackSrcs={catalogueLogoFallbacks(record)}
               imageAlt={catalogueDisplayName(record)}
               imageLayout="contain"
@@ -841,7 +867,9 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
               {index}
               title={catalogueDisplayName(record)}
               description={record.code ?? record.id}
-              imageSrc={record.logo ?? catalogueLogoFallbacks(record)[0] ?? ''}
+              imageSrc={catalogueGeneralLogo(record, true) ??
+                catalogueLogoFallbacks(record)[0] ??
+                ''}
               imageFallbackSrcs={catalogueLogoFallbacks(record)}
               imageAlt={catalogueDisplayName(record)}
               onNavigate={() => openRecord(record)}
@@ -918,6 +946,11 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
               class="bits-form__section border-border mx-auto my-6 max-w-4xl overflow-hidden rounded-xl border pb-0!"
               data-catalogue-card
             >
+              <CatalogueArtworkEditor
+                bind:content
+                {organisationId}
+                editable={isEditing && canEdit && !busy}
+              />
               <div
                 class="grid min-w-0 grid-cols-[12rem_minmax(0,1fr)]"
                 data-catalogue-columns
@@ -928,7 +961,9 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
                     icon={Tags}
                   />
                   <div class="grid gap-4 px-6 py-4">
-                    {#if content.logoAttribution}
+                    {#if content.logoAttribution &&
+                      (!content.artwork?.logo ||
+                        content.artwork.logo.src === content.logo)}
                       <a
                         class="text-muted-foreground text-xs break-words underline"
                         href={content.logoAttribution.sourceUrl}
