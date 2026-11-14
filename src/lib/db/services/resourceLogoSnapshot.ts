@@ -1,5 +1,7 @@
 // DRIZZLE
 import { sql } from 'drizzle-orm'
+// SERVICES
+import { retryBusyRead } from './sqlite'
 // TYPES
 import type { SQL } from 'drizzle-orm'
 import type { Database } from '#lib/types.js'
@@ -9,8 +11,11 @@ import type { Database } from '#lib/types.js'
  * @returns Whether exact logo recording is installed.
  */
 export async function hasResourceLogoStorage(db: Database): Promise<boolean> {
-  const row = await db.get<{ n: number }>(
-    sql`SELECT count(*) n FROM sqlite_master WHERE type='table' AND name IN ('resourceLogoImageHead','organisationRevisionLogo','projectRevisionLogo','hubRevisionLogo')`,
+  // Schema reads can encounter transient workerd locks before an image edit begins.
+  const row = await retryBusyRead(() =>
+    db.get<{ n: number }>(
+      sql`SELECT count(*) n FROM sqlite_master WHERE type='table' AND name IN ('resourceLogoImageHead','organisationRevisionLogo','projectRevisionLogo','hubRevisionLogo')`,
+    ),
   )
   if (!row?.n) return false
   if (row.n !== 4) throw new Error('Incomplete resource logo revision migration')

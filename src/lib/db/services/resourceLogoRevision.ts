@@ -14,6 +14,7 @@ import {
   isAdminResourceRevisionRecordingEnabled,
 } from './adminResourceRevision'
 import { hasResourceLogoStorage } from './resourceLogoSnapshot'
+import { retryBusyRead } from './sqlite'
 import { equalRevisionValue } from '#lib/revisions/merge.js'
 // TYPES
 import type { Database } from '#lib/types.js'
@@ -94,16 +95,19 @@ export async function readResourceLogoHead(
   imageId: string,
 ): Promise<ResourceLogoHead | null> {
   if (!(await hasResourceLogoStorage(db))) return null
-  const row = await db.get<
-    LogoAssetEvidence & {
-      imageRevisionId: string
-      assetVersionId: string
-      metadata: string
-    }
-  >(sql`
+  // Retry only the read; baseline enrollment and rotation writes must not be replayed.
+  const row = await retryBusyRead(() =>
+    db.get<
+      LogoAssetEvidence & {
+        imageRevisionId: string
+        assetVersionId: string
+        metadata: string
+      }
+    >(sql`
     SELECT h.imageRevisionId,r.assetVersionId,r.metadata,a.storageNamespace,a.storageKey,a.contentHash,a.byteSize,a.mediaType
     FROM resourceLogoImageHead h JOIN imageRevision r ON r.id=h.imageRevisionId AND r.imageId=h.imageId
-    JOIN imageAssetVersion a ON a.id=r.assetVersionId AND a.imageId=r.imageId WHERE h.imageId=${imageId}`)
+    JOIN imageAssetVersion a ON a.id=r.assetVersionId AND a.imageId=r.imageId WHERE h.imageId=${imageId}`),
+  )
   if (!row) return null
   const { imageRevisionId, assetVersionId, metadata, ...asset } = row
   return {
