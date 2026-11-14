@@ -1,0 +1,79 @@
+{
+  "venueId": "6f0e1339-7f9b-4024-abed-a462006568bc",
+  "retrievedAt": "2026-11-14T14:17:28.765Z",
+  "source": "Lands Department 3D Indoor MTR Station Map API",
+  "documentation": "https://tools.csdi.gov.hk/csdi-webpage/apidoc/3d-indoor-mtr-station-map",
+  "entries": [
+    {
+      "layer": "venue_polygon",
+      "url": "https://mapapi.hkmapservice.gov.hk/ogc/wfs/indoor/mtr_venue_polygon?service=WFS&version=1.1.0&request=GetFeature&outputFormat=application%2Fjson&cql_filter=venue_id%3D%276f0e1339-7f9b-4024-abed-a462006568bc%27&srsName=EPSG%3A4326",
+      "count": 1,
+      "bytes": 29378,
+      "sha256": "286de47fc34c1a28276e526bbed7110ae66947617ecbba92f1fc90792c52e868"
+    },
+    {
+      "layer": "level_polygon",
+      "url": "https://mapapi.hkmapservice.gov.hk/ogc/wfs/indoor/mtr_level_polygon?service=WFS&version=1.1.0&request=GetFeature&outputFormat=application%2Fjson&cql_filter=venue_id%3D%276f0e1339-7f9b-4024-abed-a462006568bc%27&srsName=EPSG%3A4326",
+      "count": 6,
+      "bytes": 34899,
+      "sha256": "b72e89aa035c9cdee2ef12ad667640fa4686b0035833627201b694889f4f9de1"
+    },
+    {
+      "layer": "unit_polygon",
+      "url": "https://mapapi.hkmapservice.gov.hk/ogc/wfs/indoor/mtr_unit_polygon?service=WFS&version=1.1.0&request=GetFeature&outputFormat=application%2Fjson&cql_filter=venue_id%3D%276f0e1339-7f9b-4024-abed-a462006568bc%27&srsName=EPSG%3A4326",
+      "count": 88,
+      "bytes": 202437,
+      "sha256": "5d1565ad742b6b197b2e8de76b6bfea2b148c8eedd30729c6d3e9ea077c798e8"
+    },
+    {
+      "layer": "opening_line",
+      "url": "https://mapapi.hkmapservice.gov.hk/ogc/wfs/indoor/mtr_opening_line?service=WFS&version=1.1.0&request=GetFeature&outputFormat=application%2Fjson&cql_filter=venue_id%3D%276f0e1339-7f9b-4024-abed-a462006568bc%27&srsName=EPSG%3A4326",
+      "count": 175,
+      "bytes": 170534,
+      "sha256": "9956f80c0dc5d0abdcf1892037e6566bf483c61ea1d523aeb04d1dec45cd1abe"
+    },
+    {
+      "layer": "amenity_point",
+      "url": "https://mapapi.hkmapservice.gov.hk/ogc/wfs/indoor/mtr_amenity_point?service=WFS&version=1.1.0&request=GetFeature&outputFormat=application%2Fjson&cql_filter=venue_id%3D%276f0e1339-7f9b-4024-abed-a462006568bc%27&srsName=EPSG%3A4326",
+      "count": 97,
+      "bytes": 112422,
+      "sha256": "ee0a079c697caf4cff1bcf40d97f38541b38b015311ed2e411ce0de6482c3117"
+    },
+    {
+      "layer": "occupant_point",
+      "url": "https://mapapi.hkmapservice.gov.hk/ogc/wfs/indoor/mtr_occupant_point?service=WFS&version=1.1.0&request=GetFeature&outputFormat=application%2Fjson&cql_filter=venue_id%3D%276f0e1339-7f9b-4024-abed-a462006568bc%27&srsName=EPSG%3A4326",
+      "count": 10,
+      "bytes": 12118,
+      "sha256": "7e15071d64d2ee9b1d948cb17ae0aeea011e0c8ba349e87866ad676d1c17f5be"
+    }
+  ],
+  "references": [
+    {
+      "file": "landsdlogo.jpg",
+      "url": "https://api.hkmapservice.gov.hk/mapapi/landsdlogo.jpg",
+      "bytes": 41500,
+      "sha256": "97fc83e2643b2e98dd40afae56a63ad2ad6cbc4aa6dd0152cd4ec44d5912ed59"
+    },
+    {
+      "file": "mtr-shops.pdf",
+      "url": "https://www.mtr.com.hk/archive/ch/services/shop/ket.pdf",
+      "bytes": 148387,
+      "sha256": "9944bb030a944b6c28825eac95c0154bc050f39004e0605ae1a8c9873f1d1413",
+      "researchPath": "premises/transit/mtr/references/kennedy-town/mtr-shops.pdf"
+    },
+    {
+      "file": "mtr-layout.pdf",
+      "url": "https://www.mtr.com.hk/archive/ch/services/layouts/ket.pdf",
+      "bytes": 641423,
+      "sha256": "dfc6c231dcdcf4999c724a81d3b9e465ad586a7e883a388b861f6b6d4fc467f9",
+      "researchPath": "premises/transit/mtr/references/kennedy-town/mtr-layout.pdf"
+    },
+    {
+      "file": "mtr-directory.html",
+      "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?query_type=search&start=83",
+      "bytes": 15130,
+      "sha256": "69431412236e24f05fa95cbe070b099b5f422b933db7f2b80fb0e2cb7b64460e",
+      "researchPath": "premises/transit/mtr/references/kennedy-town/mtr-directory.html"
+    }
+  ]
+}

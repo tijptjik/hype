@@ -100,6 +100,15 @@
   },
   "overrides": [
     {
+      "includes": [
+        "static/indoor/kennedy-town/*_*.json",
+        "static/indoor/hong-kong/*_*.json"
+      ],
+      "formatter": {
+        "enabled": false
+      }
+    },
+    {
       "includes": ["docs/policies/*.md"],
       "markdown": {
         "formatter": {
