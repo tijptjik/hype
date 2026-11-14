@@ -1,0 +1,292 @@
+{
+  "7eleven": {
+    "sha256": "88a2c75b3a898267b465022e3e664097e26d697b22dcc4d11348371e37e58c6f",
+    "sourceUrl": "https://web711-nuxt-pc.rtacdn-os.com/_nuxt/img/superwebShopLogo.caf0204.svg",
+    "pageUrl": "https://www.7-eleven.com.hk/"
+  },
+  "a1-bakery": {
+    "sha256": "ac606f57544062823bbd88a3bef7968965d4fee7c19500f527defef929125ba3",
+    "sourceUrl": "https://www.a-1bakery.com.hk/favicon.ico",
+    "pageUrl": "https://www.a-1bakery.com.hk/"
+  },
+  "arome": {
+    "sha256": "5c0910acf0ab31852b9357d5043b8de71e7c8d5e87d6e29b65109cfd8d1b546d",
+    "sourceUrl": "https://www.aromebakery.com.hk/arome/images/logo_v2.png",
+    "pageUrl": "https://www.aromebakery.com.hk/tc"
+  },
+  "berlin-optical": {
+    "sha256": "684633113a422577a9f3e0046c0f60ded3a15831a4dec9c2f15f256182967f47",
+    "sourceUrl": "https://cdn.prod.website-files.com/60d585f8410568b834845fa3/60d886dc9b981fe99fa1efb8_256%20berlin%20optical%20logo.jpg",
+    "pageUrl": "https://www.berlinoptical.com/"
+  },
+  "calzedonia": {
+    "sha256": "021d7aa39cfee3e6b806a9e67bd8cbce2b1e9741554b45241bb5123b2f4ccfc3",
+    "sourceUrl": "https://www.calzedonia.com/mobify/bundle/2403/static/ico/favicon.ico",
+    "pageUrl": "https://www.calzedonia.com/hk/"
+  },
+  "colourmix": {
+    "sha256": "0058309c04ca592ef88c1088c092e8c3566b33d9f0195a3ad3e6f1bf5d4759ae",
+    "sourceUrl": "https://img.cdn.91app.hk/webapi/images/t/512/512/ShopIcon/87/0/11150230",
+    "pageUrl": "https://www.colourmix-cosmetics.com/"
+  },
+  "comvita": {
+    "sha256": "c69e049fe153c8fd4dbb72e2fb8ab5b726c556543ce564d76c7b160c1a03def4",
+    "sourceUrl": "https://comvita.com.hk/cdn/shop/files/logo_7a964a64-0a4a-4d3c-b2dd-7a61ed80c9a4_300x300.png?v=1621652375",
+    "pageUrl": "https://comvita.com.hk/"
+  },
+  "fotomax": {
+    "sha256": "5a403b9414202f03ef5d7ef5acb6977de2303292e186d63a715607ec83dc550c",
+    "sourceUrl": "https://www.fotomax.com/favicon.ico",
+    "pageUrl": "https://www.fotomax.com/"
+  },
+  "global-exchange": {
+    "sha256": "290e4d67cf8005286d1193db4f5fe43d50802f7fddf28541e738d3b4c9e0f637",
+    "sourceUrl": "https://www.globalexchange.hk/favicon.ico",
+    "pageUrl": "https://www.globalexchange.hk/"
+  },
+  "green-dot-dot": {
+    "sha256": "918e97e19de0a7a0b328455b135d77354613522ac8650edcecbc2777b1df7233",
+    "sourceUrl": "https://img.shoplineapp.com/media/image_clips/6a2fb83cc2886b9bc32fd1e2/original.png?1781512252=&owner_id=6a2268f807e75d001a1c8c7b",
+    "pageUrl": "https://www.greendotdot.com/"
+  },
+  "hang-seng-bank": {
+    "sha256": "9d40bc7de25856427ba5ca9bcb6951652765cb0344ed14974d4ddc4ea17f9e65",
+    "sourceUrl": "https://www.hangseng.com/etc.clientlibs/hase/clientlibs/clientlib-header/resources/favicon.ico",
+    "pageUrl": "https://www.hangseng.com/en-hk/home/"
+  },
+  "hertz": {
+    "sha256": "2b85d61524302f4fb8c733038fa68d60510455a5983a371a269a45e6d28256e3",
+    "sourceUrl": "https://www.hertz.com.hk/rentacar/assets/images/favicon.ico?v=2",
+    "pageUrl": "https://www.hertz.com.hk/rentacar/reservation/"
+  },
+  "hiwalk": {
+    "sha256": "4ecae36c5e9555906568217465fb120f4c69e3b13b4e660a0e24034e55d8d3ca",
+    "sourceUrl": "https://img.shoplineapp.com/media/image_clips/6458838812ea7d0014602f27/original.jpg?1683522440",
+    "pageUrl": "https://www.hiwalk.co/"
+  },
+  "hung-fook-tong": {
+    "sha256": "75c8aab7e19e30c1a4fa1ff3f4ed5885e8ea5b4e06ab8b9c2dde9f784ce62b41",
+    "sourceUrl": "https://www.hungfooktong.com/favicon.png",
+    "pageUrl": "https://www.hungfooktong.com/"
+  },
+  "italian-tomato": {
+    "sha256": "8de4aaa1cc303bb794d9ae0baa80c3bbe71c3ce70985e00487720a8fe0ea46d9",
+    "sourceUrl": "https://www.italiantomato.com.hk/assets/img/favicon.png",
+    "pageUrl": "https://www.italiantomato.com.hk/"
+  },
+  "joint-host": {
+    "sha256": "9c8ffeeb986955033bc570f0d187b548e00a86761e3f572bf49d86a41b29b335",
+    "sourceUrl": "https://jointhost.com.hk/manus-storage/favicon-180_54f6e742.png",
+    "pageUrl": "https://jointhost.com.hk/"
+  },
+  "juewei": {
+    "sha256": "455157314b593b9fa6e248f5aa4cc77cc78d469bdd1a650277afc00014131ad6",
+    "sourceUrl": "https://www.juewei.cn/image/favicon.png?_v_=598880",
+    "pageUrl": "https://www.juewei.cn/"
+  },
+  "keen-health": {
+    "sha256": "a8090f3b3c0e54b239388c7c3a7c51f5cdf927b6e40ed42b4b8c34a38e95d731",
+    "sourceUrl": "https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=180,h=180,fit=crop,f=png/6i2wfCv9UHZ1yk4V/favicon-m2Wp1eqkMoSnow42.jpg",
+    "pageUrl": "https://keenhealth.com.hk/"
+  },
+  "marks-and-spencer-food": {
+    "sha256": "bcbdaf2ac26deb6cf4b4bcc9efca18639eb58e5e5f01f857fe8cf5d1cc11fcb5",
+    "sourceUrl": "https://static.marksandspencer.com/images/favicon.ico",
+    "pageUrl": "https://www.marksandspencer.com/"
+  },
+  "mos-burger": {
+    "sha256": "60bede7a959ff15a68662912e5f03e7d8745bf72d88ec671377b29f0e69a24cb",
+    "sourceUrl": "https://mosburger-hk.com/_nuxt/logo.BV8nGcF6.png",
+    "pageUrl": "https://mosburger-hk.com/"
+  },
+  "mannings": {
+    "sha256": "6ef9067b09993c2e4df3a951b3ec35ca4e4dcb5fee8ac87c7016619a2148cc4e",
+    "sourceUrl": "https://www.mannings.com.hk/venia-static-assets/favicon.ico",
+    "pageUrl": "https://www.mannings.com.hk/zh-hant/"
+  },
+  "max-sight": {
+    "sha256": "e60cf51ef4ad4597a260234203794d562f3c02efffeefc90b9fb2a6a37d991b7",
+    "sourceUrl": "https://media-maxsight.todayir.com/20180131162320_logo.jpg",
+    "pageUrl": "https://www.maxsightgroup.com/"
+  },
+  "mrs-fields": {
+    "sha256": "8bb72b13cd840a962d31ce0a9d52178eb8caaa1ac170232139e8f4dbf49abd64",
+    "sourceUrl": "https://mrsfields.com.hk/wp-content/uploads/2026/04/cropped-187-180x180.jpg",
+    "pageUrl": "https://mrsfields.com.hk/"
+  },
+  "okashi-land": {
+    "sha256": "207b6cb803495ceb18b8806388d1b8f192726ecb321fded7d2cf6dd00057fe15",
+    "sourceUrl": "https://www.okashiland.com/wp-content/uploads/2021/07/cropped-favicon-180x180.png",
+    "pageUrl": "https://www.okashiland.com/"
+  },
+  "organic-nature": {
+    "sha256": "665c80efd58c65724e7a4a471894dafd00c77da6802099e37c6476d02c440814",
+    "sourceUrl": "https://img.cdn.91app.hk/webapi/images/t/512/512/ShopIcon/33/0/11150230",
+    "pageUrl": "https://www.ausupreme.com/"
+  },
+  "original-taste-workshop": {
+    "sha256": "58085e7b816a63d9ee073815c1ee260ac72cece9a616eebce31265b5d466148c",
+    "sourceUrl": "https://otw.com.hk/wp-content/uploads/2026/04/cropped-favicon-180x180.png",
+    "pageUrl": "https://otw.com.hk/"
+  },
+  "pit": {
+    "sha256": "35913492dd26cfbadc39cfb2a3fa699be66c4b5baefaeba0041c453be9a4b2a8",
+    "sourceUrl": "https://static.wixstatic.com/media/3af56b_dfd18685a6964d18b97968fb574e9f3e%7Emv2.jpg/v1/fill/w_180%2Ch_180%2Clg_1%2Cusm_0.66_1.00_0.01/3af56b_dfd18685a6964d18b97968fb574e9f3e%7Emv2.jpg",
+    "pageUrl": "https://www.pit.cc/shop"
+  },
+  "sarasei": {
+    "sha256": "0b6538b6f4923d9294d81c7a60d2a8f324519c9290cf599d4b50ac210c73f046",
+    "sourceUrl": "https://img.gogoshop.cloud/25734276/Iz0AwAzfkia.jpg",
+    "pageUrl": "https://www.sarasei.com.hk/"
+  },
+  "shiu-heung-yuen-bakery": {
+    "sha256": "8dafc871662f8fe366a7bf5877f02717865d2fc79fca6858a255dbd33a266bfe",
+    "sourceUrl": "https://walnut.com.hk/media/SHY_logo_header.png",
+    "pageUrl": "https://walnut.com.hk/"
+  },
+  "super-super": {
+    "sha256": "e860068f9cb800118856e4496e11050aa91e42b35014391c69b9373ed5400747",
+    "sourceUrl": "https://www.supersuper.com.hk/tc/images/supersuper_logo.jpg",
+    "pageUrl": "https://www.supersuper.com.hk/tc/"
+  },
+  "tonymoly": {
+    "sha256": "de357dd4006f688d4daa1332e66467f81583c2461bbe1492209cb4877a9df57f",
+    "sourceUrl": "https://tonymoly.com.hk/image/custom/favicon-32x32.png",
+    "pageUrl": "https://tonymoly.com.hk/"
+  },
+  "yamazaki": {
+    "sha256": "6ab7176de744f73f823c6a259dcfd0ef4dfb433f74edb6c99902d6d29513c370",
+    "sourceUrl": "https://www.yamazaki.hk/favicon.png",
+    "pageUrl": "https://www.yamazaki.hk/"
+  },
+  "ans": {
+    "sha256": "f2e689a41b66e6b3bca9300d78061750154f4c61cb10c2c8d736e5f7e2357c0f",
+    "sourceUrl": "https://img.shoplineapp.com/media/image_clips/5a39d424552115e500001f53/original.jpg?1513739299",
+    "pageUrl": "https://www.ans.com.hk/"
+  },
+  "eslite": {
+    "sha256": "486844dd190d785ee2eedebdc491db0fe09c9b8a13882a460324ba1f9e5f112b",
+    "sourceUrl": "https://www.eslitecorp.com/eslite/img/themeImg/logo_title_b.svg",
+    "pageUrl": "https://www.eslitecorp.com/eslite/index.jsp"
+  },
+  "tim-ho-wan": {
+    "sha256": "7c47da788c33c11af6ad0089a9b120f53791be31dd887c01713f3c1b3f8552ff",
+    "sourceUrl": "https://cdn.prod.website-files.com/68afff38752a0c887d2ab567/6941384cab7b0c4086eff837_thw-tab-logo-256x256.jpg",
+    "pageUrl": "https://www.timhowan.com/"
+  },
+  "watsons": {
+    "sha256": "56da23a7cd2acd4bf160d75ad69afd58e0fa6b418e44c15e18e8d968936a2cda",
+    "sourceUrl": "https://www.watsons.com.hk/favicon.ico",
+    "pageUrl": "https://www.watsons.com.hk/"
+  },
+  "muji": {
+    "sha256": "fcd4dde6527436d74e270e8fcd33351240689cf2fe4791640c88f602afd43737",
+    "sourceUrl": "https://www.muji.com/favicon.ico",
+    "pageUrl": "https://www.muji.com/hk/"
+  },
+  "dfi": {
+    "sha256": "129ba16d0ed2b0d80988021192a78ab47ed22e2b2f25e54b408a7ca2d9c33535",
+    "sourceUrl": "https://www.dfiretailgroup.com/media/1ikj4buy/favicon.png",
+    "pageUrl": "https://www.dfiretailgroup.com/"
+  },
+  "yamazaki-group": {
+    "sha256": "2ad134143f49dd2cb30128a8a8e7b8a9779419bc105328ee185ff45984cf910c",
+    "sourceUrl": "https://www.yamazakipan.co.jp/english/img/logo.gif",
+    "pageUrl": "https://www.yamazakipan.co.jp/english/"
+  },
+  "ck-hutchison": {
+    "sha256": "a980e39f423ed5206a2efff9f74088b6daca45306b3b539adce9b13009a5a00c",
+    "sourceUrl": "https://www.ckh.com.hk/apple-touch-icon.png",
+    "pageUrl": "https://www.ckh.com.hk/en/global/home.php"
+  },
+  "four-seas": {
+    "sha256": "55c78a01dfe63ae3bb7d42676f4c5b713e0e5699f379a62b3a96fc8b5610008b",
+    "sourceUrl": "https://www.fourseasgroup.com.hk/wp-content/uploads/2025/05/cropped-FSML-Logo_Purple_RGB-2-03-scaled-1-180x180.png",
+    "pageUrl": "https://www.fourseasgroup.com.hk/"
+  },
+  "jollibee-foods": {
+    "sha256": "a3e58b0d8bd1994495c053944cc4ee466d284604033e350cfba88f2649cfa78f",
+    "sourceUrl": "https://www.jollibeegroup.com/apple-touch-icon.png",
+    "pageUrl": "https://www.jollibeegroup.com/"
+  },
+  "mos-food-services": {
+    "sha256": "006b69ef42699d2ab2281260260a47913ef78e8a240caf4fce0bba12d49e4e02",
+    "sourceUrl": "https://www.mos.co.jp/apple-touch-icon-precomposed.png",
+    "pageUrl": "https://www.mos.co.jp/global/"
+  },
+  "giordano-international": {
+    "sha256": "a14f6bfbdcb7512a2976865152307bdf60aa6d46bf12ec65c9758b3a1e25831f",
+    "sourceUrl": "https://corp.giordano.com.hk/img/favicon.ico",
+    "pageUrl": "https://corp.giordano.com.hk/en/"
+  },
+  "oniverse": {
+    "sha256": "30bd5a869b0a3eedfa28c4b8d6f9f4c7e11be284fa69247abc63626eb1473bdd",
+    "sourceUrl": "https://www.oniverse.it/docroot/dist/img/favicon/favicon-oniverse.ico",
+    "pageUrl": "https://www.oniverse.it/"
+  },
+  "china-hong-kong-photo": {
+    "sha256": "5afe62b225809f9bef4ca87c148d721a27bb9a23489926c9027a844fb41ace7b",
+    "sourceUrl": "https://www.chinahkphoto.com.hk/chkp_small.jpg",
+    "pageUrl": "https://www.chinahkphoto.com.hk/"
+  },
+  "hsbc": {
+    "sha256": "e326fc1e0be7ac7178e594a446e9a7d6c4ee510153b10af24fc5afd12c6d12bb",
+    "sourceUrl": "https://www.hsbc.com/apple-touch-icon.png",
+    "pageUrl": "https://www.hsbc.com/"
+  },
+  "hsbc-asia-pacific": {
+    "sha256": "4f6074e3e0e55ff51452cce43b23b5cd2f5b0b293191c5f621db7d1581ec2bba",
+    "sourceUrl": "https://www.about.hsbc.com.hk/assets/pws171/images/touchicon/HSBC_touch-icon.png",
+    "pageUrl": "https://www.about.hsbc.com.hk/"
+  },
+  "bank-of-china-hong-kong": {
+    "sha256": "088db75252ff39b8f88d2c0acbf13241533325002fa738bab61704118b316b8f",
+    "sourceUrl": "https://www.bochk.com/etc/designs/bochk_web/images/icon/boc-logo-96.png",
+    "pageUrl": "https://www.bochk.com/en/home.html"
+  },
+  "cafe-de-coral": {
+    "sha256": "d4a2b76d8c1ca93fdbc753714b7f46b50b7ff8ff369a63fe6c9fc123799c85b5",
+    "sourceUrl": "https://www.cafedecoral.com/share/img/favicon.ico",
+    "pageUrl": "https://www.cafedecoral.com/eng/main/index.jsp"
+  },
+  "hana-musubi": {
+    "sha256": "ce35741d67514146458ec9a2780ec8067d6a610f84204aa039d1032f0a3db714",
+    "sourceUrl": "https://media.langhamplace.com.hk/cms/store/9X3J1I3BCrouFCjJEn2K2q0Hn86I8Dr4XVwTmzoI.png",
+    "pageUrl": "https://www.langhamplace.com.hk/dining/229"
+  },
+  "tong-kee-bao-dim": {
+    "sha256": "42895a2cab5967cd18bad6e35c00599365bebb56f7bd774ca01a0b17f33e1963",
+    "sourceUrl": "https://taipomegamall.shkp.com/wp-content/uploads/2024/07/Shop016-%E5%94%90%E8%A8%98%E5%8C%85%E9%BB%9E-1.jpg",
+    "pageUrl": "https://taipomegamall.shkp.com/dinings/%E5%94%90%E8%A8%98%E5%8C%85%E9%BB%9E/"
+  },
+  "maxims": {
+    "sha256": "e4d8ec0a1c2d984222b0157d6da3d4bb639d857726402d05495d36e75ea7ea3b",
+    "sourceUrl": "https://cdn.maximscakes.com.hk/public/GeneralData/100_66309277125f6.jpg",
+    "pageUrl": "https://www.maximscakes.com.hk/tc"
+  },
+  "starbucks": {
+    "sha256": "db870aa1ba725cf13e132e1164b25b7ac49791fd13b1ed786d0774bf22b99bde",
+    "sourceUrl": "https://www.starbucks.com/pwa-icon.png",
+    "pageUrl": "https://www.starbucks.com/"
+  },
+  "giordano": {
+    "sha256": "a14f6bfbdcb7512a2976865152307bdf60aa6d46bf12ec65c9758b3a1e25831f",
+    "sourceUrl": "https://corp.giordano.com.hk/img/favicon.ico",
+    "pageUrl": "https://corp.giordano.com.hk/en/"
+  },
+  "starbucks-corporation": {
+    "sha256": "db870aa1ba725cf13e132e1164b25b7ac49791fd13b1ed786d0774bf22b99bde",
+    "sourceUrl": "https://www.starbucks.com/pwa-icon.png",
+    "pageUrl": "https://www.starbucks.com/"
+  },
+  "marks-and-spencer-group": {
+    "sha256": "3c740271a4f482b4462f508229f7e77e5369e1fca177cda0ad9c3dc2ac6a6d01",
+    "sourceUrl": "https://corporate.marksandspencer.com/sites/marksandspencer/files/ms-favicon.jpg",
+    "pageUrl": "https://corporate.marksandspencer.com/"
+  },
+  "ausupreme": {
+    "sha256": "665c80efd58c65724e7a4a471894dafd00c77da6802099e37c6476d02c440814",
+    "sourceUrl": "https://img.cdn.91app.hk/webapi/images/t/512/512/ShopIcon/33/0/11150239",
+    "pageUrl": "https://www.ausupreme.com/"
+  }
+}

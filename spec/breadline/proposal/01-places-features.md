@@ -4352,3 +4352,12 @@ Selection does not overwrite names or automatically adopt the logo. Reset discar
 pending profile and identity changes. Unit coverage lives in
 `identity-catalogue.test.ts` and `wikidata-brands.test.ts`; the authenticated
 live-provider interaction check is `scripts/visual-checks/wikidata-brand-check.ts`.
+
+### Brand and group artwork
+
+Catalogue revisions include a source-artwork library with solid-background general logos
+and approved marker variants. Selection uses exact theme, light/dark mode, default
+marker, then a general logo or generic icon with a white ring. Candidates stay in admin
+review. Corporate ownership evidence is separate from local franchise operation;
+imported artwork does not change pinned Location identity revisions. See
+[the artwork contract and local MTR import](../../../docs/catalogue/mtr-artwork.md).

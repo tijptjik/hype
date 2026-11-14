@@ -1,0 +1,331 @@
+[
+  {
+    "code": "jardine-matheson",
+    "name": "Jardine Matheson",
+    "website": "https://www.jardines.com/",
+    "brands": [],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.dfiretailgroup.com/media/gdedjld3/dfi_corporate_overview.pdf",
+        "note": "DFI corporate overview identifies Jardine Matheson group membership."
+      }
+    ]
+  },
+  {
+    "code": "dfi",
+    "name": "DFI Retail Group",
+    "website": "https://www.dfiretailgroup.com/",
+    "brands": ["mannings"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.dfiretailgroup.com/media/gdedjld3/dfi_corporate_overview.pdf",
+        "note": "Mannings is a DFI retail brand. DFI operates 7-Eleven in Hong Kong; this does not establish ownership of the global 7-Eleven trademark."
+      }
+    ],
+    "parent": "jardine-matheson"
+  },
+  {
+    "code": "hyakunousha",
+    "name": "Hyakunousha International",
+    "website": "https://www.h-musubi.com/",
+    "brands": ["hana-musubi"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.hketotyo.gov.hk/japan/en/news/topics/topics180619/",
+        "note": "Hong Kong government identifies Hana-musubi as a Hyakunousha brand."
+      }
+    ]
+  },
+  {
+    "code": "yamazaki-group",
+    "name": "Yamazaki Baking",
+    "website": "https://www.yamazakipan.co.jp/english/",
+    "brands": ["yamazaki"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.yamazakipan.co.jp/english/yamazaki_group/index.html",
+        "note": "Official group directory identifies Hong Kong Yamazaki Baking."
+      }
+    ]
+  },
+  {
+    "code": "ck-hutchison",
+    "name": "CK Hutchison Holdings",
+    "website": "https://www.ckh.com.hk/",
+    "brands": [],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.ckh.com.hk/en/businesses/retail.php",
+        "note": "Retail division includes AS Watson."
+      }
+    ]
+  },
+  {
+    "code": "as-watson",
+    "name": "AS Watson Group",
+    "website": "https://www.aswatson.com/",
+    "brands": ["watsons"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.aswatson.com/our-brands",
+        "note": "Official portfolio includes Watsons."
+      }
+    ],
+    "parent": "ck-hutchison"
+  },
+  {
+    "code": "ryohin-keikaku",
+    "name": "Ryohin Keikaku",
+    "website": "https://www.ryohin-keikaku.jp/eng/",
+    "brands": ["muji"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.muji.com/sg/company/",
+        "note": "MUJI corporate profile identifies Ryohin Keikaku."
+      }
+    ]
+  },
+  {
+    "code": "veeko",
+    "name": "Veeko International Holdings",
+    "website": "https://www.veeko.com.hk/",
+    "brands": ["colourmix"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.irasia.com/listco/hk/veeko/profile.htm",
+        "note": "Issuer profile identifies Colourmix as a group brand."
+      }
+    ]
+  },
+  {
+    "code": "four-seas",
+    "name": "Four Seas Mercantile Holdings",
+    "website": "https://www.fourseasgroup.com.hk/",
+    "brands": ["okashi-land"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.fourseasgroup.com.hk/en/our-businesses/food-distribution/",
+        "note": "Official group portfolio includes Okashi Land."
+      }
+    ]
+  },
+  {
+    "code": "cafe-de-coral-holdings",
+    "name": "Café de Coral Holdings",
+    "website": "https://www.cafedecoral.com/",
+    "brands": ["cafe-de-coral", "super-super"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://contactus.cafedecoral.com/ENG/ContactUs.aspx",
+        "note": "Official group contact directory lists Café de Coral and Super Super."
+      }
+    ]
+  },
+  {
+    "code": "jollibee-foods",
+    "name": "Jollibee Group",
+    "website": "https://www.jollibeegroup.com/",
+    "brands": ["tim-ho-wan"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.jollibeegroup.com/news/tim-ho-wan-ownership-and-management-to-transfer-to-jfc/",
+        "note": "Tim Ho Wan ownership and management transfer; Hong Kong scope, not a claim about every overseas franchise."
+      }
+    ]
+  },
+  {
+    "code": "mos-food-services",
+    "name": "MOS Food Services",
+    "website": "https://www.mos.co.jp/global/",
+    "brands": ["mos-burger"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.mos.co.jp/global/corporateinfo/profile/",
+        "note": "MOS corporate profile and restaurant business."
+      }
+    ]
+  },
+  {
+    "code": "giordano-international",
+    "name": "Giordano International",
+    "website": "https://corp.giordano.com.hk/",
+    "brands": ["giordano"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://m.giordano.com/hk/en-us/article/eshop2015_help_privacy",
+        "note": "Official Giordano privacy policy identifies corporate group."
+      }
+    ]
+  },
+  {
+    "code": "oniverse",
+    "name": "Oniverse",
+    "website": "https://www.oniverse.it/",
+    "brands": ["calzedonia"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.oniverse.it/mediaObject/images/report-sostenibilita/Sustainability-Report---Oniverse-2024/original/Sustainability%2BReport%2B-%2BOniverse%2B2024.pdf",
+        "note": "Group sustainability report includes Calzedonia."
+      }
+    ]
+  },
+  {
+    "code": "cec-international",
+    "name": "CEC International Holdings",
+    "website": "https://www.ceccoils.com/",
+    "brands": ["759-store"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.ceccoils.com/cecweb/HistoryBusDevp.aspx?lang=en",
+        "note": "Official history states the group established 759 STORE."
+      }
+    ]
+  },
+  {
+    "code": "china-hong-kong-photo",
+    "name": "China-Hongkong Photo Products Holdings",
+    "website": "https://www.chinahkphoto.com.hk/",
+    "brands": ["fotomax"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.fotomax.com/en-us/content/company",
+        "note": "Fotomax company page states full ownership by China-Hongkong Photo Products Holdings."
+      }
+    ]
+  },
+  {
+    "code": "hsbc",
+    "name": "HSBC Holdings",
+    "website": "https://www.hsbc.com/",
+    "brands": [],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.hsbc.com/investors/hsbc-proposal-to-privatise-hang-seng-bank",
+        "note": "HSBC announcement of completed Hang Seng privatisation in January 2026."
+      }
+    ]
+  },
+  {
+    "code": "hsbc-asia-pacific",
+    "name": "The Hongkong and Shanghai Banking Corporation",
+    "website": "https://www.about.hsbc.com.hk/",
+    "brands": ["hang-seng-bank"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.hsbc.com/investors/hsbc-proposal-to-privatise-hang-seng-bank",
+        "note": "Hang Seng is wholly owned by HSBC Asia Pacific following privatisation."
+      }
+    ],
+    "parent": "hsbc"
+  },
+  {
+    "code": "bank-of-china",
+    "name": "Bank of China",
+    "website": "https://www.boc.cn/en/",
+    "brands": [],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.bochk.com/en/aboutus/ir/faq.html",
+        "note": "BOCHK investor FAQ identifies Bank of China as ultimate holding company."
+      }
+    ]
+  },
+  {
+    "code": "boc-hong-kong-holdings",
+    "name": "BOC Hong Kong Holdings",
+    "website": "https://www.bochk.com/",
+    "brands": ["bank-of-china-hong-kong"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.bochk.com/en/aboutus/ir/faq.html",
+        "note": "BOCHK investor FAQ identifies the listed holding company. Intermediate investment entities omitted."
+      }
+    ],
+    "parent": "bank-of-china"
+  },
+  {
+    "code": "starbucks-corporation",
+    "name": "Starbucks Corporation",
+    "website": "https://www.starbucks.com/",
+    "brands": ["starbucks"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.starbucks.com/terms/starbucks-terms-of-use",
+        "note": "Trademark owner; local licensee is not the brand owner."
+      }
+    ]
+  },
+  {
+    "code": "marks-and-spencer-group",
+    "name": "Marks and Spencer Group",
+    "website": "https://corporate.marksandspencer.com/",
+    "brands": ["marks-and-spencer-food"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://corporate.marksandspencer.com/terms-conditions",
+        "note": "Group corporate website and retail brand; Hong Kong franchise operation is separate."
+      }
+    ]
+  },
+  {
+    "code": "ten-ren-tea",
+    "name": "Ten Ren Tea Co.",
+    "website": "https://www.tenren.com/",
+    "brands": ["tenren-tea"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.tenren.com.tw/Content/Messagess/contents.aspx?MSID=654310650663631770&MmmID=654064364210765223&SiteID=11",
+        "note": "Tea brand corporate history; Hong Kong licensee is separate."
+      }
+    ]
+  },
+  {
+    "code": "ausupreme",
+    "name": "Ausupreme International Holdings",
+    "website": "https://www.ausupreme.com/",
+    "brands": ["organic-nature"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://resources.ausupreme.com/ir/announcements_and_circulars/2025/2025062601427_c.pdf",
+        "note": "Group develops and manages Organic Nature; Hong Kong retail sales network uses the AUSupreme name."
+      }
+    ]
+  },
+  {
+    "code": "global-exchange-group",
+    "name": "Global Exchange Group",
+    "website": "https://www.globalexchange.ma/en/about-us",
+    "brands": ["global-exchange"],
+    "evidence": [
+      {
+        "kind": "ownership",
+        "url": "https://www.globalexchange.ma/en/about-us",
+        "note": "Group official country list includes Hong Kong."
+      }
+    ]
+  }
+]

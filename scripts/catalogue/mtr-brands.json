@@ -1,0 +1,1061 @@
+[
+  {
+    "name": "7-Eleven",
+    "code": "7eleven",
+    "category": "convenience_store",
+    "website": "https://www.7-eleven.com.hk/",
+    "parentCandidate": "dfi",
+    "occurrences": [
+      {
+        "station": "kennedy-town",
+        "unitId": "85dc0347-d11b-4c8c-9686-dc6697050317",
+        "nameZh": "7-Eleven",
+        "category": "conveniencestore"
+      },
+      {
+        "station": "kennedy-town",
+        "unitId": "90e0ec60-9ec2-4e2a-aa70-fac74bab2b06",
+        "nameZh": "7-Eleven",
+        "category": "conveniencestore"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "e6c398d7-deab-4d23-abb5-c019a061d4c7",
+        "nameZh": "7-Eleven",
+        "category": "conveniencestore"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "6604ccf5-ddd6-47db-b32d-1242ed9dca6b",
+        "nameZh": "7-Eleven",
+        "category": "conveniencestore"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "85b1e45c-96ee-4599-95fd-001c3a841bfe",
+        "nameZh": "7-Eleven",
+        "category": "conveniencestore"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "491eb9bf-9d12-4385-b45d-5c15f3622aeb",
+        "nameZh": "7-Eleven",
+        "category": "conveniencestore"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "6131d08d-64c6-4902-bac1-545fb081f744",
+        "nameZh": "7-Eleven",
+        "category": "conveniencestore"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "9cfa7a01-6cf7-4898-a2a3-2174cf2cdb51",
+        "nameZh": "7-Eleven",
+        "category": "conveniencestore"
+      }
+    ],
+    "evidence": [
+      {
+        "kind": "operator",
+        "url": "https://www.dfiretailgroup.com/media/gdedjld3/dfi_corporate_overview.pdf",
+        "note": "DFI operates 7-Eleven in Hong Kong. Existing catalogue membership is retained as regional operating context, not global trademark ownership."
+      }
+    ]
+  },
+  {
+    "name": "759 Store",
+    "code": "759-store",
+    "category": "grocery_store",
+    "website": "https://www.759store.com/",
+    "parentCandidate": "cec-international",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "2b4ed22a-feb7-4e61-844e-4ef46acb5fb7",
+        "nameZh": "759 阿信屋",
+        "category": "shopping"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "3489a5ed-84ca-447c-b926-95c8d01a037e",
+        "nameZh": "759 阿信屋",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "A-1 Bakery",
+    "code": "a1-bakery",
+    "category": "bakery",
+    "website": "https://www.a-1bakery.com.hk/",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "e4af87fa-8e47-4669-b3ed-56145839be77",
+        "nameZh": "A-1 Bakery",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Arome Bakery",
+    "code": "arome",
+    "category": "bakery",
+    "website": "https://www.aromebakery.com.hk/",
+    "parentCandidate": "maxims-group",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "3f0a6a5e-e918-410c-a00d-ff0d33afdc4f",
+        "nameZh": "東海堂",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Bank of China (Hong Kong)",
+    "code": "bank-of-china-hong-kong",
+    "category": "bank",
+    "website": "https://www.bochk.com/en/home.html",
+    "parentCandidate": "boc-hong-kong-holdings",
+    "occurrences": [
+      {
+        "station": "kennedy-town",
+        "unitId": "91dce34e-e43f-49ee-87ce-37252f6a7954",
+        "nameZh": "中國銀行(香港)",
+        "category": "bank"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "c0f16b9f-73d7-46ae-ac04-0e0eada2572b",
+        "nameZh": "中國銀行(香港)",
+        "category": "bank"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "c0f16b9f-73d7-46ae-ac04-0e0eada2572b",
+        "nameZh": "中國銀行(香港)",
+        "category": "bank"
+      }
+    ]
+  },
+  {
+    "name": "Berlin Optical",
+    "code": "berlin-optical",
+    "category": "optometry",
+    "website": "https://www.berlinoptical.com/",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "5495cce0-9937-49ad-9ac9-a4d80d0354a0",
+        "nameZh": "Berlin Optical",
+        "category": "fashionaccessories"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "e6d18f5b-9ef5-4fdb-8508-cca8a815e2bf",
+        "nameZh": "Berlin Optical",
+        "category": "fashionaccessories"
+      }
+    ]
+  },
+  {
+    "name": "Cafe de Coral",
+    "code": "cafe-de-coral",
+    "category": "fast_food_restaurant",
+    "website": "https://www.cafedecoral.com/eng/main/index.jsp",
+    "parentCandidate": "cafe-de-coral-holdings",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "4e4c1956-7768-4990-bcfb-fae4feb5d9c3",
+        "nameZh": "大家樂",
+        "category": "restaurant"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "a239fed5-bf1e-4ece-801d-3f3ef539782c",
+        "nameZh": "大家樂",
+        "category": "restaurant"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "ad4f98c8-4e04-47af-85ec-a13ac4d8187b",
+        "nameZh": "大家樂",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Calzedonia - Italian Legwear",
+    "code": "calzedonia",
+    "category": "clothing_store",
+    "website": "https://www.calzedonia.com/hk/",
+    "parentCandidate": "oniverse",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "61d4c42f-8fe9-41fa-82cc-32ebf9d6e058",
+        "nameZh": "Calzedonia - Italian Legwear",
+        "category": "fashionaccessories"
+      }
+    ]
+  },
+  {
+    "name": "Carpenter Tan",
+    "code": "carpenter-tan",
+    "category": "beauty_supply_store",
+    "website": "https://www.ctihk.com/",
+    "parentCandidate": "carpenter-tan-holdings",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "67862c28-32f2-4222-8bad-7898ff2d6817",
+        "nameZh": "譚木匠",
+        "category": "fashionaccessories"
+      }
+    ]
+  },
+  {
+    "name": "Colourmix",
+    "code": "colourmix",
+    "category": "cosmetics_and_fragrance_store",
+    "website": "https://www.colourmix-cosmetics.com/",
+    "parentCandidate": "veeko",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "1cdf1bab-4f98-42fb-bb63-6c59f2fe3617",
+        "nameZh": "卡萊美",
+        "category": "healthcare"
+      }
+    ]
+  },
+  {
+    "name": "Comvita",
+    "code": "comvita",
+    "category": "health_food_store",
+    "website": "https://www.comvita.com.hk/",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "89e754ce-90e3-4c17-a6e3-45b586fe8d46",
+        "nameZh": "康維他",
+        "category": "healthcare"
+      }
+    ]
+  },
+  {
+    "name": "Dr. BBQ",
+    "code": "dr-bbq",
+    "category": "chinese_restaurant",
+    "website": "",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "0f578c67-73f7-4604-8b4b-7fef1e7f47a6",
+        "nameZh": "博士燒味",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Dr. George Medical Clinics",
+    "code": "dr-george-medical-clinics",
+    "category": "primary_care_or_general_clinic",
+    "website": "",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "bfce8e39-fb37-40e2-803c-c65c0dd01852",
+        "nameZh": "陳楚英醫務所",
+        "category": "transportationservices"
+      }
+    ]
+  },
+  {
+    "name": "Fotomax",
+    "code": "fotomax",
+    "category": "photography_service",
+    "website": "https://www.fotomax.com/",
+    "parentCandidate": "china-hong-kong-photo",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "75a070fd-38ec-425a-9c9d-ba1f1bff58f5",
+        "nameZh": "快圖美",
+        "category": "transportationservices"
+      }
+    ]
+  },
+  {
+    "name": "Giordano",
+    "code": "giordano",
+    "category": "clothing_store",
+    "website": "https://www.giordano.com.hk/",
+    "parentCandidate": "giordano-international",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "38b49d7c-ddee-4979-a48d-2822340ac1f0",
+        "nameZh": "佐丹奴",
+        "category": "fashionaccessories"
+      }
+    ]
+  },
+  {
+    "name": "Global Exchange",
+    "code": "global-exchange",
+    "category": "currency_exchange",
+    "website": "https://www.globalexchange.hk/",
+    "parentCandidate": "global-exchange-group",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "fa58641c-62aa-455a-8e3e-2817e2889a53",
+        "nameZh": "Global Exchange",
+        "category": "transportationservices"
+      }
+    ]
+  },
+  {
+    "name": "Green dot dot",
+    "code": "green-dot-dot",
+    "category": "health_food_store",
+    "website": "https://www.greendotdot.com/",
+    "parentCandidate": "kampery",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "7d21fe3e-df93-41bf-af20-d57e503248e9",
+        "nameZh": "點點綠",
+        "category": "healthcare"
+      }
+    ]
+  },
+  {
+    "name": "Hana musubi",
+    "code": "hana-musubi",
+    "category": "japanese_restaurant",
+    "website": "https://www.h-musubi.com/",
+    "parentCandidate": "hyakunousha",
+    "occurrences": [
+      {
+        "station": "kennedy-town",
+        "unitId": "e4214678-8599-4e2b-9356-79d1630321ef",
+        "nameZh": "華御結",
+        "category": "restaurant"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "a882ec6c-46bd-4899-affe-26cb5e8b52e8",
+        "nameZh": "華御結",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Hang Seng Bank",
+    "code": "hang-seng-bank",
+    "category": "bank",
+    "website": "https://www.hangseng.com/",
+    "parentCandidate": "hsbc",
+    "occurrences": [
+      {
+        "station": "kennedy-town",
+        "unitId": "50be22ee-9c64-4ee3-9b02-ebecb8639b1a",
+        "nameZh": "恒生銀行",
+        "category": "bank"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "a29a307b-39c4-47eb-9491-a748a5ba9098",
+        "nameZh": "恒生銀行",
+        "category": "bank"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "acb8c9f9-163d-4b07-b774-a2f70a059e0d",
+        "nameZh": "恒生銀行",
+        "category": "bank"
+      }
+    ]
+  },
+  {
+    "name": "Hertz Hong Kong",
+    "code": "hertz",
+    "category": "car_rental_service",
+    "website": "https://www.hertz.com.hk/",
+    "parentCandidate": "hertz-global",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "fe1e78d0-5c0c-4cd9-90df-40942131a405",
+        "nameZh": "Hertz Hong Kong",
+        "category": "transportationservices"
+      }
+    ]
+  },
+  {
+    "name": "Hiwalk 海邊走走",
+    "code": "hiwalk",
+    "category": "bakery",
+    "website": "https://www.hiwalk.co/",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "dd27f827-3495-415f-a819-f2e834c7c4d9",
+        "nameZh": "海邊走走",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Hung Fook Tong",
+    "code": "hung-fook-tong",
+    "category": "food_and_beverage_store",
+    "website": "https://www.hungfooktong.com/",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "kennedy-town",
+        "unitId": "6e7a237f-564b-4148-8098-c794c246d724",
+        "nameZh": "鴻福堂",
+        "category": "restaurant"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "7951c68c-d37e-49d1-988f-2b114de0a6d9",
+        "nameZh": "鴻福堂",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Hungry Korean",
+    "code": "hungry-korean",
+    "category": "korean_restaurant",
+    "website": "https://www.hungrykorean.com/",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "1d440452-156a-4970-9f70-361f1edbbbd6",
+        "nameZh": "Hungry Korean",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Italian Tomato",
+    "code": "italian-tomato",
+    "category": "bakery",
+    "website": "https://www.italiantomato.com.hk/",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "35180d0a-ed66-4519-a253-72217bc5ff1a",
+        "nameZh": "Italian Tomato",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Joint Host",
+    "code": "joint-host",
+    "category": "vending_machine_supplier",
+    "website": "https://jointhost.com.hk/",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "c0f16b9f-73d7-46ae-ac04-0e0eada2572b",
+        "nameZh": "Joint Host",
+        "category": "transportationservices"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "c0f16b9f-73d7-46ae-ac04-0e0eada2572b",
+        "nameZh": "Joint Host",
+        "category": "transportationservices"
+      }
+    ]
+  },
+  {
+    "name": "Juewei",
+    "code": "juewei",
+    "category": "food_and_beverage_store",
+    "website": "https://www.juewei.com/",
+    "parentCandidate": "juewei-food",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "58be7b93-9963-49ad-8e42-5ba91badadd6",
+        "nameZh": "絕味",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Kam Kee",
+    "code": "kam-kee",
+    "category": "hong_kong_style_cafe",
+    "website": "https://www.kamkee.com.hk/",
+    "parentCandidate": "kam-kee-holdings",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "bc05c6fc-1671-42bd-911e-a864ca39de98",
+        "nameZh": "金記",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Keen Health",
+    "code": "keen-health",
+    "category": "primary_care_or_general_clinic",
+    "website": "https://www.keenhealth.com.hk/",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "97db8fba-36ec-41a8-b553-4776488e2f17",
+        "nameZh": "健群堂",
+        "category": "transportationservices"
+      }
+    ]
+  },
+  {
+    "name": "Lovely Greenhouse",
+    "code": "lovely-greenhouse",
+    "category": "florist",
+    "website": "",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "d88d5184-f337-4780-8005-8966cd55e8ec",
+        "nameZh": "花奴",
+        "category": "shopping"
+      }
+    ]
+  },
+  {
+    "name": "M&S Food",
+    "code": "marks-and-spencer-food",
+    "category": "grocery_store",
+    "website": "https://www.marksandspencer.com/",
+    "parentCandidate": "marks-and-spencer-group",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "2d3cf93a-6d39-4fc8-9ae3-f1e9c8c994e5",
+        "nameZh": "M&S Food",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "MOS Burger Express",
+    "code": "mos-burger",
+    "category": "fast_food_restaurant",
+    "website": "https://mosburger-hk.com/",
+    "parentCandidate": "mos-food-services",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "b33baeae-6b75-42c6-927b-730ea5ede701",
+        "nameZh": "MOS Burger Express",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "MUJI com",
+    "code": "muji",
+    "category": "department_store",
+    "website": "https://www.muji.com/hk/",
+    "parentCandidate": "ryohin-keikaku",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "3991335c-aba4-49f0-888b-3c6c9f814376",
+        "nameZh": "MUJI com",
+        "category": "shopping"
+      }
+    ]
+  },
+  {
+    "name": "Mannings",
+    "code": "mannings",
+    "category": "pharmacy_and_drug_store",
+    "website": "https://www.mannings.com.hk/",
+    "parentCandidate": "dfi",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "7c33aff9-c4d7-4c97-a9a8-62273761ae4b",
+        "nameZh": "萬寧",
+        "category": "healthcare"
+      }
+    ]
+  },
+  {
+    "name": "Max Sight Photo",
+    "code": "max-sight",
+    "category": "photography_service",
+    "website": "https://www.maxsightgroup.com/",
+    "parentCandidate": "max-sight-group",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "c0f16b9f-73d7-46ae-ac04-0e0eada2572b",
+        "nameZh": "名仕快相",
+        "category": "transportationservices"
+      }
+    ]
+  },
+  {
+    "name": "Maxim's Cakes",
+    "code": "maxims",
+    "category": "bakery",
+    "website": "https://www.maximscakes.com.hk/tc",
+    "parentCandidate": "maxims-group",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "cf82d186-0483-4b49-ba0e-f9c867f27d57",
+        "nameZh": "美心西餅",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Mimi Sham, Dietitian",
+    "code": "mimi-sham-dietitian",
+    "category": "nutrition_service",
+    "website": "",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "87b0029b-c4ef-4748-af7d-0c273ea7c563",
+        "nameZh": "岑楊毓湄營養師",
+        "category": "transportationservices"
+      }
+    ],
+    "evidence": [
+      {
+        "kind": "directory",
+        "url": "https://school.eatsmart.gov.hk/files/pdf/dietetic_services_contact_en.pdf",
+        "note": "Government dietetic-services directory lists the practice at HOK 19. No website or corporate parent established."
+      }
+    ]
+  },
+  {
+    "name": "Mrs. Fields Cookies",
+    "code": "mrs-fields",
+    "category": "bakery",
+    "website": "https://www.mrsfields.com.hk/",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "f84afae3-e895-441b-9dc2-5a32acd42946",
+        "nameZh": "美國菲爾斯曲奇",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Natural is Best",
+    "code": "natural-is-best",
+    "category": "food_and_beverage_store",
+    "website": "",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "a31239d9-5b14-4877-8a77-b3c2d464f8eb",
+        "nameZh": "自然派",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Okashi Land",
+    "code": "okashi-land",
+    "category": "candy_store",
+    "website": "https://www.okashiland.com/",
+    "parentCandidate": "four-seas",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "8ff643a8-d486-4b56-85c4-86e274dfa0a6",
+        "nameZh": "零食物語",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Organic Nature",
+    "code": "organic-nature",
+    "category": "health_food_store",
+    "website": "https://www.ausupreme.com/",
+    "parentCandidate": "ausupreme",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "b0865de1-8c9e-4f4e-a6dc-cb597a186bf3",
+        "nameZh": "澳至尊",
+        "category": "healthcare"
+      }
+    ]
+  },
+  {
+    "name": "Original Taste Workshop",
+    "code": "original-taste-workshop",
+    "category": "food_and_beverage_store",
+    "website": "https://otw.com.hk/",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "kennedy-town",
+        "unitId": "6fa7db33-5d04-4176-be3f-04c9253230f3",
+        "nameZh": "原味家作",
+        "category": "transportationservices"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "f6939189-226f-49fd-945f-fc333c1c4630",
+        "nameZh": "原味家作",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "PIT",
+    "code": "pit",
+    "category": "womens_clothing_store",
+    "website": "https://www.pit.cc/shop",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "ccb5bc92-6c3b-4c2c-9a15-4c79e1f1129a",
+        "nameZh": "PIT",
+        "category": "fashionaccessories"
+      }
+    ]
+  },
+  {
+    "name": "POCA Spot",
+    "code": "poca-spot",
+    "category": "hobby_shop",
+    "website": "https://pocamarket.com/",
+    "parentCandidate": "infludeo",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "0fb2f47e-38f6-4b79-b982-1e0c2c106cf3",
+        "nameZh": "POCA Spot",
+        "category": "fashionaccessories"
+      }
+    ]
+  },
+  {
+    "name": "SARASEI",
+    "code": "sarasei",
+    "category": "bakery",
+    "website": "https://sarasei.com.hk/",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "3e74b863-390b-4f0b-b4b4-7d23c664a2cc",
+        "nameZh": "更紗製菓",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Salon Kesha",
+    "code": "salon-kesha",
+    "category": "hair_salon",
+    "website": "",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "09513c90-4dd3-47a7-96f9-af1c978aaf57",
+        "nameZh": "Salon Kesha",
+        "category": "transportationservices"
+      }
+    ]
+  },
+  {
+    "name": "Shiu Heung Yuen Bakery",
+    "code": "shiu-heung-yuen-bakery",
+    "category": "food_and_beverage_store",
+    "website": "https://walnut.com.hk/",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "kennedy-town",
+        "unitId": "80945577-9033-4666-9791-f68721877386",
+        "nameZh": "鯉魚門紹香園",
+        "category": "restaurant"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "900beff2-5aa5-46d7-9a8c-4b473d950421",
+        "nameZh": "鯉魚門紹香園",
+        "category": "shopping"
+      }
+    ]
+  },
+  {
+    "name": "Starbucks Coffee",
+    "code": "starbucks",
+    "category": "coffee_shop",
+    "website": "https://www.starbucks.com.hk/",
+    "parentCandidate": "starbucks-corporation",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "addddf9c-4eff-4c66-92ab-f3e0660eef37",
+        "nameZh": "星巴克",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Super Super Congee & Noodle",
+    "code": "super-super",
+    "category": "chinese_restaurant",
+    "website": "https://www.supersuper.com.hk/",
+    "parentCandidate": "cafe-de-coral-holdings",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "17bcfe3d-a2a3-4d69-99f8-3c55f78a39e2",
+        "nameZh": "一粥麵",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "TONYMOLY",
+    "code": "tonymoly",
+    "category": "cosmetics_and_fragrance_store",
+    "website": "https://www.tonymoly.com.hk/",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "dc321383-30d4-44b8-8536-a5b97581e5b8",
+        "nameZh": "TONYMOLY",
+        "category": "healthcare"
+      }
+    ]
+  },
+  {
+    "name": "TenRen Tea",
+    "code": "tenren-tea",
+    "category": "tea_room",
+    "website": "https://www.tenren.com/",
+    "parentCandidate": "ten-ren-tea",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "6afb91af-03f5-4c53-8800-a7492852c049",
+        "nameZh": "天仁茗茶",
+        "category": "restaurant"
+      }
+    ],
+    "evidence": [
+      {
+        "kind": "operator",
+        "url": "https://www.bandshk.com/upload/docs/report_202507251758310.pdf",
+        "note": "B&S report identifies Hong Kong licensed TenRen retail operations; franchise operation is distinct from brand ownership."
+      }
+    ]
+  },
+  {
+    "name": "Tong Bao Dim",
+    "code": "tong-bao-dim",
+    "category": "baozi_restaurant",
+    "website": "",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "ff340692-ab33-4f1e-a79a-10320d5bde17",
+        "nameZh": "唐包點",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Tong Kee Bao Dim",
+    "code": "tong-kee-bao-dim",
+    "category": "baozi_restaurant",
+    "website": "",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "658a1ecf-8523-4324-9aec-b9267332686c",
+        "nameZh": "唐記包點",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "WASO Cafe",
+    "code": "waso-cafe",
+    "category": "hong_kong_style_cafe",
+    "website": "",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "b28c181f-118f-492a-aeb5-1b0ef47e6701",
+        "nameZh": "華嫂冰室",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Watsons",
+    "code": "watsons",
+    "category": "pharmacy_and_drug_store",
+    "website": "https://www.watsons.com.hk/",
+    "parentCandidate": "as-watson",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "a721b2db-3ac3-42fb-8615-0bae7eeb551b",
+        "nameZh": "屈臣氏",
+        "category": "healthcare"
+      }
+    ]
+  },
+  {
+    "name": "Yamazaki Bakery",
+    "code": "yamazaki",
+    "category": "bakery",
+    "website": "https://www.yamazaki.hk/",
+    "parentCandidate": "yamazaki-group",
+    "occurrences": [
+      {
+        "station": "kennedy-town",
+        "unitId": "d639fad3-3246-431e-b28a-5cc2124dc6f1",
+        "nameZh": "山崎麵飽",
+        "category": "restaurant"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "70a07e8a-a12c-443c-af34-728d270b6fdc",
+        "nameZh": "山崎麵飽",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Zomii",
+    "code": "zomii",
+    "category": "fashion_accessories_store",
+    "website": "https://zomii.com/where-to-buy/",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "0fb2f47e-38f6-4b79-b982-1e0c2c106cf3",
+        "nameZh": "Zomii",
+        "category": "transportationservices"
+      }
+    ]
+  },
+  {
+    "name": "ans",
+    "code": "ans",
+    "category": "handbag_store",
+    "website": "https://www.ans.com.hk/",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "1904b772-29f4-4a1f-b3de-e474b354597e",
+        "nameZh": "ans",
+        "category": "fashionaccessories"
+      }
+    ]
+  },
+  {
+    "name": "eslite me-time",
+    "code": "eslite",
+    "category": "bookstore",
+    "website": "https://www.eslitecorp.com/",
+    "parentCandidate": "eslite-spectrum",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "0181402c-a279-4f22-83fc-bda7932508cf",
+        "nameZh": "誠品生活時光",
+        "category": "shopping"
+      }
+    ]
+  },
+  {
+    "name": "morimori",
+    "code": "morimori",
+    "category": "japanese_restaurant",
+    "website": "",
+    "parentCandidate": "",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "f1afb12e-54d1-4026-ba71-70ba2771aa1b",
+        "nameZh": "morimori 輕食堂",
+        "category": "restaurant"
+      }
+    ]
+  },
+  {
+    "name": "Tim Ho Wan",
+    "code": "tim-ho-wan",
+    "category": "dim_sum_restaurant",
+    "website": "https://www.timhowan.com/",
+    "parentCandidate": "jollibee-foods",
+    "occurrences": [
+      {
+        "station": "hong-kong",
+        "unitId": "7e226f31-a41d-422e-943a-1ae0a5477386",
+        "nameZh": "添好運點心專門店",
+        "category": "restaurant"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "d9c700d1-29d5-4ddc-85ae-a1017924e994",
+        "nameZh": "添好運點心專門店",
+        "category": "restaurant"
+      },
+      {
+        "station": "hong-kong",
+        "unitId": "60bf546e-fc04-40a2-99a3-41241ed94dcb",
+        "nameZh": "添好運點心專門店",
+        "category": "restaurant"
+      }
+    ]
+  }
+]
