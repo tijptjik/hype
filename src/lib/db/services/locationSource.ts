@@ -172,7 +172,7 @@ export async function persistSaanSeoiPlace(
     db
       .insert(locationTable)
       .select(sql`SELECT ${locationId},${projection.ssId},'operational','establishment',NULL,'linked','current',
-        NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${creationGuard}`)
+        NULL, NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${creationGuard}`)
       .onConflictDoNothing({ target: locationTable.id }),
     db.insert(locationRevisionInput).select(sql`SELECT ${revisionId},${locationId},
         (SELECT coalesce(max(version),0)+1 FROM locationRevisionContent AS locationRevision WHERE locationId=${locationId}),

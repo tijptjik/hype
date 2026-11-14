@@ -139,7 +139,7 @@ export async function applyUnresolvedFeatureSplit(
     db
       .insert(locationTable)
       .select(sql`SELECT ${plan.locationId},NULL,${locationTaxonomy(classifyLocationFactsKind('unknown', plan.facts)).kind},${locationTaxonomy(classifyLocationFactsKind('unknown', plan.facts)).class},${ownerOrganisationId},'unresolved','current',
-      NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard}`),
+      NULL, NULL, NULL, strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard}`),
     db
       .insert(locationRevisionInput)
       .select(sql`SELECT ${plan.revisionId},${plan.locationId},1,'local',

@@ -147,6 +147,7 @@ function setup(
   sqlite.exec(readFileSync('migrations/0121_place_refresh_identity_scan.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0122_simplify_place_refresh.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0138_location_storage.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0249_location_manual_match_attempt.sql', 'utf8'))
   sqlite.exec(
     readFileSync('migrations/0139_organisation_location_corrections.sql', 'utf8'),
   )

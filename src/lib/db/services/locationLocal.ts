@@ -187,7 +187,7 @@ export async function createLocalLocation(
     db
       .insert(locationTable)
       .select(sql`SELECT ${locationId},NULL,${locationTaxonomy(parsed.kind).kind},${locationTaxonomy(parsed.kind).class},${organisationId},${parsed.state},'current',
-      NULL,NULL,strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${successorGuard}`)
+      NULL,NULL,NULL,strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${successorGuard}`)
       .returning({ id: locationTable.id }),
     db
       .insert(locationRevisionInput)

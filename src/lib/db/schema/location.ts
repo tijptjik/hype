@@ -76,6 +76,8 @@ export const location = sqliteTable(
     })
       .notNull()
       .default('current'),
+    // Explicit unavailable disposition from manual reconciliation; NULL remains unreviewed.
+    lastManualMatchAttemptAt: text('lastManualMatchAttemptAt'),
     redirectTargetId: text('redirectTargetId'),
     redirect: text('redirect', { mode: 'json' }).$type<LocationRedirectRecord>(),
     createdAt: text('createdAt')
