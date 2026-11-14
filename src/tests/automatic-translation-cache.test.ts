@@ -327,3 +327,87 @@ it('accepts an unchanged AI source but still rejects a genuinely changed source'
     }),
   ).rejects.toMatchObject({ status: 409 })
 })
+
+it('persists verification changes for accepted AI while preserving its stored receipt', async () => {
+  const { db, sqlite } = database()
+  const accepted = {
+    origin: 'legacy-ai',
+    value: 'Hello',
+    acceptedValue: 'Hello',
+    humanVerified: false,
+    acceptedBy: 'original-reviewer',
+    acceptedAt: '2026-11-01T00:00:00.000Z',
+  }
+  sqlite
+    .prepare('UPDATE layerI18n SET translationProvenance=? WHERE locale=?')
+    .run(JSON.stringify({ name: accepted }), 'en')
+  for (const humanVerified of [true, false]) {
+    const rows = {
+      en: {
+        name: 'Hello',
+        nameGen: false,
+        translationProvenance: {
+          name: { ...accepted, humanVerified, value: 'forged replacement history' },
+        },
+      },
+    }
+    await prepareAutomaticTranslationSubmission({
+      db,
+      resource: 'layer',
+      id: 'layer',
+      rows,
+      actorId: 'reviewer',
+    })
+    expect(rows.en.translationProvenance.name).toEqual({ ...accepted, humanVerified })
+    expect(rows.en.nameGen).toBe(false)
+    const edited = { en: { ...rows.en, name: 'Authored after toggling' } }
+    await prepareAutomaticTranslationSubmission({
+      db,
+      resource: 'layer',
+      id: 'layer',
+      rows: edited,
+      actorId: 'reviewer',
+    })
+    expect(edited.en.name).toBe('Authored after toggling')
+    expect(edited.en.translationProvenance.name.humanVerified).toBe(!humanVerified)
+    sqlite
+      .prepare('UPDATE layerI18n SET translationProvenance=? WHERE locale=?')
+      .run(JSON.stringify(rows.en.translationProvenance), 'en')
+  }
+})
+
+it('rejects verification of an acceptance that changed after the editor loaded it', async () => {
+  const { db, sqlite } = database()
+  const accepted = {
+    origin: 'legacy-ai',
+    value: 'Hello',
+    acceptedValue: 'Hello',
+    humanVerified: false,
+    acceptedBy: 'reviewer',
+    acceptedAt: '2026-11-01T00:00:00.000Z',
+  }
+  sqlite
+    .prepare('UPDATE layerI18n SET translationProvenance=? WHERE locale=?')
+    .run(JSON.stringify({ name: accepted }), 'en')
+  await expect(
+    prepareAutomaticTranslationSubmission({
+      db,
+      resource: 'layer',
+      id: 'layer',
+      actorId: 'reviewer',
+      rows: {
+        en: {
+          name: 'Old value',
+          nameGen: false,
+          translationProvenance: {
+            name: {
+              ...accepted,
+              acceptedValue: 'Old value',
+              humanVerified: true,
+            },
+          },
+        },
+      },
+    }),
+  ).rejects.toMatchObject({ status: 409 })
+})

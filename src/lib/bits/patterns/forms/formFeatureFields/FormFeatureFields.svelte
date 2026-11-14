@@ -4,6 +4,7 @@ import { MultilingualReview } from '#lib/forms/multilingualReview.svelte.js'
 import MultilingualReviewPanel from '../translationReview/MultilingualReviewPanel.svelte'
 import TranslationSuggestion from '../translationReview/TranslationSuggestion.svelte'
 import { contentFormKey } from '#lib/i18n/contentRecords.js'
+import { isGeneratedTranslation } from '#lib/i18n/verification.js'
 import { automaticTranslationFromRow } from '#lib/i18n/automaticSchema.js'
 
 // ICONS
@@ -159,7 +160,11 @@ function resolvePropertyLabel(
                         value={translatedValue}
                         isTranslated={locale !== getLocaleKey()}
                         isGenAI={Boolean(
-                          proposal || property.i18n?.[contentFormKey(locale)]?.valueGen,
+                          proposal ||
+                            isGeneratedTranslation(
+                              property.i18n?.[contentFormKey(locale)],
+                              'value',
+                            ),
                         )}
                         {isEditing}
                         onToggleGenAI={() => {
@@ -180,7 +185,11 @@ function resolvePropertyLabel(
                         value={translatedValue}
                         isTranslated={locale !== getLocaleKey()}
                         isGenAI={Boolean(
-                          proposal || property.i18n?.[contentFormKey(locale)]?.valueGen,
+                          proposal ||
+                            isGeneratedTranslation(
+                              property.i18n?.[contentFormKey(locale)],
+                              'value',
+                            ),
                         )}
                         {isEditing}
                         onToggleGenAI={() => {

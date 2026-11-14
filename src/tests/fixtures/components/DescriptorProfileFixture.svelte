@@ -25,6 +25,7 @@ import type { DescriptorData } from '#lib/bits/patterns/forms/formI18nSection/co
 import type { ProfileProviderResult } from '#lib/bits/patterns/forms/featureLocation/profileTranslation.js'
 
 let {
+  acceptedAi = false,
   provider = async (
     _source: string,
     target: string,
@@ -34,6 +35,7 @@ let {
     text: `${target}: ${text}`,
   }),
 }: {
+  acceptedAi?: boolean
   provider?: (
     source: string,
     target: string,
@@ -80,6 +82,37 @@ $effect(() => {
           '# Privacy Policy\n\nWe protect **your data**.\n\n| Party | Role |\n| --- | --- |\n| HYPE | Provider |',
         privacyPolicyGen: false,
         termsOfService: '# Terms of Service\n\nPlease respect the community.',
+        ...(acceptedAi
+          ? {
+              translationProvenance: Object.fromEntries(
+                [
+                  ['name', name],
+                  [
+                    'description',
+                    '<p>Working together for a <strong>better tomorrow</strong>.</p>',
+                  ],
+                  [
+                    'privacyPolicy',
+                    '# Privacy Policy\n\nWe protect **your data**.\n\n| Party | Role |\n| --- | --- |\n| HYPE | Provider |',
+                  ],
+                  [
+                    'termsOfService',
+                    '# Terms of Service\n\nPlease respect the community.',
+                  ],
+                ].map(([field, value]) => [
+                  field,
+                  JSON.stringify({
+                    origin: 'legacy-ai',
+                    value,
+                    acceptedValue: value,
+                    humanVerified: false,
+                    acceptedBy: 'reviewer',
+                    acceptedAt: '2026-11-01T00:00:00.000Z',
+                  }),
+                ]),
+              ),
+            }
+          : {}),
       },
       zhHant: {
         name: '香港劇場',
@@ -97,29 +130,43 @@ const fields = new Proxy({} as Record<string, object>, {
     new Proxy(
       {},
       {
-        get: (_row, key: string) => ({
-          as: (type: string, hidden?: string) => ({
-            name: `data.i18n.${locale}.${key}`,
-            value: hidden ?? data.i18n?.[locale]?.[key as 'name'] ?? '',
-            ...(type === 'text'
-              ? {
-                  oninput: (event: Event) => {
-                    data = {
-                      ...data,
-                      i18n: {
-                        ...data.i18n,
-                        [locale]: {
-                          ...data.i18n?.[locale],
-                          [key]: (event.target as HTMLInputElement).value,
+        get: (_row, key: string) =>
+          key === 'translationProvenance' || key === 'autoTranslated'
+            ? new Proxy(
+                {},
+                {
+                  get: (_metadata, field: string) => ({
+                    as: (_type: string, value: string) => ({
+                      type: 'hidden',
+                      name: `data.i18n.${locale}.${key}.${field}`,
+                      value,
+                    }),
+                  }),
+                },
+              )
+            : {
+                as: (type: string, hidden?: string) => ({
+                  name: `data.i18n.${locale}.${key}`,
+                  value: hidden ?? data.i18n?.[locale]?.[key as 'name'] ?? '',
+                  ...(type === 'text'
+                    ? {
+                        oninput: (event: Event) => {
+                          data = {
+                            ...data,
+                            i18n: {
+                              ...data.i18n,
+                              [locale]: {
+                                ...data.i18n?.[locale],
+                                [key]: (event.target as HTMLInputElement).value,
+                              },
+                            },
+                          }
                         },
-                      },
-                    }
-                  },
-                }
-              : { type }),
-          }),
-          issues: () => undefined,
-        }),
+                      }
+                    : { type }),
+                }),
+                issues: () => undefined,
+              },
       },
     ),
 })

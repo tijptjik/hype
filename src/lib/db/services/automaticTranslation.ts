@@ -61,7 +61,8 @@ const ownerColumns = {
  * @param options Submitted locale rows and server-owned request identity.
  * @returns Nothing; normalizes metadata in the existing save payload.
  * @remarks This does not authorise writes. The owning remote must still run its existing
- * permission, revision and atomic save checks. Only explicit pending acceptances are promoted.
+ * permission, revision and atomic save checks. Pending acceptances are promoted; verification
+ * changes retain the matching stored receipt.
  */
 export async function prepareAutomaticTranslationSubmission(options: {
   db: Database
@@ -121,7 +122,27 @@ export async function prepareAutomaticTranslationSubmission(options: {
       automatic[field] = candidate
     }
     for (const [field, acceptance] of Object.entries(row.translationProvenance ?? {})) {
-      if (acceptance.acceptedBy !== 'pending') continue
+      if (acceptance.acceptedBy !== 'pending') {
+        const stored = prior?.translationProvenance?.[field]
+        // Apply only a verification change to the exact stored acceptance; never trust replacement receipts.
+        if (
+          stored &&
+          typeof acceptance.humanVerified === 'boolean' &&
+          acceptance.humanVerified !== stored.humanVerified
+        ) {
+          if (
+            acceptance.acceptedValue !== stored.acceptedValue ||
+            acceptance.acceptedBy !== stored.acceptedBy ||
+            acceptance.acceptedAt !== stored.acceptedAt
+          )
+            throw error(409, 'Accepted translation changed; reload before verifying it')
+          // A subsequent text edit supersedes the verification choice for the old value.
+          if (row[field] !== stored.acceptedValue) continue
+          provenance[field] = { ...stored, humanVerified: acceptance.humanVerified }
+          row[`${field}Gen`] = false
+        }
+        continue
+      }
       // Validate legacy acceptance against the stored value without inventing provider metadata.
       if ('origin' in acceptance && acceptance.origin === 'legacy-ai') {
         if (

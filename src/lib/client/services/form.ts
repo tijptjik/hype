@@ -1,3 +1,8 @@
+// TRANSLATION VERIFICATION
+import {
+  isGeneratedTranslation,
+  setGeneratedTranslation,
+} from '#lib/i18n/verification.js'
 import { isModelFormResource, type ModelFormResource } from '#lib/forms/modelTabs.js'
 import type { RemoteQuery, RemoteQueryOverride, RemoteFormIssue } from '$app/server'
 import { toast } from 'svelte-sonner'
@@ -1647,25 +1652,18 @@ export function getGenAiState(
   field: GenAiField,
 ): boolean {
   const localeData = form.fields.value().data?.i18n?.[contentFormKey(locale)]
-  if (!localeData) return false
-  if (field === 'title') return Boolean(localeData.titleGen)
-  if (field === 'name') return Boolean(localeData.nameGen)
-  if (field === 'nameShort') return Boolean(localeData.nameShortGen)
-  if (field === 'subscriptionBenefits') {
-    return Boolean(localeData.subscriptionBenefitsGen)
-  }
-  if (field === 'privacyPolicy') return Boolean(localeData.privacyPolicyGen)
-  if (field === 'termsOfService') return Boolean(localeData.termsOfServiceGen)
-  return Boolean(localeData.descriptionGen)
+  return isGeneratedTranslation(localeData, field)
 }
 
 /**
  * Toggles the generator-state boolean for one i18n field and locale.
- * Used by descriptor/credit fields to keep generator flags in sync with UI toggles.
+ * Used by descriptor/credit fields to keep verification metadata and UI toggles in sync.
+ * @returns Nothing; stages the choice in the owning form.
  *
  * @param form Mutable form state.
  * @param locale The locale being updated.
  * @param field The translatable field whose generator flag should flip.
+ * @param verify Whether this is an explicit verification choice rather than a text edit.
  */
 export function toggleGenAiField<
   T extends {
@@ -1684,22 +1682,21 @@ export function toggleGenAiField<
       >
     >
   },
->(form: FormDataUpdaterForm<T>, locale: string, field: GenAiField): void {
+>(
+  form: FormDataUpdaterForm<T>,
+  locale: string,
+  field: GenAiField,
+  verify = true,
+): void {
   updateFormData(form, data => {
     const localeKey = contentFormKey(locale)
 
     if (!data.i18n?.[localeKey]) return data
 
-    const fieldName = `${field}Gen` as
-      | 'titleGen'
-      | 'nameGen'
-      | 'nameShortGen'
-      | 'descriptionGen'
-      | 'subscriptionBenefitsGen'
-      | 'privacyPolicyGen'
-      | 'termsOfServiceGen'
-    const nextValue = !data.i18n[localeKey][fieldName]
-    data.i18n[localeKey][fieldName] = nextValue
+    const row = data.i18n[localeKey]
+    data.i18n[localeKey] = verify
+      ? setGeneratedTranslation(row, field, !isGeneratedTranslation(row, field), true)
+      : { ...row, [`${field}Gen`]: false }
     return data
   })
 }

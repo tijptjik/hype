@@ -1,4 +1,9 @@
 <script lang="ts">
+// TRANSLATION VERIFICATION
+import {
+  isGeneratedTranslation,
+  setGeneratedTranslation,
+} from '#lib/i18n/verification.js'
 import { translationPromptAttributes } from '#lib/forms/translationReview.js'
 import LocationCommunications from '#lib/bits/patterns/forms/featureLocation/LocationCommunications.svelte'
 import type { LocationProfileEdit } from '#lib/locations/profileEdit.js'
@@ -3964,16 +3969,26 @@ function togglePropertyI18nValueGen(
   propertyId: string,
   locale: keyof FeatureFormInput['data']['i18n'],
 ): void {
-  const currentProperty = currentFeatureData.properties?.find(
-    property => property.propertyId === propertyId,
-  )
-
-  updatePropertyI18nValue(
-    propertyId,
-    locale,
-    currentProperty?.i18n?.[locale]?.value ?? '',
-    !currentProperty?.i18n?.[locale]?.valueGen,
-  )
+  // Verification changes metadata without replacing text or hiding accepted content.
+  updateFeatureData(data => ({
+    ...data,
+    properties: (data.properties ?? []).map(property => {
+      if (property.propertyId !== propertyId) return property
+      const row = property.i18n?.[locale] ?? { value: '', valueGen: false }
+      return {
+        ...property,
+        i18n: {
+          ...property.i18n,
+          [locale]: setGeneratedTranslation(
+            row,
+            'value',
+            !isGeneratedTranslation(row, 'value'),
+            true,
+          ),
+        },
+      }
+    }),
+  }))
 }
 
 let layerPropertiesRevision = 0

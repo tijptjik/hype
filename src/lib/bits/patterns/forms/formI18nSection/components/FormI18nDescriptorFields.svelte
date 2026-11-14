@@ -72,25 +72,24 @@ let beforeEdit:
       field: GenAiField
       value: string | null | undefined
       gen: boolean | 'true' | 'false' | undefined
+      provenance: string | undefined
     }
   | undefined
 function startEdit(field: GenAiField): void {
   const row = form.fields.value().data?.i18n?.[locale]
-  beforeEdit = { field, value: row?.[field], gen: row?.[`${field}Gen`] }
+  beforeEdit = {
+    field,
+    value: row?.[field],
+    gen: row?.[`${field}Gen`],
+    provenance: row?.translationProvenance?.[field],
+  }
   onEditStart?.(field)
 }
 function toggleInline(field: GenAiField): void {
   const current = form.fields.value()
   const data = current.data
   if (!data) return
-  // Publication of accepted AI copy must not be toggled by its provenance indicator.
-  if (
-    unverifiedAcceptance(
-      data.i18n?.[locale]?.translationProvenance?.[field],
-      data.i18n?.[locale]?.[field],
-    )
-  )
-    return
+  // Verification changes preserve accepted copy and its original translation receipt.
   if (data.i18n?.[locale]) {
     toggleGenAiField(form, locale, field)
     return
@@ -130,6 +129,9 @@ function cancelEdit(): void {
   const current = form.fields.value()
   const data = current.data
   if (!data) return
+  const provenance = { ...data.i18n?.[locale]?.translationProvenance }
+  if (beforeEdit.provenance === undefined) delete provenance[beforeEdit.field]
+  else provenance[beforeEdit.field] = beforeEdit.provenance
   form.fields.set({
     ...current,
     data: {
@@ -140,6 +142,7 @@ function cancelEdit(): void {
           ...data.i18n?.[locale],
           [beforeEdit.field]: beforeEdit.value ?? '',
           [`${beforeEdit.field}Gen`]: beforeEdit.gen ?? false,
+          translationProvenance: provenance,
         },
       },
     },
@@ -166,7 +169,11 @@ function cancelEdit(): void {
       ...(config.ariaLabel ? { 'aria-label': config.ariaLabel } : {}),
     } as Record<string, unknown>}
     {@const genValue = getGenAiState(form, locale, config.key)}
-    {@const genAttrs = genField?.as('hidden', genValue ? 'true' : 'false')}
+    {@const storedGen = form.fields.value().data?.i18n?.[locale]?.[`${config.key}Gen`]}
+    {@const genAttrs = genField?.as(
+      'hidden',
+      storedGen === true || storedGen === 'true' ? 'true' : 'false',
+    )}
     {@const required = isRequiredInPreflight(['data', 'i18n', locale, config.key])}
     {@const issues = field.issues()}
 
@@ -195,7 +202,7 @@ function cancelEdit(): void {
             if (typeof attrs.oninput === 'function') attrs.oninput(event)
             onEditStart?.(config.key)
             if (getGenAiState(form, locale, config.key))
-              toggleGenAiField(form, locale, config.key)
+              toggleGenAiField(form, locale, config.key, false)
           },
         }}
         onToggle={() => toggleInline(config.key)}
@@ -218,6 +225,7 @@ function cancelEdit(): void {
         isGenAI={genValue ||
           unverifiedAcceptance(provenance, (attrs as { value?: string }).value)}
         onToggleGenAI={() => toggleInline(config.key)}
+        onValueChange={() => toggleGenAiField(form, locale, config.key, false)}
         value={(attrs as { value?: string }).value ?? ''}
         {issues}
         textareaAttrs={attrs as Record<string, unknown>}
@@ -238,6 +246,7 @@ function cancelEdit(): void {
           isGenAI={genValue ||
             unverifiedAcceptance(provenance, (attrs as { value?: string }).value)}
           onToggleGenAI={() => toggleInline(config.key)}
+          onValueChange={() => toggleGenAiField(form, locale, config.key, false)}
           value={(attrs as { value?: string }).value ?? ''}
           {issues}
           inputAttrs={attrs as Record<string, unknown>}

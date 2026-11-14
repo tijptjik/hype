@@ -378,3 +378,45 @@ describe('automatic draft API names', () => {
     expect(getData().properties![0].key).toBe(original)
   })
 })
+
+it('verifies accepted property labels and placeholders without changing published text', () => {
+  const receipt = {
+    origin: 'legacy-ai',
+    value: 'Machine text',
+    acceptedValue: 'Machine text',
+    humanVerified: false,
+    acceptedBy: 'reviewer',
+    acceptedAt: '2026-11-01T00:00:00.000Z',
+  }
+  const { form, getData } = createForm({
+    properties: [
+      {
+        id: 'property-1',
+        i18n: {
+          en: {
+            label: 'Machine text',
+            labelGen: false,
+            placeholder: 'Machine text',
+            placeholderGen: false,
+            translationProvenance: {
+              label: JSON.stringify(receipt),
+              placeholder: JSON.stringify(receipt),
+            },
+          },
+        },
+      },
+    ],
+  })
+  for (const field of ['label', 'placeholder'] as const) {
+    updateProjectPropertyI18n(form as never, 'property-1', 'en', `${field}Gen`, false)
+    const row = getData().properties[0].i18n.en
+    expect(row[field]).toBe('Machine text')
+    expect(row[`${field}Gen`]).toBe(false)
+    expect(JSON.parse(row.translationProvenance[field]).humanVerified).toBe(true)
+    updateProjectPropertyI18n(form as never, 'property-1', 'en', `${field}Gen`, true)
+    expect(
+      JSON.parse(getData().properties[0].i18n.en.translationProvenance[field])
+        .humanVerified,
+    ).toBe(false)
+  }
+})

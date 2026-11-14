@@ -96,7 +96,10 @@ function input(event: Event): void {
         ? { lang: locale, oninput: input }
         : { ...attrs, lang: locale, oninput: input }}
       onStart={() => {
-        beforeEdit = { value, gen }
+        beforeEdit = {
+          value,
+          gen: gen || unverifiedAcceptance(acceptedTranslation, value),
+        }
       }}
       onCancel={() => {
         if (proposal !== undefined) return
@@ -113,7 +116,7 @@ function input(event: Event): void {
         onValue('')
         onGen(false)
       }}
-      onToggle={() => onGen(!gen)}
+      onToggle={() => onGen(!(gen || unverifiedAcceptance(acceptedTranslation, value)))}
     />
 
     {#if proposal !== undefined}

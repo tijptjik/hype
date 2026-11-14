@@ -89,7 +89,7 @@ const showGenAiToggle = $derived(
 function handleValueChange(nextValue: string): void {
   if (!isEditing) return
   onValueChange?.(nextValue)
-  if (showGenAiToggle && isGenAI) onToggleGenAI?.()
+  // The owning form clears generation metadata when recording authored text.
 }
 </script>
 

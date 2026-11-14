@@ -1,3 +1,5 @@
+// TRANSLATION VERIFICATION
+import { setGeneratedTranslation } from '#lib/i18n/verification.js'
 // UTILITIES
 import { propertyKeyFromLabel } from '#lib/utils/nameIdentifier.js'
 import { customAlphabet } from 'nanoid'
@@ -1265,7 +1267,20 @@ export function updateProjectPropertyI18n(
       placeholderGen: false,
     }
     ;(target.i18n as WritableI18nRecord)[localeKey] = localeEntry
-    localeEntry[key] = value
+    if (key === 'labelGen' || key === 'placeholderGen') {
+      Object.assign(
+        localeEntry,
+        setGeneratedTranslation(
+          localeEntry,
+          key.slice(0, -3),
+          value === true || value === 'true',
+          true,
+        ),
+      )
+    } else {
+      localeEntry[key] = value
+      localeEntry[`${key}Gen`] = false
+    }
     // Follow English labels only while the generated API name remains untouched.
     const automaticKeys = automaticPropertyKeys.get(form)
     if (

@@ -1570,6 +1570,8 @@ $effect(() => {
             {@const genKey = field === 'label' ? 'labelGen' : 'placeholderGen'}
             {@const gen = getPropertyGenState(locale, genKey)}
             {@const proposal = proposals[`${field}:${locale}`]}
+            {@const acceptedTranslation = getLocaleEntry(property.i18n, locale)
+              ?.translationProvenance?.[field]}
             {@const value =
               (getPropertyLocaleFieldAttrs(key, field) as { value?: string }).value ??
               getLocaleEntry(property.i18n, locale)?.[field] ??
@@ -1587,10 +1589,22 @@ $effect(() => {
                   <input
                     {...getFieldAttrsWithValue(['i18n', key, genKey], 'hidden', gen)}
                   >
+                  {#if acceptedTranslation && !proposal?.accepted}
+                    <input
+                      {...getFieldAttrsWithValue(
+                        ['i18n', key, 'translationProvenance', field],
+                        'hidden',
+                        typeof acceptedTranslation === 'string'
+                          ? acceptedTranslation
+                          : JSON.stringify(acceptedTranslation),
+                      )}
+                    >
+                  {/if}
                   <FormFieldLocaleText
                     {hubReview}
-                    acceptedTranslation={getLocaleEntry(property.i18n, locale)
-                      ?.translationProvenance?.[field]}
+                    acceptedTranslation={proposal?.accepted
+                      ? undefined
+                      : acceptedTranslation}
                     missing={hubReview &&
                       reviewOpen &&
                       !value.trim() &&
@@ -1624,7 +1638,10 @@ $effect(() => {
                     required={isFieldRequired(['i18n', key, field])}
                     {isEditing}
                     onValue={text => onUpdateI18n(property.id, locale, field, text)}
-                    onGen={next => onUpdateI18n(property.id, locale, genKey, next)}
+                    onGen={next => {
+                      if (proposal?.accepted) proposal.humanVerified = !next
+                      else onUpdateI18n(property.id, locale, genKey, next)
+                    }}
                   />
                 </div>
               </div>

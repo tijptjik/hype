@@ -301,3 +301,32 @@ it('registers a shared authoring locale selected on another resource tab without
   expect(snapshot(view.container).data.i18n.fr.description).toBe('')
   expect(snapshot(view.container).data.i18n.en).toEqual(original)
 })
+
+it('toggles accepted AI verification in profiles and policy markdown without editing their text', async () => {
+  const view = render(Fixture, { acceptedAi: true })
+  await fireEvent.click(screen.getByRole('button', { name: 'Toggle editing' }))
+  for (const field of ['name', 'description', 'privacyPolicy', 'termsOfService']) {
+    if (field === 'privacyPolicy') {
+      await fireEvent.click(screen.getByRole('button', { name: 'Hub profile' }))
+      await fireEvent.click(screen.getByRole('button', { name: 'Policies tab' }))
+    }
+    const row = view.container.querySelector(
+      `[data-profile-field="${field}"] [data-profile-locale="en"]`,
+    ) as HTMLElement
+    const original = snapshot(view.container).data.i18n.en[field]
+    await fireEvent.click(
+      within(row).getByRole('button', { name: 'Machine Translated' }),
+    )
+    expect(within(row).getByRole('button', { name: 'Human Validated' })).toBeTruthy()
+    const human = snapshot(view.container).data.i18n.en
+    expect(human[field]).toBe(original)
+    expect(JSON.parse(human.translationProvenance[field]).humanVerified).toBe(true)
+    await fireEvent.click(within(row).getByRole('button', { name: 'Human Validated' }))
+    expect(within(row).getByRole('button', { name: 'Machine Translated' })).toBeTruthy()
+    expect(snapshot(view.container).data.i18n.en[field]).toBe(original)
+    const hiddenGen = row.querySelector<HTMLInputElement>(
+      `input[name="data.i18n.en.${field}Gen"]`,
+    )
+    expect(hiddenGen?.value).toBe('false')
+  }
+})
