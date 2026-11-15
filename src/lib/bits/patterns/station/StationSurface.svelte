@@ -179,7 +179,7 @@ const offset = $derived(responsive.isMobile ? 0 : (layout?.getAppMainOffsetX() ?
           ) as option (option.value)}
             <button
               type="button"
-              class="hover:bg-panel/80 focus-visible:outline-focus aria-pressed:bg-panel flex w-full flex-col gap-1 rounded-lg px-3 py-2 text-left aria-pressed:font-semibold"
+              class="hover:text-primary focus-visible:outline-focus flex w-fit max-w-full flex-col gap-1 rounded-lg bg-[var(--station-canvas)] px-2 py-1 text-left aria-pressed:font-semibold"
               aria-label={option.label}
               aria-pressed={station.exploded
                 ? option.value === 'all'
@@ -209,7 +209,7 @@ const offset = $derived(responsive.isMobile ? 0 : (layout?.getAppMainOffsetX() ?
           'https://api.portal.hkmapservice.gov.hk/disclaimer'}
         target="_blank"
         rel="noreferrer"
-        class="text-muted-foreground absolute right-3 bottom-2 z-10 flex items-center gap-2 px-2 py-1 text-[9px]"
+        class="text-muted-foreground absolute right-3 bottom-2 z-10 flex items-center gap-2 rounded-lg bg-[var(--station-canvas)] px-2 py-1 text-[9px]"
         ><img
           src={station.data.attributionLogo}
           alt="Lands Department"
