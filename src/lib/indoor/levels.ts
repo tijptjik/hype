@@ -8,6 +8,7 @@ export type LevelOption = {
   label: string
   floor: string
   exit: string
+  line?: string
   kind: string
 }
 
@@ -23,12 +24,17 @@ export function stationLevelOptions(levels: IndoorFeature[]): LevelOption[] {
       .map(level => {
         const name = value(level.properties, 'level_name_en')
         const exit = name.match(/^Exit\s+(\S+)\s+/i)?.[1] ?? ''
-        const floor = name.replace(/^Exit\s+\S+\s+/i, '').replace(/\s+Level$/i, '')
+        const platform = name.match(/^Platform(?:\s+Level)?\s*\(([^)]+)\)$/i)
+        const line = platform?.[1].trim() ?? ''
+        const floor = platform
+          ? 'Platform'
+          : name.replace(/^Exit\s+\S+\s+/i, '').replace(/\s+Level$/i, '')
         return {
           value: value(level.properties, 'level_id'),
-          label: exit ? `${floor} · Exit ${exit}` : floor,
+          label: exit ? `${floor} · Exit ${exit}` : line ? `${floor} · ${line}` : floor,
           floor,
           exit,
+          line,
           kind: exit
             ? 'exit'
             : /platform/i.test(name)

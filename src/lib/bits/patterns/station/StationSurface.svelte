@@ -187,9 +187,9 @@ const offset = $derived(responsive.isMobile ? 0 : (layout?.getAppMainOffsetX() ?
               onclick={() => station.selectLevel(option.value)}
             >
               <StationLevelLabel {option} />
-              {#if option.exit}
+              {#if option.exit || option.line}
                 <span class="text-muted-foreground pl-7 text-xs"
-                  >Exit {option.exit}</span
+                  >{option.exit ? `Exit ${option.exit}` : option.line}</span
                 >
               {/if}
             </button>
