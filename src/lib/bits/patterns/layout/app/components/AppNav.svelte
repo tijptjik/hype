@@ -28,7 +28,8 @@ import FunnelIcon from 'virtual:icons/proicons/filter'
 import InformationCircleIcon from 'virtual:icons/proicons/info'
 import MapIcon from 'virtual:icons/proicons/map'
 import StationIcon from 'virtual:icons/tabler/train'
-import FitIcon from 'virtual:icons/tabler/focus-centered'
+import RouteIcon from 'virtual:icons/lucide/route'
+import StationMapTools from '#lib/bits/patterns/station/StationMapTools.svelte'
 import MonitorIcon from 'virtual:icons/proicons/computer'
 import NewspaperIcon from 'virtual:icons/proicons/file-text'
 import SettingsIcon from 'virtual:icons/proicons/settings'
@@ -59,7 +60,17 @@ const session = useSession()
 const ADD_FEATURE_MENU_VALUE = 'addFeature'
 const SUBSCRIPTION_MENU_VALUE = 'subscribe'
 const STATION_MENU_VALUE = 'station'
-const FIT_MENU_VALUE = 'fitStation'
+const ROUTE_MENU_VALUE = 'stationRoute'
+let routeOpen = $state(false)
+const canPreviewRoute = $derived(
+  appCtx.isSuperAdmin() &&
+    station.active &&
+    Boolean(station.data) &&
+    station.data?.coordinateSpace !== 'image-pixels',
+)
+$effect(() => {
+  if (!canPreviewRoute || station.loading) routeOpen = false
+})
 // Retain map-dependent navigation through station loads, then adopt the completed venue.
 let hasStationMap = $state(false)
 $effect(() => {
@@ -69,18 +80,18 @@ $effect(() => {
 type AppNavMenuValue =
   | Panel
   | typeof STATION_MENU_VALUE
-  | typeof FIT_MENU_VALUE
+  | typeof ROUTE_MENU_VALUE
   | typeof ADD_FEATURE_MENU_VALUE
   | typeof SUBSCRIPTION_MENU_VALUE
 
 const items = $derived<AppMenuItem<AppNavMenuValue>[]>(
   station.active
     ? [
-        { value: Panel.prisms, icon: StationIcon, label: 'Amenities' },
+        { value: Panel.prisms, icon: StationIcon, label: 'Station' },
         { value: STATION_MENU_VALUE, icon: MapIcon, label: 'Surroundings' },
-        ...(hasStationMap
+        ...(hasStationMap && canPreviewRoute
           ? ([
-              { value: FIT_MENU_VALUE, icon: FitIcon, label: 'Fit' },
+              { value: ROUTE_MENU_VALUE, icon: RouteIcon, label: 'Route' },
             ] satisfies AppMenuItem<AppNavMenuValue>[])
           : []),
         { value: Panel.settings, icon: SettingsIcon, label: m.menu_settings() },
@@ -152,13 +163,14 @@ async function handleSelect(
   item: AppMenuItem<AppNavMenuValue>,
   event: MouseEvent,
 ): Promise<void> {
+  if (item.value !== ROUTE_MENU_VALUE) routeOpen = false
   if (item.value === STATION_MENU_VALUE) {
     station.close()
     return
   }
-  if (item.value === FIT_MENU_VALUE) {
-    if (station.loading || !station.data) return
-    station.fitRevision++
+  if (item.value === ROUTE_MENU_VALUE) {
+    if (!canPreviewRoute || station.loading) return
+    routeOpen = !routeOpen
     return
   }
   if (item.value === ADD_FEATURE_MENU_VALUE) {
@@ -196,3 +208,7 @@ async function handleSelect(
 </script>
 
 <AppMenu {items} {trailingItems} {offsetX} onSelect={handleSelect} />
+
+{#if canPreviewRoute}
+  <StationMapTools bind:open={routeOpen} {offsetX} />
+{/if}
