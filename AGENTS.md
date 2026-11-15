@@ -56,6 +56,10 @@
 
 ### Styling
 
+- Always use skeletons for loading states; never display loading text. Match the
+  skeleton to the loaded content's layout and dimensions. Accessible loading labels and
+  busy states may still be provided to assistive technology.
+
 - Use inline Tailwind utility classes for light styling.
 - Use a colocated `{component}.styles.ts` when the styling becomes heavy. Break the
   styles up into readable, logical chunks based on their domain and combine them with
