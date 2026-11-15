@@ -1,5 +1,5 @@
 // SVELTE
-import { getContext, setContext } from 'svelte'
+import { getContext, setContext, untrack } from 'svelte'
 // GEO
 import { bbox } from '@turf/bbox'
 // CONTEXT
@@ -33,7 +33,10 @@ import type { Id } from '#lib/types.js'
 
 /** Public map application orchestration. Admin and dashboard routes do not construct it. */
 export class AppCtx {
-  readonly station = new StationState()
+  readonly station = new StationState(() =>
+    this.onlyFeaturedMtrShops ? this.featuredIndoorUnits : null,
+  )
+  private featuredIndoorUnits = $state.raw<ReadonlySet<string>>(new Set())
   readonly view: ResourceViewCtx
   readonly selection = new AppSelection(
     id => this.view.cache.feature.get(id) ?? this.view.features.get(id),
@@ -91,6 +94,34 @@ export class AppCtx {
       queryFn: () => this.featuresQueryFn(),
     })
     cacheCtx.installProviders(mapResourceProviders)
+    $effect(() => {
+      const active =
+        this.station.active && this.station.isMtr && this.onlyFeaturedMtrShops
+      const input = this.view.filters.featureQueryInput({ includeCounts: false })
+      // Indoor matches must cover the full selected scope, independent of outdoor camera bounds.
+      this.featuredIndoorUnits = new Set()
+      if (!active || !input.prisms?.layer?.length) return
+      const query = untrack(() => cacheCtx.createFeatureQuery())
+      let current = true
+      untrack(() => {
+        void (async () => {
+          try {
+            await query.load(input)
+            while (current && query.hasMore && !query.error) await query.next()
+            if (current && !query.error)
+              this.featuredIndoorUnits = new Set(
+                query.rows.flatMap(row => (row.indoorUnitId ? [row.indoorUnitId] : [])),
+              )
+          } catch (error) {
+            if (current) console.error('Could not load featured indoor shops:', error)
+          }
+        })()
+      })
+      return () => {
+        current = false
+        cacheCtx.releaseFeatureQuery(query)
+      }
+    })
   }
 
   /** Drops the camera capability and releases the resource view. @returns Nothing. */

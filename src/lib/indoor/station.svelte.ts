@@ -1,3 +1,4 @@
+import { visibleIndoorPlaces } from './visibility'
 import type { IndoorRoute } from './routing'
 import { goto } from '$app/navigation'
 import {
@@ -45,6 +46,7 @@ export class StationState {
   }
   active = $state(false)
   code = $state('KET')
+  isMtr = $derived(Boolean(findStation(this.code)))
   metadata = $derived(findStation(this.code))
   exploded = $state(true)
   bearing = $state(-115)
@@ -53,7 +55,14 @@ export class StationState {
   spacing = $state(25)
   showInferred = $state(true)
   data = $state.raw<IndoorData | null>(null)
-  entries = $state.raw<Place[]>([])
+  private sourceEntries = $state.raw<Place[]>([])
+  entries = $derived(
+    visibleIndoorPlaces(this.sourceEntries, this.isMtr ? this.featuredUnits() : null),
+  )
+  /** Configure shop visibility without altering physical geometry.
+   * @param featuredUnits Null exposes all shops; a set restricts shops to accepted Feature units.
+   */
+  constructor(private featuredUnits: () => ReadonlySet<string> | null = () => null) {}
   floor = $state('')
   selected = $state<Place | null>(null)
   error = $state('')
@@ -78,7 +87,7 @@ export class StationState {
       const controller = new AbortController()
       this.controller = controller
       this.data = null
-      this.entries = []
+      this.sourceEntries = []
       this.documents = []
       this.selected = null
       this.loading = true
@@ -98,7 +107,7 @@ export class StationState {
         if (controller.signal.aborted) return
         this.documents = documents
         this.data = data
-        this.entries = data ? places(data) : []
+        this.sourceEntries = data ? places(data) : []
         this.floor = data ? value(initialLevel(data).properties, 'level_id') : ''
         this.exploded = true
         this.loadedCode = code

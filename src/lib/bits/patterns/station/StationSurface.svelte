@@ -28,6 +28,15 @@ $effect(() => {
     } else if (station.active) station.close(false)
   })
 })
+// Clear hidden shop details and routes when the selected project or Feature set changes.
+$effect(() => {
+  const visible = new Set(station.entries.map(place => place.id))
+  if (station.selected?.kind === 'shop' && !visible.has(station.selected.id)) {
+    station.selected = null
+    station.clearRoute()
+  }
+  if (station.route && !visible.has(station.route.targetId)) station.clearRoute()
+})
 const offset = $derived(responsive.isMobile ? 0 : (layout?.getAppMainOffsetX() ?? 0))
 </script>
 {#if station.active}

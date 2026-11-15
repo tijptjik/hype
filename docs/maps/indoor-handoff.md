@@ -406,3 +406,27 @@ required before applying cross-family station reconciliations.
 
 The initial Kennedy Town review is in `scripts/indoor/mtr-station-reconciliation.json`.
 Its blacklist is deliberately empty: no building-family duplicate has been verified.
+
+## Featured MTR shop visibility (15 November 2026, Refs #194)
+
+The project setting now restricts the indoor shop directory, logos, labels, selection
+and route destinations to units linked through a Feature's accepted current occupancy.
+The authorized Feature read exposes only the matching LandsD source unit ID, using the
+retained canonical-draft source correlation. Draft Features, former/suppressed
+occupancies and foreign private placements do not qualify. No name or coordinate
+matching creates relationships.
+
+Matching traverses the complete selected Feature scope, including pagination, without
+the outdoor viewport constraint. Scope changes clear stale matches immediately; loading
+or failed matching does not expose all shops. Existing multi-project policy applies:
+restriction is active only when all selected projects request it. Physical unit outlines
+and facilities remain visible; non-MTR premises are unaffected. Combined source polygons
+remain one unit, so this filter operates at the accepted unit level. Unreconciled shops
+remain hidden until reviewed occupancies are accepted by their Features.
+
+Validation: the focused accepted-occupancy/visibility suite passed on Li
+(`job-Yp70Clt4Am`); scoped lint passed. The managed Chrome interaction job
+(`job-jWmOl4CD4H`) lost its SSH connection before completion when Li became unreachable.
+Full typecheck (`job-i3wVkHFV1U`) reported Node heap exhaustion before the connection
+failed; complete artifacts could not be retrieved. Browser verification and a typecheck
+retry with a larger Node heap remain outstanding. No local browser fallback was used.

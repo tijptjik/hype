@@ -28,6 +28,7 @@ import {
 } from './locationBrandProjection.js'
 import { featureLocationNamesSQL } from './locationNameProjection.js'
 import { featureLocationLifecycleSQL } from './locationLifecycleProjection.js'
+import { featureIndoorUnitSQL } from './featureIndoorProjection'
 // SEARCH
 import { rankNearbyFeatures } from '#lib/features/nearby.js'
 import { foldFeatureSearchText } from '#lib/features/search.js'
@@ -234,6 +235,7 @@ export async function queryFeatureIndex(
         locationNames: featureLocationNamesSQL().as('locationNames'),
         authoring: featureAuthoringSQL().as('authoring'),
         locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
+        indoorUnitId: featureIndoorUnitSQL().as('indoorUnitId'),
       },
       where: and(
         ...conditions,

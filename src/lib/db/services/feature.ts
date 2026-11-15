@@ -38,6 +38,7 @@ import { retryBusyRead } from './sqlite'
 import { featureLocationBrandsSQL } from './locationBrandProjection'
 import { featureLocationNamesSQL } from './locationNameProjection'
 import { featureLocationLifecycleSQL } from './locationLifecycleProjection'
+import { featureIndoorUnitSQL } from './featureIndoorProjection'
 import { validateFeaturePhoneProperties } from './feature-property-validation'
 // MAP
 import { createFeatureSpatialIndex } from '#lib/map/featureSpatial.js'
@@ -464,6 +465,7 @@ export const listFeatures = async <TRow extends Record<string, unknown> = Featur
             locationNames: featureLocationNamesSQL().as('locationNames'),
             authoring: featureAuthoringSQL().as('authoring'),
             locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
+            indoorUnitId: featureIndoorUnitSQL().as('indoorUnitId'),
           },
       where: whereClause,
       limit: pageLimit === undefined ? undefined : pageLimit + 1,
@@ -537,6 +539,7 @@ export const getFeature = async <TRow extends Record<string, unknown> = FeatureD
         locationNames: featureLocationNamesSQL().as('locationNames'),
         authoring: featureAuthoringSQL().as('authoring'),
         locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
+        indoorUnitId: featureIndoorUnitSQL().as('indoorUnitId'),
       },
       where: allConditions.length > 0 ? and(...allConditions) : undefined,
     }),

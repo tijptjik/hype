@@ -298,6 +298,7 @@ export const FeatureListRow = FeatureBase.extend({
   locationNames: ReadLocationNames,
   authoring: ReadFeatureAuthoring,
   locationLifecycle: ReadLocationLifecycle,
+  indoorUnitId: z.string().nullish(),
   divisionMemberships: z
     .array(z.object({ divisionId: z.string(), selected: z.boolean() }))
     .optional(),
@@ -327,6 +328,7 @@ export const FeatureAdminRow = FeatureBase.extend({
   locationNames: ReadLocationNames,
   authoring: ReadFeatureAuthoring,
   locationLifecycle: ReadLocationLifecycle,
+  indoorUnitId: z.string().nullish(),
   i18n: z.array(FeatureI18nBase).nullish(),
   properties: z
     .array(
@@ -470,6 +472,7 @@ export const FeatureListProfileAPI = FeatureListFields.extend({
   locationNames: ReadLocationNames,
   authoring: ReadFeatureAuthoring,
   locationLifecycle: ReadLocationLifecycle,
+  indoorUnitId: z.string().nullish(),
   divisionMemberships: z
     .array(z.object({ divisionId: z.string(), selected: z.boolean() }))
     .optional(),
@@ -504,6 +507,7 @@ export const FeatureAdminProfileAPI = FeatureBase.extend({
   locationNames: ReadLocationNames,
   authoring: ReadFeatureAuthoring,
   locationLifecycle: ReadLocationLifecycle,
+  indoorUnitId: z.string().nullish(),
   i18n: contentLocaleMap(FeatureI18nBase.partial({ featureId: true })).nullish(),
   properties: z.array(FeaturePropertyAPI).default([]),
   contributor: UserBasic.nullish(),

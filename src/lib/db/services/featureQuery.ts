@@ -35,6 +35,7 @@ import { featureSearchDocument } from '#lib/db/schema/featureQuery.js'
 import { featureLocationBrandsSQL } from './locationBrandProjection'
 import { featureLocationNamesSQL } from './locationNameProjection'
 import { featureLocationLifecycleSQL } from './locationLifecycleProjection'
+import { featureIndoorUnitSQL } from './featureIndoorProjection'
 import { getFeatureHubFilter } from './hub'
 import { retryBusyRead } from './sqlite'
 import { getFeatureQueryCounts } from './featureCounts'
@@ -523,6 +524,7 @@ export async function queryFeaturePage(
             locationNames: featureLocationNamesSQL().as('locationNames'),
             authoring: featureAuthoringSQL().as('authoring'),
             locationLifecycle: featureLocationLifecycleSQL().as('locationLifecycle'),
+            indoorUnitId: featureIndoorUnitSQL().as('indoorUnitId'),
           },
           columns: { spatialIndex: false },
           // Recheck visibility if a feature changes between candidate selection and hydration.

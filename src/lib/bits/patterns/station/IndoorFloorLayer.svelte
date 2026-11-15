@@ -130,7 +130,10 @@ const isBrand = (feature: IndoorFeature) => Boolean(brand(feature))
     {/each}
   {/if}
   <!-- Transparent targets sit above artwork, so a logo remains a shop hit target. -->
-  {#each units as unit}
+  {#each units.filter(
+    unit =>
+      exploded || entries.some(place => place.id === value(unit.properties, 'unit_id')),
+  ) as unit}
     <!-- biome-ignore lint/a11y/useSemanticElements: SVG geometry cannot be an HTML button; the directory provides keyboard selection. -->
     <path
       d={projection.path(unit)}

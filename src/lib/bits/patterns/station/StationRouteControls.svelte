@@ -45,7 +45,12 @@ async function preview(
   if (!data || !entrance || !target) return false
   station.clearRoute()
   const route = await findIndoorRoute(data, entrance, target)
-  if (station.data !== data || !station.active) return false
+  if (
+    station.data !== data ||
+    !station.active ||
+    !targets.some(place => place.id === destination)
+  )
+    return false
   if (!route) return false
   station.selected = null
   station.exploded = true
