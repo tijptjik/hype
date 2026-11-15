@@ -1,5 +1,5 @@
-import { indexMatches } from './indexNavigation'
 import { prepareIndoorData } from './preload'
+import { indexMatches } from './indexNavigation'
 import { visibleIndoorPlaces } from './visibility'
 import type { IndoorRoute } from './routing'
 import { goto } from '$app/navigation'
@@ -54,6 +54,18 @@ export class StationState {
     this.routeMode = 'flying'
     this.fitRevision++
   }
+  worldView = $state.raw<{
+    center: [number, number]
+    zoom: number
+    bearing: number
+    pitch: number
+    metresPerPixel: number
+  } | null>(null)
+  returningToMap = $state(false)
+  returnSceneReady = $state(false)
+  returnMapReady = $state(false)
+  returnFading = $state(false)
+  active = $state(false)
   code = $state('')
   isMtr = $derived(Boolean(findStation(this.code)))
   metadata = $state<ReturnType<typeof findPremises>>(undefined)
@@ -82,9 +94,10 @@ export class StationState {
   documents = $state.raw<{ kind: string; path: string }[]>([])
   private controller: AbortController | null = null
   private loadedCode = ''
-  /** Mounted scene callback preserves or recenters the frame before changing floors. */
-  preserveFloorCamera: ((id: string) => void) | null = null
   enterFromMap = false
+  entryPose = { bearing: 0, tilt: 0 }
+  /** Mounted scene callback freezes the visible frame before changing floors. */
+  preserveFloorCamera: ((id: string) => void) | null = null
   private prepared: { code: string; data: IndoorData | null } | null = null
   /** Prepare an indoor map while the outdoor camera approaches.
    * @param code Venue code. @returns Completion once the destination is ready.
@@ -117,7 +130,10 @@ export class StationState {
       await goto(premisesPath(code, id))
       return
     }
+    this.returningToMap = false
+    this.returnFading = false
     if ((id && this.route) || code !== this.loadedCode) this.clearRoute()
+    if (this.code !== code) this.worldView = null
     this.active = true
     this.code = code
     this.metadata = findPremises(code)
@@ -155,8 +171,11 @@ export class StationState {
         this.data = data
         this.sourceEntries = data ? places(data) : []
         this.floor = data ? value(initialLevel(data).properties, 'level_id') : ''
-        this.bearing =
-          this.enterFromMap || data?.coordinateSpace === 'image-pixels' ? 0 : -115
+        this.bearing = this.enterFromMap
+          ? this.entryPose.bearing
+          : data?.coordinateSpace === 'image-pixels'
+            ? 0
+            : -115
         this.exploded = !this.enterFromMap && !this.isBuilding
         this.loadedCode = code
       } catch (error) {
@@ -167,7 +186,9 @@ export class StationState {
       }
       if (controller.signal.aborted) return
     }
-    this.selected = id ? (this.entries.find(p => p.id === id) ?? null) : null
+    this.selected = id
+      ? (this.entries.find(p => p.id === id || p.sourceIds?.includes(id)) ?? null)
+      : null
     if (id && !this.selected)
       this.error = 'This place is not available in the venue snapshot.'
     if (this.selected) {
@@ -175,8 +196,8 @@ export class StationState {
       this.exploded = false
     }
     if (this.enterFromMap) {
-      this.bearing = 0
-      this.planTilt = 0
+      this.bearing = this.entryPose.bearing
+      this.planTilt = this.entryPose.tilt
       this.exploded = false
       this.enterFromMap = false
     }
@@ -290,9 +311,19 @@ export class StationState {
   /** Restores the outdoor map. @param navigation Whether to navigate. @returns Nothing. */
   close(navigation = true): void {
     if (navigation) {
+      if (this.returningToMap) return
+      if (this.worldView && this.data) {
+        this.returnSceneReady = false
+        this.returnMapReady = false
+        this.returnFading = false
+        this.returningToMap = true
+        return
+      }
       void goto('/')
       return
     }
+    this.returningToMap = false
+    this.returnFading = false
     this.controller?.abort()
     this.loading = false
     this.clearRoute()

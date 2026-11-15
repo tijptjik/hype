@@ -8,10 +8,11 @@ import {
   centre,
   value,
   type IndoorData,
-  type IndoorFeature,
   type Place,
+  type IndoorFeature,
 } from '#lib/indoor/model.js'
 import IndoorFloorLayer from './IndoorFloorLayer.svelte'
+import { prepareConnectorReliefs } from '#lib/indoor/connectorRelief.js'
 import { shopArtwork } from '#lib/indoor/artwork.js'
 import { cameraTravel, floorInViewport } from '#lib/indoor/cameraTransition.js'
 import { stationFloorCallout } from '#lib/indoor/levels.js'
@@ -23,8 +24,21 @@ let {
   data,
   onSelect,
 }: { station: StationState; data: IndoorData; onSelect: () => void } = $props()
-// Follow the live bearing; the shared pose animation can supply this value when integrated.
-const displayedPose = $derived({ bearing: station.bearing })
+// Separate the destination camera from the displayed pose so geometry and zoom move together.
+const targetPose = $derived(
+  station.returningToMap
+    ? {
+        bearing: -(station.worldView?.bearing ?? -station.bearing),
+        tilt: station.worldView?.pitch ?? station.planTilt,
+        spacing: 0,
+      }
+    : {
+        bearing: station.bearing,
+        tilt: station.exploded ? station.tilt : station.planTilt,
+        spacing: station.exploded ? station.spacing : 0,
+      },
+)
+let displayedPose = $state(untrack(() => targetPose))
 // The map rotates north clockwise by its bearing; the viewing heading is the inverse.
 const compassHeading = $derived(
   ((Math.round(-displayedPose.bearing) % 360) + 360) % 360,
@@ -32,18 +46,30 @@ const compassHeading = $derived(
 const compassDirection = $derived(
   ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(compassHeading / 45) % 8],
 )
-const projection = $derived(
-  stationProjection(data, station.exploded, {
-    bearing: station.bearing,
-    tilt: station.exploded ? station.tilt : station.planTilt,
-    spacing: station.spacing,
-  }),
+let modeAnimating = $state(false)
+let detailOpacity = $state(untrack(() => (station.exploded ? 0 : 1)))
+let displayedExploded = $state(untrack(() => station.exploded))
+const targetProjection = $derived(stationProjection(data, true, targetPose))
+const projection = $derived(stationProjection(data, true, displayedPose))
+// Source-local geometry is reusable across camera frames and discarded with this snapshot.
+const flatProjection = $derived(stationProjection(data, false, { bearing: 0, tilt: 0 }))
+const showExploded = $derived(
+  station.exploded || displayedExploded || (modeAnimating && !station.returningToMap),
 )
+const targetLevels = $derived(
+  data.level_polygon.features.filter(
+    f =>
+      (station.exploded || f.properties.level_id === station.floor) &&
+      (station.arrival < 1 ||
+        f.properties.level_id === station.route?.points.at(-1)?.level),
+  ),
+)
+// Keep every floor mounted until the selected floor has reached its plan position.
 const levels = $derived(
   data.level_polygon.features
     .filter(
       f =>
-        (station.exploded || f.properties.level_id === station.floor) &&
+        (showExploded || f.properties.level_id === station.floor) &&
         (station.arrival < 1 ||
           f.properties.level_id === station.route?.points.at(-1)?.level),
     )
@@ -51,24 +77,51 @@ const levels = $derived(
       (a, b) => Number(a.properties.level_ordinal) - Number(b.properties.level_ordinal),
     ),
 )
+const projectReliefs = $derived(prepareConnectorReliefs(data))
+const reliefs = $derived(projectReliefs(projection))
 const connections = $derived(
   connectionCandidates(data).filter(
     c => station.showInferred || c.evidence !== 'aligned-footprints',
   ),
 )
+// Blank duplicate website hotspots must not cover a named tenant or its mark.
+const visibleUnits = $derived(
+  data.unit_polygon.features.filter(
+    unit =>
+      data.coordinateSpace !== 'image-pixels' ||
+      unit.properties.source_shop_id !== 'shop_' ||
+      !data.unit_polygon.features.some(
+        other =>
+          other !== unit &&
+          other.properties.level_id === unit.properties.level_id &&
+          other.properties.source_coords === unit.properties.source_coords &&
+          other.properties.source_shop_id !== 'shop_',
+      ),
+  ),
+)
 const treads = $derived(stairTreads(data).features)
 const shops = $derived(
-  new Map(station.entries.filter(p => p.kind === 'shop').map(p => [p.id, p])),
+  new Map(
+    station.entries
+      .filter(
+        p => p.kind === 'shop' || (data.coordinateSpace === 'image-pixels' && p.code),
+      )
+      .map(p => [p.id, p]),
+  ),
 )
 const brand = (feature: IndoorFeature) =>
   shopArtwork(shops.get(value(feature.properties, 'unit_id')))
 
-const isBrand = (f: IndoorFeature) => Boolean(brand(f))
-const focused = $derived(
-  station.selected?.kind === 'shop' ? [station.selected.feature] : levels,
-)
-const box = $derived(projection.box(focused))
-const fittedView = $derived([box[0] - 18, box[1] - 24, box[2] + 36, box[3] + 48])
+const focused = $derived(station.selected ? [station.selected.feature] : targetLevels)
+const box = $derived(targetProjection.box(focused))
+// Leave room at the map edge for labels beside their individual floors.
+const labelGutter = $derived(station.exploded ? Math.max(60, box[2] * 0.35) : 18)
+const fittedView = $derived([
+  box[0] - labelGutter,
+  box[1] - 24,
+  box[2] + labelGutter + 18,
+  box[3] + 48,
+])
 // Overlapping floor switches keep the source-coordinate frame, including manual pan and zoom.
 let retainedView = $state<number[] | null>(null)
 const baseView = $derived(retainedView ?? fittedView)
@@ -138,7 +191,8 @@ $effect(() => {
     station.preserveFloorCamera = null
   }
 })
-
+// Allow a wider floor overview consistently across wheel, pinch, and keyboard input.
+const MIN_ZOOM = 0.25
 let zoom = $state(1),
   panX = $state(0),
   panY = $state(0)
@@ -240,8 +294,8 @@ const traveller = $derived.by(() => {
   for (const segment of routeSegments) {
     if (remaining <= segment.length || segment === routeSegments.at(-1)) {
       const t = Math.min(1, remaining / segment.length),
-        a = projection.project(segment.a.point, segment.a.level),
-        b = projection.project(segment.b.point, segment.b.level)
+        a = targetProjection.project(segment.a.point, segment.a.level),
+        b = targetProjection.project(segment.b.point, segment.b.level)
       return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
     }
     remaining -= segment.length
@@ -249,6 +303,12 @@ const traveller = $derived.by(() => {
   return null
 })
 const viewBox = $derived.by(() => {
+  if (station.returningToMap && station.worldView) {
+    const point = targetProjection.project(station.worldView.center, station.floor)
+    const w = station.worldView.metresPerPixel * width
+    const h = station.worldView.metresPerPixel * height
+    return `${point[0] - w / 2} ${point[1] - h / 2} ${w} ${h}`
+  }
   if (!traveller || (station.routeProgress === 0 && station.routeMode !== 'flying'))
     return manualViewBox
   const span = (130 - 45 * Math.min(1, station.routeProgress * 3)) / zoom
@@ -293,44 +353,117 @@ $effect(() => {
   frame = requestAnimationFrame(animate)
   return () => cancelAnimationFrame(frame)
 })
-// Animate level navigation from the visible camera while keeping gestures immediate.
+// Animate navigation from the currently displayed camera; gestures remain immediate.
 let displayedViewBox = $state('')
 let cameraAnimating = $state(false)
-let lastCameraFloor = ''
+let lastCameraSelection = ''
+let lastCameraFloor: {
+  code: string
+  id: string
+  exploded: boolean
+} | null = null
 $effect(() => {
   const target = viewBox.split(' ').map(Number)
-  const floor = `${station.code}:${station.floor}:${station.exploded}`
+  const pose = targetPose
+  const exploded = station.exploded
+  const fromPose = untrack(() => displayedPose)
+  const fromDetailOpacity = untrack(() => detailOpacity)
+  const targetDetailOpacity = exploded ? 0 : 1
+  const selection = `${station.code}:${station.floor}:${station.selected?.id ?? ''}:${station.exploded}:${station.returningToMap}`
+  const reduced = prefersReducedMotion.current
   const previous = untrack(() => displayedViewBox)
-  const navigating = floor !== lastCameraFloor || untrack(() => cameraAnimating)
-  lastCameraFloor = floor
-  if (
-    !previous ||
-    !navigating ||
-    prefersReducedMotion.current ||
-    station.routeMode === 'flying'
-  ) {
+  const navigating = selection !== lastCameraSelection || untrack(() => cameraAnimating)
+  lastCameraSelection = selection
+  const previousFloor = lastCameraFloor
+  lastCameraFloor = {
+    code: station.code,
+    id: station.floor,
+    exploded: station.exploded,
+  }
+  const modeChanged = Boolean(
+    previousFloor &&
+      previousFloor.code === station.code &&
+      previousFloor.exploded !== station.exploded,
+  )
+  const changingMode =
+    station.returningToMap || modeChanged || untrack(() => modeAnimating)
+  if (!previous || !navigating || reduced || station.routeMode === 'flying') {
     displayedViewBox = viewBox
+    displayedPose = pose
+    displayedExploded = exploded
+    detailOpacity = targetDetailOpacity
+    modeAnimating = false
     cameraAnimating = false
+    if (station.returningToMap) station.returnSceneReady = true
     return
   }
   const from = previous.split(' ').map(Number)
+  // Flat floor changes crossfade in their shared frame, flying to off-screen destinations without changing scale.
   const start = performance.now()
   let frame = 0
   cameraAnimating = true
+  modeAnimating = changingMode
+  // Rotate via the shortest arc, while flattening the same geometry and fitting its view.
+  const bearingDelta = ((pose.bearing - fromPose.bearing + 540) % 360) - 180
   const step = (now: number): void => {
-    const progress = Math.min(1, (now - start) / 420)
+    const progress = Math.min(1, (now - start) / (changingMode ? 700 : 420))
     const eased = progress * progress * (3 - 2 * progress)
+    // Reveal details only in the final part of the move; reach full opacity at settlement.
+    const detailProgress =
+      changingMode && !exploded ? Math.max(0, (progress - 0.8) / 0.2) : eased
+    detailOpacity =
+      fromDetailOpacity + (targetDetailOpacity - fromDetailOpacity) * detailProgress
+    displayedPose = {
+      bearing: fromPose.bearing + bearingDelta * eased,
+      tilt: fromPose.tilt + (pose.tilt - fromPose.tilt) * eased,
+      spacing: fromPose.spacing + (pose.spacing - fromPose.spacing) * eased,
+    }
     displayedViewBox = target
       .map((value, index) => from[index] + (value - from[index]) * eased)
       .join(' ')
     if (progress < 1) frame = requestAnimationFrame(step)
-    else cameraAnimating = false
+    else {
+      cameraAnimating = false
+      modeAnimating = false
+      displayedPose = pose
+      displayedExploded = exploded
+      if (station.returningToMap) station.returnSceneReady = true
+    }
   }
   frame = requestAnimationFrame(step)
   return () => cancelAnimationFrame(frame)
 })
 const viewport = $derived((displayedViewBox || viewBox).split(' ').map(Number))
+// Capture the actual panned viewport, not the station's default bounds.
+$effect(() => {
+  if (station.returningToMap) return
+  if (data.coordinateSpace === 'image-pixels') {
+    station.worldView = null
+    return
+  }
+  const center = projection.unproject(
+    [viewport[0] + viewport[2] / 2, viewport[1] + viewport[3] / 2],
+    station.floor,
+  )
+  const metresPerPixel = Math.max(viewport[2] / width, viewport[3] / height) * 2.5
+  station.worldView = {
+    center,
+    bearing: -displayedPose.bearing,
+    pitch: displayedPose.tilt,
+    metresPerPixel,
+    zoom: Math.log2(
+      (40075016.686 * Math.cos((center[1] * Math.PI) / 180)) / (512 * metresPerPixel),
+    ),
+  }
+})
 const textScale = $derived(Math.max(viewport[2] / width, viewport[3] / height))
+// SVG's centred aspect-ratio fit exposes space beyond the nominal viewBox on wide/tall screens.
+const maskViewport = $derived([
+  viewport[0] + (viewport[2] - width * textScale) / 2,
+  viewport[1] + (viewport[3] - height * textScale) / 2,
+  width * textScale,
+  height * textScale,
+])
 const maskId = $props.id()
 function wheel(event: WheelEvent): void {
   cameraAnimating = false
@@ -341,7 +474,7 @@ function wheel(event: WheelEvent): void {
       (station.exploded ? station.tilt : station.planTilt) - event.deltaY * 0.08,
     )
   else if (event.altKey) station.bearing += event.deltaY * 0.12
-  else zoom = Math.max(0.7, Math.min(12, zoom * Math.exp(-event.deltaY * 0.001)))
+  else zoom = Math.max(MIN_ZOOM, Math.min(12, zoom * Math.exp(-event.deltaY * 0.001)))
 }
 function move(event: PointerEvent): void {
   if (pointers.has(event.pointerId))
@@ -349,7 +482,7 @@ function move(event: PointerEvent): void {
   if (pinch && pointers.size === 2) {
     const [a, b] = [...pointers.values()]
     zoom = Math.max(
-      0.7,
+      MIN_ZOOM,
       Math.min(12, (pinch.zoom * Math.hypot(b.x - a.x, b.y - a.y)) / pinch.distance),
     )
     station.bearing =
@@ -402,7 +535,7 @@ function chooseFloor(id: string): void {
   onkeydown={e => {
     station.stopFly()
     if (e.key === '+' || e.key === '=') zoom = Math.min(12, zoom * 1.3)
-    if (e.key === '-') zoom = Math.max(0.7, zoom / 1.3)
+    if (e.key === '-') zoom = Math.max(MIN_ZOOM, zoom / 1.3)
     if (e.key === 'ArrowLeft') {
       e.preventDefault()
       station.bearing -= 10
@@ -434,14 +567,17 @@ function chooseFloor(id: string): void {
     bind:clientHeight={height}
     viewBox={displayedViewBox || viewBox}
     data-camera-animating={cameraAnimating}
-    data-camera-bearing={station.bearing}
+    data-camera-bearing={displayedPose.bearing}
+    data-camera-tilt={displayedPose.tilt}
     class="h-full w-full touch-none outline-none select-none"
     data-station-scene={station.exploded ? 'exploded' : 'plan'}
+    data-station-transition={modeAnimating ? 'moving' : 'settled'}
     role="application"
     aria-label={station.exploded
       ? 'Exploded station levels. Select a floor to open its plan.'
       : 'Station floor plan. Drag to pan, scroll to zoom.'}
     oncontextmenu={e => e.preventDefault()}
+    ondragstart={e => e.preventDefault()}
     onwheel={wheel}
     data-route-mode={station.routeMode}
     data-route-progress={station.routeProgress}
@@ -450,6 +586,9 @@ function chooseFloor(id: string): void {
     onpointerdown={e => {
       cameraAnimating = false
       if (e.button !== 0 && e.button !== 2) return
+      // Own the gesture before native image dragging or SVG text selection can intercept it.
+      e.preventDefault()
+      svg.parentElement?.focus({ preventScroll: true })
       station.stopFly()
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
       if (pointers.size === 2) {
@@ -491,11 +630,6 @@ function chooseFloor(id: string): void {
     onpointercancel={releasePointer}
   >
     <defs>
-      {#each data.unit_polygon.features.filter(isBrand) as unit}
-        <clipPath id={`${maskId}-${value(unit.properties, 'unit_id')}`}>
-          <path d={projection.path(unit)} />
-        </clipPath>
-      {/each}
       <clipPath id={`${maskId}-floors`}>
         {#each levels as level}
           <path d={projection.path(level)} clip-rule="evenodd" />
@@ -504,16 +638,16 @@ function chooseFloor(id: string): void {
       <mask
         id={`${maskId}-outside`}
         maskUnits="userSpaceOnUse"
-        x={viewport[0]}
-        y={viewport[1]}
-        width={viewport[2]}
-        height={viewport[3]}
+        x={maskViewport[0]}
+        y={maskViewport[1]}
+        width={maskViewport[2]}
+        height={maskViewport[3]}
       >
         <rect
-          x={viewport[0]}
-          y={viewport[1]}
-          width={viewport[2]}
-          height={viewport[3]}
+          x={maskViewport[0]}
+          y={maskViewport[1]}
+          width={maskViewport[2]}
+          height={maskViewport[3]}
           fill="white"
         />
         {#each levels as level}
@@ -521,105 +655,130 @@ function chooseFloor(id: string): void {
         {/each}
       </mask>
     </defs>
-    {#each levels as level}
+    {#each levels as level (value(level.properties, 'level_id'))}
       {@const id = value(level.properties, 'level_id')}
-      <IndoorFloorLayer
-        {level}
-        artworkOpacity={station.artworkOpacity}
-        artwork={data.coordinateSpace === 'image-pixels'
-          ? {
-              src: value(level.properties, 'image_url'),
-              width: Number(level.properties.image_width),
-              height: Number(level.properties.image_height),
-            }
-          : undefined}
-        units={data.unit_polygon.features.filter(f => f.properties.level_id === id)}
-        entries={station.entries.filter(p => p.levelId === id)}
-        treads={treads.filter(f => f.properties.level_id === id)}
-        {projection}
-        {shops}
-        {connections}
-        {brand}
-        {maskId}
-        exploded={station.exploded}
-        selectedId={station.selected?.id}
-        opacity={station.route && id !== station.route.points.at(-1)?.level
-          ? 1 - station.arrival
-          : 1}
-        {textScale}
-        {dragged}
-        {activate}
-        {chooseFloor}
-        onSelectPlace={place => {
-          station.select(place)
-          onSelect()
-        }}
-      />
+      <g
+        transition:fade={{ duration: prefersReducedMotion.current ? 0 : 240 }}
+        data-floor-transition={id}
+      >
+        <IndoorFloorLayer
+          {level}
+          {reliefs}
+          {connections}
+          artworkOpacity={station.artworkOpacity}
+          artwork={data.coordinateSpace === 'image-pixels'
+            ? {
+                src: value(level.properties, 'image_url'),
+                width: Number(level.properties.image_width),
+                height: Number(level.properties.image_height),
+              }
+            : undefined}
+          units={visibleUnits.filter(f => f.properties.level_id === id)}
+          entries={station.entries.filter(p => p.levelId === id)}
+          treads={treads.filter(f => f.properties.level_id === id)}
+          {projection}
+          {flatProjection}
+          {shops}
+          {brand}
+          {maskId}
+          exploded={showExploded}
+          detailOpacity={id === station.floor ? detailOpacity : 0}
+          selectedId={station.selected?.id}
+          opacity={station.route && id !== station.route.points.at(-1)?.level
+            ? 1 - station.arrival
+            : 1}
+          {textScale}
+          {dragged}
+          {activate}
+          {chooseFloor}
+          onSelectPlace={place => {
+            station.select(place)
+            onSelect()
+          }}
+        />
+      </g>
     {/each}
     <g opacity={1 - station.arrival}>
-      {#if station.exploded}
-        {#each connections as connection}
-          {@const a = data.unit_polygon.features.find(
-            f => f.properties.unit_id === connection.from,
-          )}
-          {@const b = data.unit_polygon.features.find(
-            f => f.properties.unit_id === connection.to,
-          )}
-          {#if a && b}
-            {@const from = projection.project(centre(a), connection.fromLevel)}
-            {@const to = projection.project(centre(b), connection.toLevel)}
-            <line
-              x1={from[0]}
-              y1={from[1]}
-              x2={to[0]}
-              y2={to[1]}
-              stroke="var(--station-connector)"
-              stroke-width="1.3"
-              stroke-dasharray={connection.evidence !== 'aligned-footprints'
-                ? undefined
-                : '4 4'}
-              mask={`url(#${maskId}-outside)`}
-              vector-effect="non-scaling-stroke"
-              data-connection={connection.evidence}
-            >
-              <title>
-                {connection.evidence === 'matching-lift-code'
-                  ? `${value(a.properties, 'unit_name_en')} · matching lift code`
-                  : connection.evidence === 'reviewed-layout'
-                    ? `${value(a.properties, 'unit_name_en')} · ${value(b.properties, 'level_name_en')} · MTR layout`
-                    : connection.evidence === 'editor-verified'
-                      ? 'Verified by map editor'
-                      : 'Possible connection · unverified'}
-              </title>
-            </line>
-            <line
-              x1={from[0]}
-              y1={from[1]}
-              x2={to[0]}
-              y2={to[1]}
-              stroke="var(--station-connector)"
-              stroke-width="1.3"
-              vector-effect="non-scaling-stroke"
-              stroke-dasharray={connection.evidence === 'aligned-footprints'
-                ? '4 4'
-                : undefined}
-              opacity="0.5"
-              clip-path={`url(#${maskId}-floors)`}
-              data-through-floor="true"
-            />
-            <circle
-              cx={from[0]}
-              cy={from[1]}
-              r={2 * textScale}
-              fill="var(--station-connector)"
-            />
-            <circle
-              cx={to[0]}
-              cy={to[1]}
-              r={2 * textScale}
-              fill="var(--station-connector)"
-            />
-          {/if}
+      {#if showExploded}
+        <!-- Apply shared floor occlusion once per pass, rather than once for every connector. -->
+        {#each ['outside', 'inside', 'endpoints'] as pass}
+          <g
+            mask={pass === 'outside' ? `url(#${maskId}-outside)` : undefined}
+            clip-path={pass === 'inside' ? `url(#${maskId}-floors)` : undefined}
+            data-connection-pass={pass}
+          >
+            {#each connections as connection}
+              {@const a = data.unit_polygon.features.find(
+                f => f.properties.unit_id === connection.from,
+              )}
+              {@const b = data.unit_polygon.features.find(
+                f => f.properties.unit_id === connection.to,
+              )}
+              {#if a && b}
+                {@const from = projection.project(centre(a), connection.fromLevel)}
+                {@const to = projection.project(centre(b), connection.toLevel)}
+                {@const dash =
+                  connection.category === 'elevator'
+                    ? undefined
+                    : connection.category === 'ramp'
+                      ? '0 4 5 4'
+                      : ['stairs', 'steps'].includes(connection.category)
+                        ? '0 4'
+                        : '5 4'}
+                {#if pass === 'outside'}
+                  <line
+                    x1={from[0]}
+                    y1={from[1]}
+                    x2={to[0]}
+                    y2={to[1]}
+                    stroke="var(--station-connector)"
+                    stroke-width="1.3"
+                    stroke-dasharray={dash}
+                    stroke-linecap="round"
+                    vector-effect="non-scaling-stroke"
+                    data-connection={connection.evidence}
+                  >
+                    <title>
+                      {connection.evidence === 'matching-lift-code'
+                        ? `${value(a.properties, 'unit_name_en')} · matching lift code`
+                        : connection.evidence === 'reviewed-layout'
+                          ? `${value(a.properties, 'unit_name_en')} · ${value(b.properties, 'level_name_en')} · MTR layout`
+                          : connection.evidence === 'editor-verified'
+                            ? 'Verified by map editor'
+                            : 'Possible connection · unverified'}
+                    </title>
+                  </line>
+                {:else if pass === 'inside'}
+                  <line
+                    x1={from[0]}
+                    y1={from[1]}
+                    x2={to[0]}
+                    y2={to[1]}
+                    stroke="var(--station-connector)"
+                    stroke-width="1.3"
+                    vector-effect="non-scaling-stroke"
+                    stroke-dasharray={dash}
+                    stroke-linecap="round"
+                    opacity="0.25"
+                    data-through-floor="true"
+                  />
+                {:else}
+                  <circle
+                    cx={from[0]}
+                    cy={from[1]}
+                    r={2 * textScale}
+                    fill="var(--station-connector)"
+                  />
+                  <circle
+                    cx={to[0]}
+                    cy={to[1]}
+                    r={2 * textScale}
+                    fill="var(--station-connector)"
+                  />
+                {/if}
+              {/if}
+            {/each}
+          </g>
         {/each}
       {/if}
     </g>
@@ -669,21 +828,42 @@ function chooseFloor(id: string): void {
         {/if}
       </g>
     {/if}
-    <!-- Paint floor labels last so floors, connections and routes cannot cover them. -->
-    {#if station.exploded}
+    <!-- Paint all leaders before all labels so floors, connections and routes cannot cover the labels. -->
+    {#if showExploded}
       <g data-floor-labels>
-        {#each levels as level}
+        {#each levels as level (value(level.properties, 'level_id'))}
           {@const id = value(level.properties, 'level_id')}
-          {@const floorAnchor = projection.anchor(level)}
           {@const title = stationFloorCallout(value(level.properties, 'level_name_en'))}
-          {@const titleX = Math.min(
-            floorAnchor[0],
-            baseView[0] +
-              (baseView[2] * (1 + 1 / zoom)) / 2 +
-              panX -
-              (title.length * 6 + 30) * textScale,
-          )}
+          {@const titleX =
+            projection.anchor(level)[0] - (title.length * 6 + 36) * textScale}
+          {@const floorAnchor = projection.anchor(level)}
           <g
+            transition:fade={{ duration: prefersReducedMotion.current ? 0 : 240 }}
+            opacity={station.route && id !== station.route.points.at(-1)?.level
+              ? 1 - station.arrival
+              : 1}
+          >
+            <!-- Keep the label just outside its own floor, with a short leader to the edge. -->
+            <line
+              x1={titleX + (title.length * 6 + 26) * textScale}
+              y1={floorAnchor[1] - 13 * textScale}
+              x2={floorAnchor[0]}
+              y2={floorAnchor[1]}
+              stroke="var(--station-edge)"
+              stroke-width="1"
+              vector-effect="non-scaling-stroke"
+              pointer-events="none"
+            />
+          </g>
+        {/each}
+        {#each levels as level (value(level.properties, 'level_id'))}
+          {@const id = value(level.properties, 'level_id')}
+          {@const title = stationFloorCallout(value(level.properties, 'level_name_en'))}
+          {@const titleX =
+            projection.anchor(level)[0] - (title.length * 6 + 36) * textScale}
+          {@const floorAnchor = projection.anchor(level)}
+          <g
+            transition:fade={{ duration: prefersReducedMotion.current ? 0 : 240 }}
             opacity={station.route && id !== station.route.points.at(-1)?.level
               ? 1 - station.arrival
               : 1}

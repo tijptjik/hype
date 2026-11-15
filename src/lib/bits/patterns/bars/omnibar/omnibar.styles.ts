@@ -19,7 +19,7 @@ function getOmnibarResponsiveFlags(effectiveAppMainWidth: number): {
 }
 
 export const OMNIBAR_TRANSITION_CLASSES =
-  'transition-[margin,width,padding,height,border-color,background-color,border-radius,box-shadow] duration-260 ease-[ease]'
+  'transition-[transform,margin,width,padding,height,border-color,background-color,border-radius,box-shadow] duration-260 ease-[ease] motion-reduce:transition-none'
 
 const OMNIBAR_COLLECTION_PANEL_TRANSITION_CLASSES =
   'transition-[margin,width,border-color,background-color,border-radius,box-shadow] duration-260 ease-[ease]'

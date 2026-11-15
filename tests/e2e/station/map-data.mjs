@@ -13,3 +13,11 @@ export async function currentMapArtwork(page, id) {
   if (!response.ok()) throw new Error(`Occupancy unavailable: ${id}`)
   return response.json()
 }
+
+/** Select a floor through the collapsible level index. @param page Browser page. @param name Level label. @returns Selection completion. */
+export async function selectIndoorLevel(page, name) {
+  const index = page.getByRole('navigation', { name: 'Indoor levels' })
+  if (!(await index.locator('details').evaluate(node => node.open)))
+    await index.locator('summary').click()
+  await index.getByRole('button', { name, exact: true }).click()
+}

@@ -1,7 +1,8 @@
 import { cx } from '#lib/bits/utils.js'
 import { cssVars } from '#lib/bits/utils.js'
 
-const APP_MENU_TRANSITION_CLASSES = 'transition-[padding] duration-260 ease-[ease]'
+const APP_MENU_TRANSITION_CLASSES =
+  'transition-[transform,width,max-width,bottom,padding] duration-260 ease-[ease] motion-reduce:transition-none'
 
 const APP_MENU_NAV_PANEL_SHARED_CLASSES =
   'pointer-events-auto relative flex w-full min-w-0 items-center justify-between'

@@ -1,24 +1,33 @@
 <script lang="ts">
 // DATA
-import { roomLabel } from '#lib/indoor/labels.js'
+import { facilitySymbol } from '#lib/indoor/facilities.js'
 import { centre, value, type IndoorFeature, type Place } from '#lib/indoor/model.js'
+import { polygonLabels, fitPolygonText, roomLabel } from '#lib/indoor/labels.js'
 import { stationFill, type StationProjection } from '#lib/indoor/scene.js'
-import { connectorLabel, isConnector, type Connection } from '#lib/indoor/spatial.js'
+import {
+  isConnector,
+  connectorTravelDirection,
+  type Connection,
+} from '#lib/indoor/spatial.js'
 // TYPES
+import type { ConnectorRelief } from '#lib/indoor/connectorRelief.js'
 import type { ShopArtwork } from '#lib/indoor/artwork.js'
 let {
   level,
+  reliefs,
+  connections,
   artwork,
   artworkOpacity = 0,
   units,
   entries,
   treads,
-  projection,
+  projection: cameraProjection,
+  flatProjection,
   shops,
-  connections,
   brand,
   maskId,
   exploded,
+  detailOpacity,
   selectedId,
   opacity,
   textScale,
@@ -28,17 +37,20 @@ let {
   onSelectPlace,
 }: {
   level: IndoorFeature
+  connections: Connection[]
+  reliefs: Map<string, ConnectorRelief>
   artwork?: { src: string; width: number; height: number }
   artworkOpacity?: number
   units: IndoorFeature[]
   entries: Place[]
   treads: IndoorFeature[]
   projection: StationProjection
+  flatProjection: StationProjection
   shops: Map<string, Place>
-  connections: Connection[]
   brand: (feature: IndoorFeature) => ShopArtwork | null
   maskId: string
   exploded: boolean
+  detailOpacity: number
   selectedId?: string
   opacity: number
   textScale: number
@@ -47,6 +59,25 @@ let {
   chooseFloor: (id: string) => void
   onSelectPlace: (place: Place) => void
 } = $props()
+const reliefUnits = $derived(
+  units.filter(unit => reliefs.has(value(unit.properties, 'unit_id'))),
+)
+// Flat overview floors keep their paths stable; only a six-number matrix follows the camera.
+// Sloped relief and upright detail labels retain the full screen-space projection.
+const useFloorTransform = $derived(
+  exploded && detailOpacity === 0 && reliefUnits.length === 0,
+)
+const projection = $derived(useFloorTransform ? flatProjection : cameraProjection)
+const floorTransform = $derived.by(() => {
+  if (!useFloorTransform) return undefined
+  const a = cameraProjection.project(flatProjection.unproject([0, 0], id), id)
+  const b = cameraProjection.project(flatProjection.unproject([1, 0], id), id)
+  const c = cameraProjection.project(flatProjection.unproject([0, 1], id), id)
+  return `matrix(${b[0] - a[0]} ${b[1] - a[1]} ${c[0] - a[0]} ${c[1] - a[1]} ${a[0]} ${a[1]})`
+})
+const reliefMask = $props.id()
+const floorClip = `${reliefMask}-floor`
+const floorBounds = $derived(projection.box([level]))
 const id = $derived(value(level.properties, 'level_id'))
 const artworkTransform = $derived.by(() => {
   if (!artwork) return ''
@@ -56,87 +87,349 @@ const artworkTransform = $derived.by(() => {
   return `matrix(${b[0] - a[0]} ${b[1] - a[1]} ${d[0] - a[0]} ${d[1] - a[1]} ${a[0]} ${a[1]})`
 })
 const isBrand = (feature: IndoorFeature) => Boolean(brand(feature))
+const facilityMarkers = $derived.by(() => {
+  const markers: {
+    amenity: Place
+    origin: [number, number]
+    point: [number, number]
+  }[] = []
+  const gap = 32 * textScale
+  for (const amenity of entries.filter(
+    p =>
+      p.levelId === id &&
+      p.kind === 'facility' &&
+      (p.markerFeature ?? p.feature).geometry.type === 'Point' &&
+      (artwork || !isConnector(p.category)) &&
+      !['platform', 'faregate', 'entry'].includes(p.category),
+  )) {
+    const origin = projection.project(
+      centre(amenity.markerFeature ?? amenity.feature),
+      id,
+    )
+    let point: [number, number] = origin
+    // Keep adjacent toilet symbols readable; leaders retain their exact source locations.
+    for (let attempt = 0; attempt < 20; attempt++) {
+      if (
+        markers.every(
+          marker =>
+            Math.hypot(marker.point[0] - point[0], marker.point[1] - point[1]) >= gap,
+        )
+      )
+        break
+      const step = Math.ceil((attempt + 1) / 2)
+      point = [origin[0] + (attempt % 2 ? -1 : 1) * step * gap, origin[1]]
+    }
+    markers.push({ amenity, origin, point })
+  }
+  return markers
+})
 </script>
-<g data-station-level={id} {opacity}>
-  <path
-    d={projection.path(level)}
-    fill="var(--station-paper)"
-    stroke="var(--station-edge)"
-    stroke-width="1.5"
-    vector-effect="non-scaling-stroke"
-  />
-  {#each units as unit}
-    {@const shop = shops.get(value(unit.properties, 'unit_id'))}
-    <path
-      d={projection.path(unit)}
-      fill={brand(unit)?.background ?? stationFill(unit)}
-      fill-rule="evenodd"
-      stroke={selectedId === shop?.id && shop
-        ? 'var(--station-accent)'
-        : 'var(--station-edge)'}
-      stroke-width={selectedId === shop?.id && shop ? 3 : 0.9}
-      vector-effect="non-scaling-stroke"
-    />
-    {#if isBrand(unit)}
-      <g clip-path={`url(#${maskId}-${value(unit.properties, 'unit_id')})`}>
-        <image
-          href={brand(unit)?.src}
-          width="1"
-          height="1"
-          preserveAspectRatio="none"
-          transform={projection.logo(unit, brand(unit)?.aspect, brand(unit)?.padding)}
-          data-shop-logo={shop?.code || shop?.name.en}
-        />
-      </g>
-    {:else if shop && !exploded}
-      {@const p = projection.project(centre(unit), id)}
-      <text
-        x={p[0]}
-        y={p[1]}
-        fill="var(--station-ink)"
-        font-size={12 * textScale}
-        text-anchor="middle"
-        dominant-baseline="central"
-      >
-        {roomLabel(shop.code || shop.name.en)}
-      </text>
+{#snippet reliefSurface(unit: IndoorFeature, facesOnly = false)}
+  {@const relief = reliefs.get(value(unit.properties, 'unit_id'))!}
+  {@const openingId = `${reliefMask}-opening-${value(unit.properties, 'unit_id')}`}
+  <g
+    data-connector-relief={facesOnly ? undefined : value(unit.properties, 'unit_id')}
+    data-connector-walls={facesOnly ? value(unit.properties, 'unit_id') : undefined}
+    data-descending={relief.descending}
+    clip-path={relief.descending ? `url(#${floorClip})` : undefined}
+    pointer-events="none"
+  >
+    {#if !facesOnly}
+      <defs>
+        <linearGradient
+          id={`${openingId}-depth`}
+          gradientUnits="userSpaceOnUse"
+          x1={relief.entrance[0]}
+          y1={relief.entrance[1]}
+          x2={relief.farEnd[0]}
+          y2={relief.farEnd[1]}
+        >
+          <stop offset="0" stop-color="var(--station-connector-fill)" />
+          <stop
+            offset="1"
+            stop-color="color-mix(in srgb, var(--station-connector) 38%, var(--station-connector-fill))"
+          />
+        </linearGradient>
+        <clipPath id={openingId} clipPathUnits="userSpaceOnUse">
+          <path d={relief.opening} />
+        </clipPath>
+      </defs>
     {/if}
+    <!-- Adjoining flights share an opening; their connecting face meets both independent slopes. -->
+    <g clip-path={relief.descending ? `url(#${openingId})` : undefined}>
+      <!-- Only exposed edge faces are filled; nearby inclines leave the shared side open. -->
+      {#if facesOnly}
+        {#each relief.recessFaces as face}
+          <path
+            d={face}
+            fill="color-mix(in srgb, var(--station-connector) 22%, var(--station-connector-fill))"
+            stroke="var(--station-connector)"
+            stroke-width={relief.descending ? 0 : 0.8}
+            vector-effect="non-scaling-stroke"
+            data-connector-recess-face
+          />
+        {/each}
+        <!-- Corner strokes reveal the far-end depth without filled separating walls. -->
+        {#each relief.depthEdges as edge}
+          <path
+            d={edge}
+            fill="none"
+            stroke="var(--station-connector)"
+            stroke-width="1.2"
+            stroke-linecap="round"
+            vector-effect="non-scaling-stroke"
+            data-connector-depth-edge
+          />
+        {/each}
+      {:else}
+        {#each relief.bridges as bridge}
+          <path
+            d={bridge}
+            fill="color-mix(in srgb, var(--station-connector) 14%, var(--station-connector-fill))"
+            data-connector-shared-surface
+          />
+        {/each}
+        <!-- A warm depth gradient follows each flight, avoiding the old gray buildup. -->
+        <path
+          d={relief.surface}
+          fill={`url(#${openingId}-depth)`}
+          stroke="var(--station-connector)"
+          stroke-width="0.9"
+          vector-effect="non-scaling-stroke"
+          fill-rule="evenodd"
+        />
+        {#each treads.filter(
+          tread => tread.properties.unit_id === unit.properties.unit_id,
+        ) as tread}
+          <path
+            d={relief.line(tread)}
+            fill="none"
+            stroke="var(--station-connector)"
+            stroke-width="0.8"
+            vector-effect="non-scaling-stroke"
+          />
+        {/each}
+      {/if}
+    </g>
+  </g>
+{/snippet}
+<g
+  data-station-level={id}
+  {opacity}
+  transform={floorTransform}
+  data-floor-transform={useFloorTransform}
+>
+  <defs>
+    <!-- Logo clips use the same local coordinates as transformed floor geometry. -->
+    {#each units.filter(isBrand) as unit}
+      <clipPath id={`${maskId}-${value(unit.properties, 'unit_id')}`}>
+        <path d={projection.path(unit)} />
+      </clipPath>
+    {/each}
+    <!-- Only lowered openings and flat linework are clipped; raised flights extend above the floor edge. -->
+    <clipPath id={floorClip} clipPathUnits="userSpaceOnUse">
+      <path d={projection.path(level)} clip-rule="evenodd" />
+    </clipPath>
+    <mask
+      id={reliefMask}
+      maskUnits="userSpaceOnUse"
+      x={floorBounds[0] - 5}
+      y={floorBounds[1] - 5}
+      width={floorBounds[2] + 10}
+      height={floorBounds[3] + 10}
+    >
+      <rect
+        x={floorBounds[0] - 5}
+        y={floorBounds[1] - 5}
+        width={floorBounds[2] + 10}
+        height={floorBounds[3] + 10}
+        fill="white"
+      />
+      {#each reliefUnits.filter(
+        unit => reliefs.get(value(unit.properties, 'unit_id'))?.descending,
+      ) as unit}
+        <path
+          d={reliefs.get(value(unit.properties, 'unit_id'))!.opening}
+          fill="black"
+        />
+      {/each}
+    </mask>
+  </defs>
+  <!-- Descending flights sit beneath openings cut through the flat floor and its units. -->
+  {#each reliefUnits.filter(
+    unit => reliefs.get(value(unit.properties, 'unit_id'))?.descending,
+  ) as unit}
+    {@render reliefSurface(unit, true)}
   {/each}
-  {#each treads as tread}
+  {#each reliefUnits.filter(
+    unit => reliefs.get(value(unit.properties, 'unit_id'))?.descending,
+  ) as unit}
+    {@render reliefSurface(unit)}
+  {/each}
+  <g mask={reliefUnits.length ? `url(#${reliefMask})` : undefined}>
     <path
-      d={projection.path(tread)}
-      fill="none"
-      stroke="var(--station-connector)"
-      stroke-width="0.8"
+      d={projection.path(level)}
+      fill="var(--station-paper)"
+      stroke="var(--station-edge)"
+      stroke-width="1.5"
       vector-effect="non-scaling-stroke"
     />
-  {/each}
-  {#if !exploded}
-    {#each entries.filter(p => p.levelId === id && isConnector(p.category)) as place}
-      {@const unit = units.find(
-        f => f.properties.unit_id === place.feature.properties.unit_id,
-      )}
-      {@const p = projection.project(centre(unit ?? place.feature), id)}
-      <text
-        x={p[0]}
-        y={p[1]}
-        font-size={14 * textScale}
-        text-anchor="middle"
-        dominant-baseline="central"
-        fill="var(--station-ink)"
-        stroke="var(--station-paper)"
-        stroke-width={3 * textScale}
-        paint-order="stroke"
-      >
-        {connectorLabel(place, connections).split(' ')[0]}
-      </text>
+    {#each units.filter(
+      unit => !reliefs.has(value(unit.properties, 'unit_id')),
+    ) as unit}
+      {@const shop = shops.get(value(unit.properties, 'unit_id'))}
+      <path
+        d={projection.path(unit)}
+        clip-path={isConnector(value(unit.properties, 'unit_category'))
+          ? `url(#${floorClip})`
+          : undefined}
+        fill={brand(unit)?.background ??
+          (value(unit.properties, 'geometry_role') === 'artwork_colour_trace'
+            ? 'var(--station-edge)'
+            : stationFill(unit))}
+        fill-rule="evenodd"
+        stroke="var(--station-edge)"
+        stroke-width="0.9"
+        vector-effect="non-scaling-stroke"
+      />
+      {#if isBrand(unit)}
+        <g clip-path={`url(#${maskId}-${value(unit.properties, 'unit_id')})`}>
+          <image
+            href={brand(unit)?.src}
+            width="1"
+            height="1"
+            preserveAspectRatio="none"
+            transform={projection.logo(unit, brand(unit)?.aspect, brand(unit)?.padding)}
+            data-shop-logo={shop?.code || shop?.name.en}
+          />
+        </g>
+      {:else if shop &&
+        detailOpacity > 0 &&
+        value(unit.properties, 'geometry_role') !== 'artwork_colour_trace'}
+        {#each polygonLabels(unit, point => projection.project(point, id)) as placement}
+          {@const labels = (
+            artwork
+              ? shop.code
+                  .replace(/L[12]-/g, '')
+                  .replace(/\s*-\s*/g, '–')
+                  .replace(/(\d{3})–\d{3}–(\d{3})/g, '$1–$2')
+                  .split(/\s*&\s*|(?<=–)/)
+              : [shop.code || shop.name.en]
+          ).map(roomLabel)}
+          {@const fitted = fitPolygonText(
+            placement,
+            12 * textScale,
+            Math.max(...labels.map(label => label.length)),
+            labels.length,
+          )}
+          {@const p = fitted.point}
+          {@const labelSize = Math.max(10 * textScale, fitted.size)}
+          <text
+            x={p[0]}
+            y={p[1]}
+            fill="var(--station-ink)"
+            data-unit-label={shop.code}
+            opacity={detailOpacity}
+            font-size={labelSize}
+            stroke="var(--station-paper)"
+            stroke-width={2 * textScale}
+            paint-order="stroke"
+            text-anchor="middle"
+            dominant-baseline="central"
+          >
+            {#each labels as label, index}
+              <tspan
+                x={p[0]}
+                dy={index === 0
+                  ? -(labels.length - 1) * labelSize * 0.55
+                  : labelSize * 1.1}
+              >
+                {label}
+              </tspan>
+            {/each}
+          </text>
+        {/each}
+      {/if}
     {/each}
-  {/if}
-  <!-- Transparent targets sit above artwork, so a logo remains a shop hit target. -->
-  {#each units.filter(
-    unit =>
-      exploded || entries.some(place => place.id === value(unit.properties, 'unit_id')),
+    {#each treads.filter(
+      tread => !reliefs.has(value(tread.properties, 'unit_id')),
+    ) as tread}
+      <path
+        d={projection.path(tread)}
+        clip-path={`url(#${floorClip})`}
+        fill="none"
+        stroke="var(--station-connector)"
+        stroke-width="0.8"
+        vector-effect="non-scaling-stroke"
+      />
+    {/each}
+  </g>
+  {#each reliefUnits.filter(
+    unit => !reliefs.get(value(unit.properties, 'unit_id'))?.descending,
   ) as unit}
+    {@render reliefSurface(unit, true)}
+  {/each}
+  {#each reliefUnits.filter(
+    unit => !reliefs.get(value(unit.properties, 'unit_id'))?.descending,
+  ) as unit}
+    {@render reliefSurface(unit)}
+  {/each}
+  {#if detailOpacity > 0}
+    <g
+      data-level-details
+      opacity={detailOpacity}
+      pointer-events={exploded ? 'none' : 'auto'}
+    >
+      {#each entries.filter(
+        p =>
+          p.levelId === id &&
+          isConnector(p.category) &&
+          !(artwork && (p.markerFeature ?? p.feature).geometry.type === 'Point'),
+      ) as place}
+        {@const unit = units.find(
+          f => f.properties.unit_id === place.feature.properties.unit_id,
+        )}
+        {@const p = projection.project(centre(unit ?? place.feature), id)}
+        {@const direction = connectorTravelDirection(
+          value(place.feature.properties, 'unit_id'),
+          connections,
+        )}
+        {@const relief = reliefs.get(value(place.feature.properties, 'unit_id'))}
+        {#if direction && relief}
+          {@const angle =
+            (Math.atan2(
+              relief.farEnd[1] - relief.entrance[1],
+              relief.farEnd[0] - relief.entrance[0],
+            ) *
+              180) /
+            Math.PI}
+          <text
+            data-connector-travel-direction={direction}
+            x={p[0]}
+            y={p[1]}
+            transform={`rotate(${angle} ${p[0]} ${p[1]})`}
+            font-size={16 * textScale}
+            text-anchor="middle"
+            dominant-baseline="central"
+            fill="var(--station-ink)"
+            stroke="var(--station-paper)"
+            stroke-width={3 * textScale}
+            paint-order="stroke"
+            pointer-events="none"
+          >
+            <title>Reviewed travel direction</title>
+            {direction === 'both' ? '↔' : direction === 'depart' ? '→' : '←'}
+          </text>
+        {/if}
+      {/each}
+    </g>
+  {/if}
+  <!-- One floor target is enough in overview; detailed targets stay above artwork so logos remain selectable. -->
+  {#each exploded
+    ? [level]
+    : units.filter(unit =>
+        entries.some(place => place.id === value(unit.properties, 'unit_id')),
+      ) as unit}
     <!-- biome-ignore lint/a11y/useSemanticElements: SVG geometry cannot be an HTML button; the directory provides keyboard selection. -->
     <path
       d={projection.path(unit)}
@@ -154,64 +447,78 @@ const isBrand = (feature: IndoorFeature) => Boolean(brand(feature))
       }}
     />
   {/each}
-  {#if !exploded}
-    {#each entries.filter(
-      p =>
-        p.levelId === id &&
-        p.kind === 'facility' &&
-        p.feature.geometry.type === 'Point' &&
-        !isConnector(p.category) &&
-        !['platform', 'faregate', 'entry'].includes(p.category),
-    ) as amenity}
-      {@const point = projection.project(centre(amenity.feature), id)}
-      <!-- biome-ignore lint/a11y/useSemanticElements: SVG markers have equivalent keyboard-accessible entries in the station directory. -->
-      <g
-        role="button"
-        tabindex="-1"
-        aria-label={amenity.name.en}
-        class="cursor-pointer"
-        onclick={event => {
-          event.stopPropagation()
-          if (!dragged) {
-            onSelectPlace(amenity)
-          }
-        }}
-        onkeydown={e => {
-          if (e.key === 'Enter') {
-            onSelectPlace(amenity)
-          }
-        }}
-      >
-        <title>{amenity.name.en}</title>
-        <circle
-          cx={point[0]}
-          cy={point[1]}
-          r={7 * textScale}
-          fill="var(--station-paper)"
-          stroke={selectedId === amenity.id
-            ? 'var(--station-accent)'
-            : 'var(--station-edge)'}
-          stroke-width="1"
-          vector-effect="non-scaling-stroke"
-        />
-        <text
-          x={point[0]}
-          y={point[1]}
-          dominant-baseline="central"
-          text-anchor="middle"
-          font-size={8 * textScale}
-          fill="var(--station-ink)"
+  {#if detailOpacity > 0}
+    <g
+      data-level-details
+      opacity={detailOpacity}
+      pointer-events={exploded ? 'none' : 'auto'}
+    >
+      {#each facilityMarkers as { amenity, origin, point }}
+        {@const symbol = facilitySymbol(amenity.category, amenity.name.en)}
+        {#if point[0] !== origin[0] || point[1] !== origin[1]}
+          <line
+            x1={origin[0]}
+            y1={origin[1]}
+            x2={point[0]}
+            y2={point[1]}
+            stroke="var(--station-ink)"
+            stroke-width="1"
+            vector-effect="non-scaling-stroke"
+            pointer-events="none"
+          />
+        {/if}
+        <!-- biome-ignore lint/a11y/useSemanticElements: SVG markers have equivalent keyboard-accessible entries in the station directory. -->
+        <g
+          role="button"
+          tabindex="-1"
+          aria-label={amenity.name.en}
+          class="cursor-pointer"
+          onclick={event => {
+            event.stopPropagation()
+            if (!dragged) {
+              onSelectPlace(amenity)
+            }
+          }}
+          onkeydown={e => {
+            if (e.key === 'Enter') {
+              onSelectPlace(amenity)
+            }
+          }}
         >
-          {amenity.category.startsWith('restroom')
-            ? 'WC'
-            : amenity.category === 'information'
-              ? 'i'
-              : amenity.category === 'defibrillator'
-                ? '+'
-                : '•'}
-        </text>
-      </g>
-    {/each}
+          <title>{amenity.name.en}</title>
+          <circle
+            cx={point[0]}
+            cy={point[1]}
+            r={14 * textScale}
+            fill={symbol.background}
+            stroke={selectedId === amenity.id ? 'var(--station-accent)' : symbol.color}
+            stroke-width="1"
+            vector-effect="non-scaling-stroke"
+          />
+          <path
+            d={symbol.path}
+            transform={`translate(${point[0] - 10 * textScale} ${point[1] - 10 * textScale}) scale(${(20 * textScale) / 24})`}
+            fill="none"
+            stroke={symbol.color}
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          {#if symbol.text}
+            <text
+              x={point[0]}
+              y={point[1] + 7 * textScale}
+              text-anchor="middle"
+              font-size={9 * textScale}
+              font-weight="800"
+              fill={symbol.color}
+            >
+              {symbol.text}
+            </text>
+          {/if}
+        </g>
+      {/each}
+    </g>
   {/if}
   {#if artwork}
     <image
@@ -225,4 +532,19 @@ const isBrand = (feature: IndoorFeature) => Boolean(brand(feature))
       data-floor-artwork
     />
   {/if}
+  <!-- Paint selection last: logos, neighbour fills and the reference overlay cannot cover its perimeter. -->
+  {#each units.filter(
+    unit => value(unit.properties, 'unit_id') === selectedId,
+  ) as selectedUnit}
+    <path
+      d={projection.path(selectedUnit)}
+      fill="none"
+      stroke="var(--station-accent)"
+      stroke-width="3"
+      stroke-linejoin="round"
+      vector-effect="non-scaling-stroke"
+      pointer-events="none"
+      data-selection-outline={selectedId}
+    />
+  {/each}
 </g>

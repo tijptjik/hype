@@ -47,13 +47,9 @@ async function plan(fly: boolean): Promise<void> {
   }
 }
 </script>
-<div
-  class="bg-panel text-base-content border-border pointer-events-auto w-80 max-w-full rounded-xl border p-3 text-xs"
-  data-route-controls
->
-  <details>
-    <summary class="cursor-pointer font-medium">Route preview</summary>
-    <div class="mt-3 grid grid-cols-2 gap-2">
+<div class="text-base-content w-80 max-w-full text-xs" data-route-controls>
+  <div>
+    <div class="grid grid-cols-2 gap-2">
       <label class="grid gap-1"
         >Entrance<select
           aria-label="Route entrance"
@@ -80,10 +76,9 @@ async function plan(fly: boolean): Promise<void> {
       >
     </div>
     <p class="text-muted-foreground mt-2">
-      Unpaid routes first. Paid access only when no unpaid route is mapped. Preview
-      connections may be incomplete.
+      Unpaid routes preferred · Connections may be incomplete.
     </p>
-  </details>
+  </div>
   <div class="mt-2 flex flex-wrap gap-3">
     <button
       type="button"
@@ -91,7 +86,7 @@ async function plan(fly: boolean): Promise<void> {
       disabled={busy || !origin || !destination}
       onclick={() => plan(false)}
     >
-      Highlight route
+      Show route
     </button>
     <button
       type="button"
@@ -99,9 +94,7 @@ async function plan(fly: boolean): Promise<void> {
       disabled={busy || !origin || !destination}
       onclick={() => plan(true)}
     >
-      {busy
-        ? 'Finding route…'
-        : `▶ Fly to ${destinations.find(d => d.id === destination)?.name ?? 'destination'}`}
+      {busy ? 'Finding route…' : 'Fly route'}
     </button>
     {#if flying}
       <button type="button" onclick={onStop}>Stop</button>

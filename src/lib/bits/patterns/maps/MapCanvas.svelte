@@ -214,6 +214,8 @@ const syncMapViewToUrl = (map: MaplibreMap | undefined): void => {
     !isTrackingMapUrl ||
     pendingIndoorEntry !== null ||
     typeof window === 'undefined' ||
+    appCtx.station.active ||
+    appCtx.station.returningToMap ||
     /^\/(?:premises|buildings)\//.test(window.location.pathname)
   ) {
     return
@@ -539,6 +541,8 @@ const setupMap = (map: MaplibreMap): void => {
       const originUrl = indoorEntryNavigationKey(window.location.href)
       pendingIndoorEntry = revision
       const extent = indoorBounds(indoorFeature)
+      const entryBearing = map.getBearing()
+      const entryPitch = map.getPitch()
       const duration = prefersReducedMotion.current ? 0 : 1500
       // Load in parallel with the approach; retain the outdoor map until both are ready.
       const ready = appCtx.station.prepareFromMap(code)
@@ -551,8 +555,8 @@ const setupMap = (map: MaplibreMap): void => {
           padding: 80,
           maxZoom: 20,
           duration,
-          bearing: 0,
-          pitch: 0,
+          bearing: entryBearing,
+          pitch: entryPitch,
         },
       )
       void Promise.all([
@@ -569,6 +573,11 @@ const setupMap = (map: MaplibreMap): void => {
             return
           // End any remaining animation frame while camera URL writes are still suspended.
           map.stop()
+          // SVG rotates source coordinates; MapLibre rotates the camera in the opposite direction.
+          appCtx.station.entryPose = {
+            bearing: -map.getBearing(),
+            tilt: map.getPitch(),
+          }
           appCtx.station.enterFromMap = true
           return appCtx.station.open(code)
         })
@@ -617,7 +626,10 @@ const setupMap = (map: MaplibreMap): void => {
           appCtx.view.state.userLocation = position
         },
         canAutoCenter: () =>
-          !window.location.pathname.includes('/features/') && !isTrackingMapUrl,
+          !appCtx.station.active &&
+          !appCtx.station.returningToMap &&
+          !window.location.pathname.includes('/features/') &&
+          !isTrackingMapUrl,
         onInitialFix: ({ coords: { latitude, longitude } }) => {
           const offset = surfaceLayout.getAppMainOffsetX()
           const point = map.project({ lng: longitude, lat: latitude })
@@ -649,6 +661,32 @@ $effect(() => {
   return () => {
     onMapReady?.(null)
   }
+})
+
+// Prepare the world camera behind the indoor surface and reveal it only after rendering.
+$effect(() => {
+  const map = activeMapInstance
+  const station = appCtx.station
+  const view = station.worldView
+  if (!map || !station.returningToMap || !view) return
+  // MapLibre callbacks must not become dependencies of this camera effect.
+  return untrack(() => {
+    map.stop()
+    map.jumpTo({
+      center: view.center,
+      zoom: view.zoom,
+      bearing: view.bearing,
+      pitch: view.pitch,
+    })
+    const ready = () => {
+      station.returnMapReady = true
+    }
+    map.once('idle', ready)
+    map.triggerRepaint()
+    return () => {
+      map.off('idle', ready)
+    }
+  })
 })
 
 $effect(() => {
@@ -1110,6 +1148,7 @@ $effect(() => {
         : DEFAULT_MAP_VIEW
       ).pitch}
       minZoom={MIN_MAP_ZOOM}
+      maxPitch={75}
       hash={false}
       attributionControl={false}
       {interactive}

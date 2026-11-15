@@ -40,11 +40,9 @@ const isNavigationMode = $derived(mode === 'navigation')
 const panelClasses = $derived(
   getOmnibarCollectionPanelClasses({ hasElevatedChrome, effectiveAppMainWidth }),
 )
-const scrollAreaMaxHeight = $derived(
-  mode === 'navigation'
-    ? 'calc(var(--omni-available-height, 100dvh) - 7rem)'
-    : 'calc(var(--omni-available-height, 100dvh) - 4rem)',
-)
+// Cap the whole tray, including its footer, and let only the list scroll.
+const panelMaxHeight =
+  'max(0px, min(calc(75dvh - 3.5rem), calc(var(--omni-available-height, 100dvh) - 4rem)))'
 const panelSlideDelay = 0
 
 let listContainer: HTMLUListElement | null = $state(null)
@@ -111,7 +109,9 @@ $effect(() => {
 </script>
 
 <div
-  class={panelClasses}
+  class={`${panelClasses} flex min-h-0 flex-col`}
+  style:max-height={panelMaxHeight}
+  data-omni-collection
   transition:slide={{
     duration: COLLECTION_SLIDE_DURATION_MS,
     axis: 'y',
@@ -120,8 +120,7 @@ $effect(() => {
 >
   <div
     bind:this={scrollArea}
-    class={OMNIBAR_COLLECTION_SCROLL_AREA_CLASSES}
-    style="max-height: {scrollAreaMaxHeight};"
+    class={`${OMNIBAR_COLLECTION_SCROLL_AREA_CLASSES} min-h-0 flex-1`}
   >
     {#if items.length === 0}
       <div class="text-base-content/60 p-4 text-center">
@@ -190,7 +189,7 @@ $effect(() => {
     </button>
   {/if}
   {#if isNavigationMode}
-    <div class={OMNIBAR_COLLECTION_FOOTER_CLASSES}>
+    <div class={`${OMNIBAR_COLLECTION_FOOTER_CLASSES} shrink-0`}>
       <span class="text-base-content/60 text-xs tracking-wider uppercase">
         {navTitle}
       </span>

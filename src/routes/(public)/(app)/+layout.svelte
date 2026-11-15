@@ -50,7 +50,7 @@ import {
   getActiveMapStyleCode,
   getActiveMapStyleIdentity,
 } from '#lib/client/services/map.js'
-import MapCanvas from '#lib/bits/patterns/maps/MapCanvas.svelte'
+import MapCanvas from '#lib/bits/patterns/maps/LazyMapCanvas.svelte'
 import StationSurface from '#lib/bits/patterns/station/StationSurface.svelte'
 import StationPanel from '#lib/bits/patterns/station/StationPanel.svelte'
 import { useResourcePanelModel } from '#lib/adapters/panels/useResourcePanelModel.svelte.js'
@@ -127,6 +127,17 @@ const navigationShell = usePanelShellModel(appCtx.view, Panel.navigation)
 const navigationModel = useNavigationPanelModel(appCtx, () => omniCtx.closeCard())
 const responsiveCtx = getResponsiveCtx()
 const surfaceLayout = appCtx.view.layout
+// Decide from the URL before the asynchronous indoor catalogue resolves.
+const isIndoorRoute = $derived(
+  /^\/(?:premises|buildings)\/[a-z0-9-]+(?:\/places\/[^/]+)?\/?$/.test(
+    page.url.pathname,
+  ),
+)
+let hasRequestedOverworld = $state(false)
+// Retain the outdoor camera after its first use, including subsequent indoor visits.
+$effect(() => {
+  if (!isIndoorRoute || appCtx.station.returningToMap) hasRequestedOverworld = true
+})
 let isMapVisualReady = $state(false)
 let hasCompletedMapIntro = $state(false)
 
@@ -622,26 +633,28 @@ $effect(() => {
 <AppShell>
   {#if !$session.isPending && $session.data && appCtx.view.isInitialised}
     <AppEntrance
-      ready={isMapVisualReady}
+      ready={isIndoorRoute || isMapVisualReady}
       enabled={!hasCompletedMapIntro}
       onComplete={() => {
         hasCompletedMapIntro = true
       }}
     >
-      <MapCanvas
-        intro={!hasCompletedMapIntro}
-        onVisualReady={() => {
-          isMapVisualReady = true
-        }}
-        highlightedSegment={navigationModel.highlightedSegment}
-        journey={navigationModel.state.phase === 'ready'
-          ? navigationModel.state.journey
-          : null}
-        mapStyleCode={activeMapStyleCode}
-        onMapReady={controller => {
-          appCtx.mapController = controller
-        }}
-      />
+      {#if hasRequestedOverworld}
+        <MapCanvas
+          intro={!hasCompletedMapIntro}
+          onVisualReady={() => {
+            isMapVisualReady = true
+          }}
+          highlightedSegment={navigationModel.highlightedSegment}
+          journey={navigationModel.state.phase === 'ready'
+            ? navigationModel.state.journey
+            : null}
+          mapStyleCode={activeMapStyleCode}
+          onMapReady={controller => {
+            appCtx.mapController = controller
+          }}
+        />
+      {/if}
       <StationSurface />
       <!-- Panels -->
       {#if appCtx.station.active}

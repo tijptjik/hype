@@ -127,7 +127,7 @@ test('premises URLs restore exact places, share links and search stations', asyn
   const input = page.locator('#omni-search-bar')
   await expect(input).toBeVisible({ timeout: 60000 })
   await input.fill('MTR')
-  await page.getByRole('button', { name: 'MTR stations', exact: true }).click()
+  await page.getByRole('button', { name: 'Stations & malls', exact: true }).click()
   await expect(page.getByText('Yuen Long · 元朗 · YUL', { exact: true })).toBeAttached()
   await input.fill('堅尼地城')
   await expect(

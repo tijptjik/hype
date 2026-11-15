@@ -28,9 +28,7 @@ import FunnelIcon from 'virtual:icons/proicons/filter'
 import InformationCircleIcon from 'virtual:icons/proicons/info'
 import MapIcon from 'virtual:icons/proicons/map'
 import StationIcon from 'virtual:icons/tabler/train'
-import LayersIcon from 'virtual:icons/proicons/layers'
 import FitIcon from 'virtual:icons/tabler/focus-centered'
-import WorldIcon from 'virtual:icons/tabler/world'
 import MonitorIcon from 'virtual:icons/proicons/computer'
 import NewspaperIcon from 'virtual:icons/proicons/file-text'
 import SettingsIcon from 'virtual:icons/proicons/settings'
@@ -61,12 +59,16 @@ const session = useSession()
 const ADD_FEATURE_MENU_VALUE = 'addFeature'
 const SUBSCRIPTION_MENU_VALUE = 'subscribe'
 const STATION_MENU_VALUE = 'station'
-const EXPLODED_MENU_VALUE = 'exploded'
 const FIT_MENU_VALUE = 'fitStation'
+// Retain map-dependent navigation through station loads, then adopt the completed venue.
+let hasStationMap = $state(false)
+$effect(() => {
+  if (!station.active) hasStationMap = false
+  else if (!station.loading && !station.error) hasStationMap = Boolean(station.data)
+})
 type AppNavMenuValue =
   | Panel
   | typeof STATION_MENU_VALUE
-  | typeof EXPLODED_MENU_VALUE
   | typeof FIT_MENU_VALUE
   | typeof ADD_FEATURE_MENU_VALUE
   | typeof SUBSCRIPTION_MENU_VALUE
@@ -74,18 +76,13 @@ type AppNavMenuValue =
 const items = $derived<AppMenuItem<AppNavMenuValue>[]>(
   station.active
     ? [
-        { value: Panel.prisms, icon: StationIcon, label: 'Station' },
-        ...(station.data
+        { value: Panel.prisms, icon: StationIcon, label: 'Amenities' },
+        { value: STATION_MENU_VALUE, icon: MapIcon, label: 'Surroundings' },
+        ...(hasStationMap
           ? ([
-              {
-                value: EXPLODED_MENU_VALUE,
-                icon: LayersIcon,
-                label: station.exploded ? 'Floor plan' : 'Exploded view',
-              },
-              { value: FIT_MENU_VALUE, icon: FitIcon, label: 'Fit layout' },
+              { value: FIT_MENU_VALUE, icon: FitIcon, label: 'Fit' },
             ] satisfies AppMenuItem<AppNavMenuValue>[])
           : []),
-        { value: STATION_MENU_VALUE, icon: WorldIcon, label: 'General map' },
         { value: Panel.settings, icon: SettingsIcon, label: m.menu_settings() },
       ]
     : hub.isCore
@@ -116,16 +113,6 @@ const isContributorAddVisible = $derived(
   ),
 )
 const trailingItems = $derived<AppMenuItem<AppNavMenuValue>[]>([
-  ...(!station.active && publicApp.showMtrStations
-    ? [
-        {
-          value: STATION_MENU_VALUE,
-          icon: StationIcon,
-          label: 'Kennedy Town',
-          isMobileVisible: true,
-        } satisfies AppMenuItem<AppNavMenuValue>,
-      ]
-    : []),
   ...(isContributorAddVisible
     ? [
         {
@@ -166,22 +153,11 @@ async function handleSelect(
   event: MouseEvent,
 ): Promise<void> {
   if (item.value === STATION_MENU_VALUE) {
-    if (station.active) station.close()
-    else {
-      void station.open()
-      appCtx.panels.openPanel(Panel.prisms, false)
-    }
-    return
-  }
-  if (item.value === EXPLODED_MENU_VALUE) {
-    const exploded = !station.exploded
-    station.openFloor(station.floor)
-    station.exploded = exploded
-    station.selected = null
-    station.fitRevision++
+    station.close()
     return
   }
   if (item.value === FIT_MENU_VALUE) {
+    if (station.loading || !station.data) return
     station.fitRevision++
     return
   }
