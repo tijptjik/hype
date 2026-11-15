@@ -1,5 +1,8 @@
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
+// SERVICES
+import { prepareRevisionCheck } from './revisionBatch'
+import { systemTask } from '../schema/systemTask'
 // SCHEMA
 import {
   premisesMap,
@@ -8,12 +11,14 @@ import {
 } from '../schema/premisesMap'
 // DOMAIN
 import {
+  MAX_MAP_BUNDLE_BYTES,
   mapHash,
   mapReleaseKey,
   validateMapBundle,
   type MapBundle,
 } from '#lib/indoor/releases.js'
 // TYPES
+import type { BatchItem } from 'drizzle-orm/batch'
 import type { Database } from '#lib/types.js'
 import type { R2Bucket } from '@cloudflare/workers-types'
 
@@ -37,7 +42,13 @@ export async function readMapBundle(
 export async function saveMapDraft(
   db: Database,
   bucket: R2Bucket,
-  input: { id: string; expectedVersion: number; bundle: unknown; actorId: string },
+  input: {
+    id: string
+    expectedVersion: number
+    bundle: unknown
+    actorId: string
+    correctionWrites?: BatchItem<'sqlite'>[]
+  },
 ): Promise<{ hash: string; version: number }> {
   const bundle = validateMapBundle(input.bundle)
   // Live occupancy presentation is never copied into immutable physical geometry.
@@ -45,8 +56,8 @@ export async function saveMapDraft(
   delete bundle.data.releaseHash
   delete bundle.data.basePath
   const text = JSON.stringify(bundle)
-  if (new TextEncoder().encode(text).length > 20 * 1024 * 1024)
-    throw new Error('Map bundle exceeds 20 MiB')
+  if (new TextEncoder().encode(text).length > MAX_MAP_BUNDLE_BYTES)
+    throw new Error('Map bundle exceeds 64 MiB')
   const hash = await mapHash(text),
     key = mapReleaseKey(input.id, hash)
   await bucket.put(key, text, {
@@ -74,6 +85,9 @@ export async function saveMapDraft(
         ),
       )
       .returning({ id: premisesMap.id }),
+    ...(input.correctionWrites?.length
+      ? [prepareRevisionCheck(db, sql`changes()=1`), ...input.correctionWrites]
+      : []),
     db
       .insert(premisesMapDraftRevision)
       .select(
@@ -81,9 +95,9 @@ export async function saveMapDraft(
           .select({
             mapId: premisesMap.id,
             version: premisesMap.draftVersion,
-            hash: sql<string>`${premisesMap.draftHash}`,
-            actorId: sql<string>`${input.actorId}`,
-            createdAt: sql<string>`${now}`,
+            hash: sql<string>`${premisesMap.draftHash}`.as('hash'),
+            actorId: sql<string>`${input.actorId}`.as('actorId'),
+            createdAt: sql<string>`${now}`.as('createdAt'),
           })
           .from(premisesMap)
           .where(
@@ -111,6 +125,7 @@ export async function publishMapDraft(
     expectedDraftVersion: number
     expectedPublishedVersion: number
     actorId: string
+    upstreamReview?: { sourceSnapshotHash: string; name: string }
   },
 ): Promise<number> {
   const bundle = await readMapBundle(bucket, input.id, input.hash)
@@ -120,9 +135,9 @@ export async function publishMapDraft(
     )
   const now = new Date().toISOString(),
     version = input.expectedPublishedVersion + 1
-  // Publication is the editor's verification of every enabled connection.
+  // Editor publication verifies enabled connections; automated upstream publication preserves their existing evidence.
   bundle.data.connections = (bundle.data.connections ?? []).map(connection =>
-    connection.enabled
+    connection.enabled && !input.upstreamReview
       ? { ...connection, evidence: 'editor-verified' as const }
       : connection,
   )
@@ -161,6 +176,8 @@ export async function publishMapDraft(
         ),
       )
       .returning({ id: premisesMap.id }),
+    // Fence publication and its review task together so stale writers cannot create notifications.
+    ...(input.upstreamReview ? [prepareRevisionCheck(db, sql`changes()=1`)] : []),
     db
       .insert(premisesMapPublication)
       .select(
@@ -168,9 +185,9 @@ export async function publishMapDraft(
           .select({
             mapId: premisesMap.id,
             version: premisesMap.publishedVersion,
-            hash: sql<string>`${premisesMap.publishedHash}`,
-            actorId: sql<string>`${input.actorId}`,
-            createdAt: sql<string>`${now}`,
+            hash: sql<string>`${premisesMap.publishedHash}`.as('hash'),
+            actorId: sql<string>`${input.actorId}`.as('actorId'),
+            createdAt: sql<string>`${now}`.as('createdAt'),
           })
           .from(premisesMap)
           .where(
@@ -189,9 +206,9 @@ export async function publishMapDraft(
           .select({
             mapId: premisesMap.id,
             version: premisesMap.draftVersion,
-            hash: sql<string>`${premisesMap.draftHash}`,
-            actorId: sql<string>`${input.actorId}`,
-            createdAt: sql<string>`${now}`,
+            hash: sql<string>`${premisesMap.draftHash}`.as('hash'),
+            actorId: sql<string>`${input.actorId}`.as('actorId'),
+            createdAt: sql<string>`${now}`.as('createdAt'),
           })
           .from(premisesMap)
           .where(
@@ -204,6 +221,25 @@ export async function publishMapDraft(
           ),
       )
       .onConflictDoNothing(),
+    ...(input.upstreamReview
+      ? [
+          db
+            .insert(systemTask)
+            .values({
+              id: `map-publication:${input.id}:${publishedHash}`,
+              resource: 'premisesMap' as const,
+              resourceId: input.id,
+              type: 'map-upstream-published',
+              sourceSnapshotHash: input.upstreamReview.sourceSnapshotHash,
+              title: `${input.upstreamReview.name} · Updated upstream map`,
+              message: `New upstream content published. Review the published map ${input.id} for correctness. Release: ${publishedHash}`,
+              isReviewed: false,
+              createdAt: now,
+              modifiedAt: now,
+            })
+            .onConflictDoNothing(),
+        ]
+      : []),
   ])
   if (!updated.length)
     throw new Error(

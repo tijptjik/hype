@@ -1,16 +1,21 @@
 // NODE
 import { resolve } from 'node:path'
+import { gunzipSync } from 'node:zlib'
 // CLOUDFLARE
 import { getPlatformProxy } from 'wrangler'
 // DRIZZLE
 import { drizzle } from 'drizzle-orm/d1'
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 // SYSTEM TASKS
 import { prepareCorrectedMap } from '../../src/lib/db/services/premisesMapCorrection'
 // DOMAIN
 import { saveMapDraft, publishMapDraft } from '../../src/lib/db/services/premisesMap'
 import { retryBusyRead } from '../../src/lib/db/services/sqlite'
-import { premisesMap, premisesMapUnit } from '../../src/lib/db/schema/premisesMap'
+import {
+  premisesMap,
+  premisesMapUnit,
+  premisesMapCorrection,
+} from '../../src/lib/db/schema/premisesMap'
 import { validateMapBundle, mapIdSchema } from '../../src/lib/indoor/releases'
 // TYPES
 import type { Database } from '../../src/lib/types'
@@ -52,7 +57,14 @@ try {
   )
   for (const entry of entries) {
     mapIdSchema.parse(entry.id)
-    const bundle = await Bun.file(entry.bundle).json()
+    // Baseline archives may be losslessly compressed to keep large imports within local disk limits.
+    const bundle = entry.bundle.endsWith('.gz')
+      ? JSON.parse(
+          gunzipSync(
+            new Uint8Array(await Bun.file(entry.bundle).arrayBuffer()),
+          ).toString('utf8'),
+        )
+      : await Bun.file(entry.bundle).json()
     // Preserve schematic originals inside the immutable R2 bundle, not application assets.
     for (const level of bundle.data.level_polygon.features) {
       const path = level.properties.image_path
@@ -88,11 +100,9 @@ try {
         updatedAt: new Date().toISOString(),
       })
       .onConflictDoNothing()
-    const current = await db
-      .select()
-      .from(premisesMap)
-      .where(eq(premisesMap.id, entry.id))
-      .get()
+    const current = await retryBusyRead(() =>
+      db.select().from(premisesMap).where(eq(premisesMap.id, entry.id)).get(),
+    )
     if (!current) throw new Error('Missing map')
     if (current.publishedHash && !refreshImport) {
       console.log(
@@ -120,10 +130,23 @@ try {
           })
           .onConflictDoNothing()
     }
+    const sourceDataset =
+      entry.sourceDataset ?? (entry.kind === 'station' ? 'landsd-mtr' : entry.id)
+    const corrections = await retryBusyRead(() =>
+      db
+        .select()
+        .from(premisesMapCorrection)
+        .where(
+          and(
+            eq(premisesMapCorrection.mapId, entry.id),
+            eq(premisesMapCorrection.sourceDataset, sourceDataset),
+          ),
+        ),
+    )
     const correctedBundle = await prepareCorrectedMap(db, proxy.env.ASSET_RAW_DEV, {
       id: entry.id,
-      sourceDataset:
-        entry.sourceDataset ?? (entry.kind === 'station' ? 'landsd-mtr' : entry.id),
+      sourceDataset,
+      corrections,
       bundle,
     })
     const draft = await saveMapDraft(db, proxy.env.ASSET_RAW_DEV, {

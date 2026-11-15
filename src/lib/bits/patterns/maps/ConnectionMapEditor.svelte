@@ -1,28 +1,45 @@
 <script lang="ts">
+// SVELTE
+import { untrack } from 'svelte'
+// BITS COMPONENTS
+import { Button } from '#lib/bits/core/index.js'
+import { SelectField } from '#lib/bits/custom/form/index.js'
+// COMPONENTS
+import ConnectionMapPane from './ConnectionMapPane.svelte'
+import ConnectionFacilityIcon from './ConnectionFacilityIcon.svelte'
 // DOMAIN
 import { stationProjection } from '#lib/indoor/scene.js'
-import { centre, value } from '#lib/indoor/model.js'
+import {
+  connectionAnchor,
+  suggestConnectionFloor,
+  createEditorConnection,
+  nextConnectionDirection,
+  setConnectionDirection,
+  type EditorDirection,
+} from '#lib/indoor/connectionEditor.js'
+import { value } from '#lib/indoor/model.js'
 // TYPES
 import type { IndoorData, IndoorFeature } from '#lib/indoor/model.js'
-import type { MapConnection } from '#lib/indoor/releases.js'
+import type { EntranceSide, MapConnection } from '#lib/indoor/releases.js'
 
 let {
   data,
   connections = $bindable(),
   disabled = false,
-}: {
-  data: IndoorData
-  connections: MapConnection[]
-  disabled?: boolean
-} = $props()
-let editing = $state(true)
-let selected = $state('')
-let floor = $state('')
-let zoom = $state(1)
+}: { data: IndoorData; connections: MapConnection[]; disabled?: boolean } = $props()
+let leftFloor = $state('')
+let rightFloor = $state('')
+let leftId = $state('')
+let rightId = $state('')
+let pendingDirection = $state<EditorDirection>('both')
+let pendingLeftEntrance = $state<EntranceSide | null>(null)
+let pendingRightEntrance = $state<EntranceSide | null>(null)
 let notice = $state('')
+let suggestion = $state('')
+let camera = $state({ x: 0, y: 0, size: 100 })
+let fittedSize = $state(100)
 const projection = $derived(stationProjection(data, false, { bearing: 0, tilt: 0 }))
 const levels = $derived(data.level_polygon.features)
-const activeFloor = $derived(floor || value(levels[0]?.properties ?? {}, 'level_id'))
 const facilities = $derived(
   data.unit_polygon.features.filter(unit =>
     ['stairs', 'steps', 'escalator', 'elevator', 'ramp'].includes(
@@ -30,305 +47,423 @@ const facilities = $derived(
     ),
   ),
 )
-const source = $derived(
-  facilities.find(unit => value(unit.properties, 'unit_id') === selected),
+const left = $derived(
+  facilities.find(unit => value(unit.properties, 'unit_id') === leftId),
 )
-const floorFeatures = $derived(
-  data.level_polygon.features.filter(
-    unit => value(unit.properties, 'level_id') === activeFloor,
+const right = $derived(
+  facilities.find(unit => value(unit.properties, 'unit_id') === rightId),
+)
+const viewBox = $derived([camera.x, camera.y, camera.size, camera.size].join(' '))
+const pairIndex = $derived(
+  connections.findIndex(
+    c =>
+      (c.from === leftId && c.to === rightId) ||
+      (c.to === leftId && c.from === rightId),
   ),
 )
-const bounds = $derived(projection.box(floorFeatures))
-const viewBox = $derived(
-  [
-    bounds[0] - 5,
-    bounds[1] - 5,
-    Math.max(bounds[2], 1) + 10,
-    Math.max(bounds[3], 1) + 10,
-  ].join(' '),
+const pair = $derived(pairIndex >= 0 ? connections[pairIndex] : undefined)
+const compatible = $derived(
+  !!left &&
+    !!right &&
+    leftFloor !== rightFloor &&
+    left.properties.unit_category === right.properties.unit_category,
 )
-const related = $derived(
-  connections
-    .map((connection, index) => ({ connection, index }))
-    .filter(
-      ({ connection }) => connection.from === selected || connection.to === selected,
-    ),
+const related = $derived(connections.filter(c => c.from === leftId || c.to === leftId))
+const floorItems = $derived(
+  levels.map(level => ({
+    value: value(level.properties, 'level_id'),
+    label: value(level.properties, 'level_name_en'),
+  })),
 )
+const direction = $derived<EditorDirection>(
+  pair
+    ? pair.direction === null
+      ? 'unknown'
+      : pair.direction === 'both'
+        ? 'both'
+        : pair.from === leftId
+          ? 'forward'
+          : 'reverse'
+    : pendingDirection,
+)
+const directionLabel = $derived(
+  {
+    both: 'Both ways',
+    forward: 'Left to right',
+    reverse: 'Right to left',
+    unknown: 'Unknown — display only',
+  }[direction],
+)
+const leftEntrance = $derived(
+  pair
+    ? ((pair.from === leftId ? pair.fromEntrance : pair.toEntrance) ?? null)
+    : pendingLeftEntrance,
+)
+const rightEntrance = $derived(
+  pair
+    ? ((pair.from === rightId ? pair.fromEntrance : pair.toEntrance) ?? null)
+    : pendingRightEntrance,
+)
+
+/** Cycle direction and apply it directly to an existing draft pair. @returns Nothing. */
+function cycleDirection(): void {
+  if (!compatible || disabled) return
+  const next = nextConnectionDirection(direction)
+  if (pair)
+    connections = connections.map((c, index) =>
+      index === pairIndex ? setConnectionDirection(c, leftId, next) : c,
+    )
+  else pendingDirection = next
+  notice = `Travel direction: ${{ both: 'Both ways', forward: 'Left to right', reverse: 'Right to left', unknown: 'Unknown — display only' }[next]}.`
+}
 
 /** Describe a facility in its floor context. @param unit Map facility. @returns Human-readable label. */
 function label(unit: IndoorFeature): string {
   return [
-    value(unit.properties, 'level_name_en') || value(unit.properties, 'level_id'),
+    value(unit.properties, 'level_name_en'),
     value(unit.properties, 'unit_name_en') || value(unit.properties, 'unit_category'),
   ].join(' · ')
 }
-/** Find compatible endpoints without imposing one-link-per-facility restrictions. @param unit Candidate endpoint. @returns Whether a new pair can be made. */
+/** Fit the left floor while giving both panes the exact same XY viewport. @returns Nothing. */
+function fit(): void {
+  const floors = levels.filter(
+    level => value(level.properties, 'level_id') === leftFloor,
+  )
+  if (!floors.length) return
+  const box = projection.box(floors)
+  const size = Math.max(box[2], box[3], 1) * 1.15
+  fittedSize = size
+  camera = {
+    x: box[0] + box[2] / 2 - size / 2,
+    y: box[1] + box[3] / 2 - size / 2,
+    size,
+  }
+}
+/** Suggest a destination without selecting or connecting its polygons. @param source Optional source facility. @returns Nothing. */
+function suggest(source?: IndoorFeature): void {
+  const point = source
+    ? connectionAnchor(source)
+    : projection.unproject(
+        [camera.x + camera.size / 2, camera.y + camera.size / 2],
+        leftFloor,
+      )
+  rightFloor = suggestConnectionFloor(data, leftFloor, point, source, connections)
+  suggestion = rightFloor
+    ? 'Suggested floor · choose another if needed.'
+    : 'No overlapping floor found at this position. Choose the right floor manually.'
+  rightId = ''
+}
+/** Select a facility and optionally its nearest entrance without creating a pair.
+ * @param side Pane. @param unit Facility. @param entrance Clicked outer edge, if supplied.
+ * @returns Nothing. @remarks Repeated entrance clicks retain the other pane and its camera.
+ */
+function choose(
+  side: 'left' | 'right',
+  unit: IndoorFeature,
+  entrance?: EntranceSide,
+): void {
+  if (disabled) return
+  const id = value(unit.properties, 'unit_id')
+  const changed = id !== (side === 'left' ? leftId : rightId)
+  if (side === 'left') {
+    if (changed) {
+      leftId = id
+      pendingLeftEntrance = null
+      pendingRightEntrance = null
+      pendingDirection = 'both'
+      suggest(unit)
+    }
+    if (entrance) pendingLeftEntrance = entrance
+  } else {
+    if (changed) {
+      rightId = id
+      pendingRightEntrance = null
+      pendingDirection = 'both'
+    }
+    if (entrance) pendingRightEntrance = entrance
+  }
+  if (pair && entrance) {
+    // Entrance sides are attached to physical endpoints independently of travel direction.
+    connections = connections.map((c, index) => {
+      if (index !== pairIndex) return c
+      const next = { ...c }
+      if (side === 'right' && changed && pendingLeftEntrance)
+        next[c.from === leftId ? 'fromEntrance' : 'toEntrance'] = pendingLeftEntrance
+      next[c.from === id ? 'fromEntrance' : 'toEntrance'] = entrance
+      return next
+    })
+  }
+  notice = entrance ? 'Entrance selected. Save the draft when you are ready.' : ''
+}
+/** Find compatible endpoints without imposing one-link-per-facility restrictions. @param unit Candidate. @returns Whether a new pair can be made. */
 function available(unit: IndoorFeature): boolean {
   const id = value(unit.properties, 'unit_id')
   return (
-    !!source &&
-    id !== selected &&
-    value(unit.properties, 'level_id') !== value(source.properties, 'level_id') &&
-    value(unit.properties, 'unit_category') ===
-      value(source.properties, 'unit_category') &&
+    !!left &&
+    value(unit.properties, 'level_id') !== leftFloor &&
+    unit.properties.unit_category === left.properties.unit_category &&
     !connections.some(
-      c => (c.from === selected && c.to === id) || (c.to === selected && c.from === id),
+      c => (c.from === leftId && c.to === id) || (c.to === leftId && c.from === id),
     )
   )
 }
 /** Describe the visible connection state. @param unit Facility. @returns Legend state. */
 function status(unit: IndoorFeature): string {
   const id = value(unit.properties, 'unit_id')
-  if (selected === id) return 'Selected'
+  if (id === leftId || id === rightId) return 'Selected'
   if (available(unit)) return 'Available'
   return connections.some(c => c.enabled && (c.from === id || c.to === id))
     ? 'Linked'
     : 'Unlinked'
 }
-/** Select a facility or create a compatible cross-floor pair. @param unit Clicked facility. @returns Nothing. */
-function choose(unit: IndoorFeature): void {
-  if (!editing || disabled) return
-  if (available(unit) && source) {
-    connections = [
-      ...connections,
-      {
-        from: selected,
-        to: value(unit.properties, 'unit_id'),
-        fromLevel: value(source.properties, 'level_id'),
-        toLevel: value(unit.properties, 'level_id'),
-        category: value(
-          source.properties,
-          'unit_category',
-        ) as MapConnection['category'],
-        evidence: 'aligned-footprints',
-        direction:
-          value(source.properties, 'unit_category') === 'escalator' ? null : 'both',
-        enabled: true,
-      },
-    ]
-    notice = 'Connection added to draft. Publish to verify it.'
-  } else {
-    selected = value(unit.properties, 'unit_id')
-    notice = 'Choose an available facility on another floor to connect it.'
+/** Move both maps in source-aligned coordinates. @param x Horizontal delta. @param y Vertical delta. @returns Nothing. */
+function pan(x: number, y: number): void {
+  camera = { ...camera, x: camera.x + x, y: camera.y + y }
+}
+/** Zoom both panes around the same map coordinate. @param factor Scale multiplier. @param point Optional pointer anchor. @returns Nothing. */
+function zoom(factor: number, point?: [number, number]): void {
+  const size = Math.max(fittedSize / 20, Math.min(fittedSize * 4, camera.size * factor))
+  const anchor = point ?? [camera.x + camera.size / 2, camera.y + camera.size / 2]
+  const ratio = size / camera.size
+  camera = {
+    x: anchor[0] - (anchor[0] - camera.x) * ratio,
+    y: anchor[1] - (anchor[1] - camera.y) * ratio,
+    size,
   }
 }
+/** Add the explicitly selected pair or update its travel direction. @returns Nothing. */
+function connect(): void {
+  if (!left || !right || !compatible || disabled) return
+  if (!['unknown', 'both', 'forward', 'reverse'].includes(direction)) return
+  const next = createEditorConnection(left, right, direction)
+  if (pair) {
+    // Entrance sides remain attached to their physical endpoint when direction reverses.
+    next.fromEntrance = pair.from === next.from ? pair.fromEntrance : pair.toEntrance
+    next.toEntrance = pair.to === next.to ? pair.toEntrance : pair.fromEntrance
+    next.enabled = pair.enabled
+    connections = connections.map((c, index) => (index === pairIndex ? next : c))
+  } else {
+    next.fromEntrance =
+      next.from === leftId ? pendingLeftEntrance : pendingRightEntrance
+    next.toEntrance = next.to === rightId ? pendingRightEntrance : pendingLeftEntrance
+    connections = [...connections, next]
+  }
+  notice = 'Connection updated. Save the draft when you are ready.'
+}
+/** Navigate to both endpoints of an existing connection. @param connection Stored pair. @returns Nothing. */
+function inspect(connection: MapConnection): void {
+  rightId = connection.from === leftId ? connection.to : connection.from
+  rightFloor = connection.from === leftId ? connection.toLevel : connection.fromLevel
+  pendingLeftEntrance = null
+  pendingRightEntrance = null
+  suggestion = 'Showing the recorded connection.'
+}
+// A fresh map starts fitted; choosing another floor retains the same camera in both panes.
+$effect(() => {
+  const first = levels[0]
+  untrack(() => {
+    if (!leftFloor && first) {
+      leftFloor = value(first.properties, 'level_id')
+      fit()
+      suggest()
+    }
+  })
+})
 </script>
 
-<section class="flex flex-col gap-4">
-  <h2 class="text-lg font-semibold">Floor connections</h2>
-  <label class="flex items-center gap-2"
-    ><input type="checkbox" bind:checked={editing} {disabled}>Connection editor
-    mode</label
-  >
-  <p class="text-sm">
-    Select a facility, then choose a floor and click an available endpoint. Publishing
-    verifies every enabled connection. Unknown directions remain display only.
-  </p>
-  <div class="flex flex-wrap gap-4 text-sm">
+<section class="grid gap-3" aria-label="Floor connections">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <p class="text-muted-foreground text-sm">
+      Click near a facility edge to select its entrance. Scroll to zoom; drag to move
+      both plans.
+    </p>
+    <Button text="Fit floors" style="ghost" size="sm" onClick={fit} />
+  </div>
+  <div class="flex flex-wrap gap-x-5 gap-y-2 text-xs">
+    {#each [
+      { category: 'stairs', label: 'Stairs' },
+      { category: 'escalator', label: 'Escalator' },
+      { category: 'ramp', label: 'Ramp' },
+      { category: 'elevator', label: 'Lift' },
+    ] as item}
+      <span class="flex items-center gap-1.5"
+        ><ConnectionFacilityIcon category={item.category} class="size-5" />
+        {item.label}</span
+      >
+    {/each}
     <span class="text-blue-600">● Linked</span
     ><span class="text-orange-600">● Unlinked</span>
     <span class="text-purple-600">● Selected</span
     ><span class="text-green-700">● Available</span>
   </div>
-  <div class="flex flex-wrap items-center gap-3">
-    <label
-      >Floor
-      <select
-        class="bg-panel rounded border p-2"
-        value={activeFloor}
-        onchange={event => {
-          floor = event.currentTarget.value
-          zoom = 1
+  <div class="relative grid grid-cols-2 gap-12">
+    {#each ['left', 'right'] as side}
+      <div class="grid min-w-0 content-start gap-3">
+        <SelectField
+          label={side === 'left' ? 'Left floor' : 'Right floor'}
+          placeholder="Choose a floor"
+          triggerAttrs={{
+            'aria-label': side === 'left' ? 'Left floor' : 'Right floor',
+          }}
+          value={side === 'left' ? leftFloor : rightFloor}
+          items={side === 'left'
+            ? floorItems
+            : floorItems.filter(item => item.value !== leftFloor)}
+          {disabled}
+          onValueChange={next => {
+            if (side === 'left') {
+              leftFloor = next
+              leftId = ''
+              pendingLeftEntrance = null
+              pendingRightEntrance = null
+              pendingDirection = 'both'
+              fit()
+              suggest()
+            } else {
+              rightFloor = next
+              rightId = ''
+              pendingRightEntrance = null
+              pendingDirection = 'both'
+              suggestion = 'Floor selected manually.'
+            }
+          }}
+        />
+        <ConnectionMapPane
+          {data}
+          {projection}
+          {viewBox}
+          {side}
+          {disabled}
+          floor={side === 'left' ? leftFloor : rightFloor}
+          selected={side === 'left' ? leftId : rightId}
+          entrance={side === 'left' ? leftEntrance : rightEntrance}
+          state={status}
+          onChoose={(unit, entrance) =>
+            choose(side === 'left' ? 'left' : 'right', unit, entrance)}
+          onPan={pan}
+          onZoom={zoom}
+        />
+        <p class="min-h-5 text-sm">
+          {side === 'left'
+            ? left
+              ? label(left)
+              : 'Select the first facility.'
+            : right
+              ? label(right)
+              : 'Select the matching facility.'}
+        </p>
+      </div>
+    {/each}
+
+    <div class="absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2">
+      <Button
+        text={`Travel direction: ${directionLabel}`}
+        hideLabel
+        modifier="circle"
+        style="soft"
+        color="primary"
+        class="size-10!"
+        disabled={disabled || !compatible}
+        onClick={cycleDirection}
+        attrs={{
+          'data-direction': direction,
+          'data-tooltip': `${directionLabel}. Click to change travel direction.`,
         }}
       >
-        {#each levels as level}
-          {@const id = value(level.properties, 'level_id')}
-          <option value={id}>
-            {value(level.properties, 'level_name_en') || id}
-            ({facilities.filter(
-              unit => value(unit.properties, 'level_id') === id && available(unit),
-            ).length}
-            available)
-          </option>
+        {#snippet icon()}
+          <svg
+            viewBox="0 0 24 24"
+            class="size-6"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            {#if direction === 'both'}
+              <path d="M4 12h16M8 8l-4 4 4 4m8-8 4 4-4 4" />
+            {:else if direction === 'forward'}
+              <path d="M4 12h16m-5-5 5 5-5 5" />
+            {:else if direction === 'reverse'}
+              <path d="M20 12H4m5-5-5 5 5 5" />
+            {:else}
+              <path d="M8 8a4 4 0 1 1 7 2.6c-2 1-3 1.4-3 4M12 19v.1" />
+            {/if}
+          </svg>
+        {/snippet}
+      </Button>
+    </div>
+  </div>
+  <p class="text-muted-foreground text-xs">{suggestion}</p>
+  <div class="flex flex-wrap items-center gap-2">
+    {#if compatible}
+      {#if !pair}
+        <Button
+          text="Connect selected facilities"
+          style="soft"
+          color="primary"
+          size="sm"
+          {disabled}
+          onClick={connect}
+        />
+      {/if}
+      {#if pair}
+        <Button
+          text={pair.enabled ? 'Disable connection' : 'Enable connection'}
+          style="outline"
+          size="sm"
+          {disabled}
+          onClick={() => {
+            connections = connections.map((c, index) =>
+              index === pairIndex ? { ...c, enabled: !c.enabled } : c,
+            )
+          }}
+        />
+      {/if}
+      <span class="text-muted-foreground text-xs">{directionLabel}</span>
+    {:else if left && right}
+      <p role="status" class="text-muted-foreground text-xs">
+        Choose the same facility type on a different floor.
+      </p>
+    {/if}
+    {#if left && related.length}
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-muted-foreground text-xs">Existing connections</span>
+        {#each related as connection}
+          {@const destination = floorItems.find(
+            item =>
+              item.value ===
+              (connection.from === leftId ? connection.toLevel : connection.fromLevel),
+          )}
+          <Button
+            text={(destination?.label ?? 'Other floor') +
+              (connection.enabled ? '' : ' · Disabled')}
+            style="outline"
+            size="sm"
+            onClick={() => inspect(connection)}
+          />
         {/each}
-      </select></label
-    >
-    <button
-      type="button"
-      class="rounded border px-3 py-2"
-      onclick={() => (zoom = Math.min(zoom + 0.5, 5))}
-    >
-      Zoom in
-    </button>
-    <button
-      type="button"
-      class="rounded border px-3 py-2"
-      onclick={() => (zoom = Math.max(zoom - 0.5, 1))}
-    >
-      Zoom out
-    </button>
-    {#if selected}
-      <button
-        type="button"
-        class="underline"
-        onclick={() => {
-          selected = ''
+      </div>
+    {/if}
+    {#if leftId || rightId}
+      <Button
+        text="Clear selection"
+        style="ghost"
+        size="sm"
+        class="justify-self-start"
+        onClick={() => {
+          leftId = ''
+          rightId = ''
+          pendingLeftEntrance = null
+          pendingRightEntrance = null
+          pendingDirection = 'both'
           notice = ''
         }}
-      >
-        Clear selection
-      </button>
+      />
     {/if}
   </div>
-  <div class="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)]">
-    <div class="h-[32rem] overflow-auto rounded border bg-slate-50" data-connection-map>
-      <svg
-        {viewBox}
-        style:width={`${zoom * 100}%`}
-        style:height={`${zoom * 100}%`}
-        aria-label="Floor plan"
-      >
-        {#each floorFeatures as feature}
-          <path
-            d={projection.path(feature)}
-            fill="#e2e8f0"
-            stroke="#94a3b8"
-            stroke-width="0.5"
-          />
-        {/each}
-        {#if data.coordinateSpace === 'image-pixels'}
-          {#each floorFeatures as level}
-            {@const origin = projection.project([0, 0], activeFloor)}
-            <image
-              href={value(level.properties, 'image_url')}
-              x={origin[0]}
-              y={origin[1]}
-              width={Number(level.properties.image_width) * 0.2}
-              height={Number(level.properties.image_height) * 0.2}
-            />
-          {/each}
-        {/if}
-        {#each data.unit_polygon.features.filter(
-          unit => value(unit.properties, 'level_id') === activeFloor,
-        ) as unit}
-          <path
-            d={projection.path(unit)}
-            fill={data.coordinateSpace === 'image-pixels' ? 'transparent' : '#f8fafc'}
-            stroke="#cbd5e1"
-            stroke-width="0.25"
-          />
-        {/each}
-        {#each facilities.filter(
-          unit => value(unit.properties, 'level_id') === activeFloor,
-        ) as unit}
-          {@const state = status(unit)}
-          {@const point = projection.project(centre(unit), activeFloor)}
-          <!-- biome-ignore lint/a11y/useSemanticElements: SVG facilities need keyboard-operable geometry rather than HTML buttons. -->
-          <g
-            role="button"
-            tabindex={editing && !disabled ? 0 : -1}
-            aria-disabled={!editing || disabled}
-            aria-label={`${label(unit)} — ${state}`}
-            data-facility={value(unit.properties, 'unit_id')}
-            data-state={state}
-            onclick={() => choose(unit)}
-            onkeydown={event => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault()
-                choose(unit)
-              }
-            }}
-          >
-            <title>{label(unit)} — {state}</title>
-            <path
-              d={projection.path(unit)}
-              fill={state === 'Selected'
-                ? '#9333ea'
-                : state === 'Available'
-                  ? '#15803d'
-                  : state === 'Linked'
-                    ? '#2563eb'
-                    : '#ea580c'}
-              stroke="#fff"
-              stroke-width="0.5"
-            />
-            <circle
-              cx={point[0]}
-              cy={point[1]}
-              r={Math.max(bounds[2], bounds[3]) / 100}
-              fill={state === 'Selected'
-                ? '#9333ea'
-                : state === 'Available'
-                  ? '#15803d'
-                  : state === 'Linked'
-                    ? '#2563eb'
-                    : '#ea580c'}
-              stroke="#fff"
-              stroke-width="0.5"
-            />
-          </g>
-        {/each}
-      </svg>
-    </div>
-    <aside class="flex max-h-[32rem] flex-col gap-3 overflow-auto rounded border p-4">
-      {#if source}
-        <h3 class="font-semibold">{label(source)}</h3>
-        <p class="text-sm">
-          {facilities.filter(available).length}
-          available endpoints across all floors.
-        </p>
-        {#each related as { connection, index }}
-          {@const target = facilities.find(
-            unit =>
-              value(unit.properties, 'unit_id') ===
-              (connection.from === selected ? connection.to : connection.from),
-          )}
-          <fieldset
-            class="flex flex-col gap-2 rounded border p-3"
-            disabled={disabled || !editing}
-          >
-            <legend>{target ? label(target) : 'Connection'}</legend>
-            <label class="flex items-center gap-2"
-              ><input
-                type="checkbox"
-                bind:checked={connections[index].enabled}
-              >Enabled</label
-            >
-            <label
-              >Direction
-              <select
-                class="bg-panel w-full rounded border p-2"
-                bind:value={connections[index].direction}
-              >
-                <option value={null}>Unknown — display only</option>
-                <option value="both">Both ways</option>
-                <option value="forward">From → To only</option>
-              </select>
-            </label>
-            <p class="text-xs">From {connection.fromLevel} → {connection.toLevel}</p>
-            <button
-              type="button"
-              class="self-start underline"
-              onclick={() => {
-                floor =
-                  connection.from === selected
-                    ? connection.toLevel
-                    : connection.fromLevel
-                selected =
-                  connection.from === selected ? connection.to : connection.from
-              }}
-            >
-              Show other endpoint
-            </button>
-          </fieldset>
-        {/each}
-        {#if !related.length}
-          <p>No connections yet.</p>
-        {/if}
-      {:else}
-        <p>Select a coloured facility on the map to inspect its connections.</p>
-      {/if}
-    </aside>
-  </div>
-  <p role="status">{notice}</p>
+  {#if notice}
+    <p role="status" class="sr-only">{notice}</p>
+  {/if}
 </section>
