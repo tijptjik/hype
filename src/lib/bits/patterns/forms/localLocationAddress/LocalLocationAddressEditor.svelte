@@ -38,6 +38,7 @@ import {
 } from '#lib/locations/lifecycle.js'
 import LocationKindField from './LocationKindField.svelte'
 import MapPrimitive from '../formMapSection/components/MapPrimitive.svelte'
+import LocationAvatar from '#lib/bits/custom/locationIcon/LocationAvatar.svelte'
 import LocationIcon from '#lib/bits/custom/locationIcon/LocationIcon.svelte'
 // API
 import {
@@ -1081,7 +1082,11 @@ $effect(() => {
           data-location-record
           data-tooltip={kindLabel}
         >
-          <LocationIcon kind={activeKind} class="size-6 shrink-0" />
+          <LocationAvatar
+            kind={activeKind}
+            category={place.indoorSource?.category}
+            class="size-6"
+          />
           <span class="truncate text-sm font-semibold">{title}</span>
           <span
             class="text-muted-foreground hidden shrink-0 text-xs @min-[900px]:inline"

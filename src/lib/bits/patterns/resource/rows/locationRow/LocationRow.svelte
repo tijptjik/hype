@@ -100,7 +100,11 @@ function open(): void {
   }}
 >
   <div class="flex min-w-0 flex-1 items-center gap-4 px-4">
-    <LocationAvatar kind={entity.kind} operator={entity.operator} />
+    <LocationAvatar
+      kind={entity.kind}
+      operator={entity.operator}
+      category={entity.indoorSource?.category}
+    />
     <div class="min-w-0 flex-1">
       <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
         <a
