@@ -202,7 +202,9 @@ const panel: ResourcePanelModel = {
   class="bits-theme bg-canvas text-base-content min-h-screen transition-colors duration-200"
 >
   <div class="mx-auto max-w-[1600px] px-4 py-5 sm:px-10 sm:py-6 lg:px-14">
-    <header class="border-border flex items-center justify-between border-b pb-6">
+    <header
+      class="border-border flex flex-wrap items-center justify-between gap-4 border-b pb-6"
+    >
       <a
         data-sveltekit-reload
         href="/"
@@ -229,6 +231,11 @@ const panel: ResourcePanelModel = {
         href="/themes/icons"
         class="text-muted-foreground hover:text-primary flex items-center gap-2 text-xs"
         >Icon study <ArrowUpRight class="size-4" /></a
+      >
+      <a
+        href="/themes/map-symbols"
+        class="text-muted-foreground hover:text-primary flex items-center gap-2 text-xs"
+        >Map symbols <ArrowUpRight class="size-4" /></a
       >
     </header>
 

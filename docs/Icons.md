@@ -5,6 +5,13 @@ inventory of pre-migration `virtual:icons` imports, excluding the existing admin
 galleries. Its counts represent files, not rendered instances. The application now uses
 the selected replacements; the comparison keeps the original artwork for reference.
 
+## Map symbols
+
+The hosted map-symbol design reference is at `/themes/map-symbols`, linked from
+`/themes`. It displays the shared facility pictograms, agreed review order, service
+category filters and proposed colour palette. The palette preview is confined to the
+reference page; map colours remain defined in `src/lib/indoor/facilities.ts`.
+
 ## Loading and bundle size
 
 Use a static, per-icon import:

@@ -3,8 +3,15 @@ import { join } from 'node:path'
 for (const width of [1440, 390]) {
   test(`complete symbol review at ${width}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 })
-    await page.goto('/map-symbols/review')
-    await expect(page.getByRole('heading', { name: 'Map symbol review' })).toBeVisible()
+    await page.goto('/themes/map-symbols')
+    await expect(page.getByRole('heading', { name: 'Map symbols' })).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: 'What the source categories mean' }),
+    ).toHaveCount(0)
+    await expect(page.getByRole('link', { name: '← Theme studio' })).toHaveAttribute(
+      'href',
+      '/themes',
+    )
     const list = page.getByRole('list', { name: 'All map symbols' })
     expect(await list.locator('li').count()).toBeGreaterThan(45)
     await expect(list.getByRole('heading').first()).toHaveText('Level change')
@@ -16,6 +23,7 @@ for (const width of [1440, 390]) {
       'Accessible toilet',
       'Room',
       'Swimming pool',
+      'SOS Intercom',
       'Police',
       'Bank',
     ]) {
@@ -97,6 +105,13 @@ for (const width of [1440, 390]) {
       // biome-ignore lint/suspicious/noUndeclaredEnvVars: managed evidence directory.
       path: join(process.env.DEV_RUNNER_ARTIFACTS, `symbol-review-${width}.png`),
       fullPage: true,
+    })
+    await list
+      .getByRole('heading', { name: 'Police', exact: true })
+      .scrollIntoViewIfNeeded()
+    await page.screenshot({
+      // biome-ignore lint/suspicious/noUndeclaredEnvVars: managed evidence directory.
+      path: join(process.env.DEV_RUNNER_ARTIFACTS, `symbol-review-police-${width}.png`),
     })
   })
 }

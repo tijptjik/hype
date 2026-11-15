@@ -216,22 +216,19 @@ const mapExtras = [
 {/snippet}
 
 <svelte:head
-  ><title>Map symbol review · Hype</title>
+  ><title>Map symbols · Hype design</title>
   <meta name="robots" content="noindex"></svelte:head
 >
 <main class="h-dvh overflow-y-auto bg-[#f8f5ee] px-5 py-10 text-[#123f4b] sm:px-10">
   <div class="mx-auto max-w-7xl">
     <p class="text-xs font-semibold tracking-widest uppercase">Hype · Map design</p>
-    <h1 class="mt-3 text-3xl font-semibold">Map symbol review</h1>
+    <a href="/themes" class="mt-3 inline-block text-sm underline">← Theme studio</a>
+    <h1 class="mt-3 text-3xl font-semibold">Map symbols</h1>
     <p class="mt-3 max-w-3xl text-sm">
       All {symbols.length + mapExtras.length} named options in the agreed review order;
       numbers are stable references. These are the same pictograms used on the maps.
     </p>
-    <a
-      class="mt-3 inline-block text-sm underline"
-      href="/premises/quarry-bay-mtr/places/4be8db61-a107-42e7-b3a6-1823a0b55b68"
-      >Review Quarry Bay’s “Stairs” entry, currently classified as Room →</a
-    >
+
     <section
       class="mt-6 rounded-xl border border-[#d8dfdc] bg-white/70 p-4"
       aria-label="Colour proposal"
@@ -348,6 +345,7 @@ const mapExtras = [
         {/each}
       {/if}
     </ol>
+
     <p class="mt-6 text-sm">
       Source aliases share symbols: Bank → ATM; Platform → Platform; wheelchair toilet
       categories → Accessible toilet; Steps → Stairs. Unknown future categories retain a
