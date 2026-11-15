@@ -3,6 +3,9 @@ import { z } from 'zod'
 // MODEL
 import { layerNames, type IndoorData } from './model'
 
+/** Bounded publication size accommodates complete government building geometry. */
+export const MAX_MAP_BUNDLE_BYTES = 64 * 1024 * 1024
+
 /** Stable object identifiers are local to a map, not display labels or coordinates. */
 export const mapIdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,99}$/)
 export const releaseHashSchema = z.string().regex(/^[a-f0-9]{64}$/)
@@ -92,7 +95,9 @@ export function validateMapBundle(input: unknown): MapBundle {
         f.type !== 'Feature' ||
         !f.properties ||
         !f.geometry ||
-        !['Point', 'LineString', 'Polygon', 'MultiPolygon'].includes(f.geometry.type)
+        !['Point', 'LineString', 'MultiLineString', 'Polygon', 'MultiPolygon'].includes(
+          f.geometry.type,
+        )
       )
         throw new Error('Invalid map feature')
       const check = (value: unknown): void => {
@@ -124,6 +129,10 @@ export function validateMapBundle(input: unknown): MapBundle {
         (f.geometry.type === 'LineString' &&
           (f.geometry.coordinates.length < 2 ||
             !f.geometry.coordinates.every(position))) ||
+        (f.geometry.type === 'MultiLineString' &&
+          !f.geometry.coordinates.every(
+            line => line.length >= 2 && line.every(position),
+          )) ||
         (f.geometry.type === 'Polygon' && !polygon(f.geometry.coordinates)) ||
         (f.geometry.type === 'MultiPolygon' &&
           (!f.geometry.coordinates.length || !f.geometry.coordinates.every(polygon)))

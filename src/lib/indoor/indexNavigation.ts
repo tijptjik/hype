@@ -24,6 +24,6 @@ export function indexMatches(entries: Place[], key: string): Place[] {
     place =>
       place.kind === 'facility' &&
       category(place.category) === category(key) &&
-      place.feature.geometry.type === 'Point',
+      (place.markerFeature ?? place.feature).geometry.type === 'Point',
   )
 }

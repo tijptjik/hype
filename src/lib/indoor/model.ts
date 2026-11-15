@@ -42,6 +42,8 @@ export type Place = {
   category: string
   area: string
   feature: IndoorFeature
+  markerFeature?: IndoorFeature
+  sourceIds?: string[]
   artwork?: ShopArtwork
   occupants: IndoorFeature[]
   kind: 'shop' | 'facility'
@@ -77,9 +79,15 @@ export function centre(feature: IndoorFeature): [number, number] {
   const b = bounds(feature)
   return [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]
 }
+// MTR's Kennedy Town directory and shop plan identify this uncoded LandsD unit as KET 6.
+// Reference: https://www.mtr.com.hk/archive/en/services/shop/ket.pdf
+const verifiedShopCodes: Readonly<Record<string, string>> = {
+  '90e0ec60-9ec2-4e2a-aa70-fac74bab2b06': 'KET 6',
+}
 /** Joins source occupants and amenities. @param data Complete snapshot. @returns Display places with original identities. @remarks Multiple occupants remain on their source unit. */
 export function places(data: IndoorData): Place[] {
   const result: Place[] = []
+  const mergedMarkers = new Set<string>()
   for (const feature of data.unit_polygon.features) {
     const p = feature.properties
     const occupants = data.occupant_point.features.filter(
@@ -90,10 +98,26 @@ export function places(data: IndoorData): Place[] {
       value(p, 'unit_name_en'),
     )
       ? value(p, 'unit_name_en')
-      : value(p, 'unit_unitnumbername') || ''
+      : value(p, 'unit_unitnumbername') || verifiedShopCodes[value(p, 'unit_id')] || ''
     const named = occupants.filter(
       f => !/^[A-Z]{2,6}\s*\d+/i.test(value(f.properties, 'occupant_name_en')),
     )
+    // Merge only explicitly linked customer-service information markers into their room.
+    const serviceMarker =
+      !firstOccupant &&
+      /^(cuc|cvc|customer service cent(?:er|re))$/i.test(
+        value(p, 'unit_name_en').trim(),
+      )
+        ? data.amenity_point.features.find(
+            f =>
+              f.properties.unit_id === p.unit_id &&
+              f.properties.amenity_category === 'information' &&
+              /customer service cent(?:er|re)/i.test(
+                value(f.properties, 'amenity_name_en'),
+              ),
+          )
+        : undefined
+    if (serviceMarker) mergedMarkers.add(value(serviceMarker.properties, 'amenity_id'))
     result.push({
       artwork: data.unitArtwork?.[value(p, 'unit_id')],
       id: value(p, 'unit_id'),
@@ -103,6 +127,7 @@ export function places(data: IndoorData): Place[] {
           (named.length ? named : occupants)
             .map(f => value(f.properties, 'occupant_name_en'))
             .join(' · ') ||
+          (serviceMarker ? 'Customer Service Center' : '') ||
           value(p, 'unit_name_en') ||
           value(p, 'unit_category'),
         'zh-Hant':
@@ -114,16 +139,26 @@ export function places(data: IndoorData): Place[] {
       code,
       category: firstOccupant
         ? value(firstOccupant.properties, 'occupant_category')
-        : value(p, 'unit_category'),
+        : serviceMarker
+          ? 'information'
+          : value(p, 'unit_category'),
       area: value(p, 'section_name_en'),
       feature,
+      markerFeature: serviceMarker,
+      sourceIds: serviceMarker
+        ? [value(serviceMarker.properties, 'amenity_id')]
+        : undefined,
       occupants,
       kind: firstOccupant ? 'shop' : 'facility',
     })
   }
   for (const feature of data.amenity_point.features) {
     const p = feature.properties
-    if (value(p, 'amenity_category') === 'unspecified') continue
+    if (
+      value(p, 'amenity_category') === 'unspecified' ||
+      mergedMarkers.has(value(p, 'amenity_id'))
+    )
+      continue
     result.push({
       id: value(p, 'amenity_id'),
       levelId: value(p, 'level_id'),

@@ -14,6 +14,29 @@ export const connectorCategories = ['stairs', 'steps', 'escalator', 'elevator', 
 /** Recognises level-change facilities. @param category Source category. @returns Whether the facility changes levels. */
 export const isConnector = (category: string): boolean =>
   connectorCategories.includes(category)
+/** Recognises routes and access facilities in the place directory.
+ * @param category Source facility category. @returns Whether the entry supports circulation.
+ * @remarks Shop and amenity categories remain visible independently of circulation.
+ */
+export function isCirculation(category: string): boolean {
+  return (
+    isConnector(category) ||
+    [
+      'walkway',
+      'movingwalkway',
+      'corridor',
+      'lobby',
+      'platform',
+      'entry',
+      'entrance',
+      'exit',
+      'faregate',
+      'gate',
+      'door',
+      'passage',
+    ].includes(category)
+  )
+}
 export type Connection = {
   from: string
   to: string
@@ -220,4 +243,24 @@ export function stairTreads(data: IndoorData): Collection {
       return lines
     }),
   )
+}
+
+/** Read reviewed operating direction without inferring it from floor height.
+ * @param id Connector ID. @param connections Reviewed and inferred map links.
+ * @returns Travel along the incline, or null when no reviewed direction is recorded.
+ */
+export function connectorTravelDirection(
+  id: string,
+  connections: Connection[],
+): 'depart' | 'arrive' | 'both' | null {
+  const links = connections.filter(
+    c =>
+      c.enabled !== false &&
+      (c.from === id || c.to === id) &&
+      ['editor-verified', 'reviewed-layout'].includes(c.evidence) &&
+      c.direction,
+  )
+  const depart = links.some(c => c.direction === 'both' || c.from === id)
+  const arrive = links.some(c => c.direction === 'both' || c.to === id)
+  return depart && arrive ? 'both' : depart ? 'depart' : arrive ? 'arrive' : null
 }

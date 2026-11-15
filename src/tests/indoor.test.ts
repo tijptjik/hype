@@ -45,6 +45,26 @@ describe('indoor identities', () => {
     expect(matches(ket3, 'ket3')).toBe(true)
     expect(matches(ket3, '7 eleven')).toBe(true)
   })
+  it('fills the verified Kennedy Town shop code without guessing for other units', () => {
+    const data = dataset()
+    data.unit_polygon = collection([
+      feature({
+        unit_id: '90e0ec60-9ec2-4e2a-aa70-fac74bab2b06',
+        unit_name_en: '7-Eleven',
+      }),
+      feature({ unit_id: 'unknown-shop', unit_name_en: '7-Eleven' }),
+    ])
+    data.occupant_point = collection(
+      data.unit_polygon.features.map(unit =>
+        feature({ unit_id: unit.properties.unit_id, occupant_name_en: '7-Eleven' }),
+      ),
+    )
+    const result = places(data)
+    expect(
+      result.find(place => place.id === '90e0ec60-9ec2-4e2a-aa70-fac74bab2b06')?.code,
+    ).toBe('KET 6')
+    expect(result.find(place => place.id === 'unknown-shop')?.code).toBe('')
+  })
   it('finds source elevators when searching for a lift', () => {
     const data = dataset()
     data.amenity_point = collection([

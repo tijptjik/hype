@@ -5,7 +5,7 @@ import { polygonLabels, fitPolygonText } from './labels'
 import type { Position } from 'geojson'
 export type Point = [number, number]
 export type StationProjection = {
-  project: (p: Position, level: string) => Point
+  project: (p: Position, level: string, elevation?: number) => Point
   unproject: (p: Point, level: string) => Point
   path: (feature: IndoorFeature) => string
   box: (features: IndoorFeature[]) => [number, number, number, number]
@@ -38,16 +38,23 @@ export function stationProjection(
   const cosBearing = Math.cos(angle),
     sinBearing = Math.sin(angle)
   const tilt = ((camera.tilt ?? (exploded ? 55 : 0)) * Math.PI) / 180
-  const cosTilt = Math.cos(tilt)
+  const cosTilt = Math.cos(tilt),
+    sinTilt = Math.sin(tilt)
   const metresX = 111320 * Math.cos((origin[1] * Math.PI) / 180)
-  const project = (p: Position, level: string): Point => {
+  const project = (p: Position, level: string, elevation = 0): Point => {
     // Schematic pixels use an arbitrary display scale; they are never geographic metres.
     const schematic = data.coordinateSpace === 'image-pixels'
     const x = schematic ? (p[0] - origin[0]) * 0.2 : (p[0] - origin[0]) * metresX,
       y = schematic ? -(p[1] - origin[1]) * 0.2 : (p[1] - origin[1]) * 111320
     const rx = x * cosBearing + y * sinBearing,
       ry = -x * sinBearing + y * cosBearing
-    return [rx, -ry * cosTilt - (exploded ? (heights.get(level) ?? 0) : 0)]
+    return [
+      rx,
+      -ry * cosTilt -
+        (exploded ? (heights.get(level) ?? 0) : 0) -
+        // Local relief follows the camera: elevation has no lateral offset from directly above.
+        elevation * sinTilt,
+    ]
   }
   // Undo floor elevation and camera rotation to preserve the geographic viewport on exit.
   const unproject = (p: Point, level: string): Point => {
@@ -79,6 +86,7 @@ export function stationProjection(
     if (g.type === 'MultiPolygon')
       return g.coordinates.flatMap(p => p.map(r => `${line(r)}Z`)).join(' ')
     if (g.type === 'LineString') return line(g.coordinates)
+    if (g.type === 'MultiLineString') return g.coordinates.map(line).join(' ')
     return ''
   }
   const projectedPoints = (feature: IndoorFeature): Point[] => {
