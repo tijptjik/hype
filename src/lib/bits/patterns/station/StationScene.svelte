@@ -22,6 +22,15 @@ let {
   data,
   onSelect,
 }: { station: StationState; data: IndoorData; onSelect: () => void } = $props()
+// Follow the live bearing; the shared pose animation can supply this value when integrated.
+const displayedPose = $derived({ bearing: station.bearing })
+// The map rotates north clockwise by its bearing; the viewing heading is the inverse.
+const compassHeading = $derived(
+  ((Math.round(-displayedPose.bearing) % 360) + 360) % 360,
+)
+const compassDirection = $derived(
+  ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(compassHeading / 45) % 8],
+)
 const projection = $derived(
   stationProjection(data, station.exploded, {
     bearing: station.bearing,
@@ -720,6 +729,57 @@ function chooseFloor(id: string): void {
       </g>
     {/if}
   </svg>
+  {#if data.coordinateSpace !== 'image-pixels'}
+    <div
+      data-station-compass
+      data-heading={compassHeading}
+      role="img"
+      aria-label={`Map compass, looking ${compassDirection}, ${compassHeading} degrees. North is indicated by the pointed needle.`}
+      class="pointer-events-none absolute top-24 left-5 z-30 flex flex-col items-center gap-1 text-[color-mix(in_srgb,var(--station-ink)_70%,var(--station-canvas))] sm:top-6 sm:left-7"
+    >
+      <svg viewBox="0 0 64 64" class="size-14 sm:size-16" aria-hidden="true">
+        <circle
+          cx="32"
+          cy="32"
+          r="22"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="0.75"
+          opacity="0.2"
+        />
+        {#each Array.from({ length: 12 }, (_, index) => index) as tick}
+          <path
+            d={tick % 3 === 0 ? 'M32 10v4' : 'M32 10v2'}
+            transform={`rotate(${tick * 30} 32 32)`}
+            stroke="currentColor"
+            stroke-width="1"
+            opacity={tick % 3 === 0 ? 0.6 : 0.3}
+          />
+        {/each}
+        <g transform={`rotate(${displayedPose.bearing} 32 32)`}>
+          <path d="M32 17l5 15-5-2-5 2Z" fill="currentColor" />
+          <path d="M32 47l5-15-5 2-5-2Z" fill="currentColor" opacity="0.25" />
+          <text
+            x="32"
+            y="6"
+            text-anchor="middle"
+            dominant-baseline="central"
+            font-size="8"
+            font-weight="600"
+            fill="currentColor"
+            transform={`rotate(${-displayedPose.bearing} 32 6)`}
+          >
+            N
+          </text>
+        </g>
+        <circle cx="32" cy="32" r="1.5" fill="currentColor" />
+      </svg>
+      <span class="text-[10px] font-medium tracking-[0.12em] tabular-nums"
+        >{compassDirection}
+        · {compassHeading}°</span
+      >
+    </div>
+  {/if}
   {#if travel}
     <div
       role="status"
