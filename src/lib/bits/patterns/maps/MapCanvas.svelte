@@ -5,6 +5,7 @@ import type { ReadonlyURL } from '$app/state'
 // SVELTEKIT
 import { browser } from '$app/env'
 import { page } from '$app/state'
+import { goto } from '$app/navigation'
 import { onDestroy, untrack } from 'svelte'
 import { watch } from 'runed'
 // I18N
@@ -13,6 +14,7 @@ import { getLocale, m } from '#lib/i18n.js'
 import { fade } from 'svelte/transition'
 import { cubicInOut } from 'svelte/easing'
 import { bounds as indoorBounds } from '#lib/indoor/model.js'
+import { indoorEntryNavigationKey } from '#lib/indoor/mapEntry.js'
 import { prefersReducedMotion } from 'svelte/motion'
 // BITS COMPONENTS
 import { bridgeNativeTooltips } from '#lib/bits/core/tooltip/bridgeNativeTooltips.js'
@@ -139,6 +141,10 @@ let lastHorizontalOffset = $state(0)
 let isAnimating = $state(false)
 let isTrackingMapUrl = $state(false)
 let detachMapUrlTracking: (() => void) | null = null
+// Keep camera URL writes from superseding an indoor navigation on the retained map.
+const pendingMapUrlWrites = new Set<Promise<void>>()
+let indoorEntryRevision = 0
+let pendingIndoorEntry: number | null = null
 let styleRequestSerial = 0
 let activeMapInstance: MaplibreMap | undefined = $state(undefined)
 let initialStyle = $state<StyleSpecification | null>(null)
@@ -203,7 +209,13 @@ const isMapTrackingEnabled = (url: ReadonlyURL): boolean =>
   url.searchParams.get(MAP_TRACKING_PARAM) === 'true'
 
 const syncMapViewToUrl = (map: MaplibreMap | undefined): void => {
-  if (!map || !isTrackingMapUrl || typeof window === 'undefined') {
+  if (
+    !map ||
+    !isTrackingMapUrl ||
+    pendingIndoorEntry !== null ||
+    typeof window === 'undefined' ||
+    /^\/(?:premises|buildings)\//.test(window.location.pathname)
+  ) {
     return
   }
 
@@ -216,11 +228,20 @@ const syncMapViewToUrl = (map: MaplibreMap | undefined): void => {
   url.searchParams.set(MAP_ZOOM_PARAM, formatMapViewNumber(map.getZoom(), 2))
   url.searchParams.set(MAP_BEARING_PARAM, formatMapViewNumber(map.getBearing(), 1))
   url.searchParams.set(MAP_PITCH_PARAM, formatMapViewNumber(map.getPitch(), 1))
-  window.history.replaceState(window.history.state, '', url.toString())
+  if (url.href !== window.location.href) {
+    const write = goto(url, { shallow: true, replace: true, reset: false }).catch(
+      error => console.error('Could not track map camera', error),
+    )
+    pendingMapUrlWrites.add(write)
+    void write.finally(() => pendingMapUrlWrites.delete(write))
+  }
 }
 
 const clearTrackedMapViewFromUrl = (): void => {
-  if (typeof window === 'undefined') {
+  if (
+    typeof window === 'undefined' ||
+    /^\/(?:premises|buildings)\//.test(window.location.pathname)
+  ) {
     return
   }
 
@@ -231,7 +252,9 @@ const clearTrackedMapViewFromUrl = (): void => {
   url.searchParams.delete(MAP_ZOOM_PARAM)
   url.searchParams.delete(MAP_BEARING_PARAM)
   url.searchParams.delete(MAP_PITCH_PARAM)
-  window.history.replaceState(window.history.state, '', url.toString())
+  if (url.href !== window.location.href) {
+    void goto(url, { shallow: true, replace: true, reset: false })
+  }
 }
 
 const updateMapUrlTracking = (): void => {
@@ -262,7 +285,7 @@ const updateMapUrlTracking = (): void => {
     map.off('moveend', onMoveEnd)
   }
 
-  syncMapViewToUrl(map)
+  untrack(() => syncMapViewToUrl(map))
 }
 
 const queueMapResize = (): void => {
@@ -478,7 +501,6 @@ const setupMap = (map: MaplibreMap): void => {
   updateMapUrlTracking()
   queueMapResize()
 
-  let indoorEntryRevision = 0
   const onClick = (event: MapMouseEvent): void => {
     event.originalEvent.preventDefault()
     event.originalEvent.stopPropagation()
@@ -514,7 +536,8 @@ const setupMap = (map: MaplibreMap): void => {
     if (typeof indoorFeature?.properties?.stationCode === 'string') {
       const code = indoorFeature.properties.stationCode
       const revision = ++indoorEntryRevision
-      const originUrl = window.location.href
+      const originUrl = indoorEntryNavigationKey(window.location.href)
+      pendingIndoorEntry = revision
       const extent = indoorBounds(indoorFeature)
       const duration = prefersReducedMotion.current ? 0 : 1500
       // Load in parallel with the approach; retain the outdoor map until both are ready.
@@ -532,18 +555,36 @@ const setupMap = (map: MaplibreMap): void => {
           pitch: 0,
         },
       )
-      void Promise.all([ready, new Promise(resolve => setTimeout(resolve, duration))])
+      void Promise.all([
+        ready,
+        new Promise(resolve => setTimeout(resolve, duration)),
+        ...pendingMapUrlWrites,
+      ])
         .then(() => {
-          if (revision !== indoorEntryRevision || window.location.href !== originUrl)
+          // The approach updates tracked camera parameters; only navigation cancels entry.
+          if (
+            revision !== indoorEntryRevision ||
+            indoorEntryNavigationKey(window.location.href) !== originUrl
+          )
             return
+          // End any remaining animation frame while camera URL writes are still suspended.
+          map.stop()
           appCtx.station.enterFromMap = true
           return appCtx.station.open(code)
         })
-        .catch(error => {
+        .catch(async error => {
           console.error('Could not prepare indoor map', error)
+          // Failed preparation must also wait for older camera writes before navigating.
+          await Promise.all(pendingMapUrlWrites)
           // Fall back to the normal indoor loading/error UI so a failed prefetch is retryable.
-          if (revision === indoorEntryRevision && window.location.href === originUrl)
-            void appCtx.station.open(code)
+          if (
+            revision === indoorEntryRevision &&
+            indoorEntryNavigationKey(window.location.href) === originUrl
+          )
+            return appCtx.station.open(code)
+        })
+        .finally(() => {
+          if (pendingIndoorEntry === revision) pendingIndoorEntry = null
         })
       return
     }
@@ -674,6 +715,8 @@ $effect(() => {
 
 onDestroy(() => {
   if (!browser) return
+  indoorEntryRevision++
+  pendingIndoorEntry = null
 
   detachMapUrlTracking?.()
   detachMapUrlTracking = null
