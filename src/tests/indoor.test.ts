@@ -241,7 +241,7 @@ describe('premises navigation and logos', () => {
     data.unit_polygon = collection([
       feature({ unit_id: 'empty-room', level_id: 'c', unit_category: 'room' }),
     ])
-    expect(places(data)[0]).toMatchObject({ id: 'empty-room', name: { en: 'room' } })
+    expect(places(data)[0]).toMatchObject({ id: 'empty-room', name: { en: 'Room' } })
   })
 })
 
