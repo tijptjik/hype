@@ -7,7 +7,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SNAPSHOTS = {'KET': 'kennedy-town', 'HOK': 'hong-kong'}
+SNAPSHOTS = {'KET': 'kennedy-town', 'HOK': 'hong-kong', 'KOT': 'kowloon-tong'}
 
 
 def source_names(properties, prefix):
@@ -78,7 +78,7 @@ def audit_occupants(layers):
             p = feature['properties']
             name = (p.get('occupant_name_en') or '').strip()
             reasons = []
-            if not name or re.fullmatch(r'(?:KET|HOK)\s*\d+[A-Z]?(?:\s*[-/&]\s*\d+[A-Z]?)*', name, re.I):
+            if not name or re.fullmatch(r'(?:KET|HOK|KOT)\s*\d+[A-Z]?(?:\s*[-/&]\s*\d+[A-Z]?)*', name, re.I):
                 reasons.append('code-only-or-unnamed')
             if unit['properties'].get('unit_category') in ('lobby', 'walkway', 'platform'):
                 reasons.append('shared-area-not-exclusive-shop-unit')

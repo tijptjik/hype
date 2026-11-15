@@ -35,15 +35,15 @@ class OnboardingTests(unittest.TestCase):
         self.assertTrue(any(u['floor']['shortName'] == 'C' for u in units))
 
     def test_occupants_remain_unmatched_evidence(self):
-        self.assertEqual(len(self.plan['occupantEvidence']), 93)
+        self.assertEqual(len(self.plan['occupantEvidence']), 133)
         self.assertTrue(all(o['establishmentLocationId'] is None for o in self.plan['occupantEvidence']))
         self.assertTrue(all(o['status'] == 'needs-identity-review' for o in self.plan['occupantEvidence']))
 
     def test_audit_separates_placeholders_shared_areas_and_identity(self):
         occupants = self.plan['occupantEvidence']
         count = lambda reason: sum(reason in o['review']['reasons'] for o in occupants)
-        self.assertEqual(count('code-only-or-unnamed'), 7)
-        self.assertEqual(count('shared-area-not-exclusive-shop-unit'), 7)
+        self.assertEqual(count('code-only-or-unnamed'), 9)
+        self.assertEqual(count('shared-area-not-exclusive-shop-unit'), 14)
         self.assertEqual(count('repeated-name-distinct-source-records'), 4)
         self.assertEqual(count('point-outside-referenced-unit'), 0)
 

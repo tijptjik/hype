@@ -1,0 +1,50 @@
+[
+  {
+    "sourceOccupantId": "97e27386-77ef-4b61-b2c1-677d72144f57",
+    "establishmentLocationId": "kE0vFI_x5v7q",
+    "expectedRevisionId": "vbjyAd6MUnW3",
+    "unitCode": "KOT 206",
+    "breadlineDonorId": "687",
+    "evidence": "Exact station and kiosk code in retained establishment source and LandsD occupant/unit join. Feature associations remain unchanged for review."
+  },
+  {
+    "sourceOccupantId": "6085d485-2d43-4c1c-9384-350183ec3b73",
+    "establishmentLocationId": "Y5aHeZ4evquS",
+    "expectedRevisionId": "-EoEgNTqXSvR",
+    "unitCode": "KOT 203",
+    "breadlineDonorId": "691",
+    "evidence": "Exact station and kiosk code in retained establishment source and LandsD occupant/unit join. Feature associations remain unchanged for review."
+  },
+  {
+    "sourceOccupantId": "ed17942d-54f4-4649-b4c3-775e8a637462",
+    "establishmentLocationId": "BjheDyk2iJVz",
+    "expectedRevisionId": "ssRevision_32cba8c9bab708e54260be2ae9ae2d05330f953d34496070644f0e312d38455d",
+    "unitCode": "KOT 121",
+    "breadlineDonorId": "689",
+    "evidence": "Exact station and kiosk code in retained establishment source and LandsD occupant/unit join. Feature associations remain unchanged for review."
+  },
+  {
+    "sourceOccupantId": "25816dc6-da95-476f-8bb6-7ec97c08b366",
+    "establishmentLocationId": "nxzo7ntN1z2u",
+    "expectedRevisionId": "DY0SuEHNx1F_",
+    "unitCode": "KOT 2",
+    "breadlineDonorId": "688",
+    "evidence": "Exact station and kiosk code in retained establishment source and LandsD occupant/unit join. Feature associations remain unchanged for review."
+  },
+  {
+    "sourceOccupantId": "5d30c437-3e45-4ff7-b8b2-6b7081bf9a86",
+    "establishmentLocationId": "EJVk59Z-sZwO",
+    "expectedRevisionId": "8a1JhXrbkPgr",
+    "unitCode": "KOT 122",
+    "breadlineDonorId": "686",
+    "evidence": "Exact station and kiosk code in retained establishment source and LandsD occupant/unit join. Feature associations remain unchanged for review."
+  },
+  {
+    "sourceOccupantId": "d68fd27c-dd20-497c-b65a-182495cf9145",
+    "establishmentLocationId": "UuQfv4pjQz3j",
+    "expectedRevisionId": "ssRevision_0136e6bbce3bbd5194be8a95f14d0925f58b9258058827cb3ed79611d3254ca7",
+    "unitCode": "KOT 113",
+    "breadlineDonorId": "690",
+    "evidence": "Exact station and kiosk code in retained establishment source and LandsD occupant/unit join. Feature associations remain unchanged for review."
+  }
+]

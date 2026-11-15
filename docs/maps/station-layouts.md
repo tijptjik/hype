@@ -2,6 +2,42 @@
 
 ## Current storage architecture (15 November 2026)
 
+### Upstream label corrections
+
+Migration `0257_premises_map_correction.sql` adds `premisesMapCorrection` for current
+text-field corrections. Each row is keyed by map, source dataset, source layer, stable
+source entity ID and field. Use the publisher's `level_id` or `unit_id`, not a display
+name or GeoJSON row number. Separate locale fields have separate rows.
+
+The row stores the original value (nullable when absent), corrected value, source
+snapshot hash, reason and `authorUserId` referencing `user.id`. The hash identifies the
+upstream snapshot used to make the correction, not the corrected release. Editing a
+correction replaces its current values and author user ID. There are no evidence links,
+review states or correction revision records.
+
+The super-admin map editor saves level-label corrections and rebuilds a draft from
+retained upstream source. Publication serves a complete corrected immutable bundle; page
+loads do not consult the correction table or patch labels. The source import path and
+`refreshPremisesMapSource` replay exact-identity corrections before saving a new draft.
+Level labels are also materialized onto denormalized child records.
+
+Raw source bundles remain in private R2 by hash. Missing identities, changed source
+values, unavailable baselines or changed geometry create deduplicated `systemTask` rows
+and prevent the affected draft from publishing. Geometry comparison currently flags any
+coordinate change conservatively. A matching upstream label with unchanged geometry
+creates a resolved (accepted/reviewed) system task. Correction rows retain only their
+current values; task review does not introduce correction revision history.
+
+System issues appear in the existing Tasks list and count only for super admins.
+Resource selects Feature, Location, Premises map or System tasks. System-only views
+ignore Feature type, action and hierarchy filters, keeping Result and Reviewed.
+Reviewing an issue records the reviewer user ID and result; it does not silently change
+corrections or publish a map. Edit or remove the correction in the map editor to rebuild
+a publishable draft. Apply migration `0258_system_task.sql` alongside
+`0257_premises_map_correction.sql` before enabling these readers.
+
+### Release storage
+
 Runtime map content now comes from versioned **private R2** objects, with database
 publication pointers. The snapshot paths described below are historical collection
 notes: `static/indoor` is no longer an application data source. Preserved raw snapshots
@@ -278,13 +314,294 @@ Kennedy Town-only UI restriction, while preserving its evidence boundaries: no n
 Kong inter-floor or fare-gate connections have been inferred. Incomplete routes produce
 an explicit unavailable result.
 
+## Hysan Place and TKO Plaza (15 November 2026)
+
+`/premises/hysan-place` loads the LandsD building API snapshot for venue
+`5bb79500-645d-4089-b5bc-5a02cfeed057`: 48 level records, 2,525 units, 2,354 openings,
+2,235 amenities and 138 occupants. The source includes the podium and office tower;
+level records are not a count of retail floors. The initial view is the ground-floor
+plan. All source levels remain available in the selector and exploded view. Preserve
+source names, including generic Shop records; this is not a verified current tenant
+roster. Raw layers and hashes live in `static/indoor/hysan-place`.
+
+Collection uses `scripts/indoor/download-geometry.py VENUE_ID DESTINATION --building`.
+The building endpoint omits the MTR layer prefix. There is no reviewed walking network
+for this venue. The same source-unit URLs, directory and outdoor footprint are used.
+
+`/premises/tko-plaza` offers the mall's official floor directory. The complete LandsD
+building venue response checked on 15 November contained 689 records and no TKO Plaza,
+Tseung Kwan O Plaza, 將軍澳廣場 or matching Tong Tak Street address. Do not substitute
+PopCorn or an MTR station, manufacture geometry, or advertise an interactive footprint.
+Both premises are searchable in Stations & malls, retaining separate public slugs.
+
+Official sources:
+
+- <https://tools.csdi.gov.hk/csdi-webpage/apidoc/3d-indoor-map-api>
+- <https://www.tkoplaza.com.hk/en/find-us?submenu=floor>
+
+Focused validation: `src/tests/indoor-malls.test.ts` checks complete source hashes,
+counts, occupant joins, ground-level selection and identity separation.
+`tests/e2e/station/malls.spec.mjs` exercises floors, exact-place reload, exploded view,
+mobile overflow, official-directory fallback and Kennedy Town regression on Li.
+
+Validation evidence: Li job `job-rxJlSwjcxh` passed 14 focused tests; Chrome job
+`job-W76ohA2P60` passed the complete mall interaction scenario, including the local
+admin identity assertion. Desktop, exploded and mobile screenshots are in that job's
+artifacts. An earlier Chrome attempt timed out during TKO app startup; the rerun uses an
+explicit readiness allowance and verifies the mobile-accessible directory link.
+
+Full Svelte validation (`job-HDEHRKAMio`, 5 GiB Node heap within the 6 GiB lane)
+completed with 32 errors and four warnings in 14 other files; none were in the indoor
+implementation or mall tests. The first attempt exhausted Node's default heap and was
+retried after exit. Full repository validation is therefore not clean.
+
+## TKO Plaza schematic conversion
+
+The official directory does expose HTML image-map hotspots. The two floor fragments at
+`https://www.tkoplaza.com.hk/en/floor_level` (POST `level=1` / `level=2`) include
+location IDs, rectangles/polygons, tenant IDs and shop codes; the `/hk/` equivalents
+supply Chinese labels. `scripts/indoor/convert-tko.py` preserves these source records,
+archives responses, validates bilingual joins and converts them into the same six indoor
+layer containers. Stable UUIDs derive from source location IDs, independently of tenant
+names. The original JPEG artwork remains unchanged.
+
+The vector conversion has two traced levels, 103 source hotspot units, 22 neutral
+unclassified polygons traced from the plan's grey regions, 91 named occupants and 25
+selectable facility anchors (toilets, accessible toilets, baby changing, information,
+lifts and escalators). Twelve mapped units have no named tenant. Two source listings
+have empty coordinates: L1-130 is a duplicate of an existing mapped unit; L1-006a
+remains unplaced. Doorway data is absent.
+
+`scripts/indoor/tko-annotations.json` records reviewed floor outlines and symbol anchors
+in the source image frame. The converter traces grey regions with OpenCV, NumPy and
+Pillow. Shapely repairs six self-intersecting source hotspots into valid
+polygon/multipolygon geometry; `source_coords` retains the original vertices and
+`geometry_repaired` identifies these repairs. Grey regions are explicitly unclassified:
+colour does not establish access restrictions. Facility symbols are points, not surveyed
+room footprints or confirmed inter-floor connections.
+
+The shared Hysan renderer draws vectors and unit codes by default. Options → Original
+plan opacity overlays the unchanged JPEG from 0–100%, above vectors with pointer events
+disabled. The overlay shares each floor's projection, including rotation, tilt and
+exploded view.
+
+`coordinateSpace: image-pixels` is mandatory for this snapshot and each layer.
+Coordinates retain the website's displayed 920-pixel image frame, including its
+positive-down Y axis; the higher-resolution JPEG is scaled to exactly that frame. These
+are GeoJSON-shaped local-coordinate collections, **not RFC 7946 geographic GeoJSON**.
+Floor and venue outlines are labelled reviewed artwork traces, not surveyed boundaries.
+The renderer projects them schematically; geographic map footprints and routing reject
+this coordinate mode. No real heights, distances, accessibility or connections are
+inferred. TKO Plaza attribution replaces LandsD attribution for this source.
+
+Source archive: `.research/premises/malls/tko-plaza/2026-11-15`. Application snapshot:
+`static/indoor/tko-plaza`. The manifest records source URLs, POST bodies, input hashes,
+converted-layer hashes and unmapped entries.
+
+TKO browser verification passed on Li (`job-nYm14MrXq2`): original artwork decoded,
+MILKSHA hotspot selected the matching unit, exact-place refresh restored it, both levels
+and exploded view worked, and the mobile plan had no horizontal overflow. Screenshots
+are stored with the job artifacts. Full Svelte validation `job-ZVuH9uSijY` retained 31
+errors and four warnings outside the indoor code.
+
+The final TKO data/projection tests passed in `job-z6q0Xm27B7`. The preceding combined
+run passed the other 27 indoor/navigation tests; its TKO label assertion caught blank
+source tenant placeholders, which the converter now keeps as unoccupied source units
+rather than manufacturing occupant records.
+
+Vector update validation (15 November): 15 indoor tests passed in `job-B7HWg3nBLR`; all
+125 unit geometries and both traced level outlines pass Shapely validity checks. Chrome
+`job-HJQCvoC3bT` passed facility selection, vector-default rendering, 0/50/100% overlay
+controls, shop links, floor switching and mobile layout. Full Svelte check
+`job-hTyMEAye5X` reports the same 31 errors and four warnings in the existing broader
+checkout.
+
+Final repaired snapshot tests passed in `job-u7In8VXRzS`. Chrome rerun `job-9AAZkrVmrC`
+also passed the compact unit labels and overlay rotation check. Final Chrome evidence
+for repaired multi-part unit labels: `job-HxP8kafVnI` passed. The preceding attempt
+(`job-m0YQ4VSysp`) hit an HTTP 500 at initial navigation; the local endpoint recovered
+and the retry completed all assertions.
+
+TKO minimum-width correction: `scripts/indoor/tko_geometry.py` uses the narrow stepped
+passage beside L1-004 as its reference: 10 displayed pixels (about 20 pixels in the
+original JPEG). Vector morphological closing collapses white outline strips below that
+width, including irregular steps and junctions. Passages at the threshold survive. The
+added area is partitioned by nearest source-boundary samples into shared unit
+boundaries. It retains `source_coords` for comparison;
+`boundary_correction: minimum-corridor-width` records derived geometry. This replaces
+the earlier four-pixel parallel-edge-only correction, which left outline notches.
+
+Regression checks cover 4/8/9.9-pixel gaps, retained 10/12-pixel passages, stepped
+outlines, multi-unit junctions, valid exports and open points in both legs of the
+reference passage. The width is schematic, not a physical measurement in metres.
+
+The converter requires OpenCV, NumPy, Pillow and Shapely 2.1+ with GEOS 3.12+ (for
+ordered Voronoi cells). Boundary allocation samples at half a display pixel; source
+polygon rings are not rasterized. Numerical pinholes below 1e-8 square pixels are
+removed before export. The current correction adjusts regions across two floors while
+retaining all 125 valid polygons and the 25 facility anchors. Minimum-width
+verification: five Python geometry tests and three TKO snapshot tests passed
+(`job-alKa9mNcCT`). Final Chrome check `job-rWymAftomW` passed both floors, facilities,
+exact-place links, overlay opacity/rotation and mobile layout; screenshots were
+reviewed. Earlier attempts encountered an initial HTTP 500 and a preview-server listener
+interruption, respectively. The final run waited about 29 minutes for the shared
+validation queue before passing.
+
+Artifact correction: the minimum-width result now becomes a noded, non-overlapping
+planar coverage before shared-edge simplification at a two-pixel tolerance. This removes
+tiny tabs without independently changing adjacent boundaries. Near-perimeter outline
+strips are included in gap closing, using the floor outline as the outside boundary.
+Source pixel coordinates and unit IDs remain intact as provenance; derived boundaries
+can move during cleanup, so preservation of every original interior is no longer
+claimed.
+
+Reviewed shared-coordinate annotations resolve the L1-132–141 island, the southwest
+service area and units 130/131/126–129/112–125. Unit 142 is a reviewed rectangle with
+its neighbouring grey area adjusted to the same edge. The combined source location for
+133–135 remains one polygon and one selectable shop, with the service-area notch
+retained and internal source slits removed. The official hover groupings corroborate
+this identity grouping; they are not separate physical corridor geometry. Artifact
+cleanup verification: six Python geometry regressions passed, including the reported
+island, rectangular 142, and shared 130/service-area edge. TKO data tests passed on Li
+(`job-0oLYyhtDyo`). Chrome `job-Cbt9U7T3qk` passed combined 133–135 selection, both
+floors, opacity/rotation, exact-place reload and mobile layout. The combined-unit
+close-up was visually reviewed. An earlier test timed out clicking a faraway unit after
+selection zoomed the camera; the test now resets the view first.
+
+Unit text uses `src/lib/indoor/labels.ts`: an area-weighted polygon centroid with holes
+subtracted, independent of ring winding. Each disconnected polygon gets its own label,
+so unit 005 no longer labels the corridor between its components. A centroid outside a
+concave polygon uses an interior scanline fallback. The full text rectangle is fitted
+within the polygon; when a long label would be substantially shrunk at the centroid
+(such as 133–135 beside its service-area notch), a nearby interior span is used instead.
+This changes label anchors only, not camera/navigation centres or source geometry. Label
+verification: seven focused tests passed on Li (`job-JgFqrKRquO`). Chrome
+`job-fcAaT3cLHV` verified that all four corners of the rendered text boxes for 004, both
+005 components, 007 and 133–135 lie inside their unit polygons, and passed the existing
+two-floor/overlay/selection/mobile checks. Full-floor and combined-shop screenshots were
+reviewed. The initial centroid-only browser check caught the long 133–135 label crossing
+the notch; full-rectangle fitting resolves that case.
+
+Facility markers now have a 28px diameter and 14px glyphs at the normal text scale
+(previously 14px/8px). Nearby point markers are spaced apart with leaders back to their
+source locations, so adjacent toilet symbols remain selectable and readable.
+
+SaanSeoi tenant evidence checked against the hosted `/places/v0.1/search` and full place
+endpoints on 15 November 2026 (English and Chinese mall-name queries):
+
+| Establishment             | Source address evidence                                     | SaanSeoi Place ID                       |
+| ------------------------- | ----------------------------------------------------------- | --------------------------------------- |
+| Circle K                  | 1/F, 1-007                                                  | ss-39a8bbac-59f7-5da4-95ba-3a160fc08d06 |
+| Oliver's Super Sandwiches | 1/F, 1-003                                                  | ss-38120877-b998-5a80-84dd-4cf4e4961cb7 |
+| Chateraise                | Shop 141; mall directory confirms L1-141                    | ss-540f2dbf-9abc-5753-b3d1-a54dbd1bb880 |
+| TamJai Yunnan Mixian      | 1/F, 96–100; directory calls this Tam's Shop / 譚仔雲南米線 | ss-a7028d56-4146-5909-958b-58d6c7d25ad8 |
+
+All four match the mall directory, but their full records have null `address2dId`,
+`address3dId` and `address3dUnitId`: these are freeform-address matches, not existing
+structured occupancy relationships. Their `lastSeenMonth` is September 2026 and their
+resource release is `7cdbd963-309e-5967-8f76-61415806d895`. No records were linked or
+modified. Search also returned Tei Mou Koon, Saizeriya and Cherry On Top; their unit
+mapping needs separate review. Chicken Factory's source says L2-070–072, while the mall
+directory assigns only L2-072 to it and 070–071 to MOMOKU, so do not auto-match that
+range. The local endpoint returned 502; hosted reads succeeded with an explicit Hype
+application user-agent and the existing configured API credential. Larger-marker
+verification passed in managed Chrome (`job-Y1A9H8gsr0`), including facility selection,
+shop hit targets, both floors, overlay/rotation and mobile layout. Both floor
+screenshots were reviewed for readable symbols and separation of adjacent restrooms. The
+first run caught a removed shop hit-target loop during the marker refactor; restoring
+that loop resolved the interaction regression before delivery.
+
+### TKO tenant catalogue experiment (15 November 2026)
+
+The local experiment imports six publication-pinned SaanSeoi Locations and six catalogue
+Brands: Circle K (L1-007), Oliver’s Super Sandwiches (L1-003), Chateraise (L1-141),
+TamJai (L1-096–100), Tei Mou Koon (L1-036), and Chicken Factory (L2-072).
+`scripts/catalogue/import-tko-local.ts` previews by default; `--apply` uses only
+`wrangler.local.toml` with remote bindings disabled. Source documents, downloaded
+artwork, hashes and import receipts are retained in `.research/catalogue/tko/`.
+
+Indoor addresses are separate community corrections with SaanSeoi Organisation
+provenance and the local administrator as actor. Chicken Factory's exact bilingual
+L2-072 correction is user-supplied and corroborated by the mall's detail page. These
+corrections do not rewrite upstream SaanSeoi snapshots or create surveyed unit occupancy
+links. The reviewed map-to-Location/Brand association is in
+`src/lib/indoor/tko-brands.json`.
+
+All six marks use opaque backgrounds. Sources are the mall (Circle K), Oliver's linked
+official social profile, Chateraise and TamJai's websites, the Hong Kong Brand
+Development Council (Chicken Factory), and Hang Lung's tenant directory (Tei Mou Koon).
+Food photographs were rejected. The map uses the same immutable local catalogue asset
+URLs. Pixel-map logos fit an interior rectangle before floor rotation; they never pass
+through the geographic metres conversion.
+
+Facility markers and the map-symbol legend share vector pictograms. B formerly meant
+baby changing; diagonal/vertical arrows formerly meant escalator/lift, not travel
+direction. Labels wrap ranges, collapse redundant intermediate range codes, and retain a
+10 CSS-pixel minimum. The legend is expanded on desktop and collapsible on mobile.
+Northeast diagonals and southeast orthogonal blocks have reviewed shared coordinates.
+Blank duplicate website hotspots stay in the source snapshot but no longer cover a named
+shop in the rendered layer.
+
+Validation for this experiment: seven managed Python geometry tests pass; scoped Biome
+checks pass; all six local logo endpoints return HTTP 200 image/png; database reads
+confirm all six Brand links, bilingual address corrections and SaanSeoi Organisation
+attribution. Import replay retains source and correction identities. Initial Chrome run
+`job-OpW8R5GAc4` revealed the duplicate blank hotspot and a logo count expectation made
+before the final two marks were available. Those were corrected. Final Chrome
+`job-wg8muGT8x5` and focused Vitest `job-NkP2SjIK0b` lost SSH connectivity to Li while
+queued (exit 255); final browser/test results are not confirmed. No deployment was
+performed.
+
+## Kowloon Tong station
+
+`/premises/kowloon-tong-mtr` uses Lands Department venue
+`93187202-7a40-4906-b7e4-1e56c37562db`. The complete snapshot preserves 12 levels, 205
+units, 434 openings, 257 amenities and 40 occupant records. The existing station viewer
+supplies floor selection, exploded views, directory search and stable shop URLs. KOT
+kiosk codes, combined units and code-only occupants retain their source identities.
+
+[The complete shop index](kowloon-tong-shops.md) records every source occupant and
+provides map links. Six separate 7-Elevens occupy KOT2, KOT113, KOT121, KOT122, KOT203
+and KOT206. Local onboarding reuses six existing establishments, adds reviewed occupancy
+relationships and imports all 205 physical units under the existing station premises. No
+Feature is deleted or relinked. The G1 Feature/KOT113 mismatch remains for review.
+
+The scoped plan is generated by `scripts/indoor/plan-mtr-onboarding.py` and restricted
+to `mtr-station:KOT` before applying. Reviewed local identities and revision guards are
+in `scripts/indoor/kowloon-tong-occupancies.json`. Apply through `apply-mtr-drafts.ts`
+after an offline rehearsal; retain the local backup and do not infer production
+authorization.
+
 ### Map connection editing and verification
 
-The premises map admin uses a floor-plan connection mode. Facilities distinguish linked,
-unlinked, selected and available endpoints; candidates must have the same category, be
-on another floor and not already form a stored pair. Multiple links per facility remain
-possible. Select a facility to disable or re-enable its links, set direction, or
-navigate to the other endpoint. Zoom and scrolling support detailed floor plans.
+The premises map admin has Floor connections, Level labels, Saved corrections and
+Published history tabs. Connections use two equal-size floor plans with a shared XY
+projection and camera. Wheel zoom and drag pan on either plan update both; scrolling
+outside the plans scrolls the page. Each pane has its own floor dropdown. Stairs,
+escalators, ramps and lifts have distinct icons.
+
+Selecting the left floor suggests another level whose geometry covers the current map
+coordinate. Selecting a left facility refines that suggestion using its interior anchor:
+existing enabled destinations rank first, then matching facility footprints, then
+covering floor geometry, with nearer elevations preferred. The right dropdown can
+override the suggestion. A suggestion never selects an endpoint or creates a connection.
+Source geometry is tested in its own coordinate space, including holes. The current
+Kennedy Town source does not establish escalator operating direction; floor elevation
+and display thickness are not operating-direction evidence.
+
+Facilities distinguish linked, unlinked, selected and available endpoints. Select a
+polygon on each floor, choose travel direction, then explicitly connect them. Candidates
+must have the same category and be on different floors; existing pairs can be inspected,
+disabled or re-enabled without creating duplicates. Multiple links per facility remain
+possible. Right-to-left travel stores the reversed endpoint order, and existing entrance
+sides remain attached to their physical endpoint.
+
+The editor header uses the map name and has no New or resource-search controls.
+Connection saving does not ask for a reason; the optional API note defaults to
+“Connection updated in map editor.” Existing attribution and concurrency fences remain.
+The corrections tab compares upstream and overridden values. Published history can
+compare immutable connection and level-label values with the preceding publication; it
+does not claim to be a geometry or occupancy diff.
 
 Publishing verifies all enabled links as `editor-verified`. Unknown directions remain
 display-only. The server writes and reads back the new immutable R2 bundle before
@@ -296,3 +613,31 @@ The eight migration objects were uploaded to
 `r2-tijpdata:hype-assets-raw-dev/premises-maps/` and verified by downloading and
 comparing them: eight matches, zero differences. This upload does not deploy the
 application or migrate the remote database.
+
+Connection curations use the same `premisesMapCorrection` list as labels:
+`sourceLayer=connection`, a stable unordered pair of source unit IDs, and
+`field=connection`. Original and corrected values contain the connection JSON; new pairs
+have a null original value. The snapshot hash, reason and authenticated user ID use the
+existing columns. No new review status or correction history is added.
+
+“Save connections” records the editor's current pairs, including previously draft-only
+pairs, and builds a complete corrected draft. Omitted pairs become disabled curations so
+an import cannot resurrect them. Unchanged saved values retain their author and reason
+while their source baseline remains unchanged. Each endpoint can record an entrance side
+as a polygon component and outer-edge index, selected through overlays on the plan.
+Unknown sides stay unknown; the side where the connection meets the floor is independent
+of allowed travel direction.
+
+Refresh checks both source unit identities, geometry, categories, floor membership and
+floor elevation/order against the retained baseline. A mismatch creates a system task
+and blocks publication; it never transfers an entrance by proximity. Saved pairs and
+entrance sides are materialized before publication. Public map reads do not query the
+correction table. Entrance metadata is retained for subsequent routing work; this change
+does not infer exact entrance coordinates or change the existing route planner.
+
+The compact connection editor selects an entrance directly on the plan: hovering
+previews the nearest outer polygon edge in yellow and clicking records it in blue.
+Keyboard users can focus individual edge overlays. Dragging only pans the shared camera.
+The centre direction button cycles both ways, left to right, right to left, then unknown
+(display-only). New pairs start at both ways; existing pairs retain their recorded
+direction. Direction changes preserve each physical entrance.
