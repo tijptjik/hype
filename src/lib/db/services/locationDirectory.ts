@@ -3,7 +3,7 @@ import { locationReadFields } from './locationReadProjection'
 import { sharedLocationFacts } from './locationShared'
 // SNAPSHOT CONTRACT
 // DRIZZLE
-import { and, eq, gt, or, sql } from 'drizzle-orm'
+import { and, eq, gt, lt, asc, desc, or, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
 import { location as locationTable, locationRevision } from '../schema/location'
 import {
@@ -15,8 +15,9 @@ import {
 import { premisesMap as premisesMapTable } from '../schema/premisesMap'
 import { availablePremisesMap } from '#lib/indoor/registry.js'
 // LOCATION
-import { locationFacilityNames } from '#lib/locations/facilityNames.js'
+import type { LocationSortKey } from '#lib/locations/sorting.js'
 import { locationTaxonomy } from '#lib/locations/taxonomy.js'
+import { locationFacilityNames } from '#lib/locations/facilityNames.js'
 import { locationSourceReference, type LocationKind } from '#lib/locations/kinds.js'
 // VALIDATION
 import type { LifecycleStatus } from '#lib/locations/lifecycle.js'
@@ -37,7 +38,11 @@ import type { LocationResource } from '#lib/locations/resource.js'
 export async function listLocationResources(
   db: Database,
   input: {
-    publication?: 'published' | 'draft'
+    publication?: 'all' | 'published' | 'draft'
+    parentOfParts?: boolean
+    sortBy?: LocationSortKey
+    sortOrder?: 'asc' | 'desc'
+    locale?: 'en' | 'zh-hant' | 'zh-hans'
     excludeCanonicalDrafts?: boolean
     includeCount?: boolean
     organisationId?: string
@@ -100,10 +105,23 @@ export async function listLocationResources(
       : input.linkedFeatures
         ? linked
         : sql`NOT (${linked})`,
+    // Offer actual accessible parents with current, effective building-part membership.
+    input.parentOfParts
+      ? sql`EXISTS(SELECT 1 FROM locationMembershipHead m JOIN location c ON c.id=m.childLocationId
+        WHERE m.parentLocationId=${locationTable.id} AND c.matchingType='building_part' AND c.state!='redirect'
+        AND (c.state!='manual' OR c.ownerOrganisationId=${input.organisationId ?? null})
+        AND (${input.excludeCanonicalDrafts ? 1 : 0}=0 OR NOT(c.state='unresolved' AND c.ssId IS NULL AND c.ownerOrganisationId IS NULL))
+        AND m.assertionState='asserted' AND m.membershipState='current'
+        AND (m.effectiveFrom IS NULL OR m.effectiveFrom<=date('now'))
+        AND (m.effectiveTo IS NULL OR m.effectiveTo>date('now'))
+        AND (m.scopeOrganisationId IS NULL OR m.scopeOrganisationId=${input.organisationId ?? null}))`
+      : undefined,
     // A parent-part picker only offers explicit members of the selected building.
     input.buildingId
       ? sql`EXISTS(SELECT 1 FROM locationMembershipHead m WHERE m.childLocationId=${locationTable.id}
       AND m.parentLocationId=${input.buildingId} AND m.assertionState='asserted' AND m.membershipState='current'
+      AND (m.effectiveFrom IS NULL OR m.effectiveFrom<=date('now'))
+      AND (m.effectiveTo IS NULL OR m.effectiveTo>date('now'))
       AND (m.scopeOrganisationId IS NULL OR m.scopeOrganisationId=${input.organisationId ?? null}))`
       : undefined,
     input.organisationId
@@ -144,9 +162,71 @@ export async function listLocationResources(
         : countQuery.where(match))
     : null
   const totalCount = counted === null ? null : Number(counted[0]?.count ?? 0)
-  // Fence ownership before pagination; never search superseded revisions or raw payloads.
+  const sortBy = input.sortBy ?? 'id'
+  const sortOrder = input.sortOrder ?? 'asc'
+  const locale = input.locale ?? 'en'
+  const name = sql`coalesce(json_extract(${fields.names},${'$.' + JSON.stringify(locale)}),json_extract(${fields.names},'$.en'),'')`
+  const parentFields =
+    sortBy === 'address'
+      ? await locationReadFields(
+          db,
+          sql`p.id`,
+          sql`pr.facts`,
+          sql`${input.organisationId ?? null}`,
+          sql`pr.id`,
+        )
+      : null
+  const parentAddress = parentFields
+    ? sql`(SELECT CASE WHEN count(DISTINCT p.id)=1 THEN max(coalesce(json_extract(${parentFields.location},${'$.address.fallbackDisplay.' + JSON.stringify(locale)}),json_extract(${parentFields.names},${'$.' + JSON.stringify(locale)}),json_extract(${parentFields.names},'$.en'))) END FROM locationMembershipHead m JOIN location p ON p.id=m.parentLocationId JOIN locationRevisionContent pr ON pr.locationId=p.id AND pr.version=(SELECT max(version) FROM locationRevision WHERE locationId=p.id) WHERE m.childLocationId=${locationTable.id} AND m.assertionState='asserted' AND m.membershipState='current' AND (m.effectiveFrom IS NULL OR m.effectiveFrom<=date('now')) AND (m.effectiveTo IS NULL OR m.effectiveTo>date('now')) AND (m.scopeOrganisationId IS NULL OR m.scopeOrganisationId=${input.organisationId ?? null}) AND p.state!='redirect' AND (p.ownerOrganisationId IS NULL OR p.ownerOrganisationId=${input.organisationId ?? null}))`
+    : sql`NULL`
+  const address = sql`coalesce(json_extract(${fields.location},${'$.address.displayOverrides.' + JSON.stringify(locale)}),json_extract(${fields.location},${'$.address.authored.i18n.' + JSON.stringify(locale) + '.formattedAddress'}),json_extract(${fields.location},${'$.address.fallbackDisplay.' + JSON.stringify(locale)}),json_extract(${fields.location},'$.address.fallbackDisplay.en'),CASE WHEN ${locationTable.kind}='building_part' THEN ${name}||', '||${parentAddress} END,'')`
+  const expressions: Record<LocationSortKey, SQL> = {
+    name,
+    address,
+    kind: sql`${locationTable.kind}`,
+    lifecycle: sql`coalesce(${fields.operatingStatus},${fields.buildingStatus},'unknown')`,
+    publication: sql`CASE WHEN ${locationTable.ssId} IS NOT NULL THEN 'published' WHEN ${canonicalDraft} THEN 'draft' ELSE 'private' END`,
+    created: sql`${locationTable.createdAt}`,
+    updated: sql`coalesce(${locationRevision.createdAt},${locationTable.createdAt})`,
+    id: sql`${locationTable.id}`,
+  }
+  // Drizzle escapes repeated projection constants and scope values as SQL literals; avoid D1's 100-binding limit in the expanded effective-address expression.
+  const sortExpression = expressions[sortBy].inlineParams()
+  // Fence ownership and current-revision classification before pagination; never search superseded revisions.
+  const directory = db
+    .select({
+      sortValue:
+        sql<string>`${sortBy === 'id' ? sortExpression : sql`lower(coalesce(${sortExpression},''))`}`.as(
+          'sortValue',
+        ),
+      id: locationTable.id,
+    })
+    .from(locationTable)
+    .leftJoin(locationRevision, revisionJoin)
+    .where(match)
+    .as('directory')
+  let cursor: { value: string; id: string } | undefined
+  if (input.after) {
+    if (!input.sortBy) cursor = { value: input.after, id: input.after }
+    else {
+      const parsed = JSON.parse(input.after)
+      if (
+        parsed.by !== sortBy ||
+        parsed.order !== sortOrder ||
+        parsed.locale !== locale ||
+        typeof parsed.value !== 'string' ||
+        typeof parsed.id !== 'string'
+      )
+        throw new Error('LOCATION_SORT_CURSOR_MISMATCH')
+      cursor = parsed
+    }
+  }
+  const compare = sortOrder === 'desc' ? lt : gt
+  const order = sortOrder === 'desc' ? desc : asc
+  // Page by the ordered value plus stable ID so equal names never skip or repeat rows.
   const rows = await db
     .select({
+      sortValue: directory.sortValue,
       id: locationTable.id,
       operatorId: operator.id,
       operatorReferenceCode: locationOperator.referenceCode,
@@ -182,18 +262,30 @@ export async function listLocationResources(
       >`(SELECT revision FROM organisationLocationHead WHERE locationId=${locationTable.id} AND organisationId=${input.organisationId ?? null})`,
     })
     .from(locationTable)
+    .innerJoin(directory, eq(directory.id, locationTable.id))
     .leftJoin(locationRevision, revisionJoin)
     .leftJoin(locationOperator, eq(locationOperator.locationId, locationTable.id))
     .leftJoin(locationPremisesMap, eq(locationPremisesMap.locationId, locationTable.id))
     .leftJoin(operator, eq(operator.id, locationOperator.operatorId))
-    .where(and(match, input.after ? gt(locationTable.id, input.after) : undefined))
-    .orderBy(locationTable.id)
+    .where(
+      cursor
+        ? or(
+            compare(directory.sortValue, cursor.value),
+            and(
+              eq(directory.sortValue, cursor.value),
+              compare(directory.id, cursor.id),
+            ),
+          )
+        : undefined,
+    )
+    .orderBy(order(directory.sortValue), order(directory.id))
     .limit(26)
   const data = await Promise.all(
     rows
       .slice(0, 25)
       .map(
         async ({
+          sortValue: _sortValue,
           operatorId,
           operatorReferenceCode,
           operatorLogo,
@@ -299,5 +391,21 @@ export async function listLocationResources(
         },
       ),
   )
-  return { data, totalCount, nextCursor: rows.length > 25 ? data.at(-1)!.id : null }
+  const last = rows[24]
+  return {
+    data,
+    totalCount,
+    nextCursor:
+      rows.length > 25 && last
+        ? input.sortBy
+          ? JSON.stringify({
+              by: sortBy,
+              order: sortOrder,
+              locale,
+              value: last.sortValue,
+              id: last.id,
+            })
+          : last.id
+        : null,
+  }
 }

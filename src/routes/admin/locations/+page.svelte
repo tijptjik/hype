@@ -8,7 +8,7 @@ import { usePanelResources } from '#lib/context/panel-resources.svelte.js'
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // API
-import { getLocations } from '#lib/api/locationDirectory.remote.js'
+import { getLocation, getLocations } from '#lib/api/locationDirectory.remote.js'
 import { runRemoteQuery } from '#lib/remote/index.js'
 // BITS
 import { ResourceIndex } from '#lib/bits/index.js'
@@ -21,6 +21,7 @@ import { getLocaleKey, m } from '#lib/i18n.js'
 // ICONS
 import MapPin from 'virtual:icons/proicons/location'
 // DOMAIN
+import { locationSortKey, type LocationSortKey } from '#lib/locations/sorting.js'
 import {
   lifecycleStatusesForKind,
   lifecycleStatus as getLifecycleStatus,
@@ -42,8 +43,19 @@ const organisationId = $derived(currentUrl.searchParams.get('organisationId') ??
 const kind = $derived(
   LocationKindSchema.safeParse(currentUrl.searchParams.get('kind')).data ?? '',
 )
+const sortBy = $derived(locationSortKey(currentUrl.searchParams.get('sortBy')))
+const sortOrder = $derived(
+  currentUrl.searchParams.get('sortOrder') === 'desc' ? 'desc' : 'asc',
+)
 const publication = $derived(
-  currentUrl.searchParams.get('publication') === 'draft' ? 'draft' : 'published',
+  currentUrl.searchParams.get('publication') === 'all'
+    ? 'all'
+    : currentUrl.searchParams.get('publication') === 'draft'
+      ? 'draft'
+      : 'published',
+)
+const buildingId = $derived(
+  kind === 'building_part' ? (currentUrl.searchParams.get('buildingId') ?? '') : '',
 )
 const lifecycleStatus = $derived.by(() => {
   const value = currentUrl.searchParams.get('lifecycleStatus') as LifecycleStatus | null
@@ -87,16 +99,22 @@ const visibleRows = $derived.by(() => {
   )
 })
 let activeSearch = $state<{
+  sortBy: LocationSortKey
+  sortOrder: 'asc' | 'desc'
   kind: LocationKind | ''
   q: string
   organisationId: string
   lifecycleStatus: LifecycleStatus | ''
-  publication: 'published' | 'draft'
+  buildingId: string
+  publication: 'all' | 'published' | 'draft'
 }>({
+  sortBy: 'name',
+  sortOrder: 'asc',
   kind: '',
   q: '',
   organisationId: '',
   lifecycleStatus: '',
+  buildingId: '',
   publication: 'published',
 })
 
@@ -110,7 +128,10 @@ async function load(more = false): Promise<void> {
   const request = ++version
   if (!more) {
     activeSearch = {
+      sortBy,
+      sortOrder,
       kind,
+      buildingId,
       q: query.trim().slice(0, 200),
       organisationId,
       lifecycleStatus,
@@ -125,10 +146,19 @@ async function load(more = false): Promise<void> {
     const result = await runRemoteQuery(
       getLocations({
         includeCount: !more,
+        sortBy: activeSearch.sortBy,
+        sortOrder: activeSearch.sortOrder,
+        locale:
+          getLocaleKey() === 'en'
+            ? 'en'
+            : getLocaleKey() === 'zhHant'
+              ? 'zh-hant'
+              : 'zh-hans',
         publication: admin.view.isSuperAdmin() ? activeSearch.publication : undefined,
         scope: admin.view.getRoleScopeQueryKey(),
         q: activeSearch.q,
         kind: activeSearch.kind || undefined,
+        buildingId: activeSearch.buildingId || undefined,
         lifecycleStatus: activeSearch.lifecycleStatus || undefined,
         organisationId: activeSearch.organisationId || undefined,
         after: more ? (cursor ?? undefined) : undefined,
@@ -148,6 +178,72 @@ async function load(more = false): Promise<void> {
   }
 }
 
+let buildingRows = $state.raw<LocationResource[]>([])
+let buildingCursor = $state<string | null>(null)
+let buildingQuery = $state('')
+let buildingVersion = 0
+let buildingsLoading = $state(false)
+let buildingsFailed = $state(false)
+let selectedBuilding = $state.raw<LocationResource | null>(null)
+/** Load a bounded page of accessible parent Locations.
+ * @param more Continue the current search.
+ * @returns Completion of the latest option request.
+ */
+async function loadBuildings(more = false): Promise<void> {
+  if (more && (buildingsLoading || !buildingCursor)) return
+  const request = ++buildingVersion
+  buildingsLoading = true
+  buildingsFailed = false
+  try {
+    const result = await runRemoteQuery(
+      getLocations({
+        parentOfParts: true,
+        includeCount: false,
+        scope: admin.view.getRoleScopeQueryKey(),
+        organisationId: organisationId || undefined,
+        q: buildingQuery || undefined,
+        after: more ? (buildingCursor ?? undefined) : undefined,
+      }),
+    )
+    if (request !== buildingVersion) return
+    buildingRows = more ? [...buildingRows, ...result.data] : result.data
+    buildingCursor = result.nextCursor
+  } catch {
+    if (request === buildingVersion) buildingsFailed = true
+  } finally {
+    if (request === buildingVersion) buildingsLoading = false
+  }
+}
+$effect(() => {
+  kind
+  organisationId
+  buildingQuery
+  admin.view.getRoleScopeQueryKey()
+  untrack(() => {
+    buildingVersion++
+    buildingRows = []
+    buildingCursor = null
+  })
+  if (kind !== 'building_part') return
+  const timer = setTimeout(() => void loadBuildings().catch(() => {}), 200)
+  return () => clearTimeout(timer)
+})
+$effect(() => {
+  const id = buildingId
+  const scope = admin.view.getRoleScopeQueryKey()
+  const owner = organisationId
+  let active = true
+  selectedBuilding = null
+  if (id)
+    void runRemoteQuery(getLocation({ id, scope, organisationId: owner || undefined }))
+      .then(row => {
+        if (active) selectedBuilding = row
+      })
+      .catch(() => {})
+  return () => {
+    active = false
+  }
+})
 let previousScope = ''
 // Account and filter changes invalidate private rows before another authorized read.
 $effect(() => {
@@ -157,6 +253,10 @@ $effect(() => {
     publication,
   ])
   query
+  sortBy
+  sortOrder
+  getLocaleKey()
+  buildingId
   kind
   organisationId
   lifecycleStatus
@@ -188,6 +288,42 @@ $effect(() => {
     LocationControlBar,
     {
       publication,
+      sorting: { sortBy, sortOrder },
+      onSortingChange: (value: { sortBy: string; sortOrder: 'asc' | 'desc' }) =>
+        updateFilters(value),
+      buildingId,
+      buildingsLoading: buildingsLoading && !buildingQuery,
+      buildingsFailed,
+      onRetryBuildings: () => {
+        void loadBuildings()
+      },
+      buildings: [
+        ...(selectedBuilding &&
+        !buildingRows.some(row => row.id === selectedBuilding?.id)
+          ? [selectedBuilding]
+          : []),
+        ...buildingRows,
+      ].map(row => ({
+        value: row.id,
+        label:
+          row.facts?.names?.[
+            getLocaleKey() === 'en'
+              ? 'en'
+              : getLocaleKey() === 'zhHant'
+                ? 'zh-hant'
+                : 'zh-hans'
+          ] ||
+          row.facts?.names?.en ||
+          row.id,
+      })),
+      onBuildingChange: (value: string) => updateFilters({ buildingId: value }),
+      onBuildingSearch: (value: string) => {
+        buildingQuery = value
+      },
+      hasMoreBuildings: Boolean(buildingCursor),
+      onMoreBuildings: () => {
+        void loadBuildings(true)
+      },
       showPublication: admin.view.isSuperAdmin(),
       onPublicationChange: (value: string) => updateFilters({ publication: value }),
       count: totalCount,
@@ -196,6 +332,7 @@ $effect(() => {
       onKindChange: (value: string) => {
         updateFilters({
           kind: value,
+          buildingId: '',
           lifecycleStatus:
             lifecycleStatus &&
             lifecycleStatusesForKind(value as LocationKind | '').includes(
@@ -220,8 +357,11 @@ $effect(() => {
         updateFilters({
           organisationId: '',
           kind: '',
+          buildingId: '',
           lifecycleStatus: '',
           publication: '',
+          sortBy: '',
+          sortOrder: '',
         })
       },
       hasMoreOrganisations: organisations.list.hasMore,

@@ -242,3 +242,109 @@ it('keeps premises codes operator-scoped and maps explicitly assigned', async ()
   const buildingResult = await listLocationResources(f.db, { id: 'station' })
   expect(buildingResult.data[0].premisesMap?.href).toBe('/buildings/kennedy-town-mtr')
 })
+
+it('includes both publication states in All while retaining draft visibility fences', async () => {
+  const f = fixture()
+  f.add('draft')
+  f.add('published', 'ss-published', 'linked')
+  f.add('private', null, 'manual')
+  const all = await listLocationResources(f.db, {
+    publication: 'all',
+    includeCount: true,
+  })
+  expect(all.data.map(row => row.id)).toEqual(['draft', 'published'])
+  expect(all.totalCount).toBe(2)
+  const restricted = await listLocationResources(f.db, {
+    publication: 'all',
+    excludeCanonicalDrafts: true,
+    includeCount: true,
+  })
+  expect(restricted.data.map(row => row.id)).toEqual(['published'])
+  expect(restricted.totalCount).toBe(1)
+})
+
+it('offers actual parents only for current effective accessible building parts', async () => {
+  const f = fixture()
+  f.sqlite.exec(
+    `CREATE TABLE locationMembershipHead(parentLocationId TEXT,childLocationId TEXT,assertionState TEXT,membershipState TEXT,scopeOrganisationId TEXT,effectiveFrom TEXT,effectiveTo TEXT)`,
+  )
+  for (const id of ['current', 'expired', 'future', 'private-parent', 'draft-parent'])
+    f.add(id, `ss-${id}`, 'linked')
+  f.add('part', 'ss-part', 'linked')
+  f.add('draft-part')
+  f.add('private-part', null, 'manual')
+  f.sqlite.exec(`UPDATE location SET kind='building_part' WHERE id IN ('part','draft-part','private-part');
+    INSERT INTO locationMembershipHead VALUES
+    ('current','part','asserted','current',NULL,NULL,NULL),
+    ('expired','part','asserted','current',NULL,NULL,'2000-01-01'),
+    ('future','part','asserted','current',NULL,'2999-01-01',NULL),
+    ('private-parent','private-part','asserted','current',NULL,NULL,NULL),
+    ('draft-parent','draft-part','asserted','current',NULL,NULL,NULL)`)
+  const all = await listLocationResources(f.db, {
+    parentOfParts: true,
+    includeCount: true,
+  })
+  expect(all.data.map(row => row.id)).toEqual(['current', 'draft-parent'])
+  expect(all.totalCount).toBe(2)
+  const restricted = await listLocationResources(f.db, {
+    parentOfParts: true,
+    excludeCanonicalDrafts: true,
+  })
+  expect(restricted.data.map(row => row.id)).toEqual(['current'])
+})
+
+it('sorts the full scope in both directions with stable tie pagination and cursor fences', async () => {
+  const f = fixture()
+  f.sqlite.exec(
+    'CREATE TABLE locationMembershipHead(parentLocationId TEXT,childLocationId TEXT,assertionState TEXT,membershipState TEXT,scopeOrganisationId TEXT,effectiveFrom TEXT,effectiveTo TEXT); CREATE VIEW locationRevision AS SELECT * FROM locationRevisionContent',
+  )
+  for (let i = 0; i < 31; i++)
+    f.add(
+      `row-${String(i).padStart(2, '0')}`,
+      i % 2 ? `ss-${i}` : null,
+      i % 2 ? 'linked' : 'unresolved',
+    )
+  for (const sortBy of [
+    'name',
+    'address',
+    'kind',
+    'lifecycle',
+    'publication',
+    'created',
+    'updated',
+    'id',
+  ] as const) {
+    const forward: string[] = []
+    let after: string | undefined
+    do {
+      const page = await listLocationResources(f.db, {
+        sortBy,
+        sortOrder: 'asc',
+        after,
+        includeCount: true,
+      })
+      expect(page.totalCount).toBe(31)
+      forward.push(...page.data.map(row => row.id))
+      after = page.nextCursor ?? undefined
+    } while (after)
+    const backward: string[] = []
+    do {
+      const page = await listLocationResources(f.db, {
+        sortBy,
+        sortOrder: 'desc',
+        after,
+      })
+      backward.push(...page.data.map(row => row.id))
+      after = page.nextCursor ?? undefined
+    } while (after)
+    expect(new Set(forward).size).toBe(31)
+    expect(backward).toEqual(forward.toReversed())
+  }
+  const first = await listLocationResources(f.db, { sortBy: 'name' })
+  await expect(
+    listLocationResources(f.db, {
+      sortBy: 'created',
+      after: first.nextCursor ?? undefined,
+    }),
+  ).rejects.toThrow('LOCATION_SORT_CURSOR_MISMATCH')
+})

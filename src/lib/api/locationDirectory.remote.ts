@@ -2,6 +2,8 @@ import { sharedLocationFacts } from '#lib/db/services/locationShared.js'
 import { readLocationFacts } from '#lib/locations/factsSnapshot.js'
 // SVELTE
 import { error } from '@sveltejs/kit'
+// DOMAIN
+import { LOCATION_SORT_KEYS } from '#lib/locations/sorting.js'
 // VALIDATION
 import { z } from 'zod'
 // REMOTE
@@ -61,18 +63,26 @@ async function requireDirectoryAccess(
  */
 export const getLocations = guardedQuery(
   z.strictObject({
-    publication: z.enum(['published', 'draft']).optional(),
+    publication: z.enum(['all', 'published', 'draft']).optional(),
+    buildingId: z.string().min(1).max(200).optional(),
+    parentOfParts: z.boolean().optional(),
+    sortBy: z.enum(LOCATION_SORT_KEYS).optional(),
+    sortOrder: z.enum(['asc', 'desc']).optional(),
+    locale: z.enum(['en', 'zh-hant', 'zh-hans']).optional(),
     includeCount: z.boolean().default(true),
     scope: z.string().max(4000).optional(),
     organisationId: z.string().min(1).max(200).optional(),
     q: z.string().trim().max(200).optional(),
     lifecycleStatus: z.enum(LIFECYCLE_STATUSES).optional(),
     kind: LocationKindSchema.optional(),
-    after: z.string().min(1).max(200).optional(),
+    after: z.string().min(1).max(16000).optional(),
   }),
   async (input, ctx) => {
     await requireDirectoryAccess(ctx, input.organisationId)
-    if (input.publication === 'draft' && !ctx.user.superAdmin)
+    if (
+      (input.publication === 'draft' || input.publication === 'all') &&
+      !ctx.user.superAdmin
+    )
       error(403, 'SUPER_ADMIN_REQUIRED')
     return listLocationResources(ctx.db, {
       ...input,
