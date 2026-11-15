@@ -1,4 +1,5 @@
 <script lang="ts">
+import { paintedIndoorUnits, exposedIndoorUnits } from '#lib/indoor/exposure.js'
 // SVELTE
 import { onDestroy, untrack } from 'svelte'
 import { fade } from 'svelte/transition'
@@ -84,21 +85,9 @@ const connections = $derived(
     c => station.showInferred || c.evidence !== 'aligned-footprints',
   ),
 )
-// Blank duplicate website hotspots must not cover a named tenant or its mark.
-const visibleUnits = $derived(
-  data.unit_polygon.features.filter(
-    unit =>
-      data.coordinateSpace !== 'image-pixels' ||
-      unit.properties.source_shop_id !== 'shop_' ||
-      !data.unit_polygon.features.some(
-        other =>
-          other !== unit &&
-          other.properties.level_id === unit.properties.level_id &&
-          other.properties.source_coords === unit.properties.source_coords &&
-          other.properties.source_shop_id !== 'shop_',
-      ),
-  ),
-)
+// Share source paint order and exposed hit geometry with the directory.
+const visibleUnits = $derived(paintedIndoorUnits(data))
+const exposedUnits = $derived(exposedIndoorUnits(data))
 const treads = $derived(stairTreads(data).features)
 const shops = $derived(
   new Map(
@@ -674,6 +663,9 @@ function chooseFloor(id: string): void {
               }
             : undefined}
           units={visibleUnits.filter(f => f.properties.level_id === id)}
+          hitUnits={[...exposedUnits.values()].filter(
+            f => f.properties.level_id === id,
+          )}
           entries={station.entries.filter(p => p.levelId === id)}
           treads={treads.filter(f => f.properties.level_id === id)}
           {projection}

@@ -266,6 +266,7 @@
     "opencc-js": "^1.4.2",
     "papaparse": "^5.7.0",
     "pele": "1.6.0",
+    "polygon-clipping": "^0.15.7",
     "proj4": "^2.22.0",
     "runed": "^0.38.0",
     "sharp": "^0.35.5",

@@ -19,6 +19,7 @@ let {
   artwork,
   artworkOpacity = 0,
   units,
+  hitUnits,
   entries,
   treads,
   projection: cameraProjection,
@@ -42,6 +43,7 @@ let {
   artwork?: { src: string; width: number; height: number }
   artworkOpacity?: number
   units: IndoorFeature[]
+  hitUnits: IndoorFeature[]
   entries: Place[]
   treads: IndoorFeature[]
   projection: StationProjection
@@ -472,13 +474,15 @@ const facilityMarkers = $derived.by(() => {
   <!-- One floor target is enough in overview; detailed targets stay above artwork so logos remain selectable. -->
   {#each exploded
     ? [level]
-    : units.filter(unit =>
+    : hitUnits.filter(unit =>
         entries.some(place => place.id === value(unit.properties, 'unit_id')),
       ) as unit}
     <!-- biome-ignore lint/a11y/useSemanticElements: SVG geometry cannot be an HTML button; the directory provides keyboard selection. -->
     <path
       d={projection.path(unit)}
       fill="transparent"
+      fill-rule="evenodd"
+      data-unit-target={exploded ? undefined : value(unit.properties, 'unit_id')}
       class="cursor-pointer"
       role="button"
       tabindex="-1"

@@ -1,6 +1,7 @@
 import { prepareIndoorData } from './preload'
 import { indexMatches } from './indexNavigation'
 import { visibleIndoorPlaces } from './visibility'
+import { exposedIndoorPlaces } from './exposure'
 import type { IndoorRoute } from './routing'
 import { goto } from '$app/navigation'
 import {
@@ -172,7 +173,7 @@ export class StationState {
         if (controller.signal.aborted) return
         this.documents = documents
         this.data = data
-        this.sourceEntries = data ? places(data) : []
+        this.sourceEntries = data ? exposedIndoorPlaces(data, places(data)) : []
         this.floor = data ? value(initialLevel(data).properties, 'level_id') : ''
         this.bearing = this.enterFromMap
           ? this.entryPose.bearing
