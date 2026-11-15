@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
-import { untrack } from 'svelte'
+import { onDestroy, untrack } from 'svelte'
+import { fade } from 'svelte/transition'
+import { prefersReducedMotion } from 'svelte/motion'
 // DATA
 import {
   centre,
@@ -11,6 +13,7 @@ import {
 } from '#lib/indoor/model.js'
 import IndoorFloorLayer from './IndoorFloorLayer.svelte'
 import { shopArtwork } from '#lib/indoor/artwork.js'
+import { cameraTravel, floorInViewport } from '#lib/indoor/cameraTransition.js'
 import { stationProjection } from '#lib/indoor/scene.js'
 import { connectionCandidates, stairTreads } from '#lib/indoor/spatial.js'
 import type { StationState } from '#lib/indoor/station.svelte.js'
@@ -55,7 +58,77 @@ const focused = $derived(
   station.selected?.kind === 'shop' ? [station.selected.feature] : levels,
 )
 const box = $derived(projection.box(focused))
-const baseView = $derived([box[0] - 18, box[1] - 24, box[2] + 36, box[3] + 48])
+const fittedView = $derived([box[0] - 18, box[1] - 24, box[2] + 36, box[3] + 48])
+// Overlapping floor switches keep the source-coordinate frame, including manual pan and zoom.
+let retainedView = $state<number[] | null>(null)
+const baseView = $derived(retainedView ?? fittedView)
+let travel = $state<ReturnType<typeof cameraTravel> | null>(null)
+let travelTimer: ReturnType<typeof setTimeout> | undefined
+onDestroy(() => clearTimeout(travelTimer))
+$effect(() => {
+  station.preserveFloorCamera = id => {
+    clearTimeout(travelTimer)
+    travel = null
+    const current = (displayedViewBox || viewBox).split(' ').map(Number)
+    const scale = Math.max(current[2] / width, current[3] / height)
+    const visible = [
+      current[0] + (current[2] - width * scale) / 2,
+      current[1] + (current[3] - height * scale) / 2,
+      width * scale,
+      height * scale,
+    ]
+    const destination = data.level_polygon.features.filter(
+      f => f.properties.level_id === id,
+    )
+    // Preserve overlapping floors; recenter only when the entire destination is off screen.
+    if (
+      id !== station.floor &&
+      destination.length &&
+      !floorInViewport(destination, projection, visible)
+    ) {
+      const bounds = projection.box(destination)
+      const from: [number, number] = [
+        current[0] + current[2] / 2,
+        current[1] + current[3] / 2,
+      ]
+      const to: [number, number] = [
+        bounds[0] + bounds[2] / 2,
+        bounds[1] + bounds[3] / 2,
+      ]
+      const delta: [number, number] = [to[0] - from[0], to[1] - from[1]]
+      // Schematic artwork has no geographic scale, so never claim a distance in metres.
+      if (data.coordinateSpace !== 'image-pixels') {
+        travel = cameraTravel(
+          projection.unproject(from, station.floor),
+          projection.unproject(to, id),
+          delta,
+        )
+      } else {
+        travel = {
+          distance: '',
+          direction: 'across the floor plan',
+          angle: (Math.atan2(delta[0], -delta[1]) * 180) / Math.PI,
+        }
+      }
+      travelTimer = setTimeout(() => {
+        travel = null
+      }, 3200)
+      retainedView = [
+        to[0] - current[2] / 2,
+        to[1] - current[3] / 2,
+        current[2],
+        current[3],
+      ]
+    } else retainedView = current
+    zoom = 1
+    panX = 0
+    panY = 0
+  }
+  return () => {
+    station.preserveFloorCamera = null
+  }
+})
+
 let zoom = $state(1),
   panX = $state(0),
   panY = $state(0)
@@ -102,6 +175,7 @@ $effect(() => {
   void station.fitRevision
   void station.exploded
   untrack(() => {
+    retainedView = null
     zoom = 1
     panX = 0
     panY = 0
@@ -209,10 +283,47 @@ $effect(() => {
   frame = requestAnimationFrame(animate)
   return () => cancelAnimationFrame(frame)
 })
-const viewport = $derived(viewBox.split(' ').map(Number))
+// Animate level navigation from the visible camera while keeping gestures immediate.
+let displayedViewBox = $state('')
+let cameraAnimating = $state(false)
+let lastCameraFloor = ''
+$effect(() => {
+  const target = viewBox.split(' ').map(Number)
+  const floor = `${station.code}:${station.floor}:${station.exploded}`
+  const previous = untrack(() => displayedViewBox)
+  const navigating = floor !== lastCameraFloor || untrack(() => cameraAnimating)
+  lastCameraFloor = floor
+  if (
+    !previous ||
+    !navigating ||
+    prefersReducedMotion.current ||
+    station.routeMode === 'flying'
+  ) {
+    displayedViewBox = viewBox
+    cameraAnimating = false
+    return
+  }
+  const from = previous.split(' ').map(Number)
+  const start = performance.now()
+  let frame = 0
+  cameraAnimating = true
+  const step = (now: number): void => {
+    const progress = Math.min(1, (now - start) / 420)
+    const eased = progress * progress * (3 - 2 * progress)
+    displayedViewBox = target
+      .map((value, index) => from[index] + (value - from[index]) * eased)
+      .join(' ')
+    if (progress < 1) frame = requestAnimationFrame(step)
+    else cameraAnimating = false
+  }
+  frame = requestAnimationFrame(step)
+  return () => cancelAnimationFrame(frame)
+})
+const viewport = $derived((displayedViewBox || viewBox).split(' ').map(Number))
 const textScale = $derived(Math.max(viewport[2] / width, viewport[3] / height))
 const maskId = $props.id()
 function wheel(event: WheelEvent): void {
+  cameraAnimating = false
   event.preventDefault()
   station.stopFly()
   if (event.altKey && event.ctrlKey)
@@ -299,6 +410,7 @@ function chooseFloor(id: string): void {
       updateTilt((station.exploded ? station.tilt : station.planTilt) - 5)
     }
     if (e.key === '0') {
+      retainedView = null
       zoom = 1
       panX = 0
       panY = 0
@@ -310,7 +422,9 @@ function chooseFloor(id: string): void {
     bind:this={svg}
     bind:clientWidth={width}
     bind:clientHeight={height}
-    {viewBox}
+    viewBox={displayedViewBox || viewBox}
+    data-camera-animating={cameraAnimating}
+    data-camera-bearing={station.bearing}
     class="h-full w-full touch-none outline-none select-none"
     data-station-scene={station.exploded ? 'exploded' : 'plan'}
     role="application"
@@ -324,6 +438,7 @@ function chooseFloor(id: string): void {
     data-bearing={station.bearing}
     data-tilt={station.tilt}
     onpointerdown={e => {
+      cameraAnimating = false
       if (e.button !== 0 && e.button !== 2) return
       station.stopFly()
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
@@ -605,4 +720,30 @@ function chooseFloor(id: string): void {
       </g>
     {/if}
   </svg>
+  {#if travel}
+    <div
+      role="status"
+      data-camera-travel
+      class="pointer-events-none absolute bottom-[180px] left-1/2 z-30 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-3 rounded-full bg-[var(--station-paper)] px-5 py-3 text-sm text-[var(--station-ink)] shadow-lg"
+      transition:fade={{ duration: prefersReducedMotion.current ? 0 : 160 }}
+    >
+      <svg
+        viewBox="0 0 40 40"
+        class="size-9 shrink-0"
+        aria-hidden="true"
+        style:transform={`rotate(${travel.angle}deg)`}
+      >
+        <circle cx="20" cy="32" r="2" fill="currentColor" />
+        <path
+          d="M20 29V8M12 16l8-8 8 8"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <span>Moving {travel.distance} {travel.direction}</span>
+    </div>
+  {/if}
 </div>

@@ -28,18 +28,20 @@ export class StationState {
   stopFly(): void {
     this.routeMode = 'highlight'
   }
-  /** Clears the route and restores the default camera. @returns Nothing. */
-  clearRoute(): void {
+  /** Clears the route, optionally retaining the current camera. @param preserveCamera Keep orientation and framing for a floor change. @returns Nothing. */
+  clearRoute(preserveCamera = false): void {
     if (this.route) this.exploded = true
-    this.planTilt = 0
+    if (!preserveCamera) this.planTilt = 0
     this.route = null
     this.routeMode = 'highlight'
     this.arrival = 0
     this.routeProgress = 0
-    this.bearing = this.data?.coordinateSpace === 'image-pixels' ? 0 : -115
-    this.tilt = 60
-    this.spacing = 25
-    this.fitRevision++
+    if (!preserveCamera) {
+      this.bearing = this.data?.coordinateSpace === 'image-pixels' ? 0 : -115
+      this.tilt = 60
+      this.spacing = 25
+      this.fitRevision++
+    }
   }
   /** Starts an interruptible route animation. @returns Nothing. */
   flyRoute(): void {
@@ -80,6 +82,8 @@ export class StationState {
   documents = $state.raw<{ kind: string; path: string }[]>([])
   private controller: AbortController | null = null
   private loadedCode = ''
+  /** Mounted scene callback preserves or recenters the frame before changing floors. */
+  preserveFloorCamera: ((id: string) => void) | null = null
   enterFromMap = false
   private prepared: { code: string; data: IndoorData | null } | null = null
   /** Prepare an indoor map while the outdoor camera approaches.
@@ -94,6 +98,13 @@ export class StationState {
   }
   /** Opens a station URL or hydrates navigation. @param code Official code. @param id Source space ID. @param navigation Whether to navigate. @returns Load completion. */
   async open(code = this.code, id?: string, navigation = true): Promise<void> {
+    const previousView = {
+      active: this.active,
+      code: this.loadedCode,
+      floor: this.floor,
+      selected: this.selected?.id,
+      exploded: this.exploded,
+    }
     if (!code) {
       const catalogue = await loadPremisesCatalogue()
       code = catalogue[0]?.code ?? ''
@@ -169,7 +180,14 @@ export class StationState {
       this.exploded = false
       this.enterFromMap = false
     }
-    this.fitRevision++
+    if (
+      !previousView.active ||
+      previousView.code !== this.loadedCode ||
+      previousView.floor !== this.floor ||
+      previousView.selected !== this.selected?.id ||
+      previousView.exploded !== this.exploded
+    )
+      this.fitRevision++
   }
   /** Detect new releases without disturbing an unchanged map or active route animation. @returns Completion. */
   async checkPublished(): Promise<void> {
@@ -256,11 +274,13 @@ export class StationState {
   }
   /** Opens a detailed plan. @param id Source level ID. @returns Nothing. */
   openFloor(id: string): void {
-    this.clearRoute()
+    const preserveCamera = !this.exploded
+    if (preserveCamera) this.preserveFloorCamera?.(id)
+    this.clearRoute(preserveCamera)
     this.floor = id
     this.exploded = false
     this.selected = null
-    this.fitRevision++
+    if (!preserveCamera) this.fitRevision++
     void goto(premisesPath(this.code), { replace: true, reset: false })
   }
   /** Opens a source space. @param place Selected record. @returns Nothing. */
