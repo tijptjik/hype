@@ -108,7 +108,22 @@ test('facility legend distinguishes accessible toilets and station services', as
     /Helpline|SOS Intercom|Police sign-in box|Ticket machine/.test(item.label),
   )
   expect(new Set(services.map(item => item.path)).size).toBe(4)
-  expect(new Set(services.map(item => item.color)).size).toBe(3)
+  expect(new Set(services.map(item => item.color)).size).toBe(4)
+  for (const [label, color] of [
+    ['Female toilet', '#7e22ce'],
+    ['Male toilet', '#7e22ce'],
+    ['Accessible toilet', '#7e22ce'],
+    ['Helpline', '#0369a1'],
+    ['Ticket machine', '#92400e'],
+    ['SOS Intercom', '#b91c1c'],
+    ['Police sign-in box', '#1e3a8a'],
+  ]) {
+    await expect(
+      legend
+        .getByRole('button', { name: `Find ${label}`, exact: true })
+        .locator('path'),
+    ).toHaveAttribute('stroke', color)
+  }
   await page.screenshot({ path: join(output, 'facility-colours-desktop.png') })
   await page.setViewportSize({ width: 390, height: 844 })
   await page.getByRole('button', { name: 'Close station panel', exact: true }).click()

@@ -43,15 +43,10 @@ for (const width of [1440, 390]) {
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
     ).toBe(true)
-    const preview = page.getByRole('checkbox', { name: 'Preview proposed colours' })
     const atm = list
       .locator('li')
       .filter({ has: page.getByRole('heading', { name: 'ATM', exact: true }) })
-    await expect(atm.locator('path')).toHaveAttribute('stroke', '#0369a1')
-    await preview.check()
     await expect(atm.locator('path')).toHaveAttribute('stroke', '#92400e')
-    await preview.uncheck()
-    await expect(atm.locator('path')).toHaveAttribute('stroke', '#0369a1')
     const total = await list.locator('li').count()
     const atmReference = await atm.locator('span').innerText()
     const shopping = page.getByRole('button', {
@@ -85,7 +80,6 @@ for (const width of [1440, 390]) {
       .locator('li')
       .filter({ has: page.getByRole('heading', { name: 'ATM', exact: true }) })
     await expect(filteredAtm.locator('span')).toHaveText(atmReference)
-    await preview.check()
     await expect(filtered.locator('li')).toHaveCount(6)
     await expect(filteredAtm.locator('path')).toHaveAttribute('stroke', '#92400e')
     const police = page.getByRole('button', { name: 'Police & security', exact: true })
@@ -100,7 +94,6 @@ for (const width of [1440, 390]) {
     await shopping.click()
     await page.getByRole('button', { name: 'All categories', exact: true }).click()
     await expect(list.locator('li')).toHaveCount(total)
-    await preview.uncheck()
     await page.screenshot({
       // biome-ignore lint/suspicious/noUndeclaredEnvVars: managed evidence directory.
       path: join(process.env.DEV_RUNNER_ARTIFACTS, `symbol-review-${width}.png`),

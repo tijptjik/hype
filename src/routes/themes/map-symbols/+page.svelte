@@ -1,110 +1,23 @@
 <script lang="ts">
+// SVELTE
+import { onMount } from 'svelte'
 // DOMAIN
+import {
+  facilityColourGroups,
+  facilityColourGroup,
+} from '#lib/indoor/facilityColours.js'
 import {
   facilitySymbols,
   facilitySymbol,
   facilityLegendRank,
 } from '#lib/indoor/facilities.js'
-// Proposed colours are confined to this review page until approved.
-let proposedColours = $state(false)
+// The design reference uses the same approved colours as the live map.
 let selectedCategory = $state<string | null>(null)
-const colourGroups = [
-  {
-    label: 'Movement & transport',
-    color: '#0f766e',
-    background: '#f0fdfa',
-    keys: [
-      'elevator',
-      'escalator',
-      'ramp',
-      'stairs',
-      'walkway',
-      'corridor',
-      'movingwalkway',
-      'platform',
-      'rail.muni',
-      'taxi',
-      'parking',
-      'parking.ev',
-      'parking.motorcycle',
-    ],
-  },
-  {
-    label: 'Information & communication',
-    color: '#0369a1',
-    background: '#f0f9ff',
-    keys: [
-      'information',
-      'reception.desk',
-      'guestservices',
-      'phone',
-      'payphone',
-      'mailbox',
-    ],
-  },
-  {
-    label: 'Personal care & accessibility',
-    color: '#7e22ce',
-    background: '#faf5ff',
-    keys: [
-      'restroom.male',
-      'restroom.female',
-      'restroom.unisex',
-      'restroom.accessible',
-      'mothersroom',
-      'babychanging',
-      'wheelchairassist',
-      'shower',
-      'drinkingfountain',
-    ],
-  },
-  {
-    label: 'Shopping & transactions',
-    color: '#92400e',
-    background: '#fffbeb',
-    keys: ['atm', 'bank', 'vendingmachine', 'foodservice', 'photobooth'],
-  },
-  {
-    label: 'Leisure & recreation',
-    color: '#3f6212',
-    background: '#f7fee7',
-    keys: ['childplayarea', 'fieldofplay', 'swimmingpool', 'publiclibrary'],
-  },
-  {
-    label: 'Medical help',
-    color: '#15803d',
-    background: '#f0fdf4',
-    keys: ['firstaid', 'defibrillator'],
-  },
-  {
-    label: 'Emergency communication',
-    color: '#b91c1c',
-    background: '#fef2f2',
-    keys: ['phone.emergency'],
-  },
-  {
-    label: 'Police & security',
-    color: '#1e3a8a',
-    background: '#eff6ff',
-    keys: ['police', 'security', 'checkin:Police sign-in box'],
-  },
-  {
-    label: 'General spaces',
-    color: '#475569',
-    background: '#f1f5f9',
-    keys: ['lobby', 'seating', 'room', 'checkin'],
-  },
-]
-/** Resolve the proposed review-only group, including source-name variants.
- * @param key Review symbol identity. @returns Proposed colour group.
- */
-function proposedGroup(key: string): (typeof colourGroups)[number] {
-  return (
-    colourGroups.find(group => group.keys.includes(key)) ??
-    colourGroups.find(group => group.keys.includes(key.split(':')[0])) ??
-    colourGroups[8]
-  )
-}
+// Do not offer filters until hydration has attached their event handlers.
+let ready = $state(false)
+onMount(() => {
+  ready = true
+})
 const variants = [
   { key: 'phone', name: 'Helpline' },
   { key: 'vendingmachine', name: 'Ticket machine' },
@@ -182,7 +95,7 @@ const visibleSymbols = $derived(
     .map((symbol, index) => ({ ...symbol, reference: index + 2 }))
     .filter(
       symbol =>
-        !selectedCategory || proposedGroup(symbol.key).label === selectedCategory,
+        !selectedCategory || facilityColourGroup(symbol.key).label === selectedCategory,
     ),
 )
 const mapExtras = [
@@ -231,22 +144,19 @@ const mapExtras = [
 
     <section
       class="mt-6 rounded-xl border border-[#d8dfdc] bg-white/70 p-4"
-      aria-label="Colour proposal"
+      aria-label="Service colours"
     >
-      <h2 class="font-semibold">Proposed service colours</h2>
+      <h2 class="font-semibold">Service colours</h2>
       <p class="mt-2 text-sm">
         A consistent colour per service family, with dark ink on a pale background.
         Medical help stays green and SOS stays red. Icons and names remain the primary
-        cues. This preview does not change map colours.
+        cues. These colours are used on the maps.
       </p>
-      <label class="mt-3 flex items-center gap-2 text-sm font-medium">
-        <input type="checkbox" bind:checked={proposedColours}>
-        Preview proposed colours
-      </label>
       <ul class="mt-4 flex flex-wrap gap-3 text-xs">
         <li>
           <button
             type="button"
+            disabled={!ready}
             class="cursor-pointer rounded-lg px-3 py-2 ring-current hover:ring-1 focus-visible:outline-2 focus-visible:outline-offset-2"
             class:ring-2={selectedCategory === null}
             aria-pressed={selectedCategory === null}
@@ -255,10 +165,11 @@ const mapExtras = [
             All categories
           </button>
         </li>
-        {#each colourGroups as group}
+        {#each facilityColourGroups as group}
           <li>
             <button
               type="button"
+              disabled={!ready}
               class="cursor-pointer rounded-lg px-3 py-2 text-left ring-current hover:ring-1 focus-visible:outline-2 focus-visible:outline-offset-2"
               class:ring-2={selectedCategory === group.label}
               style:color={group.color}
@@ -286,7 +197,6 @@ const mapExtras = [
         {@render mapKey(mapExtras[0], 1)}
       {/if}
       {#each visibleSymbols as symbol (symbol.key)}
-        {@const palette = proposedColours ? proposedGroup(symbol.key) : symbol}
         <li
           class="flex min-h-32 flex-col rounded-xl border border-[#d8dfdc] bg-white/70 p-4"
         >
@@ -301,12 +211,12 @@ const mapExtras = [
                 width="32"
                 height="32"
                 rx="8"
-                fill={palette.background}
+                fill={symbol.background}
               />
               <path
                 d={symbol.path}
                 fill="none"
-                stroke={palette.color}
+                stroke={symbol.color}
                 stroke-width="1.7"
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -318,7 +228,7 @@ const mapExtras = [
                   text-anchor="middle"
                   font-size="10"
                   font-weight="800"
-                  fill={palette.color}
+                  fill={symbol.color}
                 >
                   {symbol.text}
                 </text>
@@ -326,9 +236,7 @@ const mapExtras = [
             </svg>
           </div>
           <h2 class="mt-3 text-sm font-medium">{symbol.label}</h2>
-          {#if proposedColours}
-            <p class="mt-1 text-xs">{proposedGroup(symbol.key).label}</p>
-          {/if}
+          <p class="mt-1 text-xs">{facilityColourGroup(symbol.key).label}</p>
           <p class="mt-1 text-xs text-[#60777d]">
             {['elevator', 'escalator', 'ramp', 'stairs'].includes(symbol.key)
               ? 'Connection'
