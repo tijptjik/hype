@@ -14,6 +14,7 @@ import {
 import { premisesMap as premisesMapTable } from '../schema/premisesMap'
 import { availablePremisesMap } from '#lib/indoor/registry.js'
 // LOCATION
+import { locationFacilityNames } from '#lib/locations/facilityNames.js'
 import { locationTaxonomy } from '#lib/locations/taxonomy.js'
 import { locationSourceReference, type LocationKind } from '#lib/locations/kinds.js'
 // VALIDATION
@@ -258,6 +259,9 @@ export async function listLocationResources(
               location: effective.location ?? facts.location,
             }
           }
+          // Present imported facility labels consistently without rewriting retained source facts.
+          if (facts)
+            facts = { ...facts, names: locationFacilityNames(row.kind, facts.names) }
           return {
             ...row,
             premisesMap: availablePremisesMap(row.premisesMapId, mapRegistry),
