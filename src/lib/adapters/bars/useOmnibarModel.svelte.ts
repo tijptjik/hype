@@ -61,18 +61,35 @@ export function useOmnibarModel(
   getOmnibarProps: () => OmnibarProps
 } {
   let premisesExpanded = $state<'station' | 'mall' | null>(null)
+  // Keep collection rows and navigation indices in the same displayed-title order.
+  const stationWalkItems = $derived(
+    stations
+      .map(station => ({
+        id: station.id,
+        label: getI18n(station, 'name', appCtx.view.getUserPreferences()),
+        lineBadges: stationLines(station.id).map(line => ({
+          id: line.id,
+          color: line.color,
+          label: getI18n(line, 'name', appCtx.view.getUserPreferences()),
+        })),
+      }))
+      .sort(
+        (left, right) =>
+          left.label.localeCompare(right.label) || left.id.localeCompare(right.id),
+      ),
+  )
   const stationWalkIndex = $derived(
     /^\/(?:premises|buildings)\//.test(page.url.pathname) &&
       page.url.searchParams.get('walk') === 'mtr-stations'
-      ? stations.findIndex(
+      ? stationWalkItems.findIndex(
           station => station.id === premisesCode(page.url.pathname.split('/')[2] ?? ''),
         )
       : -1,
   )
 
-  /** Opens one member of the temporary station walk. @param index Catalogue position. @returns Nothing. */
+  /** Opens one member of the temporary station walk. @param index Displayed-title position. @returns Nothing. */
   function selectStationWalkIndex(index: number): void {
-    const station = stations[index]
+    const station = stationWalkItems[index]
     if (!station) return
     omniCtx.closeTray()
     void goto(`${premisesPath(station.id)}?walk=mtr-stations`)
@@ -468,17 +485,7 @@ export function useOmnibarModel(
   return {
     getOmnibarProps: () => {
       const stationWalk = stationWalkIndex >= 0
-      const collectionItems = stationWalk
-        ? stations.map(station => ({
-            id: station.id,
-            label: getI18n(station, 'name', appCtx.view.getUserPreferences()),
-            lineBadges: stationLines(station.id).map(line => ({
-              id: line.id,
-              color: line.color,
-              label: getI18n(line, 'name', appCtx.view.getUserPreferences()),
-            })),
-          }))
-        : getCollectionItems()
+      const collectionItems = stationWalk ? stationWalkItems : getCollectionItems()
       const currentIndex = stationWalk ? stationWalkIndex : omniCtx.navIndex
       const collectionLength = collectionItems.length
 
