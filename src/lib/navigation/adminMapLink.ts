@@ -1,6 +1,7 @@
 // PUBLICATION
 import { publicationPreviewUrl } from '#lib/publication/preview.js'
 // TYPES
+import type { LocationResource } from '#lib/locations/resource.js'
 import type { Prisms } from '#lib/types.js'
 
 export const MAP_PRISM_PARAMS = [
@@ -16,6 +17,7 @@ export const MAP_PRISM_PARAMS = [
  * @param resourceRef Current persisted resource reference, or false on indexes.
  * @param task Loaded task association when the current resource is a task.
  * @param feature Saved active feature publication state.
+ * @param location Loaded Location matching the active resource identity.
  * @returns A feature detail URL or map URL carrying the hierarchy selection.
  * @remarks Admin-only facets and panels are deliberately excluded.
  */
@@ -25,6 +27,7 @@ export function getAdminMapHref(
   resourceRef: string | false,
   task?: { featureId?: string | null; feature?: { id?: string | null } | null } | null,
   feature?: { id: string; isPublished?: boolean | null } | null,
+  location?: LocationResource | null,
 ): string {
   const params = new URLSearchParams({ mapPrisms: '1' })
   const selection = {
@@ -61,6 +64,24 @@ export function getAdminMapHref(
       id: featureId,
       publishChildren: false,
     })
+  // Exact saved Location identity prevents stale detail state from targeting another record.
+  if (hasResource && resourceType === 'location' && location?.id === resourceRef) {
+    const indoor = location.indoorSource?.href ?? location.premisesMap?.href
+    if (indoor) return indoor
+    const point = location.facts?.location.geometry.coordinates
+    if (
+      point &&
+      point.length >= 2 &&
+      Number.isFinite(point[0]) &&
+      Number.isFinite(point[1]) &&
+      Math.abs(point[0]) <= 180 &&
+      Math.abs(point[1]) <= 90
+    ) {
+      params.set('lng', String(point[0]))
+      params.set('lat', String(point[1]))
+      params.set('zoom', '18')
+    }
+  }
   const path = featureId ? `/features/${encodeURIComponent(featureId)}` : '/'
   return `${path}?${params}`
 }

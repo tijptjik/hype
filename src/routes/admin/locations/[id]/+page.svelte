@@ -1,12 +1,14 @@
 <script lang="ts">
 // SVELTE
 import { page } from '$app/state'
-import { untrack } from 'svelte'
+import { untrack, type Snippet } from 'svelte'
 // COMPONENTS
 import Tabs from '#lib/bits/core/tabs/Tabs.svelte'
 import * as Main from '#lib/bits/custom/main/index.js'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import LocalLocationAddressEditor from '#lib/bits/patterns/forms/localLocationAddress/LocalLocationAddressEditor.svelte'
+import { Button } from '#lib/bits/core/index.js'
+import { getAdminMapHref } from '#lib/navigation/adminMapLink.js'
 // NAVIGATION
 import { bindAdminFacetHistorySync } from '#lib/client/services/form.js'
 import { getAdminFacetTabsForResource } from '#lib/navigation/index.js'
@@ -54,6 +56,7 @@ const request = $derived(
 ) // BITS COMPONENTS
 import AddressEditorSkeleton from '#lib/bits/patterns/forms/localLocationAddress/AddressEditorSkeleton.svelte'
 
+let editorContent = $state<Snippet | null>(null)
 let pendingEdit = $state(false)
 // Route changes discard the old record's edit mode before applying explicit edit intent.
 $effect(() => {
@@ -86,10 +89,13 @@ $effect(() => {
     Object.values(facts?.names ?? {}).find(Boolean) ||
     m.location_policy_tab()
   untrack(() => {
+    if (place && place.id === page.params.id)
+      admin.view.cache.location.set(place.id, place)
     header.setHeaderForEntity(title, MapPin, facetTabs)
     header.setCrumbs([{ name: m.location_policy_tab(), href: '/admin/locations' }])
     header.setFormActions({
       canEdit: Boolean(place?.canEditAddress && place.state !== 'redirect'),
+      content: locationEditorActions,
       canPublish: false,
       showPublishAction: false,
       showDeleteAction: false,
@@ -98,6 +104,25 @@ $effect(() => {
   })
 })
 </script>
+
+{#snippet locationEditorActions()}
+  {@render editorContent?.()}
+  {#if request.current}
+    <Button
+      text="Map"
+      iconComponent={MapPin}
+      href={getAdminMapHref(
+        admin.view.scope.prisms,
+        'location',
+        page.params.id ?? false,
+        null,
+        null,
+        request.current,
+      )}
+      disabled={header.state.isEditing}
+    />
+  {/if}
+{/snippet}
 
 <Main.Root
   class="px-0 pt-0"
@@ -145,7 +170,13 @@ $effect(() => {
                     queryScope={scope}
                     isEditing={header.state.isEditing}
                     onEditingChange={value => header.setEditing(value)}
-                    onControlsChange={controls => header.setFormActions(controls)}
+                    onControlsChange={controls => {
+                      editorContent = controls.content ?? null
+                      header.setFormActions({
+                        ...controls,
+                        content: locationEditorActions,
+                      })
+                    }}
                     onSaved={async () => {
                       await request.refresh()
                     }}

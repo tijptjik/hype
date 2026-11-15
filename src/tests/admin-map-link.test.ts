@@ -76,3 +76,51 @@ it.each([true, false])(
     )
   },
 )
+
+describe('Location map context', () => {
+  const prisms = { organisation: ['org'], project: [], layer: [] }
+  const location = {
+    id: 'part',
+    indoorSource: { href: '/premises/kowloon-tong-mtr/places/polygon-id' },
+    premisesMap: { href: '/premises/kowloon-tong-mtr' },
+    facts: { location: { geometry: { coordinates: [114.177, 22.3369] } } },
+  } as import('#lib/locations/resource.js').LocationResource
+
+  it('opens an exact polygon before the containing map', () => {
+    expect(getAdminMapHref(prisms, 'location', 'part', null, null, location)).toBe(
+      location.indoorSource?.href,
+    )
+    expect(
+      getAdminMapHref(prisms, 'location', 'part', null, null, {
+        ...location,
+        indoorSource: null,
+      }),
+    ).toBe(location.premisesMap?.href)
+  })
+
+  it('centres ordinary Locations and preserves hierarchy selections', () => {
+    const url = new URL(
+      getAdminMapHref(prisms, 'location', 'part', null, null, {
+        ...location,
+        indoorSource: null,
+        premisesMap: null,
+      }),
+      'https://hype.test',
+    )
+    expect(url.searchParams.get('lng')).toBe('114.177')
+    expect(url.searchParams.get('lat')).toBe('22.3369')
+    expect(url.searchParams.get('zoom')).toBe('18')
+    expect(getMapPrisms(url.searchParams)).toEqual(prisms)
+  })
+
+  it('never uses stale Location context for another record or the index', () => {
+    for (const ref of ['other', false, 'new'] as const) {
+      const url = new URL(
+        getAdminMapHref(prisms, 'location', ref, null, null, location),
+        'https://hype.test',
+      )
+      expect(url.pathname).toBe('/')
+      expect(url.searchParams.has('lng')).toBe(false)
+    }
+  })
+})

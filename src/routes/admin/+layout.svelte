@@ -331,6 +331,9 @@ const headerProps = $derived({
       adminCtx.activeResourceType === 'feature' && adminCtx.activeResourceRef
         ? view.cache.feature.get(adminCtx.activeResourceRef)
         : null,
+      adminCtx.activeResourceType === 'location' && adminCtx.activeResourceRef
+        ? view.cache.location.get(adminCtx.activeResourceRef)
+        : null,
     ),
     // Dispose admin retention before entering an authorized publication preview.
     reload:
