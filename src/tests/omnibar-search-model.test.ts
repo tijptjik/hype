@@ -12,7 +12,11 @@ vi.mock('#lib/navigation/index.js', () => ({
   navigate: vi.fn(),
 }))
 vi.mock('#lib/i18n.js', () => ({
-  getI18n: (row: { i18n: { en: { name: string } } }) => row.i18n.en.name,
+  getI18n: (
+    row: { i18n: Record<string, { name: string }> },
+    _field: string,
+    preferences?: { contentLocale?: string },
+  ) => row.i18n[preferences?.contentLocale ?? 'en']?.name ?? row.i18n.en.name,
   m: new Proxy({}, { get: (_, key) => () => String(key) }),
 }))
 vi.mock('#lib/context/panel-resources.svelte.js', () => ({
@@ -93,6 +97,8 @@ it('orders all categories by policy and excludes nonmatching pins', () => {
   const { search, featureSelect } = setup()
   const sections = search().sections
   expect(sections.map(section => section.collectionType)).toEqual([
+    'station',
+    'mall',
     'feature',
     'walk',
     'project',
@@ -145,6 +151,8 @@ it('selects the first project when no feature or walk matches and omits resource
   omni.state.searchTerm = ' '
   omni.searchQueryTerm = ' '
   expect(search().sections.map(section => section.collectionType)).toEqual([
+    'station',
+    'mall',
     'feature',
     'walk',
     'neighbourhood',
@@ -216,4 +224,21 @@ it('keeps search open when activation fails or an independent control is used', 
   await waitFor(() => expect(log).toHaveBeenCalled())
   expect(omni.closeTray).not.toHaveBeenCalled()
   log.mockRestore()
+})
+
+it.each([
+  ['en', 'Admiralty'],
+  ['zhHant', '金鐘'],
+  ['zhHans', '金钟'],
+])('shows only the %s station name in omnibar results', (locale, name) => {
+  const { app, omni, search } = setup()
+  Object.defineProperty(app, 'showMtrStations', { value: true })
+  app.view.getUserPreferences = () =>
+    ({ contentLocale: locale }) as ReturnType<AppCtx['view']['getUserPreferences']>
+  omni.state.searchTerm = 'ADM'
+  const station = search().sections.find(
+    section => section.collectionType === 'station',
+  )
+  expect(station?.results).toHaveLength(1)
+  expect(station?.results[0].name).toBe(`${name} · ADM`)
 })

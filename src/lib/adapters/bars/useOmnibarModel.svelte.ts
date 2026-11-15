@@ -373,7 +373,7 @@ export function useOmnibarModel(
           )
           .map(venue => ({
             ref: venue.id,
-            name: `${venue.name} · ${venue.nameZh} · ${venue.id}`,
+            name: `${getI18n(venue, 'name', appCtx.view.getUserPreferences())} · ${venue.id}`,
             count: 0,
             collectionType,
           })),

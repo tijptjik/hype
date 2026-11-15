@@ -1,5 +1,24 @@
+// I18N
+import { simplifiedChinese } from '#lib/addresses/chinese.js'
 // TYPES
 import type { SymbolLayerSpecification } from 'maplibre-gl'
+
+/** Build locale records from published premises names without changing source fields.
+ * @param premises English and Traditional Chinese catalogue names.
+ * @returns Name records for each supported content locale.
+ * @remarks Simplified Chinese is a presentation script conversion of the published name.
+ */
+export function premisesNameI18n(premises: { name: string; nameZh: string }): {
+  en: { name: string }
+  zhHant: { name: string }
+  zhHans: { name: string }
+} {
+  return {
+    en: { name: premises.name },
+    zhHant: { name: premises.nameZh },
+    zhHans: { name: simplifiedChinese(premises.nameZh) },
+  }
+}
 
 /** Resolve the catalogue name for the user's locale.
  * @param premises Bilingual database metadata. @param locale Active UI locale.

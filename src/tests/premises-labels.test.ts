@@ -1,11 +1,35 @@
 // TESTS
 import { describe, expect, it } from 'vitest'
 // DOMAIN
-import { premisesLabel, premisesTypography } from '../lib/indoor/premisesLabels'
+import {
+  premisesLabel,
+  premisesNameI18n,
+  premisesTypography,
+} from '../lib/indoor/premisesLabels'
+import { stations, searchStations } from '../lib/indoor/registry'
 // TYPES
 import type { SymbolLayerSpecification } from 'maplibre-gl'
 
 describe('indoor premises labels', () => {
+  it('provides separate name values for all supported premises locales', () => {
+    expect(premisesNameI18n({ name: 'Admiralty', nameZh: '金鐘' })).toEqual({
+      en: { name: 'Admiralty' },
+      zhHant: { name: '金鐘' },
+      zhHans: { name: '金钟' },
+    })
+  })
+
+  it('covers every station and searches both Chinese scripts independently of display', () => {
+    for (const station of stations) {
+      expect(station.i18n.en.name).toBe(station.name)
+      expect(station.i18n.zhHant.name).toBe(station.nameZh)
+      expect(station.i18n.zhHans.name.trim()).not.toBe('')
+    }
+    expect(searchStations('金鐘').map(station => station.id)).toContain('ADM')
+    expect(searchStations('金钟').map(station => station.id)).toContain('ADM')
+    expect(searchStations('港铁')).toHaveLength(stations.length)
+  })
+
   it('uses Chinese catalogue names for both supported Chinese locales', () => {
     const premises = { name: 'Kennedy Town', nameZh: '堅尼地城' }
     expect(premisesLabel(premises, 'en')).toBe('Kennedy Town')

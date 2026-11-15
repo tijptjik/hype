@@ -1,16 +1,29 @@
-import type { MapCatalogueEntry } from './releases'
+// I18N
+import { premisesNameI18n } from './premisesLabels'
+// DATA
 import catalogue from '../routing/mtr-catalog.json'
+// TYPES
+import type { MapCatalogueEntry } from './releases'
 // Public station URLs use descriptive names consistently, including PDF-only stations.
 export const stations = catalogue.stations.map(station => ({
   ...station,
+  i18n: premisesNameI18n(station),
   slug: `${station.name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')}-mtr`,
 }))
+type PremisesRecord = {
+  id: string
+  slug: string
+  name: string
+  nameZh: string
+  i18n: ReturnType<typeof premisesNameI18n>
+}
+
 /** Non-rail premises keep their own URL identities and official references. */
-export let buildings: { id: string; slug: string; name: string; nameZh: string }[] = []
-let publishedPremises: { id: string; slug: string; name: string; nameZh: string }[] = []
+export let buildings: PremisesRecord[] = []
+let publishedPremises: PremisesRecord[] = []
 /** Finds an indoor venue. @param code Registry code. @returns Venue metadata. */
 export const findPremises = (code: string) =>
   publishedPremises.find(b => b.id === code.toUpperCase()) ?? findStation(code)
@@ -49,9 +62,11 @@ export function premisesPath(code: string, id?: string): string {
 export function searchStations(query: string): typeof stations {
   const normalise = (s: string) => s.toLowerCase().replace(/[\s-]+/g, '')
   const term = normalise(query)
-  if (['mtr', 'mtrstations', '港鐵'].includes(term)) return stations
+  if (['mtr', 'mtrstations', '港鐵', '港铁'].includes(term)) return stations
   return term
-    ? stations.filter(s => normalise(`${s.id} ${s.name} ${s.nameZh}`).includes(term))
+    ? stations.filter(s =>
+        normalise(`${s.id} ${s.name} ${s.nameZh} ${s.i18n.zhHans.name}`).includes(term),
+      )
     : []
 }
 
@@ -83,10 +98,17 @@ export async function loadPremisesCatalogue(
     slug: m.id,
     name: m.name,
     nameZh: m.nameZh,
+    i18n: premisesNameI18n(m),
   }))
   buildings = maps
     .filter(m => m.kind === 'building')
-    .map(m => ({ id: m.code, slug: m.id, name: m.name, nameZh: m.nameZh }))
+    .map(m => ({
+      id: m.code,
+      slug: m.id,
+      name: m.name,
+      nameZh: m.nameZh,
+      i18n: premisesNameI18n(m),
+    }))
   indoorSnapshots = Object.fromEntries(premisesMaps.map(m => [m.code, m.basePath]))
   return maps
 }
