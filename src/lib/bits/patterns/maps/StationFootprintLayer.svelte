@@ -13,7 +13,9 @@ import {
   findPremises,
   findStation,
   premisesPath,
+  indoorSnapshots,
 } from '#lib/indoor/registry.js'
+import { preloadVisibleIndoorMaps } from '#lib/indoor/preload.js'
 import { bounds } from '#lib/indoor/model.js'
 import type { Collection } from '#lib/indoor/model.js'
 let {
@@ -205,6 +207,9 @@ $effect(() => {
                 ])
               })
               .map(feature => String(feature.properties.stationCode))
+      preloadVisibleIndoorMaps(
+        available.map(code => indoorSnapshots[code]).filter(Boolean),
+      )
     }
     target.on('style.load', render)
     target.on('styledata', render)
@@ -215,6 +220,7 @@ $effect(() => {
     target.on('mouseleave', 'hype-station-footprint-fill', leave)
     render()
     return () => {
+      preloadVisibleIndoorMaps([])
       disposed = true
       logo.onload = null
       target.off('style.load', render)

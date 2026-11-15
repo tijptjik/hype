@@ -1,3 +1,4 @@
+import { prepareIndoorData } from './preload'
 import { visibleIndoorPlaces } from './visibility'
 import type { IndoorRoute } from './routing'
 import { goto } from '$app/navigation'
@@ -78,6 +79,18 @@ export class StationState {
   documents = $state.raw<{ kind: string; path: string }[]>([])
   private controller: AbortController | null = null
   private loadedCode = ''
+  enterFromMap = false
+  private prepared: { code: string; data: IndoorData | null } | null = null
+  /** Prepare an indoor map while the outdoor camera approaches.
+   * @param code Venue code. @returns Completion once the destination is ready.
+   */
+  async prepareFromMap(code: string): Promise<void> {
+    if (!indoorSnapshots[code]) await loadPremisesCatalogue()
+    const data = indoorSnapshots[code]
+      ? await prepareIndoorData(indoorSnapshots[code])
+      : null
+    this.prepared = { code, data }
+  }
   /** Opens a station URL or hydrates navigation. @param code Official code. @param id Source space ID. @param navigation Whether to navigate. @returns Load completion. */
   async open(code = this.code, id?: string, navigation = true): Promise<void> {
     if (!code) {
@@ -108,11 +121,15 @@ export class StationState {
       this.selected = null
       this.loading = true
       try {
-        await loadPremisesCatalogue(controller.signal)
+        if (!indoorSnapshots[code]) await loadPremisesCatalogue(controller.signal)
         this.metadata = findPremises(code)
-        const data = indoorSnapshots[code]
-          ? await loadIndoorData(indoorSnapshots[code], controller.signal)
-          : null
+        const data =
+          this.prepared?.code === code
+            ? this.prepared.data
+            : indoorSnapshots[code]
+              ? await loadIndoorData(indoorSnapshots[code], controller.signal)
+              : null
+        this.prepared = null
         const documents =
           data?.documents ??
           (this.isMtr
@@ -126,8 +143,9 @@ export class StationState {
         this.data = data
         this.sourceEntries = data ? places(data) : []
         this.floor = data ? value(initialLevel(data).properties, 'level_id') : ''
-        this.bearing = data?.coordinateSpace === 'image-pixels' ? 0 : -115
-        this.exploded = !this.isBuilding
+        this.bearing =
+          this.enterFromMap || data?.coordinateSpace === 'image-pixels' ? 0 : -115
+        this.exploded = !this.enterFromMap && !this.isBuilding
         this.loadedCode = code
       } catch (error) {
         if (!controller.signal.aborted)
@@ -143,6 +161,12 @@ export class StationState {
     if (this.selected) {
       this.floor = this.selected.levelId
       this.exploded = false
+    }
+    if (this.enterFromMap) {
+      this.bearing = 0
+      this.planTilt = 0
+      this.exploded = false
+      this.enterFromMap = false
     }
     this.fitRevision++
   }

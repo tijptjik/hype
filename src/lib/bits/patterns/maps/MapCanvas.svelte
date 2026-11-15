@@ -12,6 +12,8 @@ import { getLocale, m } from '#lib/i18n.js'
 // ANIMATION
 import { fade } from 'svelte/transition'
 import { cubicInOut } from 'svelte/easing'
+import { bounds as indoorBounds } from '#lib/indoor/model.js'
+import { prefersReducedMotion } from 'svelte/motion'
 // BITS COMPONENTS
 import { bridgeNativeTooltips } from '#lib/bits/core/tooltip/bridgeNativeTooltips.js'
 import Button from '#lib/bits/core/button/Button.svelte'
@@ -476,6 +478,7 @@ const setupMap = (map: MaplibreMap): void => {
   updateMapUrlTracking()
   queueMapResize()
 
+  let indoorEntryRevision = 0
   const onClick = (event: MapMouseEvent): void => {
     event.originalEvent.preventDefault()
     event.originalEvent.stopPropagation()
@@ -509,7 +512,39 @@ const setupMap = (map: MaplibreMap): void => {
       ? map.queryRenderedFeatures(event.point, { layers: indoorLayers })[0]
       : undefined
     if (typeof indoorFeature?.properties?.stationCode === 'string') {
-      void appCtx.station.open(indoorFeature.properties.stationCode)
+      const code = indoorFeature.properties.stationCode
+      const revision = ++indoorEntryRevision
+      const originUrl = window.location.href
+      const extent = indoorBounds(indoorFeature)
+      const duration = prefersReducedMotion.current ? 0 : 1500
+      // Load in parallel with the approach; retain the outdoor map until both are ready.
+      const ready = appCtx.station.prepareFromMap(code)
+      map.fitBounds(
+        [
+          [extent[0], extent[1]],
+          [extent[2], extent[3]],
+        ],
+        {
+          padding: 80,
+          maxZoom: 20,
+          duration,
+          bearing: 0,
+          pitch: 0,
+        },
+      )
+      void Promise.all([ready, new Promise(resolve => setTimeout(resolve, duration))])
+        .then(() => {
+          if (revision !== indoorEntryRevision || window.location.href !== originUrl)
+            return
+          appCtx.station.enterFromMap = true
+          return appCtx.station.open(code)
+        })
+        .catch(error => {
+          console.error('Could not prepare indoor map', error)
+          // Fall back to the normal indoor loading/error UI so a failed prefetch is retryable.
+          if (revision === indoorEntryRevision && window.location.href === originUrl)
+            void appCtx.station.open(code)
+        })
       return
     }
 

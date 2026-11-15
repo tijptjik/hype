@@ -42,7 +42,7 @@ $effect(() => {
     return
   }
   let cancelled = false
-  void loadPremisesCatalogue()
+  void (premisesCode(match[1]) ? Promise.resolve() : loadPremisesCatalogue())
     .then(() =>
       untrack(() => {
         if (cancelled) return

@@ -160,26 +160,35 @@ export async function loadIndoorData(
   base: string,
   signal?: AbortSignal,
 ): Promise<IndoorData> {
-  const pointerResponse = await fetch(base, { signal, cache: 'no-store' })
-  if (!pointerResponse.ok) throw new Error('Could not resolve published map')
-  const pointer: { hash: string; url: string } = await pointerResponse.json()
-  const response = await fetch(pointer.url, { signal })
-  if (!response.ok) throw new Error('Could not load published map release')
-  const text = await response.text()
-  const { mapHash, validateMapBundle } = await import('./releases')
-  if ((await mapHash(text)) !== pointer.hash)
-    throw new Error('Map release integrity check failed')
-  const bundle = validateMapBundle(JSON.parse(text))
-  const presentation = await fetch(`${base}/presentation`, {
-    signal,
-    cache: 'no-store',
-  })
-  if (!presentation.ok) throw new Error('Could not load current map occupancy')
+  // Occupancy and immutable geometry are independent; fetch them concurrently.
+  const [bundleResult, unitArtwork] = await Promise.all([
+    (async () => {
+      const pointerResponse = await fetch(base, { signal, cache: 'no-store' })
+      if (!pointerResponse.ok) throw new Error('Could not resolve published map')
+      const pointer: { hash: string; url: string } = await pointerResponse.json()
+      const response = await fetch(pointer.url, { signal })
+      if (!response.ok) throw new Error('Could not load published map release')
+      const text = await response.text()
+      const { mapHash, validateMapBundle } = await import('./releases')
+      if ((await mapHash(text)) !== pointer.hash)
+        throw new Error('Map release integrity check failed')
+      return { bundle: validateMapBundle(JSON.parse(text)), hash: pointer.hash }
+    })(),
+    (async () => {
+      const presentation = await fetch(`${base}/presentation`, {
+        signal,
+        cache: 'no-store',
+      })
+      if (!presentation.ok) throw new Error('Could not load current map occupancy')
+      return presentation.json() as Promise<Record<string, ShopArtwork>>
+    })(),
+  ])
+  const { bundle, hash } = bundleResult
   return {
     ...bundle.data,
     basePath: base,
-    releaseHash: pointer.hash,
-    unitArtwork: await presentation.json(),
+    releaseHash: hash,
+    unitArtwork,
     documents: bundle.documents,
   }
 }
