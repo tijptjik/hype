@@ -1,0 +1,72 @@
+[
+  {
+    "id": "mtr-network-brand-124e8b0b3b5b44266d5c8108",
+    "name": "Bank of East Asia",
+    "file": "static/brands/mtr-reviewed/mtr-network-brand-124e8b0b3b5b44266d5c8108.svg",
+    "format": "svg",
+    "sha256": "bac4461357ff82cc58832782bf2c86269a9d5458b524f96e4a29793930af93da",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/5/57/Bank_of_East_Asia_Logo.svg",
+    "background": "transparent",
+    "notes": "Original brand artwork; transparent background. Visually reviewed."
+  },
+  {
+    "id": "mtr-network-brand-4b1f6f530975ef68d8f30d66",
+    "name": "Citibank",
+    "file": "static/brands/mtr-reviewed/mtr-network-brand-4b1f6f530975ef68d8f30d66.svg",
+    "format": "svg",
+    "sha256": "cb599b2ea12080cb20c66af5eba4accd5aab90fa28a9d72725cdcff78354f389",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/7/73/Citi_logo_March_2023.svg",
+    "background": "transparent",
+    "notes": "Original brand artwork; transparent background. Visually reviewed."
+  },
+  {
+    "id": "mtr-network-brand-452ddac3092b5a859873096c",
+    "name": "DHL",
+    "file": "static/brands/mtr-reviewed/mtr-network-brand-452ddac3092b5a859873096c.svg",
+    "format": "svg",
+    "sha256": "e47774318a44aacec1b5d863ba35974e0cd10e77e36bcecf1725709943819ac6",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/a/ac/DHL_Logo.svg",
+    "background": "transparent",
+    "notes": "Original brand artwork; transparent background. Visually reviewed. Removed only the separate yellow background polygon; red wordmark paths unchanged."
+  },
+  {
+    "id": "mtr-network-brand-e357fc9a6a65dc31d1620d2e",
+    "name": "Coca-Cola",
+    "file": "static/brands/mtr-reviewed/mtr-network-brand-e357fc9a6a65dc31d1620d2e.svg",
+    "format": "svg",
+    "sha256": "4fc464932a70e200ec6e825228543a8b3d3d12f73be9e47caee1d9a421daf52d",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/c/ce/Coca-Cola_logo.svg",
+    "background": "transparent",
+    "notes": "Original brand artwork; transparent background. Visually reviewed."
+  },
+  {
+    "id": "mtr-network-brand-ad9be18cbabbff5ec5f910dd",
+    "name": "Beard Papa's",
+    "file": "static/brands/mtr-reviewed/mtr-network-brand-ad9be18cbabbff5ec5f910dd.png",
+    "format": "png",
+    "sha256": "9f0815cc68967ba36986c8ceb3099c3f8bf2525d99ac0fb7c6a4f075dbfccb87",
+    "sourceUrl": "https://images.squarespace-cdn.com/content/v1/600a96cbf8894d79eb1e1b1f/c47652ad-634d-43cb-8837-2feebfaf5538/logo.png",
+    "background": "transparent",
+    "notes": "Original brand artwork; transparent background. Visually reviewed."
+  },
+  {
+    "id": "mtr-network-brand-1701cad3fa50ceb3aa2f1023",
+    "name": "Salvation Army",
+    "file": "static/brands/mtr-reviewed/mtr-network-brand-1701cad3fa50ceb3aa2f1023.png",
+    "format": "png",
+    "sha256": "99a9fa2dd03af65eecd517ac4637fcbb336c52db736cfb3ce89e9011fa4ce1ff",
+    "sourceUrl": "https://salvationarmy.org.hk/wp-content/uploads/2021/02/Logo_HD_1-1.png",
+    "background": "transparent",
+    "notes": "Original brand artwork; transparent background. Visually reviewed."
+  },
+  {
+    "id": "mtr-network-brand-6abdb761e1c3a7a1a817f9e5",
+    "name": "JHC",
+    "file": "static/brands/mtr-reviewed/mtr-network-brand-6abdb761e1c3a7a1a817f9e5.png",
+    "format": "png",
+    "sha256": "3291dc0f2941299994824cf050640be4bb66111db85da047fa463c78f2da4476",
+    "sourceUrl": "https://www.jhceshop.com/images/payment/jhc-logonew.png",
+    "background": "transparent",
+    "notes": "Original brand artwork; transparent background. Visually reviewed."
+  }
+]

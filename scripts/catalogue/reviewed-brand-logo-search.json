@@ -1,0 +1,90 @@
+[
+  {
+    "id": "mtr-network-brand-124e8b0b3b5b44266d5c8108",
+    "name": "Bank of East Asia",
+    "status": "installed-local",
+    "format": "svg",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/5/57/Bank_of_East_Asia_Logo.svg",
+    "notes": "Transparent original artwork; source retained in artwork manifest."
+  },
+  {
+    "id": "mtr-network-brand-ad9be18cbabbff5ec5f910dd",
+    "name": "Beard Papa's",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://images.squarespace-cdn.com/content/v1/600a96cbf8894d79eb1e1b1f/c47652ad-634d-43cb-8837-2feebfaf5538/logo.png",
+    "notes": "Transparent original artwork; source retained in artwork manifest."
+  },
+  {
+    "id": "mtr-network-brand-4b1f6f530975ef68d8f30d66",
+    "name": "Citibank",
+    "status": "installed-local",
+    "format": "svg",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/7/73/Citi_logo_March_2023.svg",
+    "notes": "Transparent original artwork; source retained in artwork manifest."
+  },
+  {
+    "id": "mtr-network-brand-452ddac3092b5a859873096c",
+    "name": "DHL",
+    "status": "installed-local",
+    "format": "svg",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/a/ac/DHL_Logo.svg",
+    "notes": "Transparent original artwork; source retained in artwork manifest."
+  },
+  {
+    "id": "mtr-network-brand-3cc5a451644da53fa4c0f915",
+    "name": "Gatchapoint",
+    "status": "needs-better-source",
+    "format": null,
+    "sourceUrl": null,
+    "notes": "Only background-bearing raster candidates found; likely duplicate of approved GACHAPOINT record. Await duplicate review."
+  },
+  {
+    "id": "mtr-network-brand-6abdb761e1c3a7a1a817f9e5",
+    "name": "JHC",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://www.jhceshop.com/images/payment/jhc-logonew.png",
+    "notes": "Transparent original artwork; source retained in artwork manifest."
+  },
+  {
+    "id": "mtr-network-brand-05c12ee57a7846716f67093b",
+    "name": "JP Fitness Meal",
+    "status": "needs-better-source",
+    "format": null,
+    "sourceUrl": null,
+    "notes": "Official page found; composite Sakuramitsuya/Japan Fitness Meal artwork has a solid white background. No clean standalone mark verified."
+  },
+  {
+    "id": "mtr-network-brand-cf4487c6936f01ad586d21ff",
+    "name": "Nanyang Commercial Bank",
+    "status": "needs-better-source",
+    "format": null,
+    "sourceUrl": null,
+    "notes": "Official homepage found, but linked header assets returned 404; no suitable original verified."
+  },
+  {
+    "id": "mtr-network-brand-1701cad3fa50ceb3aa2f1023",
+    "name": "Salvation Army",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://salvationarmy.org.hk/wp-content/uploads/2021/02/Logo_HD_1-1.png",
+    "notes": "Transparent original artwork; source retained in artwork manifest."
+  },
+  {
+    "id": "mtr-network-brand-e357fc9a6a65dc31d1620d2e",
+    "name": "Coca-Cola",
+    "status": "installed-local",
+    "format": "svg",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/c/ce/Coca-Cola_logo.svg",
+    "notes": "Transparent original artwork; source retained in artwork manifest."
+  },
+  {
+    "id": "mtr-network-brand-539952fd7f0df9dad97257e1",
+    "name": "UNICUBE",
+    "status": "needs-better-source",
+    "format": null,
+    "sourceUrl": null,
+    "notes": "Mall directory provides a JPG with a solid background; no authentic transparent original verified."
+  }
+]
