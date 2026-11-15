@@ -3385,57 +3385,6 @@ $effect(() => {
       <FormSurface>
         <section class="flex min-h-0 flex-col gap-6 pb-6">
           <SectionHeader
-            title="Map display"
-            icon={DataModelIcon}
-            description="Control MTR station layouts and shops on this project's map."
-          />
-          <div
-            class="mx-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,max(480px,calc((100%_-_2rem)/2))),1fr))] gap-x-8 gap-y-3"
-          >
-            {#each [
-              {
-                key: 'showMtrStations' as const,
-                label: 'Show MTR stations',
-                help: 'Show station outlines and indoor-map entry points. On by default.',
-              },
-              {
-                key: 'onlyFeaturedMtrShops' as const,
-                label: 'Only show featured MTR shops',
-                help: 'Show shop names and branding only for Features in the selected project layers. Keep station floors and facilities visible.',
-              },
-            ] as setting (setting.key)}
-              <Card.Root
-                size="md"
-                class="border-border bg-foreground/4 min-h-14 rounded-lg border bg-none shadow-none before:hidden"
-              >
-                <label
-                  for={`project-${setting.key}`}
-                  class="flex min-w-0 flex-1 items-center px-5 py-3 text-sm font-semibold"
-                  >{setting.label}</label
-                >
-                {@render settingHelp(setting.label, setting.help)}
-                <Card.Actions
-                  padding="md"
-                  bg="none"
-                  class="border-border/60 w-auto! min-w-0! shrink-0 border-l"
-                >
-                  <Switch
-                    id={`project-${setting.key}`}
-                    checked={setting.key === 'showMtrStations'
-                      ? projectFlags.showMtrStations !== false
-                      : projectFlags.onlyFeaturedMtrShops === true}
-                    disabled={!isEditing || formCtx.submitting}
-                    size="sm"
-                    onCheckedChange={checked =>
-                      setImagePublicationFlag(setting.key, checked)}
-                  />
-                </Card.Actions>
-              </Card.Root>
-            {/each}
-          </div>
-        </section>
-        <section class="flex min-h-0 flex-col gap-6 pb-6">
-          <SectionHeader
             title="New Feature Flow"
             icon={DataModelIcon}
             description="Configure feature addresses, names, descriptions and historical layers."
@@ -3605,6 +3554,57 @@ $effect(() => {
             />
           {/key}
         {/if}
+        <section class="flex min-h-0 flex-col gap-6 pb-6">
+          <SectionHeader
+            title="Map display"
+            icon={DataModelIcon}
+            description="Control MTR station layouts and shops on this project's map."
+          />
+          <div
+            class="mx-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,max(480px,calc((100%_-_2rem)/2))),1fr))] gap-x-8 gap-y-3"
+          >
+            {#each [
+              {
+                key: 'showMtrStations' as const,
+                label: 'Show MTR stations',
+                help: 'Show station outlines and indoor-map entry points. On by default.',
+              },
+              {
+                key: 'onlyFeaturedMtrShops' as const,
+                label: 'Only show featured MTR shops',
+                help: 'Show shop names and branding only for Features in the selected project layers. Keep station floors and facilities visible.',
+              },
+            ] as setting (setting.key)}
+              <Card.Root
+                size="md"
+                class="border-border bg-foreground/4 min-h-14 rounded-lg border bg-none shadow-none before:hidden"
+              >
+                <label
+                  for={`project-${setting.key}`}
+                  class="flex min-w-0 flex-1 items-center px-5 py-3 text-sm font-semibold"
+                  >{setting.label}</label
+                >
+                {@render settingHelp(setting.label, setting.help)}
+                <Card.Actions
+                  padding="md"
+                  bg="none"
+                  class="border-border/60 w-auto! min-w-0! shrink-0 border-l"
+                >
+                  <Switch
+                    id={`project-${setting.key}`}
+                    checked={setting.key === 'showMtrStations'
+                      ? projectFlags.showMtrStations !== false
+                      : projectFlags.onlyFeaturedMtrShops === true}
+                    disabled={!isEditing || formCtx.submitting}
+                    size="sm"
+                    onCheckedChange={checked =>
+                      setImagePublicationFlag(setting.key, checked)}
+                  />
+                </Card.Actions>
+              </Card.Root>
+            {/each}
+          </div>
+        </section>
       </FormSurface>
     </Main.Facet>
     <div class="hidden" aria-hidden="true">
