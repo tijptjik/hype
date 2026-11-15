@@ -209,13 +209,12 @@ const offset = $derived(responsive.isMobile ? 0 : (layout?.getAppMainOffsetX() ?
           'https://api.portal.hkmapservice.gov.hk/disclaimer'}
         target="_blank"
         rel="noreferrer"
-        class="text-muted-foreground absolute right-2 bottom-1 z-10 flex items-center gap-1 text-[9px]"
+        class="text-muted-foreground absolute right-3 bottom-2 z-10 flex items-center gap-2 px-2 py-1 text-[9px]"
         ><img
           src={station.data.attributionLogo}
           alt="Lands Department"
           class="h-4 w-auto"
-        >{station.data.source || 'Lands Department'}
-        · {station.data?.retrievedAt.slice(0, 10)}</a
+        >Lands Department</a
       >
     {/if}
   </section>
