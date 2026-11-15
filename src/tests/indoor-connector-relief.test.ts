@@ -291,3 +291,17 @@ it('reuses source inference without changing relief or earlier frame callbacks',
   }
   expect(first.get('stairs')?.line(unit)).toBe(firstLine)
 })
+
+it('culls the hidden faces of raised flights as the camera rotates', () => {
+  const data = fixture()
+  data.level_polygon.features[1].properties.level_ordinal = 1
+  for (const bearing of [30, 120, 210, 300]) {
+    const relief = connectorReliefs(
+      data,
+      stationProjection(data, false, { bearing, tilt: 45 }),
+    ).get('stairs')!
+    expect(relief.visibleFaces.length).toBeGreaterThan(0)
+    expect(relief.visibleFaces.length).toBeLessThan(relief.recessFaces.length)
+    for (const face of relief.visibleFaces) expect(relief.recessFaces).toContain(face)
+  }
+})

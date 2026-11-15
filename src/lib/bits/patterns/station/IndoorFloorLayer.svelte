@@ -159,7 +159,7 @@ const facilityMarkers = $derived.by(() => {
     <g clip-path={relief.descending ? `url(#${openingId})` : undefined}>
       <!-- Only exposed edge faces are filled; nearby inclines leave the shared side open. -->
       {#if facesOnly}
-        {#each relief.recessFaces as face}
+        {#each relief.visibleFaces as face}
           <path
             d={face}
             fill="color-mix(in srgb, var(--station-connector) 22%, var(--station-connector-fill))"
@@ -170,7 +170,7 @@ const facilityMarkers = $derived.by(() => {
           />
         {/each}
         <!-- Corner strokes reveal the far-end depth without filled separating walls. -->
-        {#each relief.depthEdges as edge}
+        {#each relief.descending ? relief.depthEdges : [] as edge}
           <path
             d={edge}
             fill="none"
@@ -364,15 +364,16 @@ const facilityMarkers = $derived.by(() => {
       />
     {/each}
   </g>
-  {#each reliefUnits.filter(
-    unit => !reliefs.get(value(unit.properties, 'unit_id'))?.descending,
-  ) as unit}
-    {@render reliefSurface(unit, true)}
-  {/each}
-  {#each reliefUnits.filter(
-    unit => !reliefs.get(value(unit.properties, 'unit_id'))?.descending,
-  ) as unit}
+  <!-- Raised flights are opaque solids: paint far flights before near flights, then their front faces. -->
+  {#each reliefUnits
+    .filter(unit => !reliefs.get(value(unit.properties, 'unit_id'))?.descending)
+    .toSorted(
+      (a, b) =>
+        reliefs.get(value(a.properties, 'unit_id'))!.paintDepth -
+        reliefs.get(value(b.properties, 'unit_id'))!.paintDepth,
+    ) as unit}
     {@render reliefSurface(unit)}
+    {@render reliefSurface(unit, true)}
   {/each}
   {#if detailOpacity > 0}
     <g

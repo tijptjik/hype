@@ -100,9 +100,9 @@ test('raised platform flights are not clipped by the floor boundary', async ({
       return {
         unclipped,
         faces: walls?.querySelectorAll('[data-connector-recess-face]').length ?? 0,
-        wallsBehind: Boolean(
+        wallsInFront: Boolean(
           walls &&
-            walls.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING,
+            element.compareDocumentPosition(walls) & Node.DOCUMENT_POSITION_FOLLOWING,
         ),
       }
     }),
@@ -110,15 +110,27 @@ test('raised platform flights are not clipped by the floor boundary', async ({
   expect(checks.length).toBeGreaterThan(0)
   for (const check of checks) {
     expect(check.unclipped).toBe(true)
-    expect(check.wallsBehind).toBe(true)
-    expect(check.faces).toBeGreaterThan(0)
+    expect(check.wallsInFront).toBe(true)
   }
+  expect(checks.some(check => check.faces > 0)).toBe(true)
+  const flightBox = await raised.first().boundingBox()
+  const sceneBox = await page.locator('[data-station-scene="plan"]').boundingBox()
+  const x = flightBox.x + flightBox.width / 2,
+    y = flightBox.y + flightBox.height / 2
+  await page.mouse.move(x, y)
+  await page.mouse.down()
+  await page.mouse.move(
+    sceneBox.x + sceneBox.width / 2,
+    sceneBox.y + sceneBox.height / 2,
+    { steps: 12 },
+  )
+  await page.mouse.up()
   const controls = page.getByRole('application', {
     name: 'Station plan controls',
     exact: true,
   })
   await controls.focus()
-  for (let i = 0; i < 3; i++) await controls.press('+')
+  for (let i = 0; i < 6; i++) await controls.press('+')
   // biome-ignore lint/suspicious/noUndeclaredEnvVars: managed browser evidence.
   await page.screenshot({
     path: join(process.env.DEV_RUNNER_ARTIFACTS, 'platform-raised-flights.png'),

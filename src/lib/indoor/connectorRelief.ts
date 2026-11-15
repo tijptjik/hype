@@ -13,6 +13,8 @@ export type ConnectorRelief = {
   surface: string
   depthEdges: string[]
   recessFaces: string[]
+  visibleFaces: string[]
+  paintDepth: number
   entrance: Point
   farEnd: Point
   line: (feature: IndoorFeature) => string
@@ -180,6 +182,12 @@ export function prepareConnectorReliefs(
         return [`M${top.join(',')} L${bottom.join(',')}`]
       })
       // Build only exposed recess edges; a nearby incline leaves the shared side open.
+      const visibleFaces: string[] = []
+      const projectedOutline = outline.map(point => projection.project(point, levelId))
+      const winding = projectedOutline.slice(1).reduce((sum, point, index) => {
+        const previous = projectedOutline[index]
+        return sum + previous[0] * point[1] - point[0] * previous[1]
+      }, 0)
       const recessFaces = outline.slice(1).flatMap((point, index) => {
         const previous = outline[index]
         const dx = point[0] - previous[0],
@@ -228,11 +236,15 @@ export function prepareConnectorReliefs(
             bottomB = project(to)
           if (Math.abs(topA[1] - bottomA[1]) + Math.abs(topB[1] - bottomB[1]) < 0.001)
             return []
-          return [
+          const face =
             [topA, topB, bottomB, bottomA]
               .map((p, i) => `${i ? 'L' : 'M'}${p.join(',')}`)
-              .join(' ') + 'Z',
-          ]
+              .join(' ') + 'Z'
+          // A raised solid exposes only perimeter faces pointing toward the camera.
+          if (direction < 0 || (topB[0] - topA[0]) * winding < -1e-8) {
+            visibleFaces.push(face)
+          }
+          return [face]
         })
       })
       result.set(id, {
@@ -242,6 +254,11 @@ export function prepareConnectorReliefs(
         surface: line(unit),
         depthEdges,
         recessFaces,
+        visibleFaces,
+        paintDepth: projection.project(
+          frame.world((frame.minU + frame.maxU) / 2, (frame.minV + frame.maxV) / 2),
+          levelId,
+        )[1],
         entrance: projection.project(entranceAtStart ? a : b, levelId),
         farEnd: project(entranceAtStart ? b : a),
         line,
