@@ -5,7 +5,14 @@ import { getAppCtx } from '#lib/context/app.svelte.js'
 import IndoorRoutePlanner from './IndoorRoutePlanner.svelte'
 // DATA
 import { findIndoorRoute } from '#lib/indoor/routing.js'
+import {
+  type PaidPolicy,
+  loadStationNetwork,
+  findSourceIndoorRoute,
+} from '#lib/indoor/navigation/sourceGraph.js'
 import { value } from '#lib/indoor/model.js'
+let useSourceNetwork = $state(false)
+let paidPolicy = $state<PaidPolicy>('prefer-unpaid')
 const station = getAppCtx().station
 const entrances = $derived(
   station.data?.amenity_point.features
@@ -44,9 +51,22 @@ async function preview(
     target = targets.find(p => p.id === destination)
   if (!data || !entrance || !target) return false
   station.clearRoute()
-  const route = await findIndoorRoute(data, entrance, target)
+  const sourceNetwork = useSourceNetwork,
+    policy = paidPolicy
+  const route =
+    station.isMtr && sourceNetwork
+      ? findSourceIndoorRoute(
+          await loadStationNetwork(station.code),
+          data,
+          entrance,
+          target,
+          policy,
+        )
+      : await findIndoorRoute(data, entrance, target)
   if (
     station.data !== data ||
+    sourceNetwork !== useSourceNetwork ||
+    policy !== paidPolicy ||
     !station.active ||
     !targets.some(place => place.id === destination)
   )
@@ -59,8 +79,38 @@ async function preview(
   return true
 }
 </script>
+{#if station.isMtr}
+  <label class="mb-2 flex items-center gap-2 text-sm">
+    <input
+      type="checkbox"
+      bind:checked={useSourceNetwork}
+      onchange={() => station.clearRoute()}
+    >
+    Use detailed station paths (experimental)
+  </label>
+  {#if useSourceNetwork}
+    <label class="mb-2 grid gap-1 text-sm"
+      >Paid areas
+      <select
+        aria-label="Paid-area policy"
+        bind:value={paidPolicy}
+        onchange={() => station.clearRoute()}
+        class="bg-surface rounded p-2"
+      >
+        <option value="prefer-unpaid">Prefer unpaid paths</option>
+        <option value="unpaid-only">Unpaid paths only</option>
+        <option value="paid-allowed">Allow paid areas</option>
+      </select>
+    </label>
+  {/if}
+{/if}
 {#key station.data}
   <IndoorRoutePlanner
+    preferenceLabel={useSourceNetwork && paidPolicy === 'unpaid-only'
+      ? 'Unpaid paths only'
+      : useSourceNetwork && paidPolicy === 'paid-allowed'
+        ? 'Paid areas allowed'
+        : 'Unpaid routes preferred'}
     {origins}
     {destinations}
     onPlan={preview}

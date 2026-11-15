@@ -13,6 +13,7 @@ let {
   flying,
   hasRoute,
   status,
+  preferenceLabel = 'Unpaid routes preferred',
 }: {
   origins: Option[]
   destinations: Option[]
@@ -22,6 +23,7 @@ let {
   flying: boolean
   hasRoute: boolean
   status: Snippet
+  preferenceLabel?: string
 } = $props()
 let origin = $state(''),
   destination = $state(''),
@@ -76,7 +78,8 @@ async function plan(fly: boolean): Promise<void> {
       >
     </div>
     <p class="text-muted-foreground mt-2">
-      Unpaid routes preferred · Connections may be incomplete.
+      {preferenceLabel}
+      · Connections may be incomplete.
     </p>
   </div>
   <div class="mt-2 flex flex-wrap gap-3">
@@ -94,7 +97,15 @@ async function plan(fly: boolean): Promise<void> {
       disabled={busy || !origin || !destination}
       onclick={() => plan(true)}
     >
-      {busy ? 'Finding route…' : 'Fly route'}
+      {#if busy}
+        <span
+          class="bg-muted inline-block h-4 w-16 animate-pulse rounded"
+          aria-label="Finding route"
+          role="status"
+        ></span>
+      {:else}
+        Fly route
+      {/if}
     </button>
     {#if flying}
       <button type="button" onclick={onStop}>Stop</button>

@@ -6,6 +6,8 @@ export type RoutePoint = { point: [number, number]; level: string }
 export type IndoorRoute = {
   points: RoutePoint[]
   metres: number
+  estimatedSeconds?: number
+  provider?: 'landsd-network'
   entrance: string
   destination: string
   targetId: string
