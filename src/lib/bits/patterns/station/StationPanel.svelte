@@ -295,6 +295,7 @@ $effect(() => {
                     }}
                     value={station.exploded ? '' : station.floor}
                     placeholder="Choose a level"
+                    contentClass="max-h-[var(--bits-select-content-available-height)]!"
                     items={levelOptions}
                     {itemLabel}
                     {itemPreview}
