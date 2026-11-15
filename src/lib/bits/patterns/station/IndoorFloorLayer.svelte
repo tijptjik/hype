@@ -22,7 +22,6 @@ let {
   selectedId,
   opacity,
   textScale,
-  titleX,
   dragged,
   activate,
   chooseFloor,
@@ -43,14 +42,12 @@ let {
   selectedId?: string
   opacity: number
   textScale: number
-  titleX: number
   dragged: boolean
   activate: (event: MouseEvent, feature: IndoorFeature) => void
   chooseFloor: (id: string) => void
   onSelectPlace: (place: Place) => void
 } = $props()
 const id = $derived(value(level.properties, 'level_id'))
-const floorAnchor = $derived(projection.anchor(level))
 const artworkTransform = $derived.by(() => {
   if (!artwork) return ''
   const a = projection.project([0, 0], id),
@@ -58,12 +55,6 @@ const artworkTransform = $derived.by(() => {
     d = projection.project([0, artwork.height], id)
   return `matrix(${b[0] - a[0]} ${b[1] - a[1]} ${d[0] - a[0]} ${d[1] - a[1]} ${a[0]} ${a[1]})`
 })
-const title = $derived(
-  value(level.properties, 'level_name_en')
-    .replace(' Ground Level', ' · G')
-    .replace(' Mezzanine Level', ' · M')
-    .replace(' Level', ''),
-)
 const isBrand = (feature: IndoorFeature) => Boolean(brand(feature))
 </script>
 <g data-station-level={id} {opacity}>
@@ -233,41 +224,5 @@ const isBrand = (feature: IndoorFeature) => Boolean(brand(feature))
       pointer-events="none"
       data-floor-artwork
     />
-  {/if}
-  {#if exploded}
-    <!-- biome-ignore lint/a11y/useSemanticElements: this keyboard-operable SVG label selects its floor. -->
-    <g
-      role="button"
-      tabindex="0"
-      aria-label={`Open ${value(level.properties, 'level_name_en')}`}
-      class="cursor-pointer outline-none focus:opacity-60"
-      onclick={() => {
-        if (!dragged) chooseFloor(id)
-      }}
-      onkeydown={e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          chooseFloor(id)
-        }
-      }}
-    >
-      <rect
-        x={titleX}
-        y={floorAnchor[1] - 24 * textScale}
-        width={(title.length * 6 + 24) * textScale}
-        height={22 * textScale}
-        rx={4 * textScale}
-        fill="var(--station-paper)"
-      />
-      <text
-        x={titleX + 6 * textScale}
-        y={floorAnchor[1] - 10 * textScale}
-        font-size={11 * textScale}
-        fill="var(--station-ink)"
-      >
-        {title}
-        ↗
-      </text>
-    </g>
   {/if}
 </g>

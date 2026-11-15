@@ -375,18 +375,6 @@ function chooseFloor(id: string): void {
     </defs>
     {#each levels as level}
       {@const id = value(level.properties, 'level_id')}
-      {@const floorAnchor = projection.anchor(level)}
-      {@const title = value(level.properties, 'level_name_en')
-        .replace(' Ground Level', ' · G')
-        .replace(' Mezzanine Level', ' · M')
-        .replace(' Level', '')}
-      {@const titleX = Math.min(
-        floorAnchor[0],
-        baseView[0] +
-          (baseView[2] * (1 + 1 / zoom)) / 2 +
-          panX -
-          (title.length * 6 + 30) * textScale,
-      )}
       <IndoorFloorLayer
         {level}
         artworkOpacity={station.artworkOpacity}
@@ -411,7 +399,6 @@ function chooseFloor(id: string): void {
           ? 1 - station.arrival
           : 1}
         {textScale}
-        {titleX}
         {dragged}
         {activate}
         {chooseFloor}
@@ -532,6 +519,66 @@ function chooseFloor(id: string): void {
             data-route-traveller
           />
         {/if}
+      </g>
+    {/if}
+    <!-- Paint floor labels last so floors, connections and routes cannot cover them. -->
+    {#if station.exploded}
+      <g data-floor-labels>
+        {#each levels as level}
+          {@const id = value(level.properties, 'level_id')}
+          {@const floorAnchor = projection.anchor(level)}
+          {@const title = value(level.properties, 'level_name_en')
+            .replace(' Ground Level', ' · G')
+            .replace(' Mezzanine Level', ' · M')
+            .replace(' Level', '')}
+          {@const titleX = Math.min(
+            floorAnchor[0],
+            baseView[0] +
+              (baseView[2] * (1 + 1 / zoom)) / 2 +
+              panX -
+              (title.length * 6 + 30) * textScale,
+          )}
+          <g
+            opacity={station.route && id !== station.route.points.at(-1)?.level
+              ? 1 - station.arrival
+              : 1}
+          >
+            <!-- biome-ignore lint/a11y/useSemanticElements: this keyboard-operable SVG label selects its floor. -->
+            <g
+              role="button"
+              tabindex="0"
+              aria-label={`Open ${value(level.properties, 'level_name_en')}`}
+              class="cursor-pointer outline-none focus:opacity-60"
+              onclick={() => {
+                if (!dragged) chooseFloor(id)
+              }}
+              onkeydown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  chooseFloor(id)
+                }
+              }}
+            >
+              <rect
+                x={titleX}
+                y={floorAnchor[1] - 24 * textScale}
+                width={(title.length * 6 + 24) * textScale}
+                height={22 * textScale}
+                rx={4 * textScale}
+                fill="var(--station-paper)"
+              />
+              <text
+                x={titleX + 6 * textScale}
+                y={floorAnchor[1] - 10 * textScale}
+                font-size={11 * textScale}
+                fill="var(--station-ink)"
+              >
+                {title}
+                ↗
+              </text>
+            </g>
+          </g>
+        {/each}
       </g>
     {/if}
   </svg>
