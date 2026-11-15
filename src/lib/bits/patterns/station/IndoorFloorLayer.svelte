@@ -1,5 +1,6 @@
 <script lang="ts">
 // DATA
+import { roomLabel } from '#lib/indoor/labels.js'
 import { centre, value, type IndoorFeature, type Place } from '#lib/indoor/model.js'
 import { stationFill, type StationProjection } from '#lib/indoor/scene.js'
 import { connectorLabel, isConnector, type Connection } from '#lib/indoor/spatial.js'
@@ -106,7 +107,7 @@ const isBrand = (feature: IndoorFeature) => Boolean(brand(feature))
         text-anchor="middle"
         dominant-baseline="central"
       >
-        {shop.code || shop.name.en}
+        {roomLabel(shop.code || shop.name.en)}
       </text>
     {/if}
   {/each}

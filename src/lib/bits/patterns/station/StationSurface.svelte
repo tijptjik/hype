@@ -15,6 +15,8 @@ import { Panel } from '#lib/enums.js'
 import StationScene from './StationScene.svelte'
 import StationCameraControls from './StationCameraControls.svelte'
 import StationRouteControls from './StationRouteControls.svelte'
+import StationLevelLabel from './StationLevelLabel.svelte'
+import { stationLevelOptions } from '#lib/indoor/levels.js'
 const app = getAppCtx()
 const station = app.station
 const layout = getSurfaceLayoutCtx()
@@ -167,6 +169,33 @@ const offset = $derived(responsive.isMobile ? 0 : (layout?.getAppMainOffsetX() ?
       {/if}
     </div>
     {#if station.data}
+      {#if !app.view.panels.isPanelOpenOrVisual(Panel.prisms)}
+        <nav
+          aria-label="Indoor levels"
+          class="pointer-events-auto absolute top-1/2 left-3 z-20 max-h-[calc(100%-15rem)] w-40 max-w-[40vw] -translate-y-1/2 overflow-y-auto text-left text-sm text-[var(--station-legend-ink)] sm:left-5 sm:w-52"
+        >
+          {#each stationLevelOptions(
+            station.data.level_polygon.features,
+          ) as option (option.value)}
+            <button
+              type="button"
+              class="hover:bg-panel/80 focus-visible:outline-focus aria-pressed:bg-panel flex w-full flex-col gap-1 rounded-lg px-3 py-2 text-left aria-pressed:font-semibold"
+              aria-label={option.label}
+              aria-pressed={station.exploded
+                ? option.value === 'all'
+                : option.value === station.floor}
+              onclick={() => station.selectLevel(option.value)}
+            >
+              <StationLevelLabel {option} />
+              {#if option.exit}
+                <span class="text-muted-foreground pl-7 text-xs"
+                  >Exit {option.exit}</span
+                >
+              {/if}
+            </button>
+          {/each}
+        </nav>
+      {/if}
       <div
         class="pointer-events-none absolute inset-x-4 bottom-28 flex flex-col items-center gap-2 sm:bottom-24"
         style:transform={`translateX(${offset}px)`}

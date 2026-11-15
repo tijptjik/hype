@@ -25,6 +25,7 @@ let {
   onValueChange,
   onOpenChange,
   itemPreview,
+  itemLabel,
 }: SelectProps = $props()
 
 const itemsWithEmptyOption = $derived.by(() => {
@@ -53,7 +54,11 @@ function handleValueChange(nextValue: string): void {
     >
       <span
         class={`bits-form__select-label text-foreground ${itemPreview ? 'pl-0! text-left' : reserveTriggerSpace ? 'pl-1.5' : ''}`}
-        >{selectedLabel}</span
+        >{#if itemLabel}
+          {@render itemLabel(value)}
+        {:else}
+          {selectedLabel}
+        {/if}</span
       >
       {#if itemPreview}
         <span class="flex min-w-0 items-center">{@render itemPreview(value)}</span>
@@ -86,7 +91,11 @@ function handleValueChange(nextValue: string): void {
     >
       <span
         class={`bits-form__select-label text-foreground ${itemPreview ? 'pl-0! text-left' : ''}`}
-        >{selectedLabel}</span
+        >{#if itemLabel}
+          {@render itemLabel(value)}
+        {:else}
+          {selectedLabel}
+        {/if}</span
       >
       {#if itemPreview}
         <span class="flex min-w-0 items-center">{@render itemPreview(value)}</span>
@@ -111,7 +120,11 @@ function handleValueChange(nextValue: string): void {
               {#snippet children({ selected })}
                 <span
                   class={`bits-form__select-label text-foreground ${itemPreview ? 'pl-0! text-left' : ''}`}
-                  >{item.label}</span
+                  >{#if itemLabel}
+                    {@render itemLabel(item.value)}
+                  {:else}
+                    {item.label}
+                  {/if}</span
                 >
                 {#if itemPreview}
                   <span class="flex min-w-0 items-center"

@@ -8,6 +8,7 @@
     --station-edge: #78868d;
     --station-paper: #ffffff;
     --station-ink: #263d49;
+    --station-legend-ink: var(--station-ink);
     --station-connector: #467078;
     --station-connector-fill: #c5d9d7;
     --station-accent: #a42f70;
@@ -31,6 +32,7 @@
   /* Oblivion keeps the pale architectural floors against charcoal. */
   [data-theme="hype-light"] {
     --station-canvas: #242c32;
+    --station-legend-ink: #e5edf2;
   }
 
   /* Milque and Rye retain their own semantic indoor palettes. */

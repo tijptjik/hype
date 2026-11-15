@@ -9,6 +9,8 @@ export interface SelectItem {
 
 export interface SelectProps {
   itemPreview?: Snippet<[value: string]>
+  /** Optional label rendering shared by the trigger and options. */
+  itemLabel?: Snippet<[value: string]>
   value?: string
   items: SelectItem[]
   placeholder?: string

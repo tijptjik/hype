@@ -196,6 +196,19 @@ export class StationState {
     this.clearRoute()
     await this.open(this.code, id, false)
   }
+  /** Select a shared picker option without opening the station panel.
+   * @param id Floor identity or the all-level option. @returns Nothing.
+   */
+  selectLevel(id: string): void {
+    if (id !== 'all') {
+      this.openFloor(id)
+      return
+    }
+    this.openFloor(this.floor)
+    this.exploded = true
+    this.selected = null
+    this.fitRevision++
+  }
   /** Opens a detailed plan. @param id Source level ID. @returns Nothing. */
   openFloor(id: string): void {
     this.clearRoute()

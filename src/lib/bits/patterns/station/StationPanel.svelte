@@ -6,6 +6,9 @@ import { premisesLabel } from '#lib/indoor/premisesLabels.js'
 import { getAppCtx } from '#lib/context/app.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // COMPONENTS
+import { Select } from '#lib/bits/core/select/index.js'
+import StationLevelLabel from './StationLevelLabel.svelte'
+import { stationLevelOptions } from '#lib/indoor/levels.js'
 import PanelRoot from '#lib/bits/patterns/panels/components/PanelRoot.svelte'
 // DATA
 import { matches, value, type Place } from '#lib/indoor/model.js'
@@ -43,6 +46,7 @@ const levelName = (id: string) =>
     levels.find(f => f.properties.level_id === id)?.properties ?? {},
     'level_name_en',
   )
+const levelOptions = $derived(stationLevelOptions(levels))
 const entries = $derived(station.entries.filter(p => matches(p, query)))
 const connections = $derived(
   station.data
@@ -69,6 +73,19 @@ function select(place: Place): void {
   if (responsive.isMobile) model.onClose()
 }
 </script>
+{#snippet itemLabel(id: string)}
+  {@const option = levelOptions.find(option => option.value === id)}
+  {#if option}
+    <StationLevelLabel {option} />
+  {/if}
+{/snippet}
+{#snippet itemPreview(id: string)}
+  {@const option = levelOptions.find(option => option.value === id)}
+  <span class="text-muted-foreground whitespace-nowrap"
+    >{option?.exit ? `Exit ${option.exit}` : ''}</span
+  >
+{/snippet}
+
 <PanelRoot
   {...model.panel}
   isOpen={model.open}
@@ -107,29 +124,14 @@ function select(place: Place): void {
     {#if !model.panel.isNarrow}
       <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4">
         {#if station.data}
-          <label class="text-muted-foreground grid gap-2 text-xs"
-            >Level
-            <select
-              aria-label="Station level"
-              class="bg-surface text-base-content border-border w-full rounded-lg border px-3 py-2 text-sm"
-              value={station.exploded ? 'all' : station.floor}
-              onchange={e => {
-                if (e.currentTarget.value === 'all') {
-                  station.openFloor(station.floor)
-                  station.exploded = true
-                  station.selected = null
-                  station.fitRevision++
-                } else station.openFloor(e.currentTarget.value)
-              }}
-            >
-              <option value="all">All levels · exploded view</option>
-              {#each levels as level}
-                <option value={value(level.properties, 'level_id')}>
-                  {value(level.properties, 'level_name_en')}
-                </option>
-              {/each}
-            </select>
-          </label>
+          <Select
+            triggerAttrs={{ 'aria-label': 'Station level' }}
+            value={station.exploded ? 'all' : station.floor}
+            items={levelOptions}
+            {itemLabel}
+            {itemPreview}
+            onValueChange={next => station.selectLevel(next)}
+          />
           <fieldset
             class="text-muted-foreground grid grid-cols-2 gap-2 text-xs"
             aria-label="Station legend"

@@ -181,3 +181,10 @@ export function fitPolygonText(
   }
   return best
 }
+
+/** Shorten numbered room names for map labels without changing source identities.
+ * @param name Source room name or code. @returns A compact label, preserving the number and suffix.
+ */
+export function roomLabel(name: string): string {
+  return name.replace(/^room\s*(\d+[a-z]?)$/i, 'Rm $1')
+}
