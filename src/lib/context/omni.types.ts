@@ -7,6 +7,7 @@ export type OmniSearchCollection =
   | 'project'
   | 'organisation'
   | 'station'
+  | 'mall'
 
 export type SearchResult = {
   name: string

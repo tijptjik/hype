@@ -26,6 +26,7 @@ const collectionIcons = {
   neighbourhood: Building,
   feature: MapPin,
   station: Building,
+  mall: Building,
 }
 
 const collectionTitles: Record<OmniSearchCollection, string> = {
@@ -36,6 +37,7 @@ const collectionTitles: Record<OmniSearchCollection, string> = {
   neighbourhood: m.filters__divisions(),
   feature: m.omni__title_features(),
   station: 'MTR stations',
+  mall: 'Malls',
 }
 </script>
 

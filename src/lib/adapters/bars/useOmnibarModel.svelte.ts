@@ -1,4 +1,4 @@
-import { searchStations } from '#lib/indoor/registry.js'
+import { searchPremises, findStation } from '#lib/indoor/registry.js'
 // CONTEXT
 import { usePanelResources } from '#lib/context/panel-resources.svelte.js'
 // SEARCH
@@ -49,7 +49,7 @@ export function useOmnibarModel(
 ): {
   getOmnibarProps: () => OmnibarProps
 } {
-  let stationExpanded = $state(false)
+  let premisesExpanded = $state<'station' | 'mall' | null>(null)
   const resourceTypes = ['layer', 'project', 'organisation'] as const
   const resourceLists = resourceTypes.map(type =>
     usePanelResources(
@@ -201,7 +201,7 @@ export function useOmnibarModel(
   }
 
   function handleSearchTermChange(value: string): void {
-    stationExpanded = false
+    premisesExpanded = null
     omniCtx.setSearchTerm(value)
 
     if (value !== '' && !omniCtx.state.isTrayOpen) {
@@ -326,25 +326,28 @@ export function useOmnibarModel(
 
   function getSearchSections(): OmnibarResultSection[] {
     const sections: Omit<OmnibarResultSection, 'limit'>[] = [
-      {
-        collectionType: 'station',
+      ...(['station', 'mall'] as const).map(collectionType => ({
+        collectionType,
         onLoadMore: () => {
-          stationExpanded = !stationExpanded
+          premisesExpanded = premisesExpanded === collectionType ? null : collectionType
         },
-        results: (appCtx.showMtrStations
-          ? searchStations(omniCtx.state.searchTerm)
-          : []
-        ).map(s => ({
-          ref: s.id,
-          name: `${s.name} · ${s.nameZh} · ${s.id}`,
-          count: 0,
-          collectionType: 'station' as const,
-        })),
+        results: searchPremises(omniCtx.state.searchTerm)
+          .filter(venue =>
+            collectionType === 'station'
+              ? appCtx.showMtrStations && Boolean(findStation(venue.id))
+              : !findStation(venue.id),
+          )
+          .map(venue => ({
+            ref: venue.id,
+            name: `${venue.name} · ${venue.nameZh} · ${venue.id}`,
+            count: 0,
+            collectionType,
+          })),
         onSelection: (code: string) => {
           void appCtx.station.open(code)
           omniCtx.closeTray()
         },
-      },
+      })),
       {
         collectionType: OmniCollection.feature,
         results: omniCtx.searchResults.feature ?? [],
@@ -379,14 +382,14 @@ export function useOmnibarModel(
         limit: policy.limit as number,
       }))
       .filter(section =>
-        stationExpanded
-          ? section.collectionType === 'station'
+        premisesExpanded
+          ? section.collectionType === premisesExpanded
           : !omniCtx.searchSection || section.collectionType === omniCtx.searchSection,
       )
       .map(section => ({
         ...section,
-        limit: stationExpanded
-          ? 98
+        limit: premisesExpanded
+          ? section.results.length
           : omniCtx.searchSection
             ? Math.max(section.limit, omniCtx.searchSectionLimit)
             : section.limit,
@@ -416,7 +419,7 @@ export function useOmnibarModel(
             height: responsiveCtx.visibleWindowHeight,
             offsetTop: responsiveCtx.viewport?.offsetTop ?? 0,
           },
-          expanded: stationExpanded || Boolean(omniCtx.searchSection),
+          expanded: Boolean(premisesExpanded) || Boolean(omniCtx.searchSection),
           term: omniCtx.state.searchTerm,
           updating:
             omniCtx.state.searchTerm !== omniCtx.searchQueryTerm ||
