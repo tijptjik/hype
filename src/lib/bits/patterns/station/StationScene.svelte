@@ -516,7 +516,7 @@ function chooseFloor(id: string): void {
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions (This keyboard map application provides zoom controls and equivalent panel selection.) -->
 <div
-  class="focus-visible:ring-primary h-full w-full outline-none focus-visible:ring-1"
+  class="focus-visible:ring-primary h-full w-full bg-[var(--station-canvas)] outline-none focus-visible:ring-1"
   role="application"
   aria-label="Station plan controls"
   /* biome-ignore lint/a11y/noNoninteractiveTabindex: this map application owns keyboard zoom. */
