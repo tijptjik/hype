@@ -1,22 +1,15 @@
 <script lang="ts">
 // I18N
-import { getLocale } from '#lib/i18n.js'
-import { premisesLabel } from '#lib/indoor/premisesLabels.js'
-import { page } from '$app/state'
+
 import { untrack } from 'svelte'
-import { Panel as RoutePanel } from '#lib/enums.js'
 // CONTEXT
 import { getAppCtx } from '#lib/context/app.svelte.js'
-import { getSurfaceLayoutCtx } from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
-import { premisesCode, loadPremisesCatalogue } from '#lib/indoor/registry.js'
-import { Panel } from '#lib/enums.js'
-// COMPONENTS
-import StationScene from './StationScene.svelte'
-import StationCameraControls from './StationCameraControls.svelte'
-import StationRouteControls from './StationRouteControls.svelte'
-import StationLevelLabel from './StationLevelLabel.svelte'
-import { stationLevelOptions } from '#lib/indoor/levels.js'
+import { getSurfaceLayoutCtx } from '#lib/context/surfaceLayout.svelte.js'
+import { Panel as RoutePanel } from '#lib/enums.js'
+import { loadPremisesCatalogue, premisesCode } from '#lib/indoor/registry.js'
+import { page } from '$app/state'
+
 const app = getAppCtx()
 const station = app.station
 const layout = getSurfaceLayoutCtx()
@@ -26,17 +19,17 @@ const pathname = $derived(page.url.pathname)
 const indoorMatch = $derived(
   /^\/premises\/([a-z0-9-]+)(?:\/places\/([^/]+))?\/?$/.exec(pathname),
 )
-const hasCurrentScene = $derived(
+const _hasCurrentScene = $derived(
   Boolean(station.data && indoorMatch && premisesCode(indoorMatch[1]) === station.code),
 )
-let resolving = $state(false)
-let resolutionError = $state('')
-let resolutionRetry = $state(0)
+let _resolving = $state(false)
+let _resolutionError = $state('')
+let _resolutionRetry = $state(0)
 $effect(() => {
   const match = indoorMatch
-  resolutionRetry
-  resolving = Boolean(match)
-  resolutionError = ''
+  _resolutionRetry
+  _resolving = Boolean(match)
+  _resolutionError = ''
   if (!match) {
     untrack(() => {
       if (station.active) station.close(false)
@@ -50,24 +43,23 @@ $effect(() => {
         if (cancelled) return
         const code = match ? premisesCode(match[1]) : undefined
         if (match && code) {
-          const revealPanel =
-            !station.active || station.code !== code || Boolean(match[2])
+          const revealPanel = Boolean(match[2])
           void station.open(code, match[2], false)
           if (revealPanel) app.view.panels.openPanel(RoutePanel.prisms, false)
         } else {
           if (station.active) station.close(false)
-          if (match) resolutionError = 'Premises not found'
+          if (match) _resolutionError = 'Premises not found'
         }
       }),
     )
     .catch(error => {
       if (!cancelled) {
         console.error(error)
-        resolutionError = 'Could not load premises maps'
+        _resolutionError = 'Could not load premises maps'
       }
     })
     .finally(() => {
-      if (!cancelled) resolving = false
+      if (!cancelled) _resolving = false
     })
   return () => {
     cancelled = true
@@ -95,7 +87,7 @@ $effect(() => {
   }
   if (station.route && !visible.has(station.route.targetId)) station.clearRoute()
 })
-const offset = $derived(responsive.isMobile ? 0 : (layout?.getAppMainOffsetX() ?? 0))
+const _offset = $derived(responsive.isMobile ? 0 : (layout?.getAppMainOffsetX() ?? 0))
 </script>
 {#if station.active || indoorMatch}
   <section
@@ -172,30 +164,247 @@ const offset = $derived(responsive.isMobile ? 0 : (layout?.getAppMainOffsetX() ?
       {#if !app.view.panels.isPanelOpenOrVisual(Panel.prisms)}
         <nav
           aria-label="Indoor levels"
-          class="pointer-events-auto absolute top-1/2 left-3 z-20 max-h-[calc(100%-15rem)] w-40 max-w-[40vw] -translate-y-1/2 overflow-y-auto text-left text-sm text-[var(--station-legend-ink)] sm:left-5 sm:w-52"
+          class="pointer-events-auto absolute top-1/2 left-3 z-20 max-h-[calc(100%-15rem)] w-40 max-w-[40vw] -translate-y-1/2 overflow-y-auto px-3 py-2 text-left text-sm text-[var(--station-legend-ink)] sm:left-5 sm:w-52"
         >
-          {#each stationLevelOptions(
-            station.data.level_polygon.features,
-          ) as option (option.value)}
-            <button
-              type="button"
-              class="hover:text-primary focus-visible:outline-focus flex w-fit max-w-full flex-col gap-1 rounded-lg bg-[var(--station-canvas)] px-2 py-1 text-left aria-pressed:font-semibold"
-              aria-label={option.label}
-              aria-pressed={station.exploded
-                ? option.value === 'all'
-                : option.value === station.floor}
-              onclick={() => station.selectLevel(option.value)}
+          <details
+            class="group [interpolate-size:allow-keywords] [&::details-content]:h-0 [&::details-content]:overflow-hidden [&::details-content]:opacity-0 [&::details-content]:[transition:height_240ms_ease,opacity_240ms_ease,content-visibility_240ms_allow-discrete] motion-reduce:[&::details-content]:transition-none [&[open]::details-content]:h-auto [&[open]::details-content]:opacity-100"
+            open={!responsive.isMobile}
+          >
+            <summary
+              class="text-primary focus-visible:outline-focus flex w-fit max-w-full cursor-pointer list-none items-center gap-3 rounded-lg bg-[var(--station-canvas)] px-2 py-2 text-xs font-medium tracking-[0.1em] uppercase [&::-webkit-details-marker]:hidden"
             >
-              <StationLevelLabel {option} />
-              {#if option.exit || option.line}
-                <span class="text-muted-foreground pl-7 text-xs"
-                  >{option.exit ? `Exit ${option.exit}` : option.line}</span
+              Levels<ChevronDown
+                class="size-4 -rotate-90 transition-transform group-open:rotate-0"
+                aria-hidden="true"
+              />
+            </summary>
+            <div class="mt-3 grid gap-2.5">
+              {#each stationLevelOptions(
+                station.data.level_polygon.features,
+              ) as option (option.value)}
+                <button
+                  type="button"
+                  class="hover:text-primary focus-visible:outline-focus flex w-fit max-w-full flex-col gap-1 rounded-lg bg-[var(--station-canvas)] px-2 py-1 text-left aria-pressed:font-semibold"
+                  aria-label={option.value === 'all' ? 'All' : option.label}
+                  aria-pressed={station.exploded
+                    ? option.value === 'all'
+                    : option.value === station.floor}
+                  onclick={() => station.selectLevel(option.value)}
                 >
-              {/if}
-            </button>
-          {/each}
+                  <StationLevelLabel
+                    option={option.value === 'all'
+                      ? { ...option, floor: 'All' }
+                      : option}
+                  />
+                  {#if option.exit || option.line}
+                    <span class="text-muted-foreground pl-7 text-xs"
+                      >{option.exit ? `Exit ${option.exit}` : option.line}</span
+                    >
+                  {/if}
+                </button>
+              {/each}
+            </div>
+          </details>
         </nav>
       {/if}
+
+      <div
+        class="pointer-events-auto absolute top-1/2 right-3 z-20 max-h-[calc(100%-15rem)] w-48 -translate-y-1/2 overflow-y-auto px-3 py-2 text-sm text-[var(--station-legend-ink)] sm:right-5 sm:w-52"
+      >
+        {#if !station.isBuilding}
+          <details
+            class="group mb-4 [interpolate-size:allow-keywords] [&::details-content]:h-0 [&::details-content]:overflow-hidden [&::details-content]:opacity-0 [&::details-content]:[transition:height_240ms_ease,opacity_240ms_ease,content-visibility_240ms_allow-discrete] motion-reduce:[&::details-content]:transition-none [&[open]::details-content]:h-auto [&[open]::details-content]:opacity-100"
+            open={!responsive.isMobile}
+          >
+            <summary
+              class="text-primary focus-visible:outline-focus flex w-fit max-w-full cursor-pointer list-none items-center gap-3 rounded-lg bg-[var(--station-canvas)] px-2 py-2 text-xs font-medium tracking-[0.1em] uppercase [&::-webkit-details-marker]:hidden"
+            >
+              Concourse<ChevronDown
+                class="size-4 -rotate-90 transition-transform group-open:rotate-0"
+                aria-hidden="true"
+              />
+            </summary>
+            <ul class="mt-3 grid gap-2.5" aria-label="Concourse legend">
+              <li class="flex items-center gap-2">
+                <button
+                  type="button"
+                  class="hover:text-primary focus-visible:outline-focus flex w-fit max-w-full items-center gap-2 rounded-lg bg-[var(--station-canvas)] px-2 py-1 text-left disabled:opacity-40"
+                  onclick={() => station.selectIndex('paid')}
+                  disabled={!indexMatches(station.entries, 'paid').length}
+                >
+                  <span
+                    class="h-5 w-7 shrink-0 rounded border border-[var(--station-edge)] bg-[var(--station-paid)]"
+                    aria-hidden="true"
+                  ></span
+                  >Paid area
+                </button>
+              </li>
+              <li class="flex items-center gap-2">
+                <button
+                  type="button"
+                  class="hover:text-primary focus-visible:outline-focus flex w-fit max-w-full items-center gap-2 rounded-lg bg-[var(--station-canvas)] px-2 py-1 text-left disabled:opacity-40"
+                  onclick={() => station.selectIndex('unpaid')}
+                  disabled={!indexMatches(station.entries, 'unpaid').length}
+                >
+                  <span
+                    class="h-5 w-7 shrink-0 rounded border border-[var(--station-edge)] bg-[var(--station-unpaid)]"
+                    aria-hidden="true"
+                  ></span
+                  >Unpaid area
+                </button>
+              </li>
+            </ul>
+          </details>
+        {/if}
+        <details
+          class="group [interpolate-size:allow-keywords] [&::details-content]:h-0 [&::details-content]:overflow-hidden [&::details-content]:opacity-0 [&::details-content]:[transition:height_240ms_ease,opacity_240ms_ease,content-visibility_240ms_allow-discrete] motion-reduce:[&::details-content]:transition-none [&[open]::details-content]:h-auto [&[open]::details-content]:opacity-100"
+          open={!responsive.isMobile}
+        >
+          <summary
+            class="text-primary focus-visible:outline-focus flex w-fit max-w-full cursor-pointer list-none items-center gap-3 rounded-lg bg-[var(--station-canvas)] px-2 py-2 text-xs font-medium tracking-[0.1em] uppercase [&::-webkit-details-marker]:hidden"
+          >
+            Map symbols<ChevronDown
+              class="size-4 -rotate-90 transition-transform group-open:rotate-0"
+              aria-hidden="true"
+            />
+          </summary>
+          <ul class="mt-3 grid gap-2.5" aria-label="Map symbol legend">
+            {#if !station.isBuilding}
+              <li
+                class="flex items-center gap-2"
+                title="Solid: lifts. Dashed: escalators. Dotted: stairs. Dot-dash: ramps. Arrows do not indicate travel direction."
+              >
+                <button
+                  type="button"
+                  class="hover:text-primary focus-visible:outline-focus flex w-fit max-w-full items-center gap-2 rounded-lg bg-[var(--station-canvas)] px-2 py-1 text-left disabled:opacity-40"
+                  onclick={() => station.selectIndex('level-change')}
+                  disabled={!indexMatches(station.entries, 'level-change').length}
+                >
+                  <span class="w-7 shrink-0 text-center text-2xl" aria-hidden="true"
+                    >↕</span
+                  >Level change
+                </button>
+              </li>
+            {/if}
+            {#each [
+              ...new Set(
+                station.entries
+                  .filter(
+                    p =>
+                      p.kind === 'facility' &&
+                      p.feature.geometry.type === 'Point' &&
+                      (station.data?.coordinateSpace === 'image-pixels' ||
+                        !isConnector(p.category)) &&
+                      !['platform', 'faregate', 'entry'].includes(p.category),
+                  )
+                  .map(p => p.category),
+              ),
+            ].sort((a, b) => facilityLegendRank(a) - facilityLegendRank(b)) as category}
+              {@const symbol = facilitySymbol(
+                category,
+                station.entries.find(p => p.category === category)?.name.en,
+              )}
+              <li>
+                <button
+                  type="button"
+                  class="hover:text-primary focus-visible:outline-focus flex w-fit max-w-full items-center gap-1.5 rounded-lg bg-[var(--station-canvas)] px-2 py-1 text-left"
+                  onclick={() => station.selectIndex(category)}
+                  aria-label={`Find ${symbol.label}`}
+                >
+                  <svg
+                    width="30"
+                    height="30"
+                    viewBox="-4 -4 32 32"
+                    aria-hidden="true"
+                    class="shrink-0"
+                  >
+                    <rect
+                      x="-4"
+                      y="-4"
+                      width="32"
+                      height="32"
+                      rx="8"
+                      fill={symbol.background}
+                    />
+                    <path
+                      d={symbol.path}
+                      fill="none"
+                      stroke={symbol.color}
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    {#if symbol.text}
+                      <text
+                        x="12"
+                        y="20"
+                        text-anchor="middle"
+                        font-size="10"
+                        font-weight="800"
+                        fill={symbol.color}
+                      >
+                        {symbol.text}
+                      </text>
+                    {/if}
+                  </svg>
+                  {symbol.label}
+                </button>
+              </li>
+            {/each}
+          </ul>
+        </details>
+        {#if station.entries.some(place => isConnector(place.category))}
+          <details
+            class="group mt-4 [interpolate-size:allow-keywords] [&::details-content]:h-0 [&::details-content]:overflow-hidden [&::details-content]:opacity-0 [&::details-content]:[transition:height_240ms_ease,opacity_240ms_ease,content-visibility_240ms_allow-discrete] motion-reduce:[&::details-content]:transition-none [&[open]::details-content]:h-auto [&[open]::details-content]:opacity-100"
+            open={!responsive.isMobile}
+          >
+            <summary
+              class="text-primary focus-visible:outline-focus flex w-fit max-w-full cursor-pointer list-none items-center gap-3 rounded-lg bg-[var(--station-canvas)] px-2 py-2 text-xs font-medium tracking-[0.1em] uppercase [&::-webkit-details-marker]:hidden"
+            >
+              Connections<ChevronDown
+                class="size-4 -rotate-90 transition-transform group-open:rotate-0"
+                aria-hidden="true"
+              />
+            </summary>
+            <ul class="mt-3 grid gap-2.5" aria-label="Connection legend">
+              {#each [
+                { key: 'elevator', label: 'Lift', dash: undefined },
+                { key: 'escalator', label: 'Escalator', dash: '5 4' },
+                { key: 'stairs', label: 'Stair', dash: '0 4' },
+                { key: 'ramp', label: 'Ramp', dash: '0 4 5 4' },
+              ] as connection (connection.key)}
+                {#if indexMatches(station.entries, connection.key).length}
+                  <li>
+                    <button
+                      type="button"
+                      class="hover:text-primary focus-visible:outline-focus flex w-fit max-w-full items-center gap-2 rounded-lg bg-[var(--station-canvas)] px-2 py-1 text-left"
+                      onclick={() => station.selectIndex(connection.key)}
+                    >
+                      <svg
+                        class="h-5 w-7 shrink-0"
+                        viewBox="0 0 28 20"
+                        aria-hidden="true"
+                      >
+                        <line
+                          x1="3"
+                          y1="10"
+                          x2="25"
+                          y2="10"
+                          stroke="var(--station-connector)"
+                          stroke-width="1.5"
+                          stroke-linecap="round"
+                          stroke-dasharray={connection.dash}
+                        />
+                      </svg>
+                      {connection.label}
+                    </button>
+                  </li>
+                {/if}
+              {/each}
+            </ul>
+          </details>
+        {/if}
+      </div>
       <div
         class="pointer-events-none absolute inset-x-4 bottom-28 flex flex-col items-center gap-2 sm:bottom-24"
         style:transform={`translateX(${offset}px)`}

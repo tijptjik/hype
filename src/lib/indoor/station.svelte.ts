@@ -1,3 +1,4 @@
+import { indexMatches } from './indexNavigation'
 import { prepareIndoorData } from './preload'
 import { visibleIndoorPlaces } from './visibility'
 import type { IndoorRoute } from './routing'
@@ -195,6 +196,50 @@ export class StationState {
     this.loadedCode = ''
     this.clearRoute()
     await this.open(this.code, id, false)
+  }
+  /** Camera-owned distance ordering; updated by the mounted scene. */
+  rankIndexPlaces: ((places: Place[]) => Place[]) | null = null
+  private indexCycle: {
+    venue: string
+    key: string
+    ids: string[]
+    current: string
+  } | null = null
+  /** Open the nearest match, then cycle a stable nearest-first list on repeated clicks.
+   * @param key Map legend category or area key. @returns Nothing.
+   * @remarks Distances use the current projected camera centre, not device geolocation. Flat views prefer the current floor.
+   */
+  selectIndex(key: string): void {
+    const matches = indexMatches(this.entries, key)
+    if (!matches.length) return
+    const previous = this.indexCycle
+    const continuing =
+      previous?.venue === this.code &&
+      previous.key === key &&
+      previous.current === this.selected?.id
+    const ordered = continuing
+      ? previous.ids
+          .map(id => matches.find(place => place.id === id))
+          .filter((place): place is Place => Boolean(place))
+      : (this.rankIndexPlaces?.(matches) ?? matches)
+    if (!ordered.length) return
+    const index = continuing
+      ? (ordered.findIndex(place => place.id === previous.current) + 1) % ordered.length
+      : 0
+    const place = ordered[index]
+    this.indexCycle = {
+      venue: this.code,
+      key,
+      ids: ordered.map(place => place.id),
+      current: place.id,
+    }
+    if (this.route) this.clearRoute()
+    this.floor = place.levelId
+    this.exploded = false
+    this.planTilt = 0
+    this.selected = place
+    this.fitRevision++
+    this.select(place)
   }
   /** Select a shared picker option without opening the station panel.
    * @param id Floor identity or the all-level option. @returns Nothing.

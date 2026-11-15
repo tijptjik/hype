@@ -7,6 +7,7 @@ import {
   value,
   type IndoorData,
   type IndoorFeature,
+  type Place,
 } from '#lib/indoor/model.js'
 import IndoorFloorLayer from './IndoorFloorLayer.svelte'
 import { shopArtwork } from '#lib/indoor/artwork.js'
@@ -105,6 +106,28 @@ $effect(() => {
     panX = 0
     panY = 0
   })
+})
+// Rank against the visible camera centre before index navigation changes floor or zoom.
+$effect(() => {
+  station.rankIndexPlaces = candidates => {
+    const x = baseView[0] + baseView[2] / 2 + panX
+    const y = baseView[1] + baseView[3] / 2 + panY
+    const distance = (place: Place): number => {
+      const point = projection.project(centre(place.feature), place.levelId)
+      return Math.hypot(point[0] - x, point[1] - y)
+    }
+    return [...candidates].sort(
+      (a, b) =>
+        (!station.exploded
+          ? Number(b.levelId === station.floor) - Number(a.levelId === station.floor)
+          : 0) ||
+        distance(a) - distance(b) ||
+        a.id.localeCompare(b.id),
+    )
+  }
+  return () => {
+    station.rankIndexPlaces = null
+  }
 })
 const manualViewBox = $derived(
   `${baseView[0] + (baseView[2] * (1 - 1 / zoom)) / 2 + panX} ${baseView[1] + (baseView[3] * (1 - 1 / zoom)) / 2 + panY} ${baseView[2] / zoom} ${baseView[3] / zoom}`,
