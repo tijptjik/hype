@@ -197,8 +197,8 @@ let drag: {
   py: number
   bearing: number
   tilt: number
-  rotate: boolean
-  tiltOnly: boolean
+  mode: 'pan' | 'spin' | 'orbit' | 'tilt'
+  orbit?: { point: [number, number]; level: string; center: [number, number] }
   moved: boolean
 } | null = null
 let dragged = $state(false)
@@ -485,9 +485,21 @@ function move(event: PointerEvent): void {
   }
   if (!drag) return
   const scale = Math.max(viewport[2] / svg.clientWidth, viewport[3] / svg.clientHeight)
-  if (drag.rotate || drag.tiltOnly) {
-    if (!drag.tiltOnly) station.bearing = drag.bearing + (event.clientX - drag.x) * 0.4
-    updateTilt(drag.tilt - (event.clientY - drag.y) * 0.3)
+  if (drag.mode !== 'pan') {
+    if (drag.mode !== 'tilt')
+      station.bearing = drag.bearing + (event.clientX - drag.x) * 0.4
+    if (drag.mode !== 'spin') updateTilt(drag.tilt - (event.clientY - drag.y) * 0.3)
+    // Orbit the captured ground point, preserving its screen position and the current zoom.
+    if (drag.orbit) {
+      const camera = stationProjection(data, true, {
+        bearing: station.bearing,
+        tilt: station.exploded ? station.tilt : station.planTilt,
+        spacing: station.exploded ? station.spacing : 0,
+      })
+      const point = camera.project(drag.orbit.point, drag.orbit.level)
+      panX = point[0] - drag.orbit.center[0]
+      panY = point[1] - drag.orbit.center[1]
+    }
   } else {
     panX = drag.px - (event.clientX - drag.x) * scale
     panY = drag.py - (event.clientY - drag.y) * scale
@@ -605,6 +617,33 @@ function chooseFloor(id: string): void {
         return
       }
       dragged = false
+      const mode = e.altKey
+        ? 'tilt'
+        : e.ctrlKey || e.button === 2
+          ? 'orbit'
+          : e.shiftKey
+            ? 'spin'
+            : 'pan'
+      const center: [number, number] = [
+        viewport[0] + viewport[2] / 2,
+        viewport[1] + viewport[3] / 2,
+      ]
+      const level = station.floor || value(levels[0]?.properties ?? {}, 'level_id')
+      const orbit =
+        mode === 'orbit'
+          ? { point: projection.unproject(center, level), level, center }
+          : undefined
+      if (orbit) {
+        // Freeze the visible frame so rotating bounds cannot recenter or rescale an orbit.
+        retainedView = [
+          center[0] - (viewport[2] * zoom) / 2,
+          center[1] - (viewport[3] * zoom) / 2,
+          viewport[2] * zoom,
+          viewport[3] * zoom,
+        ]
+        panX = 0
+        panY = 0
+      }
       drag = {
         x: e.clientX,
         y: e.clientY,
@@ -612,8 +651,8 @@ function chooseFloor(id: string): void {
         py: panY,
         bearing: station.bearing,
         tilt: station.exploded ? station.tilt : station.planTilt,
-        rotate: e.button === 2 || e.shiftKey || e.ctrlKey,
-        tiltOnly: e.altKey && !e.ctrlKey,
+        mode,
+        orbit,
         moved: false,
       }
     }}
