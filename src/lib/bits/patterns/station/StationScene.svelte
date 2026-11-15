@@ -25,6 +25,8 @@ let {
   data,
   onSelect,
 }: { station: StationState; data: IndoorData; onSelect: () => void } = $props()
+// Share the camera control preference between the public viewer and embedded maps.
+const screenAlignedLogos = $derived(station.screenAlignedLogos)
 // Separate the destination camera from the displayed pose so geometry and zoom move together.
 const targetPose = $derived(
   station.returningToMap
@@ -558,6 +560,7 @@ function chooseFloor(id: string): void {
     data-camera-animating={cameraAnimating}
     data-camera-bearing={displayedPose.bearing}
     data-camera-tilt={displayedPose.tilt}
+    data-logo-mode={screenAlignedLogos ? 'screen-aligned' : 'default'}
     class="h-full w-full touch-none outline-none select-none"
     data-station-scene={station.exploded ? 'exploded' : 'plan'}
     data-station-transition={modeAnimating ? 'moving' : 'settled'}
@@ -669,6 +672,7 @@ function chooseFloor(id: string): void {
           entries={station.entries.filter(p => p.levelId === id)}
           treads={treads.filter(f => f.properties.level_id === id)}
           {projection}
+          {screenAlignedLogos}
           {flatProjection}
           {shops}
           {brand}

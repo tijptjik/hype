@@ -1,6 +1,7 @@
 <script lang="ts">
 // ICONS
 import FitIcon from 'virtual:icons/tabler/focus-centered'
+import MagicIcon from 'virtual:icons/tabler/wand'
 import RotateCcwIcon from 'virtual:icons/proicons/arrow-counterclockwise'
 // TYPES
 import type { StationState } from '#lib/indoor/station.svelte.js'
@@ -10,7 +11,7 @@ let { station }: { station: StationState } = $props()
 // Match the compass heading while keeping the scene's clockwise rotation convention.
 const rotationHeading = $derived(((-station.bearing % 360) + 360) % 360)
 </script>
-<div class="grid w-44 max-w-full gap-3 text-sm" oninput={() => station.stopFly()}>
+<div class="grid w-60 max-w-full gap-3 text-sm" oninput={() => station.stopFly()}>
   {#if station.data?.coordinateSpace === 'image-pixels'}
     <label class="grid min-w-0 gap-1">
       Original plan opacity · {Math.round(station.artworkOpacity * 100)}%
@@ -71,7 +72,7 @@ const rotationHeading = $derived(((-station.bearing % 360) + 360) % 360)
       ></label
     >
   {/if}
-  <div class="flex flex-wrap items-center gap-5">
+  <div class="flex items-center gap-5">
     <button
       class="text-primary inline-flex items-center gap-1.5"
       type="button"
@@ -96,6 +97,19 @@ const rotationHeading = $derived(((-station.bearing % 360) + 360) % 360)
     >
       <RotateCcwIcon class="size-4" aria-hidden="true" />
       Reset
+    </button>
+    <button
+      class="text-primary inline-flex items-center gap-1.5 aria-[pressed=false]:opacity-50"
+      type="button"
+      aria-pressed={station.screenAlignedLogos}
+      title="Screen-aligned brand logos"
+      onclick={() => {
+        station.stopFly()
+        station.screenAlignedLogos = !station.screenAlignedLogos
+      }}
+    >
+      <MagicIcon class="size-4 shrink-0" aria-hidden="true" />
+      Brands
     </button>
   </div>
 </div>

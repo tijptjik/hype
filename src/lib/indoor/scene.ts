@@ -10,6 +10,11 @@ export type StationProjection = {
   path: (feature: IndoorFeature) => string
   box: (features: IndoorFeature[]) => [number, number, number, number]
   anchor: (feature: IndoorFeature) => Point
+  screenAlignedLogo: (
+    feature: IndoorFeature,
+    aspect?: number,
+    padding?: number,
+  ) => string
   logo: (feature: IndoorFeature, aspect?: number, padding?: number) => string
 }
 /** Creates an orthographic floor projection with schematic vertical separation.
@@ -144,7 +149,44 @@ export function stationProjection(
         : [projected[3], projected[2], projected[1], projected[0]]
     return `matrix(${b[0] - a[0]} ${b[1] - a[1]} ${d[0] - a[0]} ${d[1] - a[1]} ${a[0]} ${a[1]})`
   }
-  return { project, unproject, path, box, logo, anchor }
+  let flat: StationProjection | undefined
+  /** Keeps the optimal footprint size and screen-down orientation on the tilted floor.
+   * @param feature Shop footprint. @param aspect Artwork width/height. @param padding Artwork inset.
+   * @returns Floor-aligned SVG image transform. @remarks Bearing is cancelled before tilt, so the bottom stays screen-down while height foreshortens with the floor.
+   */
+  const screenAlignedLogo = (
+    feature: IndoorFeature,
+    aspect = 0.75,
+    padding = 0.76,
+  ): string => {
+    flat ??= stationProjection(data, false, { bearing: 0, tilt: 0 })
+    // Compare both footprint orientations before aligning the winning fit to the viewing heading.
+    const candidates = [false, true].flatMap(swapped => {
+      const fitted = flat.logo(feature, swapped ? 1 / aspect : aspect, padding)
+      if (!fitted) return []
+      const matrix = fitted.slice(7, -1).split(' ').map(Number)
+      const [a, b, c, d] = matrix
+      const w = Math.hypot(a, b),
+        h = Math.hypot(c, d)
+      return [{ matrix, width: swapped ? h : w, height: swapped ? w : h }]
+    })
+    const best = candidates.sort((a, b) => b.width * b.height - a.width * a.height)[0]
+    if (!best) return ''
+    const {
+      width,
+      height,
+      matrix: [a, b, c, d, e, f],
+    } = best
+    const level = value(feature.properties, 'level_id')
+    const [x, y] = project(
+      flat.unproject([e + (a + c) / 2, f + (b + d) / 2], level),
+      level,
+    )
+    // Counter-rotation in the floor plane removes bearing; pitch still compresses its vertical axis.
+    const projectedHeight = height * cosTilt
+    return `matrix(${width} 0 0 ${projectedHeight} ${x - width / 2} ${y - projectedHeight / 2})`
+  }
+  return { project, unproject, path, box, logo, screenAlignedLogo, anchor }
 }
 /** Maps source classes onto a theme-independent cartographic palette. @param feature Source unit. @param branded Known shop logo. @returns CSS paint value. */
 export function stationFill(feature: IndoorFeature, branded = false): string {

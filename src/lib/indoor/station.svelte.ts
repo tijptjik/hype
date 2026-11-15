@@ -89,6 +89,7 @@ export class StationState {
   spacing = $state(25)
   showInferred = $state(true)
   artworkOpacity = $state(0)
+  screenAlignedLogos = $state(true)
   data = $state.raw<IndoorData | null>(null)
   private featuredUnits: () => ReadonlySet<string> | null = () => null
   private sourceEntries = $state.raw<Place[]>([])

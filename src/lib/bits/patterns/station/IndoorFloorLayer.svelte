@@ -1,6 +1,7 @@
 <script lang="ts">
 // COMPONENTS
 import StationExitMarkers from './StationExitMarkers.svelte'
+import { shopImagePlacement } from '#lib/indoor/artwork.js'
 // DATA
 import { facilitySymbol } from '#lib/indoor/facilities.js'
 import { centre, value, type IndoorFeature, type Place } from '#lib/indoor/model.js'
@@ -26,6 +27,7 @@ let {
   treads,
   projection: cameraProjection,
   flatProjection,
+  screenAlignedLogos = false,
   shops,
   brand,
   maskId,
@@ -50,6 +52,7 @@ let {
   treads: IndoorFeature[]
   projection: StationProjection
   flatProjection: StationProjection
+  screenAlignedLogos?: boolean
   shops: Map<string, Place>
   brand: (feature: IndoorFeature) => ShopArtwork | null
   maskId: string
@@ -67,9 +70,13 @@ const reliefUnits = $derived(
   units.filter(unit => reliefs.has(value(unit.properties, 'unit_id'))),
 )
 // Flat overview floors keep their paths stable; only a six-number matrix follows the camera.
-// Sloped relief and upright detail labels retain the full screen-space projection.
+// Sloped relief and logos retain the full screen-space projection so floor tilt cannot stretch images.
 const useFloorTransform = $derived(
-  exploded && detailOpacity === 0 && reliefUnits.length === 0,
+  exploded &&
+    detailOpacity === 0 &&
+    reliefUnits.length === 0 &&
+    !screenAlignedLogos &&
+    !units.some(unit => brand(unit)),
 )
 const projection = $derived(useFloorTransform ? flatProjection : cameraProjection)
 const floorTransform = $derived.by(() => {
@@ -331,26 +338,37 @@ const facilityMarkers = $derived.by(() => {
         clip-path={isConnector(value(unit.properties, 'unit_category'))
           ? `url(#${floorClip})`
           : undefined}
-        fill={brand(unit)?.background ??
-          (value(unit.properties, 'geometry_role') === 'artwork_colour_trace'
-            ? 'var(--station-edge)'
-            : stationFill(unit))}
+        fill={value(unit.properties, 'geometry_role') === 'artwork_colour_trace'
+          ? 'var(--station-edge)'
+          : stationFill(unit)}
         fill-rule="evenodd"
         stroke="var(--station-edge)"
         stroke-width="0.9"
         vector-effect="non-scaling-stroke"
       />
       {#if isBrand(unit)}
-        <g clip-path={`url(#${maskId}-${value(unit.properties, 'unit_id')})`}>
-          <image
-            href={brand(unit)?.src}
-            width="1"
-            height="1"
-            preserveAspectRatio="none"
-            transform={projection.logo(unit, brand(unit)?.aspect, brand(unit)?.padding)}
-            data-shop-logo={shop?.code || shop?.name.en}
-          />
-        </g>
+        {@const placement = shopImagePlacement(
+          (screenAlignedLogos ? projection.screenAlignedLogo : projection.logo)(
+            unit,
+            brand(unit)?.aspect,
+            brand(unit)?.padding,
+          ),
+          brand(unit)?.aspect,
+          screenAlignedLogos,
+        )}
+        <!-- Screen-aligned marks lie on the tilted floor and stay clipped to the rotating shop footprint. -->
+        {#if placement}
+          <g clip-path={`url(#${maskId}-${value(unit.properties, 'unit_id')})`}>
+            <image
+              href={brand(unit)?.src}
+              width={placement.width}
+              height={placement.height}
+              preserveAspectRatio="xMidYMid meet"
+              transform={placement.transform}
+              data-shop-logo={shop?.code || shop?.name.en}
+            />
+          </g>
+        {/if}
       {:else if shop &&
         detailOpacity > 0 &&
         value(unit.properties, 'geometry_role') !== 'artwork_colour_trace'}
