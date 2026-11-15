@@ -29,6 +29,17 @@ export class StationState {
   stopFly(): void {
     this.routeMode = 'highlight'
   }
+  /** Fits the visible floors without changing their orientation or removing the route.
+   * @returns Nothing.
+   * @remarks Selection and route playback framing must release the camera before fitting.
+   */
+  fitView(): void {
+    this.stopFly()
+    this.selected = null
+    this.routeProgress = 0
+    this.arrival = 0
+    this.fitRevision++
+  }
   /** Clears the route, optionally retaining the current camera. @param preserveCamera Keep orientation and framing for a floor change. @returns Nothing. */
   clearRoute(preserveCamera = false): void {
     if (this.route) this.exploded = true
