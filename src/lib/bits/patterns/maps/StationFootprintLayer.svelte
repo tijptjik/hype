@@ -17,6 +17,7 @@ import {
 } from '#lib/indoor/registry.js'
 import { preloadVisibleIndoorMaps } from '#lib/indoor/preload.js'
 import { bounds } from '#lib/indoor/model.js'
+import { stationLabelFeatures } from '#lib/indoor/stationLabels.js'
 import type { Collection } from '#lib/indoor/model.js'
 let {
   map,
@@ -114,6 +115,12 @@ $effect(() => {
             type: 'geojson',
             data: JSON.parse(JSON.stringify(source)),
           })
+        // Keep station label anchors independent of polygon parts and tile clipping.
+        if (!target.getSource('hype-station-labels'))
+          target.addSource('hype-station-labels', {
+            type: 'geojson',
+            data: JSON.parse(JSON.stringify(stationLabelFeatures(source))),
+          })
         if (!target.getLayer('hype-station-footprint-fill'))
           target.addLayer({
             id: 'hype-station-footprint-fill',
@@ -148,7 +155,7 @@ $effect(() => {
           target.addLayer({
             id: 'hype-station-footprint-label',
             type: 'symbol',
-            source: 'hype-station-footprint',
+            source: 'hype-station-labels',
             minzoom: 16.5,
             layout: {
               ...typography.layout,
@@ -235,6 +242,8 @@ $effect(() => {
         'hype-station-footprint-fill',
       ])
         if (target.getLayer(id)) target.removeLayer(id)
+      if (target.getSource('hype-station-labels'))
+        target.removeSource('hype-station-labels')
       if (target.hasImage('hype-indoor-mtr')) target.removeImage('hype-indoor-mtr')
       if (target.getSource('hype-station-footprint'))
         target.removeSource('hype-station-footprint')
