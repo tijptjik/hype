@@ -69,13 +69,19 @@ export async function readIdentityCatalogueByCode(
 /** Search names in every locale without expanding an unbounded identifier list.
  * @param db Database. @param kind Brand or corporate group. @param search Typed substring.
  * @param excludeDescendantsOf Optional group whose subtree cannot be selected as its parent.
- * @returns At most fifty current records for autocomplete.
+ * @param isArchived False for active entries, true for deleted entries, null for both.
+ * @param independent True for no group association, false for a group association, null for either.
+ * @param page Optional keyset cursor for index pages, including one lookahead record.
+ * @returns At most fifty autocomplete records, or fifty-one index records.
  */
 export async function searchIdentityCatalogue(
   db: Database,
   kind: 'brand' | 'group',
   search: string,
   excludeDescendantsOf?: string,
+  isArchived: boolean | null = false,
+  independent: boolean | null = null,
+  page?: { after?: { name: string; id: string } },
 ): Promise<IdentityCatalogueRecord[]> {
   const rows = await db.all<{
     id: string
@@ -83,7 +89,7 @@ export async function searchIdentityCatalogue(
     version: number
     content: string
   }>(
-    sql`SELECT c.id,c.kind,c.version,r.content FROM identityCatalogue c JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version WHERE c.kind=${kind} AND c.id NOT IN (WITH RECURSIVE descendants(id) AS (SELECT id FROM identityCatalogue WHERE id=${excludeDescendantsOf ?? null} UNION SELECT child.id FROM identityCatalogue child JOIN descendants parent ON child.groupId=parent.id) SELECT id FROM descendants) AND (${search}='' OR instr(lower(coalesce(json_extract(r.content,'$.code'),c.id)),lower(${search}))>0 OR EXISTS(SELECT 1 FROM identityCatalogueI18n names WHERE names.catalogueId=c.id AND names.version=c.version AND instr(lower(names.name),lower(${search}))>0)) ORDER BY json_extract(r.content,'$.i18n.en.name'),c.id LIMIT 50`,
+    sql`SELECT c.id,c.kind,c.version,r.content FROM identityCatalogue c JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version WHERE c.kind=${kind} AND (${isArchived === null ? null : Number(isArchived)} IS NULL OR coalesce(json_extract(r.content,'$.isArchived'),0)=${isArchived === null ? null : Number(isArchived)}) AND (${independent === null ? null : Number(independent)} IS NULL OR (c.groupId IS NULL)=${independent === null ? null : Number(independent)}) AND c.id NOT IN (WITH RECURSIVE descendants(id) AS (SELECT id FROM identityCatalogue WHERE id=${excludeDescendantsOf ?? null} UNION SELECT child.id FROM identityCatalogue child JOIN descendants parent ON child.groupId=parent.id) SELECT id FROM descendants) AND (${search}='' OR instr(lower(coalesce(json_extract(r.content,'$.code'),c.id)),lower(${search}))>0 OR EXISTS(SELECT 1 FROM identityCatalogueI18n names WHERE names.catalogueId=c.id AND names.version=c.version AND instr(lower(names.name),lower(${search}))>0)) AND (${page?.after?.id ?? null} IS NULL OR coalesce(json_extract(r.content,'$.i18n.en.name'),'') > ${page?.after?.name ?? ''} OR (coalesce(json_extract(r.content,'$.i18n.en.name'),'') = ${page?.after?.name ?? ''} AND c.id > ${page?.after?.id ?? ''})) ORDER BY coalesce(json_extract(r.content,'$.i18n.en.name'),''),c.id LIMIT ${page ? 51 : 50}`,
   )
   return rows.map(row => ({
     id: row.id,

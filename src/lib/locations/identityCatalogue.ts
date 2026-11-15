@@ -25,6 +25,8 @@ export const IdentityCatalogueContentSchema = z.strictObject({
     )
     .max(100)
     .optional(),
+  // Archived identities remain readable for existing references and revision history.
+  isArchived: z.boolean().optional(),
   // Optional containing group for both brands and groups; revisions retain membership history.
   groupId: z.string().min(1).max(200).nullable().optional(),
   code: z

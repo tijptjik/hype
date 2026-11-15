@@ -736,3 +736,49 @@ it('finds sibling brands across intermediate groups while group pages stay withi
   })
   expect(await ids('middle', true)).toEqual(['arome', 'cousin', 'deep', 'direct'])
 })
+
+it.each(['brand', 'group'] as const)(
+  'pages every %s with tied names without truncation or duplicates',
+  async kind => {
+    const f = fixture()
+    for (let index = 0; index < 103; index++) {
+      await saveIdentityCatalogue(f.db, {
+        id: `paging-${kind}-${String(index).padStart(3, '0')}`,
+        kind,
+        expectedVersion: 0,
+        content: {
+          i18n: {
+            en: { name: 'Same name' },
+            'zh-Hant': { name: '' },
+            'zh-Hans': { name: '' },
+          },
+          logo: null,
+        },
+        actorId: 'editor',
+        guard: sql`1`,
+      })
+    }
+    expect(await searchIdentityCatalogue(f.db, kind, '')).toHaveLength(50)
+    const ids: string[] = []
+    let after: { name: string; id: string } | undefined
+    for (;;) {
+      const rows = await searchIdentityCatalogue(
+        f.db,
+        kind,
+        '',
+        undefined,
+        false,
+        null,
+        { after },
+      )
+      const page = rows.slice(0, 50)
+      ids.push(...page.map(row => row.id))
+      if (rows.length <= 50) break
+      const last = page.at(-1)!
+      after = { name: last.i18n.en.name, id: last.id }
+    }
+    expect(ids).toHaveLength(103)
+    expect(new Set(ids).size).toBe(103)
+    expect(ids).toEqual([...ids].sort())
+  },
+)

@@ -39,6 +39,7 @@ import {
   importIdentityCatalogue,
   publishIdentityCatalogueLocations,
   findIdentityCatalogue,
+  listIdentityCatalogue,
   getIdentityCatalogue,
   publishIdentityCatalogue,
   uploadIdentityCatalogueLogo,
@@ -104,6 +105,57 @@ let detailFailed = $state(false)
 let detailRetry = $state(0)
 let indexFailed = $state(false)
 let indexRetry = $state(0)
+let nextCursor = $state<{ name: string; id: string } | null>(null)
+let loadingMore = $state(false)
+let moreFailed = $state(false)
+let sentinel = $state<HTMLDivElement>()
+let indexGeneration = 0
+
+/** Load the next page without mixing results from changed filters.
+ * @returns Resolves after the page is appended or its error is displayed.
+ */
+async function loadMore(): Promise<void> {
+  if (!nextCursor || loading || loadingMore) return
+  const generation = indexGeneration
+  const retry = moreFailed
+  loadingMore = true
+  moreFailed = false
+  try {
+    const request = listIdentityCatalogue({
+      kind,
+      search,
+      after: nextCursor,
+      isArchived: false,
+    })
+    if (retry) await request.refresh()
+    const value = await request
+    if (generation !== indexGeneration) return
+    records = [
+      ...records,
+      ...value.records.filter(row => !records.some(old => old.id === row.id)),
+    ]
+    nextCursor = value.nextCursor
+  } catch {
+    if (generation === indexGeneration) moreFailed = true
+  } finally {
+    if (generation === indexGeneration) loadingMore = false
+  }
+}
+$effect(() => {
+  if (!sentinel || !nextCursor || loading || loadingMore || moreFailed) return
+  const observer = new IntersectionObserver(
+    entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        observer.disconnect()
+        void loadMore()
+      }
+    },
+    { rootMargin: '300px' },
+  )
+  observer.observe(sentinel)
+  return () => observer.disconnect()
+})
+
 let groupNamesBeforeEdit: Record<string, string> = {}
 let namesBeforeEdit: Record<string, string> = {}
 $effect(() => {
@@ -490,16 +542,25 @@ $effect(() => {
   const type = kind,
     query = search
   let cancelled = false
+  untrack(() => {
+    indexGeneration++
+  })
+  records = []
+  nextCursor = null
+  loadingMore = false
+  moreFailed = false
   loading = true
   indexFailed = false
-  const request = findIdentityCatalogue({
+  const request = listIdentityCatalogue({
     kind: type,
     search: query,
+    isArchived: false,
   })
-  void (indexRetry ? request.refresh().then(() => request) : request)
+  void (indexRetry || refresh ? request.refresh().then(() => request) : request)
     .then(value => {
       if (!cancelled) {
-        records = value
+        records = value.records
+        nextCursor = value.nextCursor
       }
     })
     .catch(() => {
@@ -1559,6 +1620,22 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
         style="ghost"
         onClick={() => detailRetry++}
       />
+    </div>
+  {/if}
+  {#if !detail && nextCursor}
+    <div bind:this={sentinel} class="flex justify-center p-6">
+      <Button
+        text={loadingMore
+          ? 'Loading…'
+          : moreFailed
+            ? 'Retry loading more'
+            : 'Load more'}
+        style="ghost"
+        onClick={() => void loadMore()}
+      />
+      {#if moreFailed}
+        <p role="alert">Unable to load more records.</p>
+      {/if}
     </div>
   {/if}
   {#if !detail && indexFailed}

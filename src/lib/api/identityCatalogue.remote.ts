@@ -58,6 +58,46 @@ export const findIdentityCatalogue = guardedQuery(
     )
   },
 )
+/** List a stable page of brands or groups.
+ * @param input Search, filters and optional continuation cursor.
+ * @returns Fifty records and a cursor when another page exists.
+ */
+export const listIdentityCatalogue = guardedQuery(
+  z.strictObject({
+    kind: z.enum(['brand', 'group']),
+    search: z.string().max(200),
+    isArchived: z.boolean().nullable().optional(),
+    independent: z.boolean().nullable().optional(),
+    after: z.object({ name: z.string(), id: z.string().min(1).max(200) }).optional(),
+  }),
+  async (input, ctx) => {
+    if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
+    if (
+      input.isArchived !== undefined &&
+      input.isArchived !== false &&
+      !ctx.user.superAdmin
+    )
+      error(403, 'INSUFFICIENT_ROLE')
+    const rows = await searchIdentityCatalogue(
+      ctx.db,
+      input.kind,
+      input.search,
+      undefined,
+      input.isArchived,
+      input.independent,
+      { after: input.after },
+    )
+    const records = rows.slice(0, 50)
+    const last = records.at(-1)
+    return {
+      records,
+      nextCursor:
+        rows.length > 50 && last
+          ? { name: last.i18n.en?.name ?? '', id: last.id }
+          : null,
+    }
+  },
+)
 /** Read the current brands belonging to a group profile.
  * @param input Group identity and optional wider-family sibling discovery.
  * @returns Linked localized brands, including intermediate groups.
