@@ -71,3 +71,5 @@ export * from './staffRoleHistory'
 
 export * from './locationCanonicalDraft'
 export * from './operator'
+
+export * from './premisesMap'

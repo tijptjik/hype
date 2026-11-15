@@ -1,5 +1,73 @@
 # Station layouts
 
+## Current storage architecture (15 November 2026)
+
+Runtime map content now comes from versioned **private R2** objects, with database
+publication pointers. The snapshot paths described below are historical collection
+notes: `static/indoor` is no longer an application data source. Preserved raw snapshots
+are in ignored `.research/indoor/`; the migration input and backups are in
+`.research/premises-map-migration/`. Real-source integration tests require that external
+archive; synthetic navigation and release-contract tests do not.
+
+- `premisesMap` stores discovery metadata, an outdoor footprint optimization, and
+  separate optimistic draft/publication pointers. Existing `locationPremisesMap` links
+  it to the canonical premises Location.
+- R2 keys are `premises-maps/{mapId}/releases/{sha256}.json`. A schema-v1 bundle
+  contains all six GeoJSON layers, explicit connections, source attribution,
+  official-document links and embedded schematic imagery. The hash covers the exact
+  stored bytes.
+- `premisesMapDraftRevision` and `premisesMapPublication` preserve author/version
+  receipts. Publishing first validates an R2 readback, then atomically switches the
+  database pointer and records publication. Failed or stale writes cannot replace the
+  active release.
+- `/api/premises-maps/{id}` is `no-store`; published hash URLs are immutable. Public
+  reads require a publication receipt, so draft hashes do not grant access. Older
+  publications remain readable for rollback. The client checks for new releases every
+  minute while visible and refreshes geometry/occupancy when returning to the tab;
+  flights defer checks.
+- The storage adapter uses the environment's **original/private asset bucket**, not its
+  public image bucket. Development is `ASSET_RAW_DEV` (`hype-assets-raw-dev`); preview
+  and production use their respective existing bindings. Local simulation uses local R2.
+- `premisesMapUnit` binds each source polygon ID to a stable canonical physical
+  Location. Current public occupancy resolves the establishment and its curated brand;
+  approved catalogue artwork supplies the logo. Geometry never embeds live brand
+  presentation. Missing or conflicting occupancy/brand evidence produces no invented
+  logo.
+- `/admin/premises-maps` is a super-admin connection editor: save draft, publish saved
+  draft, discard unsaved edits, or restore a previous publication as a draft. Unknown
+  direction remains display-only. Publishing verifies every enabled connection. Imported
+  reviewed-layout evidence retains its source URL. Polygon edits can use the same
+  full-bundle draft command; a graphical polygon editor is not included.
+
+Apply migrations `0255_premises_map_releases.sql` and
+`0256_premises_map_draft_history.sql` before deploying these readers. The local-only
+importer accepts an external index containing `id`, `code`, `name`, `nameZh`, `kind`,
+`sourceDirectory` and `bundle` for each map:
+
+```sh
+dev-check bun scripts/indoor/import-map-releases.ts /path/to/index.json
+# After reviewing the plan:
+dev-check bun scripts/indoor/import-map-releases.ts /path/to/index.json --apply
+```
+
+The importer never infers occupancy. It binds exact canonical source keys only and
+preserves already published maps. `--refresh-import` can update only maps still owned by
+that importer; edited maps require the editor. R2 garbage collection is deliberately
+absent: publication and draft history retain their objects.
+
+Local cutover: five maps and eight distinct retained bundles were copied to private
+local R2 and verified through HTTP with SHA-256 readback. There are 542 canonical unit
+bindings across the three MTR maps. Current Kennedy Town occupancy is absent in the
+local head table; Hysan Place and TKO Plaza lack canonical unit bindings. Completing
+those relationships is separate evidence-backed catalogue work. Production has not been
+migrated or deployed. The approved remote development-bucket upload completed; download
+comparison confirmed eight matching files and zero differences.
+
+Validation: scoped formatting/lint and local HTTP/module checks were performed. Managed
+unit tests, storage integration tests, full typecheck and Chrome interaction checks
+could not start because Li had no reachable SSH address. HTTP reads are not browser
+interaction proof.
+
 The public Hype map opens Kennedy Town from the regular menu. The station panel occupies
 the Maps panel slot, and the omnibar stays mounted in its usual position. General map
 restores the retained outdoor renderer and camera. Station state belongs to the public
@@ -134,6 +202,15 @@ record has no L06 code, so this pair has explicit reviewed-layout evidence in th
 connection model. Endpoints are drawn above the floors to prevent occlusion from making
 links appear attached to nearby shops.
 
+Exit C also has three explicit reviewed-layout links: its two parallel escalators and
+adjacent stair connect the ground landing to the unpaid concourse. MTR's
+[official layout](https://www.mtr.com.hk/archive/en/services/layouts/ket.pdf), reviewed
+2026-11-15, confirms the bank; source lane ordering identifies the corresponding
+polygons. Their footprints are horizontally separated, so overlap matching misses them.
+The stair is available to the routing adapter through source pedestrian openings;
+escalators remain display-only because operating direction is not established. The
+unmatched Exit C L01 lift is not assigned an invented destination.
+
 Bounding-box candidates are shown by default, per the user's preference, and can be
 hidden through Show unverified connections. They use dashed strokes. These do not
 establish stairs/escalator destinations or operating direction. The complete pedestrian
@@ -194,3 +271,22 @@ stations now expose the same data-driven route planner. This supersedes the earl
 Kennedy Town-only UI restriction, while preserving its evidence boundaries: no new Hong
 Kong inter-floor or fare-gate connections have been inferred. Incomplete routes produce
 an explicit unavailable result.
+
+### Map connection editing and verification
+
+The premises map admin uses a floor-plan connection mode. Facilities distinguish linked,
+unlinked, selected and available endpoints; candidates must have the same category, be
+on another floor and not already form a stored pair. Multiple links per facility remain
+possible. Select a facility to disable or re-enable its links, set direction, or
+navigate to the other endpoint. Zoom and scrolling support detailed floor plans.
+
+Publishing verifies all enabled links as `editor-verified`. Unknown directions remain
+display-only. The server writes and reads back the new immutable R2 bundle before
+atomically updating the draft/public pointers and audit receipts; the publication
+receipt records the verifying actor and time. Disabled links remain disabled.
+Publication never modifies the previous release.
+
+The eight migration objects were uploaded to
+`r2-tijpdata:hype-assets-raw-dev/premises-maps/` and verified by downloading and
+comparing them: eight matches, zero differences. This upload does not deploy the
+application or migrate the remote database.

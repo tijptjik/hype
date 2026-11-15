@@ -389,6 +389,14 @@ function chooseFloor(id: string): void {
       )}
       <IndoorFloorLayer
         {level}
+        artworkOpacity={station.artworkOpacity}
+        artwork={data.coordinateSpace === 'image-pixels'
+          ? {
+              src: value(level.properties, 'image_url'),
+              width: Number(level.properties.image_width),
+              height: Number(level.properties.image_height),
+            }
+          : undefined}
         units={data.unit_polygon.features.filter(f => f.properties.level_id === id)}
         entries={station.entries.filter(p => p.levelId === id)}
         treads={treads.filter(f => f.properties.level_id === id)}
@@ -443,8 +451,10 @@ function chooseFloor(id: string): void {
                 {connection.evidence === 'matching-lift-code'
                   ? `${value(a.properties, 'unit_name_en')} · matching lift code`
                   : connection.evidence === 'reviewed-layout'
-                    ? 'Exit B lift · MTR layout'
-                    : 'Possible connection · unverified'}
+                    ? `${value(a.properties, 'unit_name_en')} · ${value(b.properties, 'level_name_en')} · MTR layout`
+                    : connection.evidence === 'editor-verified'
+                      ? 'Verified by map editor'
+                      : 'Possible connection · unverified'}
               </title>
             </line>
             <line

@@ -1,3 +1,5 @@
+import { validateMapBundle } from '../lib/indoor/releases'
+import { existsSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
   bounds,
@@ -223,39 +225,85 @@ describe('premises navigation and logos', () => {
   })
 })
 
-it('keeps real shop logos upright and unmirrored in both projections', () => {
-  const data = dataset()
-  for (const layer of layerNames)
-    data[layer] = JSON.parse(
-      readFileSync(`static/indoor/kennedy-town/${layer}.json`, 'utf8'),
-    )
-  const shops = places(data).filter(p => p.name.en === '7-Eleven')
-  expect(shops).toHaveLength(2)
-  for (const exploded of [false, true])
-    for (const shop of shops) {
-      const matrix = stationProjection(data, exploded).logo(shop.feature)
-      const [a, b, c, d] = matrix.slice(7, -1).split(' ').map(Number)
-      expect(a * d - b * c).toBeGreaterThan(0)
-      expect(a).toBeGreaterThan(0)
-    }
-})
+it.skipIf(!existsSync('.research/indoor/kennedy-town/manifest.json'))(
+  'keeps real shop logos upright and unmirrored in both projections',
+  () => {
+    const data = dataset()
+    for (const layer of layerNames)
+      data[layer] = JSON.parse(
+        readFileSync(`.research/indoor/kennedy-town/${layer}.json`, 'utf8'),
+      )
+    const shops = places(data).filter(p => p.name.en === '7-Eleven')
+    expect(shops).toHaveLength(2)
+    for (const exploded of [false, true])
+      for (const shop of shops) {
+        const matrix = stationProjection(data, exploded).logo(shop.feature)
+        const [a, b, c, d] = matrix.slice(7, -1).split(' ').map(Number)
+        expect(a * d - b * c).toBeGreaterThan(0)
+        expect(a).toBeGreaterThan(0)
+      }
+  },
+)
 
-it('keeps distinct lift identities and restores the reviewed Exit B continuation', () => {
-  const data = dataset()
-  for (const layer of layerNames)
-    data[layer] = JSON.parse(
-      readFileSync(`static/indoor/kennedy-town/${layer}.json`, 'utf8'),
+it.skipIf(!existsSync('.research/indoor/kennedy-town/manifest.json'))(
+  'keeps distinct lift identities and restores the reviewed Exit B continuation',
+  () => {
+    const data = dataset()
+    for (const layer of layerNames)
+      data[layer] = JSON.parse(
+        readFileSync(`.research/indoor/kennedy-town/${layer}.json`, 'utf8'),
+      )
+    data.connections = JSON.parse(
+      readFileSync('.research/indoor/kennedy-town/connections.json', 'utf8'),
     )
-  const links = connectionCandidates(data)
-  expect(links.filter(c => c.evidence === 'matching-lift-code')).toHaveLength(4)
-  expect(links.find(c => c.evidence === 'reviewed-layout')).toMatchObject({
-    from: 'c1769bda-5a37-4043-bbf0-4d3352bb9841',
-    to: '5dc92c22-09a9-46ff-a049-4f7e4c438a5a',
-  })
-  const floor = data.level_polygon.features
-  const normal = stationProjection(data, true)
-  const wide = stationProjection(data, true, { spacing: 65 })
-  expect(normal.box(floor)[3]).toBeLessThan(wide.box(floor)[3])
-  const rotated = stationProjection(data, true, { bearing: 90 })
-  expect(rotated.path(floor[0])).not.toBe(normal.path(floor[0]))
-})
+    const links = connectionCandidates(data)
+    expect(links.filter(c => c.evidence === 'matching-lift-code')).toHaveLength(4)
+    expect(links.find(c => c.evidence === 'reviewed-layout')).toMatchObject({
+      from: 'c1769bda-5a37-4043-bbf0-4d3352bb9841',
+      to: '5dc92c22-09a9-46ff-a049-4f7e4c438a5a',
+    })
+    const floor = data.level_polygon.features
+    const normal = stationProjection(data, true)
+    const wide = stationProjection(data, true, { spacing: 65 })
+    expect(normal.box(floor)[3]).toBeLessThan(wide.box(floor)[3])
+    const rotated = stationProjection(data, true, { bearing: 90 })
+    expect(rotated.path(floor[0])).not.toBe(normal.path(floor[0]))
+  },
+)
+
+it.skipIf(!existsSync('.research/indoor/kennedy-town/manifest.json'))(
+  'connects Exit C flights despite separated footprints without inventing a lift',
+  () => {
+    const data = dataset()
+    for (const layer of layerNames)
+      data[layer] = JSON.parse(
+        readFileSync(`.research/indoor/kennedy-town/${layer}.json`, 'utf8'),
+      )
+    const exitC = data.level_polygon.features.find(
+      f => f.properties.level_name_en === 'Exit C Ground Level',
+    )
+    data.connections = JSON.parse(
+      readFileSync('.research/indoor/kennedy-town/connections.json', 'utf8'),
+    )
+    const links = connectionCandidates(data).filter(
+      c => c.toLevel === exitC?.properties.level_id,
+    )
+    expect(
+      links
+        .filter(c => c.evidence === 'reviewed-layout')
+        .map(c => c.category)
+        .sort(),
+    ).toEqual(['escalator', 'escalator', 'stairs'])
+    expect(links.some(c => c.category === 'elevator')).toBe(false)
+    data.unit_polygon.features = data.unit_polygon.features.filter(
+      f => f.properties.unit_id !== 'a23543b9-39c6-4e22-8674-25560c8cd40f',
+    )
+    expect(() =>
+      validateMapBundle({
+        schemaVersion: 1,
+        data: { ...data, retrievedAt: '2026-01-01' },
+        documents: [],
+      }),
+    ).toThrow('endpoints')
+  },
+)

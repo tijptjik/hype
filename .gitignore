@@ -67,3 +67,6 @@ spec/breadline/Breadline v4 - Scope of Work.pdf
 
 # Local research evidence is synchronised with R2, never committed.
 /.research/
+
+# Indoor geometry is published to R2; local source archives belong under .research/.
+/static/indoor/

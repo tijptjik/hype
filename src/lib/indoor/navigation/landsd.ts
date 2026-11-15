@@ -67,6 +67,9 @@ export function adaptLandsD(data: IndoorData): {
     'lobby',
     'elevator',
     'ramp',
+    'stairs',
+    'steps',
+    'escalator',
     'platform',
     'movingwalkway',
   ])
@@ -168,7 +171,14 @@ export function adaptLandsD(data: IndoorData): {
   }
   // Preserve the existing matching-code and reviewed-layout evidence, separate from display candidates.
   for (const c of connectionCandidates(data)) {
-    if (c.evidence === 'aligned-footprints') continue
+    // The layout establishes escalator destinations, but not operating direction.
+    if (
+      c.evidence === 'aligned-footprints' ||
+      c.enabled === false ||
+      c.direction === null ||
+      (c.category === 'escalator' && !c.direction)
+    )
+      continue
     const from = floors.get(c.fromLevel),
       to = floors.get(c.toLevel),
       a = from?.areas.find(x => x.id === c.from),
@@ -184,8 +194,15 @@ export function adaptLandsD(data: IndoorData): {
       id,
       from: { floorId: from.id, accessPointId: id },
       to: { floorId: to.id, accessPointId: id },
-      kind: 'lift',
-      direction: 'both',
+      kind:
+        c.category === 'elevator'
+          ? 'lift'
+          : c.category === 'escalator'
+            ? 'escalator'
+            : c.category === 'ramp'
+              ? 'ramp'
+              : 'stairs',
+      direction: c.direction ?? 'both',
       evidence: c.evidence,
       sourceIds: [c.from, c.to],
       enabled: true,

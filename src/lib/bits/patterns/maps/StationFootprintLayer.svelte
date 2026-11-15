@@ -3,7 +3,12 @@ import { untrack } from 'svelte'
 import { divisionHighlightColors } from '#lib/map/divisionHighlights.js'
 import type { MapMarkerTheme } from '#lib/map/styles/catalog.js'
 import type { Map as MapLibreMap } from 'maplibre-gl'
-import { indoorSnapshots, findStation, premisesPath } from '#lib/indoor/registry.js'
+import {
+  loadPremisesCatalogue,
+  findStation,
+  findPremises,
+  premisesPath,
+} from '#lib/indoor/registry.js'
 import { bounds } from '#lib/indoor/model.js'
 import type { Collection } from '#lib/indoor/model.js'
 let {
@@ -15,25 +20,22 @@ let available = $state<string[]>([])
 let data = $state.raw<Collection | null>(null)
 $effect(() => {
   const controller = new AbortController()
-  void Promise.all(
-    Object.entries(indoorSnapshots).map(async ([code, base]) => {
-      const response = await fetch(`${base}/venue_polygon.json`, {
-        signal: controller.signal,
-      })
-      if (!response.ok) throw new Error('Station outline unavailable')
-      const collection: Collection = await response.json()
-      return collection.features.map(feature => ({
-        ...feature,
-        properties: {
-          ...feature.properties,
-          stationCode: code,
-          indoorLabel: `${findStation(code)?.name} · Indoor map ↗`,
-        },
-      }))
-    }),
-  )
-    .then(features => {
-      data = { type: 'FeatureCollection', features: features.flat() }
+  void loadPremisesCatalogue(controller.signal)
+    .then(maps => {
+      data = {
+        type: 'FeatureCollection',
+        features: maps.flatMap(entry =>
+          (entry.footprint?.features ?? []).map(feature => ({
+            ...feature,
+            properties: {
+              ...feature.properties,
+              stationCode: entry.code,
+              indoorLabel: entry.name,
+              isStation: entry.kind === 'station',
+            },
+          })),
+        ),
+      }
     })
     .catch(error => {
       if (!controller.signal.aborted) console.error(error)
@@ -42,7 +44,13 @@ $effect(() => {
 })
 $effect(() => {
   const source = data
-      ? { ...data, features: showMtrStations ? data.features : [] }
+      ? {
+          ...data,
+          features: data.features.filter(
+            feature =>
+              showMtrStations || !findStation(String(feature.properties.stationCode)),
+          ),
+        }
       : null,
     colour = divisionHighlightColors[theme],
     target = map
@@ -158,6 +166,6 @@ $effect(() => {
   <a
     href={premisesPath(code)}
     class="focus:bg-panel focus:text-primary sr-only focus:not-sr-only focus:absolute focus:right-4 focus:bottom-12 focus:z-50 focus:rounded-lg focus:p-3"
-    >Open {findStation(code)?.name} indoor map</a
+    >Open {findPremises(code)?.name} indoor map</a
   >
 {/each}

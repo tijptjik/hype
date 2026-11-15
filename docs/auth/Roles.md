@@ -306,3 +306,10 @@ are unaffected.
 Branch ID is an internal Organisation identifier. Community correction commands reject
 its edits, including edits inside an entity envelope, for every role. It remains
 editable through the Internal destination under Organisation customization permissions.
+
+## Premises map authoring
+
+Shared physical map drafts, connection edits, publication and rollback currently require
+`superAdmin`. All commands enforce this server-side; Feature or Organisation editing
+rights do not implicitly grant authority over a shared physical map. Public readers see
+only releases with a publication receipt and public, unscoped occupancy presentation.

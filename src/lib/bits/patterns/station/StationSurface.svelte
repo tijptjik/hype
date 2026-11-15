@@ -6,7 +6,7 @@ import { Panel as RoutePanel } from '#lib/enums.js'
 import { getAppCtx } from '#lib/context/app.svelte.js'
 import { getSurfaceLayoutCtx } from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
-import { premisesCode } from '#lib/indoor/registry.js'
+import { premisesCode, loadPremisesCatalogue } from '#lib/indoor/registry.js'
 import { Panel } from '#lib/enums.js'
 // COMPONENTS
 import StationScene from './StationScene.svelte'
@@ -16,18 +16,70 @@ const app = getAppCtx()
 const station = app.station
 const layout = getSurfaceLayoutCtx()
 const responsive = getResponsiveCtx()
+// Same-path navigation must not restart catalogue resolution or replace the scene.
+const pathname = $derived(page.url.pathname)
+const indoorMatch = $derived(
+  /^\/premises\/([a-z0-9-]+)(?:\/places\/([^/]+))?\/?$/.exec(pathname),
+)
+const hasCurrentScene = $derived(
+  Boolean(station.data && indoorMatch && premisesCode(indoorMatch[1]) === station.code),
+)
+let resolving = $state(false)
+let resolutionError = $state('')
+let resolutionRetry = $state(0)
 $effect(() => {
-  const match = /^\/premises\/([a-z0-9-]+)(?:\/places\/([^/]+))?\/?$/.exec(
-    page.url.pathname,
-  )
-  untrack(() => {
-    const code = match ? premisesCode(match[1]) : undefined
-    if (match && code) {
-      const revealPanel = !station.active || station.code !== code || Boolean(match[2])
-      void station.open(code, match[2], false)
-      if (revealPanel) app.view.panels.openPanel(RoutePanel.prisms, false)
-    } else if (station.active) station.close(false)
-  })
+  const match = indoorMatch
+  resolutionRetry
+  resolving = Boolean(match)
+  resolutionError = ''
+  if (!match) {
+    untrack(() => {
+      if (station.active) station.close(false)
+    })
+    return
+  }
+  let cancelled = false
+  void loadPremisesCatalogue()
+    .then(() =>
+      untrack(() => {
+        if (cancelled) return
+        const code = match ? premisesCode(match[1]) : undefined
+        if (match && code) {
+          const revealPanel =
+            !station.active || station.code !== code || Boolean(match[2])
+          void station.open(code, match[2], false)
+          if (revealPanel) app.view.panels.openPanel(RoutePanel.prisms, false)
+        } else {
+          if (station.active) station.close(false)
+          if (match) resolutionError = 'Premises not found'
+        }
+      }),
+    )
+    .catch(error => {
+      if (!cancelled) {
+        console.error(error)
+        resolutionError = 'Could not load premises maps'
+      }
+    })
+    .finally(() => {
+      if (!cancelled) resolving = false
+    })
+  return () => {
+    cancelled = true
+  }
+})
+$effect(() => {
+  const refresh = () => {
+    if (document.visibilityState === 'visible') void station.refreshPublished()
+  }
+  document.addEventListener('visibilitychange', refresh)
+  const timer = setInterval(() => {
+    if (document.visibilityState === 'visible') void station.checkPublished()
+  }, 60000)
+  return () => {
+    document.removeEventListener('visibilitychange', refresh)
+    clearInterval(timer)
+  }
 })
 // Clear hidden shop details and routes when the selected project or Feature set changes.
 $effect(() => {
@@ -40,7 +92,7 @@ $effect(() => {
 })
 const offset = $derived(responsive.isMobile ? 0 : (layout?.getAppMainOffsetX() ?? 0))
 </script>
-{#if station.active}
+{#if station.active || indoorMatch}
   <section
     class="absolute inset-0 z-10 overflow-hidden bg-[var(--station-canvas)]"
     aria-label={`${station.metadata?.name} indoor layout`}
@@ -51,22 +103,27 @@ const offset = $derived(responsive.isMobile ? 0 : (layout?.getAppMainOffsetX() ?
       style:margin-left={`${Math.max(0, offset * 2)}px`}
       style:margin-right={`${Math.max(0, -offset * 2)}px`}
     >
-      {#if station.loading}
+      {#if (resolving && !hasCurrentScene) ||
+        station.loading ||
+        (!station.active && !resolutionError)}
         <div
           class="bg-surface h-full animate-pulse rounded-2xl"
           role="status"
           aria-label="Loading station layout"
         ></div>
-      {:else if station.error}
+      {:else if resolutionError || station.error}
         <div
           class="bg-panel text-base-content mx-auto mt-20 max-w-sm rounded-xl p-5"
           role="alert"
         >
-          <p>{station.error}</p>
+          <p>{resolutionError || station.error}</p>
           <button
             type="button"
             class="text-primary mt-3 underline"
-            onclick={() => station.open(station.code, undefined, false)}
+            onclick={() => {
+              if (resolutionError) resolutionRetry++
+              else void station.open(station.code, undefined, false)
+            }}
           >
             Retry loading station
           </button>
@@ -114,15 +171,17 @@ const offset = $derived(responsive.isMobile ? 0 : (layout?.getAppMainOffsetX() ?
         <StationCameraControls />
       </div>
       <a
-        href="https://api.portal.hkmapservice.gov.hk/disclaimer"
+        href={station.data.sourceUrl ||
+          'https://api.portal.hkmapservice.gov.hk/disclaimer'}
         target="_blank"
         rel="noreferrer"
         class="text-muted-foreground absolute right-2 bottom-1 z-10 flex items-center gap-1 text-[9px]"
         ><img
-          src="/indoor/kennedy-town/landsdlogo.jpg"
+          src={station.data.attributionLogo}
           alt="Lands Department"
           class="h-4 w-auto"
-        >Map from Lands Department · {station.data?.retrievedAt.slice(0, 10)}</a
+        >{station.data.source || 'Lands Department'}
+        · {station.data?.retrievedAt.slice(0, 10)}</a
       >
     {/if}
   </section>

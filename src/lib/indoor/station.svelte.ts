@@ -9,7 +9,13 @@ import {
   type IndoorData,
   type Place,
 } from './model'
-import { findStation, indoorSnapshots, premisesPath } from './registry'
+import {
+  findStation,
+  findPremises,
+  indoorSnapshots,
+  premisesPath,
+  loadPremisesCatalogue,
+} from './registry'
 /** Public indoor session; source spaces remain independent of catalogue identities. */
 export class StationState {
   route = $state.raw<IndoorRoute | null>(null)
@@ -28,7 +34,7 @@ export class StationState {
     this.routeMode = 'highlight'
     this.arrival = 0
     this.routeProgress = 0
-    this.bearing = -115
+    this.bearing = this.data?.coordinateSpace === 'image-pixels' ? 0 : -115
     this.tilt = 60
     this.spacing = 25
     this.fitRevision++
@@ -44,16 +50,17 @@ export class StationState {
     this.routeMode = 'flying'
     this.fitRevision++
   }
-  active = $state(false)
-  code = $state('KET')
+  code = $state('')
   isMtr = $derived(Boolean(findStation(this.code)))
-  metadata = $derived(findStation(this.code))
+  metadata = $state<ReturnType<typeof findPremises>>(undefined)
+  isBuilding = $derived(!this.isMtr)
   exploded = $state(true)
   bearing = $state(-115)
   tilt = $state(60)
   planTilt = $state(0)
   spacing = $state(25)
   showInferred = $state(true)
+  artworkOpacity = $state(0)
   data = $state.raw<IndoorData | null>(null)
   private sourceEntries = $state.raw<Place[]>([])
   entries = $derived(
@@ -72,7 +79,15 @@ export class StationState {
   private controller: AbortController | null = null
   private loadedCode = ''
   /** Opens a station URL or hydrates navigation. @param code Official code. @param id Source space ID. @param navigation Whether to navigate. @returns Load completion. */
-  async open(code = 'KET', id?: string, navigation = true): Promise<void> {
+  async open(code = this.code, id?: string, navigation = true): Promise<void> {
+    if (!code) {
+      const catalogue = await loadPremisesCatalogue()
+      code = catalogue[0]?.code ?? ''
+      if (!code) {
+        this.error = 'No published premises maps are available'
+        return
+      }
+    }
     if (navigation) {
       await goto(premisesPath(code, id))
       return
@@ -80,6 +95,7 @@ export class StationState {
     if ((id && this.route) || code !== this.loadedCode) this.clearRoute()
     this.active = true
     this.code = code
+    this.metadata = findPremises(code)
     this.error = ''
     if (this.loadedCode !== code) {
       this.loadedCode = ''
@@ -92,24 +108,26 @@ export class StationState {
       this.selected = null
       this.loading = true
       try {
-        const response = await fetch('/indoor/mtr/manifest.json', {
-          signal: controller.signal,
-        })
-        if (!response.ok) throw new Error('Could not load station maps')
-        const manifest = await response.json()
-        const documents = manifest.entries.filter(
-          (e: { station: string; status: string }) =>
-            e.station === code && e.status === 'downloaded',
-        )
+        await loadPremisesCatalogue(controller.signal)
+        this.metadata = findPremises(code)
         const data = indoorSnapshots[code]
           ? await loadIndoorData(indoorSnapshots[code], controller.signal)
           : null
+        const documents =
+          data?.documents ??
+          (this.isMtr
+            ? ['layout', 'shops', 'location'].map(kind => ({
+                kind,
+                path: `https://www.mtr.com.hk/archive/en/services/${kind === 'layout' ? 'layouts' : kind === 'shops' ? 'shop' : 'maps'}/${code.toLowerCase()}.pdf`,
+              }))
+            : [])
         if (controller.signal.aborted) return
         this.documents = documents
         this.data = data
         this.sourceEntries = data ? places(data) : []
         this.floor = data ? value(initialLevel(data).properties, 'level_id') : ''
-        this.exploded = true
+        this.bearing = data?.coordinateSpace === 'image-pixels' ? 0 : -115
+        this.exploded = !this.isBuilding
         this.loadedCode = code
       } catch (error) {
         if (!controller.signal.aborted)
@@ -121,12 +139,38 @@ export class StationState {
     }
     this.selected = id ? (this.entries.find(p => p.id === id) ?? null) : null
     if (id && !this.selected)
-      this.error = 'This place is not available in the station snapshot.'
+      this.error = 'This place is not available in the venue snapshot.'
     if (this.selected) {
       this.floor = this.selected.levelId
       this.exploded = false
     }
     this.fitRevision++
+  }
+  /** Detect new releases without disturbing an unchanged map or active route animation. @returns Completion. */
+  async checkPublished(): Promise<void> {
+    if (
+      !this.active ||
+      this.loading ||
+      this.routeMode === 'flying' ||
+      !this.data?.basePath
+    )
+      return
+    try {
+      const response = await fetch(this.data.basePath, { cache: 'no-store' })
+      if (!response.ok) return
+      const pointer: { hash: string } = await response.json()
+      if (pointer.hash !== this.data.releaseHash) await this.refreshPublished()
+    } catch {
+      /* A transient refresh failure leaves the complete current release usable. */
+    }
+  }
+  /** Refresh published geometry and occupancy together on explicit reload or tab return. @returns Completion. */
+  async refreshPublished(): Promise<void> {
+    if (!this.active || this.loading || this.routeMode === 'flying') return
+    const id = this.selected?.id
+    this.loadedCode = ''
+    this.clearRoute()
+    await this.open(this.code, id, false)
   }
   /** Opens a detailed plan. @param id Source level ID. @returns Nothing. */
   openFloor(id: string): void {

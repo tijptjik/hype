@@ -41,4 +41,4 @@ manifest = dict(retrievedAt=datetime.datetime.now(datetime.timezone.utc).isoform
 print('COMPLETE', len(entries), 'requests', flush=True)
 
 # The application retains only a small public index; PDFs stay in research storage.
-(ROOT / 'static/indoor/mtr/manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
+(ROOT / '.research/indoor/mtr/manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')

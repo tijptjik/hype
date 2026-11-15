@@ -11,6 +11,7 @@ import {
   operatorI18n,
   locationPremisesMap,
 } from '../schema/operator'
+import { premisesMap as premisesMapTable } from '../schema/premisesMap'
 import { availablePremisesMap } from '#lib/indoor/registry.js'
 // LOCATION
 import { locationTaxonomy } from '#lib/locations/taxonomy.js'
@@ -55,6 +56,13 @@ export async function listLocationResources(
   nextCursor: string | null
   totalCount: number | null
 }> {
+  const mapRegistry = (await db.select().from(premisesMapTable)).map(m => ({
+    id: m.id,
+    code: m.code,
+    basePath: `/api/premises-maps/${m.id}`,
+    enabled: Boolean(m.publishedHash),
+    ready: Boolean(m.publishedHash),
+  }))
   const fields = await locationReadFields(
     db,
     locationTable.id,
@@ -251,7 +259,7 @@ export async function listLocationResources(
           }
           return {
             ...row,
-            premisesMap: availablePremisesMap(row.premisesMapId),
+            premisesMap: availablePremisesMap(row.premisesMapId, mapRegistry),
             operator: operatorId
               ? {
                   id: operatorId,

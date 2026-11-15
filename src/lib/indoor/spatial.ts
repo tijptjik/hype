@@ -20,7 +20,14 @@ export type Connection = {
   fromLevel: string
   toLevel: string
   category: string
-  evidence: 'aligned-footprints' | 'matching-lift-code' | 'reviewed-layout'
+  direction?: 'both' | 'forward' | null
+  enabled?: boolean
+  evidenceUrl?: string
+  evidence:
+    | 'aligned-footprints'
+    | 'matching-lift-code'
+    | 'reviewed-layout'
+    | 'editor-verified'
 }
 /** Reads the explicit access section. @param feature Source unit. @returns Paid, unpaid or unknown. */
 export function accessArea(
@@ -31,6 +38,7 @@ export function accessArea(
 }
 /** Finds conservative display candidates. @param data Source snapshot. @returns Mutually best overlapping connectors. @remarks These are never a routing graph. */
 export function connectionCandidates(data: IndoorData): Connection[] {
+  if (data.connections) return data.connections.filter(c => c.enabled)
   const units = data.unit_polygon.features.filter(f =>
     isConnector(value(f.properties, 'unit_category')),
   )
@@ -94,30 +102,6 @@ export function connectionCandidates(data: IndoorData): Connection[] {
           ? 'matching-lift-code'
           : 'aligned-footprints',
     })
-  }
-  // MTR's Kennedy Town layout explicitly continues the Exit B lift through the mezzanine.
-  // LandsD names the lower shaft L06 but leaves its ground landing unnamed.
-  // Evidence: https://www.mtr.com.hk/archive/en/services/layouts/ket.pdf (reviewed 2026-11-15).
-  const lower = units.find(
-    f => f.properties.unit_id === 'c1769bda-5a37-4043-bbf0-4d3352bb9841',
-  )
-  const upper = units.find(
-    f => f.properties.unit_id === '5dc92c22-09a9-46ff-a049-4f7e4c438a5a',
-  )
-  if (lower && upper) {
-    const existing = result.find(
-      c => c.from === lower.properties.unit_id && c.to === upper.properties.unit_id,
-    )
-    if (existing) existing.evidence = 'reviewed-layout'
-    else
-      result.push({
-        from: value(lower.properties, 'unit_id'),
-        to: value(upper.properties, 'unit_id'),
-        fromLevel: value(lower.properties, 'level_id'),
-        toLevel: value(upper.properties, 'level_id'),
-        category: 'elevator',
-        evidence: 'reviewed-layout',
-      })
   }
   return result
 }

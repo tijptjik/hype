@@ -110,7 +110,7 @@ def build_plan(root=ROOT):
         })
         if station['id'] not in SNAPSHOTS:
             continue
-        directory = root / 'static/indoor' / SNAPSHOTS[station['id']]
+        directory = root / '.research/indoor' / SNAPSHOTS[station['id']]
         manifest, layers = read_snapshot(directory)
         venues = indexed(layers['venue_polygon'], 'venue_id')
         if len(venues) != 1:

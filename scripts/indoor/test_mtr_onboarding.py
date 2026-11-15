@@ -57,7 +57,7 @@ class OnboardingTests(unittest.TestCase):
             onboarding.indexed([{'properties': {'unit_id': 'a'}}] * 2, 'unit_id')
 
     def test_snapshot_tampering_is_rejected(self):
-        source = onboarding.ROOT / 'static/indoor/kennedy-town'
+        source = onboarding.ROOT / '.research/indoor/kennedy-town'
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
             (directory / 'manifest.json').write_bytes((source / 'manifest.json').read_bytes())

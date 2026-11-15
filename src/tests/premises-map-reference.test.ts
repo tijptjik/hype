@@ -6,7 +6,6 @@ import {
   premisesCode,
   premisesMapForCode,
   premisesPath,
-  premisesMaps,
   stations,
 } from '../lib/indoor/registry'
 
@@ -24,17 +23,26 @@ it('resolves only descriptive MTR premises URLs', () => {
   expect(premisesMapForCode('ADM')).toBeNull()
 })
 it('offers only enabled, ready maps without changing the stored reference', () => {
+  const premisesMaps = [
+    {
+      id: 'sample-map',
+      code: 'SAMPLE',
+      basePath: '/api/premises-maps/sample-map',
+      enabled: true,
+      ready: true,
+    },
+  ]
   expect(availablePremisesMap('unknown')).toBeNull()
   for (const change of [{ enabled: false }, { ready: false }]) {
     expect(
       availablePremisesMap(
-        'kennedy-town-mtr',
+        'sample-map',
         premisesMaps.map(map => ({ ...map, ...change })),
       ),
     ).toBeNull()
   }
-  expect(availablePremisesMap('kennedy-town-mtr')?.basePath).toBe(
-    '/indoor/kennedy-town',
+  expect(availablePremisesMap('sample-map', premisesMaps)?.basePath).toBe(
+    '/api/premises-maps/sample-map',
   )
 })
 

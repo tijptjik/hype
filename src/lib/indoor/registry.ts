@@ -1,3 +1,4 @@
+import type { MapCatalogueEntry } from './releases'
 import catalogue from '../routing/mtr-catalog.json'
 // Public station URLs use descriptive names consistently, including PDF-only stations.
 export const stations = catalogue.stations.map(station => ({
@@ -7,16 +8,40 @@ export const stations = catalogue.stations.map(station => ({
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')}-mtr`,
 }))
-/** Resolve a canonical station slug. @param slug Public URL segment. @returns Station code if known. */
+/** Non-rail premises keep their own URL identities and official references. */
+export let buildings: { id: string; slug: string; name: string; nameZh: string }[] = []
+let publishedPremises: { id: string; slug: string; name: string; nameZh: string }[] = []
+/** Finds an indoor venue. @param code Registry code. @returns Venue metadata. */
+export const findPremises = (code: string) =>
+  publishedPremises.find(b => b.id === code.toUpperCase()) ?? findStation(code)
+/** Resolves a public slug without aliasing unrelated places. @param slug URL segment. @returns Registry code if known. */
 export function premisesCode(slug: string): string | undefined {
-  return stations.find(station => station.slug === slug)?.id
+  return (
+    publishedPremises.find(b => b.slug === slug)?.id ??
+    stations.find(station => station.slug === slug)?.id
+  )
+}
+/** Searches rail and building names. @param query User text. @returns Matching premises. */
+export function searchPremises(query: string) {
+  const term = query.toLowerCase().replace(/[\s-]+/g, '')
+  return [
+    ...searchStations(query),
+    ...buildings.filter(
+      b =>
+        term &&
+        `${b.id} ${b.name} ${b.nameZh}`
+          .toLowerCase()
+          .replace(/[\s-]+/g, '')
+          .includes(term),
+    ),
+  ]
 }
 /** Finds a station by its official code. @param code MTR code. @returns Station metadata. */
 export const findStation = (code: string) =>
   stations.find(s => s.id === code.toUpperCase())
 /** Builds a stable source-space URL. @param code Station code. @param id Optional source space ID. @returns Public path. */
 export function premisesPath(code: string, id?: string): string {
-  const venue = findStation(code)
+  const venue = findPremises(code)
   if (!venue) throw new Error(`Unknown premises code: ${code}`)
   return `/premises/${venue.slug}${id ? `/places/${encodeURIComponent(id)}` : ''}`
 }
@@ -38,22 +63,33 @@ export type PremisesMap = {
   enabled: boolean
   ready: boolean
 }
-export const premisesMaps: readonly PremisesMap[] = [
-  {
-    id: 'kennedy-town-mtr',
-    code: 'KET',
-    basePath: '/indoor/kennedy-town',
+export let premisesMaps: PremisesMap[] = []
+/** Refresh the database-backed discovery catalogue. @param signal Optional cancellation. @returns Published metadata and lightweight footprints. */
+export async function loadPremisesCatalogue(
+  signal?: AbortSignal,
+): Promise<MapCatalogueEntry[]> {
+  const response = await fetch('/api/premises-maps', { signal, cache: 'no-store' })
+  if (!response.ok) throw new Error('Could not load premises maps')
+  const maps: MapCatalogueEntry[] = await response.json()
+  premisesMaps = maps.map(map => ({
+    id: map.id,
+    code: map.code,
+    basePath: `/api/premises-maps/${map.id}`,
     enabled: true,
-    ready: true,
-  },
-  {
-    id: 'hong-kong-mtr',
-    code: 'HOK',
-    basePath: '/indoor/hong-kong',
-    enabled: true,
-    ready: true,
-  },
-]
+    ready: Boolean(map.publishedHash),
+  }))
+  publishedPremises = maps.map(m => ({
+    id: m.code,
+    slug: m.id,
+    name: m.name,
+    nameZh: m.nameZh,
+  }))
+  buildings = maps
+    .filter(m => m.kind === 'building')
+    .map(m => ({ id: m.code, slug: m.id, name: m.name, nameZh: m.nameZh }))
+  indoorSnapshots = Object.fromEntries(premisesMaps.map(m => [m.code, m.basePath]))
+  return maps
+}
 
 /** Resolve only enabled, ready detail maps. @param id Stored map reference.
  * @param registry Maintained map registry. @returns Available map or null, never a PDF-only station.
@@ -76,8 +112,4 @@ export function premisesMapForCode(
 }
 
 /** Curated complete snapshots; stations absent here retain official PDF references. */
-export const indoorSnapshots: Record<string, string> = Object.fromEntries(
-  premisesMaps
-    .filter(map => map.enabled && map.ready)
-    .map(map => [map.code, map.basePath]),
-)
+export let indoorSnapshots: Record<string, string> = {}

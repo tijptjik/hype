@@ -7,6 +7,8 @@ import { connectorLabel, isConnector, type Connection } from '#lib/indoor/spatia
 import type { ShopArtwork } from '#lib/indoor/artwork.js'
 let {
   level,
+  artwork,
+  artworkOpacity = 0,
   units,
   entries,
   treads,
@@ -26,6 +28,8 @@ let {
   onSelectPlace,
 }: {
   level: IndoorFeature
+  artwork?: { src: string; width: number; height: number }
+  artworkOpacity?: number
   units: IndoorFeature[]
   entries: Place[]
   treads: IndoorFeature[]
@@ -46,6 +50,13 @@ let {
 } = $props()
 const id = $derived(value(level.properties, 'level_id'))
 const floorAnchor = $derived(projection.anchor(level))
+const artworkTransform = $derived.by(() => {
+  if (!artwork) return ''
+  const a = projection.project([0, 0], id),
+    b = projection.project([artwork.width, 0], id),
+    d = projection.project([0, artwork.height], id)
+  return `matrix(${b[0] - a[0]} ${b[1] - a[1]} ${d[0] - a[0]} ${d[1] - a[1]} ${a[0]} ${a[1]})`
+})
 const title = $derived(
   value(level.properties, 'level_name_en')
     .replace(' Ground Level', ' · G')
@@ -209,6 +220,18 @@ const isBrand = (feature: IndoorFeature) => Boolean(brand(feature))
         </text>
       </g>
     {/each}
+  {/if}
+  {#if artwork}
+    <image
+      href={artwork.src}
+      width="1"
+      height="1"
+      preserveAspectRatio="none"
+      transform={artworkTransform}
+      opacity={artworkOpacity}
+      pointer-events="none"
+      data-floor-artwork
+    />
   {/if}
   {#if exploded}
     <!-- biome-ignore lint/a11y/useSemanticElements: this keyboard-operable SVG label selects its floor. -->

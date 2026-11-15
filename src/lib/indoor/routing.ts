@@ -15,6 +15,8 @@ export type IndoorRoute = {
 const sessions = new WeakMap<IndoorData, ReturnType<typeof adaptLandsD>>()
 /** Retrieves the source adapter and reusable floor graphs for one immutable snapshot. @param data Snapshot. @returns Navigation session. */
 export function indoorNavigation(data: IndoorData): ReturnType<typeof adaptLandsD> {
+  if (data.coordinateSpace === 'image-pixels')
+    throw new Error('Schematic hotspots do not supply a navigation network')
   let session = sessions.get(data)
   if (!session) {
     session = adaptLandsD(data)
@@ -32,6 +34,7 @@ export async function findIndoorRoute(
   entrance: IndoorFeature,
   target: Place,
 ): Promise<IndoorRoute | null> {
+  if (data.coordinateSpace === 'image-pixels') return null
   const navigation = indoorNavigation(data)
   const route = await navigation.router.route(
     navigation.endpoint(entrance, value(entrance.properties, 'level_id')),

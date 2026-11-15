@@ -27,7 +27,12 @@ export type NavigationConnection = {
   to: ConnectionEndpoint
   kind: 'door' | 'passage' | 'faregate' | 'lift' | 'stairs' | 'escalator' | 'ramp'
   direction: 'both' | 'forward'
-  evidence: 'source-opening' | 'matching-lift-code' | 'reviewed-layout' | 'candidate'
+  evidence:
+    | 'source-opening'
+    | 'matching-lift-code'
+    | 'reviewed-layout'
+    | 'editor-verified'
+    | 'candidate'
   sourceIds: string[]
   enabled: boolean
 }

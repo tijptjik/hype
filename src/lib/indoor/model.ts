@@ -1,8 +1,12 @@
+import type { MapConnection } from './releases'
+import type { ShopArtwork } from './artwork'
 import type { Feature, FeatureCollection, Geometry } from 'geojson'
 
 export type Properties = Record<string, unknown>
 export type IndoorFeature = Feature<Geometry, Properties>
-export type Collection = FeatureCollection<Geometry, Properties>
+export type Collection = FeatureCollection<Geometry, Properties> & {
+  coordinateSpace?: 'image-pixels'
+}
 export const layerNames = [
   'venue_polygon',
   'level_polygon',
@@ -13,7 +17,17 @@ export const layerNames = [
 ] as const
 export type LayerName = (typeof layerNames)[number]
 export type IndoorData = Record<LayerName, Collection> & {
+  attributionLogo?: string
+  documents?: { kind: string; path: string }[]
+  connections?: MapConnection[]
+  releaseHash?: string
+  unitArtwork?: Record<string, ShopArtwork>
   retrievedAt: string
+  coordinateSpace?: 'image-pixels'
+  basePath?: string
+  source?: string
+  sourceUrl?: string
+  unmappedPlaces?: { name: string; nameZh: string; code: string; level: number }[]
 }
 export type Place = {
   id: string
@@ -23,6 +37,7 @@ export type Place = {
   category: string
   area: string
   feature: IndoorFeature
+  artwork?: ShopArtwork
   occupants: IndoorFeature[]
   kind: 'shop' | 'facility'
 }
@@ -66,15 +81,16 @@ export function places(data: IndoorData): Place[] {
       f => f.properties.unit_id === p.unit_id,
     )
     const firstOccupant = occupants[0]
-    const code = /^(?:KET|HOK)\s*\d+[A-Z]?(?:\s*[-/&]\s*\d+[A-Z]?)*$/i.test(
+    const code = /^[A-Z]{2,6}\s*\d+[A-Z]?(?:\s*[-/&]\s*\d+[A-Z]?)*$/i.test(
       value(p, 'unit_name_en'),
     )
       ? value(p, 'unit_name_en')
-      : ''
+      : value(p, 'unit_unitnumbername') || ''
     const named = occupants.filter(
-      f => !/^(?:KET|HOK)\s*\d+/i.test(value(f.properties, 'occupant_name_en')),
+      f => !/^[A-Z]{2,6}\s*\d+/i.test(value(f.properties, 'occupant_name_en')),
     )
     result.push({
+      artwork: data.unitArtwork?.[value(p, 'unit_id')],
       id: value(p, 'unit_id'),
       levelId: value(p, 'level_id'),
       name: {
@@ -144,29 +160,28 @@ export async function loadIndoorData(
   base: string,
   signal?: AbortSignal,
 ): Promise<IndoorData> {
-  const get = async (name: string) => {
-    const response = await fetch(`${base}/${name}.json`, { signal })
-    if (!response.ok) throw new Error(`Could not load ${name} (${response.status})`)
-    return response.json()
+  const pointerResponse = await fetch(base, { signal, cache: 'no-store' })
+  if (!pointerResponse.ok) throw new Error('Could not resolve published map')
+  const pointer: { hash: string; url: string } = await pointerResponse.json()
+  const response = await fetch(pointer.url, { signal })
+  if (!response.ok) throw new Error('Could not load published map release')
+  const text = await response.text()
+  const { mapHash, validateMapBundle } = await import('./releases')
+  if ((await mapHash(text)) !== pointer.hash)
+    throw new Error('Map release integrity check failed')
+  const bundle = validateMapBundle(JSON.parse(text))
+  const presentation = await fetch(`${base}/presentation`, {
+    signal,
+    cache: 'no-store',
+  })
+  if (!presentation.ok) throw new Error('Could not load current map occupancy')
+  return {
+    ...bundle.data,
+    basePath: base,
+    releaseHash: pointer.hash,
+    unitArtwork: await presentation.json(),
+    documents: bundle.documents,
   }
-  const manifest = await get('manifest')
-  const result = { retrievedAt: manifest.retrievedAt } as IndoorData
-  for (const name of layerNames) {
-    const data = await get(name)
-    const entry = manifest.entries.find((e: { layer: string }) => e.layer === name)
-    if (
-      data.type !== 'FeatureCollection' ||
-      !Array.isArray(data.features) ||
-      data.features.length !== entry?.count
-    )
-      throw new Error(`Incomplete ${name} data`)
-    for (const f of data.features) {
-      if (f.properties?.venue_id !== manifest.venueId)
-        throw new Error(`Unexpected venue in ${name}`)
-    }
-    result[name] = data
-  }
-  return result
 }
 
 /** Chooses the source concourse for initial detail. @param data Complete snapshot. @returns Concourse or the first available level. */
@@ -174,7 +189,9 @@ export function initialLevel(data: IndoorData): IndoorFeature {
   const level =
     data.level_polygon.features.find(f =>
       /^Concourse Level/.test(value(f.properties, 'level_name_en')),
-    ) ?? data.level_polygon.features[0]
+    ) ??
+    data.level_polygon.features.find(f => f.properties.level_ordinal === 0) ??
+    data.level_polygon.features[0]
   if (!level) throw new Error('No station levels are available')
   return level
 }
