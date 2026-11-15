@@ -59,7 +59,13 @@ export const facilityColourGroups = [
     label: 'Leisure & recreation',
     color: '#3f6212',
     background: '#f7fee7',
-    keys: ['childplayarea', 'fieldofplay', 'swimmingpool', 'publiclibrary'],
+    keys: [
+      'childplayarea',
+      'fieldofplay',
+      'swimmingpool',
+      'publiclibrary',
+      'exhibition',
+    ],
   },
   {
     label: 'Medical help',

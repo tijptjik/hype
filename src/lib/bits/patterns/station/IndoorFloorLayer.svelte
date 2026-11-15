@@ -3,7 +3,7 @@
 import StationExitMarkers from './StationExitMarkers.svelte'
 import { shopImagePlacement } from '#lib/indoor/artwork.js'
 // DATA
-import { facilitySymbol } from '#lib/indoor/facilities.js'
+import { facilityCategory, facilitySymbol } from '#lib/indoor/facilities.js'
 import { centre, value, type IndoorFeature, type Place } from '#lib/indoor/model.js'
 import { polygonLabels, fitPolygonText, roomLabel } from '#lib/indoor/labels.js'
 import { stationFill, type StationProjection } from '#lib/indoor/scene.js'
@@ -369,6 +369,30 @@ const facilityMarkers = $derived.by(() => {
             />
           </g>
         {/if}
+      {:else if shop &&
+        detailOpacity > 0 &&
+        facilityCategory(shop.category, shop.name.en) === 'exhibition' &&
+        value(unit.properties, 'geometry_role') !== 'artwork_colour_trace'}
+        {@const symbol = facilitySymbol(shop.category, shop.name.en)}
+        {#each polygonLabels(unit, point => projection.project(point, id)) as placement}
+          <!-- Keep the exhibition display centred inside its source polygon. -->
+          {@const size = Math.min(24 * textScale, placement.clearance * 1.4)}
+          <g
+            data-unit-icon="exhibition"
+            aria-label={shop.name.en}
+            transform={`translate(${placement.point[0] - size / 2} ${placement.point[1] - size / 2}) scale(${size / 24})`}
+          >
+            <title>{shop.name.en}</title>
+            <path
+              d={symbol.path}
+              fill="none"
+              stroke={symbol.color}
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </g>
+        {/each}
       {:else if shop &&
         detailOpacity > 0 &&
         value(unit.properties, 'geometry_role') !== 'artwork_colour_trace'}

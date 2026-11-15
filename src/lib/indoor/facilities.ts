@@ -19,6 +19,10 @@ const toiletFigurePath =
 
 /** Shared facility pictograms in a 24px square, used by markers and their legend. */
 const pictograms: Record<string, Omit<FacilitySymbol, 'color' | 'background'>> = {
+  exhibition: {
+    label: 'Exhibition site',
+    path: 'M3 3h18v14H3zM6 13l4-4 4 4 3-3 1 3M15 6h.1M8 17l-2 5m10-5 2 5M12 17v3',
+  },
   'restroom.male': {
     label: 'Male toilet',
     path: `${toiletFigurePath}M9 11v10h2l1-6 1 6h2V11M9 14h6`,
@@ -214,10 +218,11 @@ export const facilitySymbols: Record<string, FacilitySymbol> = Object.fromEntrie
 )
 
 /** Resolve source aliases to shared symbol identities.
- * @param category Source category. @returns Canonical display category.
+ * @param category Source category. @param sourceName Source facility name. @returns Canonical display category.
  * @remarks Source records remain unchanged; entity corrections are persisted separately.
  */
-export function facilityCategory(category: string): string {
+export function facilityCategory(category: string, sourceName = ''): string {
+  if (/^exhibition site$/i.test(sourceName.trim())) return 'exhibition'
   const aliases: Record<string, string> = {
     Bank: 'atm',
     Platform: 'platform',
@@ -234,7 +239,7 @@ export function facilityCategory(category: string): string {
  * @returns Shared pictogram, contrast-safe ink and tinted background for map and legend.
  */
 export function facilitySymbol(category: string, sourceName = ''): FacilitySymbol {
-  const key = facilityCategory(category)
+  const key = facilityCategory(category, sourceName)
   const symbol = facilitySymbols[key] ?? {
     label: category.startsWith('restroom')
       ? 'Toilet (type unspecified)'
