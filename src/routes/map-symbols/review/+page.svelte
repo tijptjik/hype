@@ -110,17 +110,76 @@ const variants = [
   { key: 'vendingmachine', name: 'Ticket machine' },
   { key: 'checkin', name: 'Police sign-in box' },
 ]
+// Review order follows the agreed sequence; map-only keys bookend this list.
+const symbolOrder = [
+  'information',
+  'vendingmachine:Ticket machine',
+  'restroom.unisex',
+  'restroom.female',
+  'restroom.male',
+  'restroom.accessible',
+  'shower',
+  'mothersroom',
+  'babychanging',
+  'drinkingfountain',
+  'phone',
+  'childplayarea',
+  'fieldofplay',
+  'guestservices',
+  'reception.desk',
+  'publiclibrary',
+  'swimmingpool',
+  'atm',
+  'bank',
+  'vendingmachine',
+  'foodservice',
+  'mailbox',
+  'payphone',
+  'photobooth',
+  'phone:Helpline',
+  'wheelchairassist',
+  'firstaid',
+  'defibrillator',
+  'checkin',
+  'corridor',
+  'escalator',
+  'elevator',
+  'rail.muni',
+  'lobby',
+  'movingwalkway',
+  'platform',
+  'ramp',
+  'room',
+  'seating',
+  'stairs',
+  'walkway',
+  'taxi',
+  'parking',
+  'parking.ev',
+  'parking.motorcycle',
+  'phone.emergency',
+  'security',
+  'police',
+  'checkin:Police sign-in box',
+]
 const symbols = [
   ...Object.keys(facilitySymbols).map(key => ({ key, ...facilitySymbol(key) })),
   ...variants.map(({ key, name }) => ({
     key: `${key}:${name}`,
     ...facilitySymbol(key, name),
   })),
-].sort((a, b) => a.label.localeCompare(b.label))
+].sort((a, b) => {
+  const aRank = symbolOrder.indexOf(a.key)
+  const bRank = symbolOrder.indexOf(b.key)
+  return (
+    (aRank < 0 ? symbolOrder.length : aRank) -
+      (bRank < 0 ? symbolOrder.length : bRank) || a.label.localeCompare(b.label)
+  )
+})
 // Keep review reference numbers stable when a category hides other symbols.
 const visibleSymbols = $derived(
   symbols
-    .map((symbol, index) => ({ ...symbol, reference: index + 1 }))
+    .map((symbol, index) => ({ ...symbol, reference: index + 2 }))
     .filter(
       symbol =>
         !selectedCategory || proposedGroup(symbol.key).label === selectedCategory,
@@ -137,6 +196,25 @@ const mapExtras = [
 ]
 </script>
 
+{#snippet mapKey(symbol: (typeof mapExtras)[number], reference: number)}
+  <li class="flex min-h-32 flex-col rounded-xl border border-[#d8dfdc] bg-white/70 p-4">
+    <div class="flex items-center justify-between">
+      <span class="text-xs text-[#60777d]">{String(reference).padStart(2, '0')}</span>
+      <svg width="44" height="44" viewBox="-4 -4 32 32" aria-hidden="true">
+        <path
+          d={symbol.path}
+          fill={symbol.fill || 'none'}
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </div>
+    <h2 class="mt-3 text-sm font-medium">{symbol.label}</h2>
+    <p class="mt-1 text-xs text-[#60777d]">Map key</p>
+  </li>
+{/snippet}
+
 <svelte:head
   ><title>Map symbol review · Hype</title>
   <meta name="robots" content="noindex"></svelte:head
@@ -146,9 +224,8 @@ const mapExtras = [
     <p class="text-xs font-semibold tracking-widest uppercase">Hype · Map design</p>
     <h1 class="mt-3 text-3xl font-semibold">Map symbol review</h1>
     <p class="mt-3 max-w-3xl text-sm">
-      All {symbols.length + mapExtras.length} named options together. Alphabetical for
-      review; numbers are references, not proposed ranks. These are the same pictograms
-      used on the maps.
+      All {symbols.length + mapExtras.length} named options in the agreed review order;
+      numbers are stable references. These are the same pictograms used on the maps.
     </p>
     <a
       class="mt-3 inline-block text-sm underline"
@@ -208,6 +285,9 @@ const mapExtras = [
         ? `${selectedCategory} map symbols`
         : 'All map symbols'}
     >
+      {#if !selectedCategory}
+        {@render mapKey(mapExtras[0], 1)}
+      {/if}
       {#each visibleSymbols as symbol (symbol.key)}
         {@const palette = proposedColours ? proposedGroup(symbol.key) : symbol}
         <li
@@ -262,26 +342,11 @@ const mapExtras = [
           </p>
         </li>
       {/each}
-      {#each selectedCategory ? [] : mapExtras as symbol, i}
-        <li
-          class="flex min-h-32 flex-col rounded-xl border border-[#d8dfdc] bg-white/70 p-4"
-        >
-          <div class="flex items-center justify-between">
-            <span class="text-xs text-[#60777d]">{symbols.length + i + 1}</span>
-            <svg width="44" height="44" viewBox="-4 -4 32 32" aria-hidden="true">
-              <path
-                d={symbol.path}
-                fill={symbol.fill || 'none'}
-                stroke="currentColor"
-                stroke-width="1.7"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </div>
-          <h2 class="mt-3 text-sm font-medium">{symbol.label}</h2>
-          <p class="mt-1 text-xs text-[#60777d]">Map key</p>
-        </li>
-      {/each}
+      {#if !selectedCategory}
+        {#each mapExtras.slice(1) as symbol, i}
+          {@render mapKey(symbol, symbols.length + i + 2)}
+        {/each}
+      {/if}
     </ol>
     <p class="mt-6 text-sm">
       Source aliases share symbols: Bank → ATM; Platform → Platform; wheelchair toilet

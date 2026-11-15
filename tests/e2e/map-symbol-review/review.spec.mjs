@@ -7,6 +7,9 @@ for (const width of [1440, 390]) {
     await expect(page.getByRole('heading', { name: 'Map symbol review' })).toBeVisible()
     const list = page.getByRole('list', { name: 'All map symbols' })
     expect(await list.locator('li').count()).toBeGreaterThan(45)
+    await expect(list.getByRole('heading').first()).toHaveText('Level change')
+    await expect(list.getByRole('heading').nth(1)).toHaveText('Information')
+    await expect(list.getByRole('heading').nth(2)).toHaveText('Ticket machine')
     for (const label of [
       'ATM',
       'Corridor',
@@ -53,6 +56,14 @@ for (const width of [1440, 390]) {
       name: 'Shopping & transactions map symbols',
     })
     await expect(filtered.locator('li')).toHaveCount(6)
+    await expect(filtered.getByRole('heading')).toHaveText([
+      'Ticket machine',
+      'ATM',
+      'Bank',
+      'Vending machine',
+      'Food service',
+      'Photo booth',
+    ])
     await expect(
       filtered.getByRole('heading', { name: 'Ticket machine', exact: true }),
     ).toBeVisible()
