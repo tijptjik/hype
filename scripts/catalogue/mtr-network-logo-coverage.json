@@ -1,0 +1,2002 @@
+[
+  {
+    "id": "mtr-network-brand-6d9d3080eddc44205f4940bd",
+    "name": "180 Popcorn",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-925fa79cb10a4e363a1813b5",
+    "name": "2XCHANGE",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-9e1f84b84b26c838d0755ac9",
+    "name": "A Nice Gift",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-59e1e44650f7fb34bc2b428c",
+    "name": "Alice Florist",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-1643c627b388efd04b78695b",
+    "name": "Appolo",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-8ba18dde3a5fe99992e94139",
+    "name": "Asia Favourites",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-e329a3ca63325b44990a696b",
+    "name": "Baleno",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-4384cb0100ab41d3848ef2c9",
+    "name": "Bank of Communications (Hong Kong)",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://www.bankcomm.com.hk/hk/shtml/hk/cn/images/logo_tw.png",
+    "candidateCount": 4
+  },
+  {
+    "id": "mtr-network-brand-08d9284773e910df422d3b44",
+    "name": "Bauhinia Magazine",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://res.bauhk.com/template/44/2024/9/30/2006549/img/zj-logo2024.png",
+    "candidateCount": 3
+  },
+  {
+    "id": "mtr-network-brand-159d1b09394f1c17de83f013",
+    "name": "Bee Cheng Hiang",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-6ff3fff96dd4aea1df5560ae",
+    "name": "Beijing Tong Ren Tang",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-0cb3e2155c80f8ff9a60ec10",
+    "name": "Best Mart 360",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://www.bestmart360.com/catalog/view/theme/bestmart/images/bestmart360_logo.png",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-5f9811bfc71e53177380521c",
+    "name": "Better Skill",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-6830ee4f56eb8d52d05ba26e",
+    "name": "Bonaqua Mineralized Water",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-095a50e31847899bbd4d3686",
+    "name": "BRAND OFF TOKYO",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://www.brandoff.com.hk/cdn/shop/files/black_logo_2_large.png?v=1714367185",
+    "candidateCount": 4
+  },
+  {
+    "id": "mtr-network-brand-5d5df7366b2b1037f5cb9ca3",
+    "name": "BreadTalk",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-1ba21abcf429532a83868f5b",
+    "name": "Brighten Coffee",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-dedc13b987a8ff7e19de2118",
+    "name": "Cainiao",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-9cf694e4a1ae7155c471830b",
+    "name": "CATALO",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://www.catalo.com/cdn/shop/files/1_53.png?v=1793244656&width=190",
+    "candidateCount": 6
+  },
+  {
+    "id": "mtr-network-brand-12405128354785d53f3d7064",
+    "name": "Centaline Property",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-26f1a99fbdf4c33d0af42218",
+    "name": "Chez Choux",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-2ad137d29ada38e82f8356d6",
+    "name": "Chi Cha San Chen",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-3d18d032cffbafb95ff3c70b",
+    "name": "Chief Securities",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://www.chiefgroup.com.hk/content/images/chief-logo.png",
+    "candidateCount": 4
+  },
+  {
+    "id": "mtr-network-brand-01768c17eb3ac2766a76d44e",
+    "name": "China Construction Bank (Asia)",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-1fcb365805e670be1931b62e",
+    "name": "China Mobile",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-79bebf4d0d90e1f955dfa603",
+    "name": "China Telecom",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-95ca34fc4b90b65a0b73819c",
+    "name": "China Travel Service (H.K.) Limited",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-70e85ca42414334caa714e66",
+    "name": "Chow Tai Fook",
+    "status": "installed-local",
+    "format": "svg",
+    "sourceUrl": "https://www.chowtaifook.com/content/dam/ctfweb/en-hk/footer/footer_logo.svg",
+    "candidateCount": 4
+  },
+  {
+    "id": "mtr-network-brand-4c3be6430ec8dfa8b0ddae20",
+    "name": "Chun Shui Tang",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-bac62c71e1783fee13433558",
+    "name": "Cityline",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-b3b96634f207b4cea14b725b",
+    "name": "Clean Living",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-2bc9986c31818801fe6ff58b",
+    "name": "CMB Wing Lung Bank",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://www.cmbwinglungbank.com/wlb_corporate/files/en/img/logo.png",
+    "candidateCount": 5
+  },
+  {
+    "id": "mtr-network-brand-2418514d62d4a3afd28258db",
+    "name": "Coin Dragon",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-881d5fb60090f59aabba4f28",
+    "name": "COLUMN",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-5c7cc5e91551b436a97b8c3b",
+    "name": "COMEBUYTEA",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-5e2db14f22df0ef6a93ebaa4",
+    "name": "Cooking Buddy",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-924fae237daf82bdf91aa419",
+    "name": "DAISO JAPAN",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-c663731dc59ae354a151eeb2",
+    "name": "Dazzle Hair",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-3304d1f93f619b5438bada70",
+    "name": "DGG by LBuy",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 3
+  },
+  {
+    "id": "mtr-network-brand-7be86a83929b214f9c389dc7",
+    "name": "Dignity Mama",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-9a9fae53091be686c0f7614b",
+    "name": "Dough Bros Pizza & Doughnuts",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://static.wixstatic.com/media/2f0764_7d94ab207b764375922eba7746b6e1da~mv2.png/v1/fill/w_220,h_45,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/20240530-103736.png",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-4f213d819a4251277f2ebb01",
+    "name": "DSG Energy",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 6
+  },
+  {
+    "id": "mtr-network-brand-d086f69639754b71bdc46fc7",
+    "name": "Eat East",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-e4fc134b3e8b5521775058f0",
+    "name": "Eat3D",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-5ad37792ad6cdfb768e00f5b",
+    "name": "Eldershop by Gingko House",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-4f6f442309b7249cd79fd8f7",
+    "name": "Elegance Mia Finest Dry Cleaning",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-849771d0835ec06de2cd2d6c",
+    "name": "Emperor Jewellery",
+    "status": "installed-local",
+    "format": "svg",
+    "sourceUrl": "https://www.emperorwatchjewellery.com/media/lximxy0o/logo.svg",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-421e299051655870a3c130fc",
+    "name": "Eu Yan Sang",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://cms-static.cdn.91app.hk/images/original/12/effdc8a6-9cb8-4e67-a320-70697426517a-1591693203-6zknqnexoa_d.png",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-ee3da3befa983f35022477c3",
+    "name": "Fairwood",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 2
+  },
+  {
+    "id": "mtr-network-brand-d52cde694737649cbdf9961a",
+    "name": "Family Fun",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-782d35fa67fbf8f815c797fc",
+    "name": "FANCL",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://www.fancl-hk.com/assets/img/fancl-1.png",
+    "candidateCount": 2
+  },
+  {
+    "id": "mtr-network-brand-6694fd59510aac852e410d94",
+    "name": "FanTown 聚星商店",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-679cff45b3326356dfd30053",
+    "name": "Far East Storage",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-d89ddae83a7df0994f1ec799",
+    "name": "farmfresh330",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 5
+  },
+  {
+    "id": "mtr-network-brand-c380779f6175766fdbe90940",
+    "name": "fg+",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-edb443aed531669e53eb2ad0",
+    "name": "First 兌換店",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-ad4f168cfc8d9dc783b569d3",
+    "name": "Flash Nova by Dazzle Hair",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-016d3f6822c46c89a1a42abe",
+    "name": "FlashGreen 環保折扣店",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-cc90b4bc0284c75c2210f165",
+    "name": "Fleur De La Vie",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-724d94e969a81553941c574c",
+    "name": "FNW 全港一站式裝修",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://cdn.prod.website-files.com/60a377cf0f0b135963c87229/627ba6b47c5fc4d71518f3ba_fnwnewlogo--black_New.png",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-661e7a5700e2f6afc2f9d7d4",
+    "name": "Free Duty",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 4
+  },
+  {
+    "id": "mtr-network-brand-66e9d2d893293630c1abce34",
+    "name": "Fresh Fresh簡品堂",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-da9a4c801cda8c1c1172841a",
+    "name": "Fresh Up",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://static.wixstatic.com/media/19dde8_02ce2a9dfcab44a091de88e9a0b9596f~mv2.png/v1/fill/w_189,h_53,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/FreshUp%20Logo%20(Traditional).png",
+    "candidateCount": 6
+  },
+  {
+    "id": "mtr-network-brand-d83aebf43b6028e0894e2353",
+    "name": "Friendship Market",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-1f65429d58a7c06ca9d9587c",
+    "name": "Futu Securities",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-0b44a96e2b9677bd454ba17a",
+    "name": "Gashapon Station",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-d0d8f02a04db8c5fe3e7f11a",
+    "name": "GB Color",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-9f37d4722a8b9195b853f431",
+    "name": "Gift & Take by Nobletime",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 2
+  },
+  {
+    "id": "mtr-network-brand-4b5a81873d10c76501abdc55",
+    "name": "Gingko Bakery",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-626f418ce8f55631658453b6",
+    "name": "GNC",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-ae55246d966237276fdc09d8",
+    "name": "GODIVA",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://www.godiva.com.hk/media/logo/default/logo_2025_v3.png",
+    "candidateCount": 3
+  },
+  {
+    "id": "mtr-network-brand-1f32dd0503741dd8b8611ebd",
+    "name": "Gong Cha",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-46e3e5aafa00a52f60ac534e",
+    "name": "Good Smell Lemon Tea",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-cc4ef5749ae6244e20eb0c70",
+    "name": "Goodfortune Property Consultant Co. Ltd",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-decd0a7f1d1b2152a86e3680",
+    "name": "Hailey's House",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-1397258912e49409ff4b58ef",
+    "name": "Hair concept",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-84ee60836bf6b77d507051a6",
+    "name": "Hallmark",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-4d23eaae3be80b5f478896a5",
+    "name": "Handmade For Picky",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-e829dafcdcb2e36b08ffa4f6",
+    "name": "Hang Heung",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-da3fb1ea890e3cdf8f0c2a81",
+    "name": "Hanjin",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 4
+  },
+  {
+    "id": "mtr-network-brand-7891e34ad013761f2a176e64",
+    "name": "Happy Cake Shop",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-6fedb815463edae4736a2d7d",
+    "name": "Happy House",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-463d26621519e4253b713fdb",
+    "name": "Hareody Mall x Papery",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-359578ed142272e9c029620e",
+    "name": "HC.HANDCRAFT",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-efc292cae86975aad8676299",
+    "name": "Health Online",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-803e5420fb21ef59ef1fd985",
+    "name": "Healthworks",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://www.health-wks.com/wp-content/uploads/2023/03/health-wks-logo-header.png",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-57421e2d41eeb7ea5ae4181d",
+    "name": "Hello Cocoa",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-f9d2d03e7b43d533ed190997",
+    "name": "Hello Milk Tee",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-1c69e375ee781e1b695be374",
+    "name": "Herbaceous Teas",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://images.squarespace-cdn.com/content/v1/5bea43d49d5abb5104bbc9e3/1542084817514-DRBQ1YNI5WB964X8O6TO/LOGO-%28HORIZONTAL%29.png",
+    "candidateCount": 3
+  },
+  {
+    "id": "mtr-network-brand-ca54bcd798f70d7f73d59190",
+    "name": "Herbal Seasons",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-0537bed4280031f03eb1bcd0",
+    "name": "HKRT Pop Up Store",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-6be3354ec038b3d935a76caa",
+    "name": "HKTV mall",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://images-dynamic.hktvmall.com/mkgb/common/cqa/qhv/MNjSuLWlwM20240508165218.png",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-85f7f0faacab22ee2e0531e3",
+    "name": "Hoe Hin Pak Fah Yeow",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-c16948acf193c7ece26b4c89",
+    "name": "Home Market",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://www.homemarket.hk/tc/img/logo.png",
+    "candidateCount": 2
+  },
+  {
+    "id": "mtr-network-brand-073ebc735e36f9f1bb629e73",
+    "name": "HOMESmart",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-92d666a748f23db89e04258b",
+    "name": "Hong Kong Daily (Maxim's Food Plaza)",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-b48eb5ba9534f7219051a523",
+    "name": "Hong Kong Duty Free",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-de086b4f872cc2977aa93f8c",
+    "name": "Hong Kong Property",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-ce749e840dcada0f9196edd4",
+    "name": "HSBC",
+    "status": "installed-local",
+    "format": "svg",
+    "sourceUrl": "https://www.hsbc.com.hk/content/dam/hsbc/hk/images/hongkong-hsbc-logo-en.svg",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-5b72f5e2ed054ec2fe16e218",
+    "name": "Human Health Medical Centre",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 6
+  },
+  {
+    "id": "mtr-network-brand-9f8449b868142980fd451ae4",
+    "name": "Hung Rui Chen",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-df6c93e204bab262313b5ade",
+    "name": "ICBC (Asia)",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-195300088d8c65f5841083cc",
+    "name": "IKKA HAIR",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-a5c87fd8808a5cd37819960e",
+    "name": "IMC Networks",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-57cb47c70781edc23900897a",
+    "name": "In Art House",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-2dbd46fc4282904a03ec68ba",
+    "name": "iroiro",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-a91b2c6495e62281a05aa5c8",
+    "name": "Japan Fitness Meal",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-1db59f4f479f6c22580ef8d1",
+    "name": "Japan Home Centre",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-f8711a4b86170ed525cbb685",
+    "name": "Joni",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-a54088c69497f09e37409e5e",
+    "name": "JOY N JAY",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-d4dfb26858d1b922d58f7728",
+    "name": "JP House",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-7903f18fb9a951696094401c",
+    "name": "Just for Fun Claw",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-37f3cac15cba6d8e36d69f95",
+    "name": "Just Foto",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-ad370ed99b189921e7fe2605",
+    "name": "K & K",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-71aace5bf4f2e987bab08b2e",
+    "name": "K CASH Supreme Powered by 康業金融科技",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://kcash.hk/_nuxt/img/Supreme_logo.17d2bba.png",
+    "candidateCount": 4
+  },
+  {
+    "id": "mtr-network-brand-3e0f31e9a388216522cc5b5a",
+    "name": "K100",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-418d7a0b5df6207bb1437444",
+    "name": "Kee Wah Bakery",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://keewah.com/media/logo/stores/1/site-logo-red.png",
+    "candidateCount": 4
+  },
+  {
+    "id": "mtr-network-brand-50907ae4f70761a9eabecb05",
+    "name": "Kimbap Lab",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-2c017d91d9ebc07d39128b75",
+    "name": "King Bakery",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "http://www.kingbakery.com.hk/images/stories/newlogo.png",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-4feb1572df4898e6243d7bf6",
+    "name": "KOLB LIFE",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-7b8173381ed2ed032c92f013",
+    "name": "Korean Ginseng Food Market",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-670d62b228891ca0943a0a5d",
+    "name": "KT5",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-2f03e63e17b78d045a396526",
+    "name": "Lady Story",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-aa53d78f7bae70d70d06a7a4",
+    "name": "LBuy",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://lbuy.hk/images/20231121/lbuylogo.png",
+    "candidateCount": 3
+  },
+  {
+    "id": "mtr-network-brand-1f6489f66a4bfa311ad9e232",
+    "name": "Lee Hong Dispensary",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-df4b7809b2fc151a0275855a",
+    "name": "Lee Kin Driving School",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-42ee150e0f7c475178a78cf3",
+    "name": "LEGO",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 2
+  },
+  {
+    "id": "mtr-network-brand-bf417c88aae840d98e4d138a",
+    "name": "LEMO",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-4c1aa909023c977b31ae3ae3",
+    "name": "LINE FRIENDS",
+    "status": "installed-local",
+    "format": "svg",
+    "sourceUrl": "https://cdn.prod.website-files.com/69311b39f8f16a9fc0469883/69311b39f8f16a9fc0469919_logo.svg",
+    "candidateCount": 2
+  },
+  {
+    "id": "mtr-network-brand-22187fb60456d86e94df4bc2",
+    "name": "Live Smart",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 2
+  },
+  {
+    "id": "mtr-network-brand-83b4ad2057bdc53a70a6f019",
+    "name": "Lo Hong Ka",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://lohongka.com.hk/cdn/shop/files/lohongka_with_slogan_logo.png?v=1781144928&width=1100",
+    "candidateCount": 2
+  },
+  {
+    "id": "mtr-network-brand-6616ee9f32fa2ee7b2adae50",
+    "name": "Luckin Coffee",
+    "status": "installed-local",
+    "format": "svg",
+    "sourceUrl": "https://web.luckincdn.com/default/assets/logo2-9d412147.svg",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-67593fe43f25128638eaa50c",
+    "name": "Lucullus",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-47d867c2cf83238581e2b71d",
+    "name": "LUSH Fresh Handmade Cosmetics",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-4107d1f418b0e15856ad5077",
+    "name": "Mammy Pancake",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://mammypancake.com/wp-content/uploads/2023/10/16bf076abd7c2e6645dcb8bf2c238ddd-copy-250x116.png",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-840457672bec8b31bc0d4378",
+    "name": "Many Wells",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://www.manyw.com/mw_v2/mw_logo3.webp",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-a3dc103c3a9105dd791f93c2",
+    "name": "McDonald's Restaurant",
+    "status": "installed-local",
+    "format": "svg",
+    "sourceUrl": "https://www.mcdonalds.com.hk/images/logo.svg",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-1578a4267131554b6c041909",
+    "name": "Meet Culture",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-8e27a54bdd369248b4029ac8",
+    "name": "MEG",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 6
+  },
+  {
+    "id": "mtr-network-brand-e8d43594e0dd7d6719bdf03c",
+    "name": "Meka",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 6
+  },
+  {
+    "id": "mtr-network-brand-6f8d6dbd89182c538f9fcc81",
+    "name": "Midland Realty",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-6f2571c9d1bef570a7fa5cc6",
+    "name": "Million Yield Properties Ltd.",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-8c1713589e8e15a3e3d5e24d",
+    "name": "MINISO",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-04b976db57f5fbee490e39ad",
+    "name": "Mister Donut",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-51229d88e68c70e6a6e037ec",
+    "name": "Mixian Sense",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-afa93a4c4628c74cbfb970f1",
+    "name": "Mizomi",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-37dc75bf77b829693a92f1d5",
+    "name": "Momax",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://www.momax.net/cdn/shop/files/black_logo280x80-removebg-preview_165x.png?v=1758874606",
+    "candidateCount": 6
+  },
+  {
+    "id": "mtr-network-brand-9bb6384d628bcdfbfc70bd02",
+    "name": "MTR e-Store",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-d7f890c4f72a3d49b69870b2",
+    "name": "MX",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-629e680e1bfe2465df5ef267",
+    "name": "My Little Coffee",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-5f73fe0896dddd80b5007b36",
+    "name": "My Sweet Home Employment Agency",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-afcf6579d423b92612ae0937",
+    "name": "Nobletime Traveller",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-d0c8d83125ccdd566dc3b957",
+    "name": "nsew任天堂官方販賣店",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-9e941719b932762b0f7da7bd",
+    "name": "Number 8 Dry Cleaning & Laundry",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-f0fe1eddf7fd2c1579b498e5",
+    "name": "O Good",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-050c8b196af2689e5afc2106",
+    "name": "Okashi Galleria by 零食物語",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-858526ef7a091292a83ce316",
+    "name": "OP Beauty",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-6984bcd34c06541b165c9651",
+    "name": "Orchid Padaria Bakery",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-5ff32313e71d4017cede14ab",
+    "name": "Orient Exchange Company (HK) Limited",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-b861f7f2aa1b72c54bad927f",
+    "name": "Partager",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-28f73be8cd72eae2556beaff",
+    "name": "Paykool by KCash",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 4
+  },
+  {
+    "id": "mtr-network-brand-7c85464c97797ffbd947beb0",
+    "name": "Phiten",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-188b80adff5f496afd51203d",
+    "name": "Pick Light",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-e600bda8b7b82249ddf2e049",
+    "name": "Playful+",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-dd8650e5297e0a515b6bc234",
+    "name": "Pojangmacha",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-8a3823a6ffd5bbbb611c84e3",
+    "name": "POPJOY",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-d6c366df7464a2899e23cf69",
+    "name": "Poppop Rangers",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://www.poppoprangers.com/images/images/3bros.png",
+    "candidateCount": 2
+  },
+  {
+    "id": "mtr-network-brand-983a992d84466806347df698",
+    "name": "Premier Practice",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-db861b8984d138a469dd71a0",
+    "name": "Pret A Manger",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://images.ctfassets.net/4zu8gvmtwqss/4J3tq43hFKDHLTwPXX2YBb/ee4fbeaa8ea7b08f41ec974168af5927/pret-a-manger-logo.png",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-dc3497992847db6cfc07dbbe",
+    "name": "Professional Locksmith Lock & Key Center",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-b4e57d4d8111023ced68d7b6",
+    "name": "Pure Baba Cut",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-53e42243bf57b6680b39903c",
+    "name": "QB House",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-6b7f1045ee40634d2be4b689",
+    "name": "Queen Club",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-82086c1064fab955a328db4f",
+    "name": "Red Tea",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-525751d234e35aa860475447",
+    "name": "Ricacorp Properties",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 6
+  },
+  {
+    "id": "mtr-network-brand-6fd74dfcdfef36cc0c0143b8",
+    "name": "Rich Honour Optical",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-d3f5cd5b01acf38e7b561b9d",
+    "name": "Rolls & Bites",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-f733125de9c36707754978e6",
+    "name": "Romanova Bakery",
+    "status": "installed-local",
+    "format": "svg",
+    "sourceUrl": "https://romanovabakery.com/logo-only.svg",
+    "candidateCount": 2
+  },
+  {
+    "id": "mtr-network-brand-95c14590f6a67af869d49539",
+    "name": "Rosana",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-928110519362183fba758dc8",
+    "name": "S.F. Express",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://hk.sf-express.com/_next/static/media/ic-black-logo.c86816fe.png",
+    "candidateCount": 3
+  },
+  {
+    "id": "mtr-network-brand-5cd38f85f66bc64702320d8c",
+    "name": "Sa Sa",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://cms-static.cdn.91app.hk/images/original/17/77cbf5b3-54bb-4710-a383-4e4f36302618-1765160784-uecg2dclbo_d.png",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-822f39a2cb6507321ac9c490",
+    "name": "Saffron",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 5
+  },
+  {
+    "id": "mtr-network-brand-5a12838e0d64ffb7c1124518",
+    "name": "sakkarra",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-671d44984ae1ece27af633dd",
+    "name": "Sama Sama",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-15af03ecf143622c7731e5f5",
+    "name": "SCENTATION",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-22db8baac3138dcbeb4cb5e6",
+    "name": "Sha Tin Wai Integrated Medical Centre",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-8ff4578c1ab7ef0736f1f992",
+    "name": "Sheung Ho Beef Brisket",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-4d10e83e26a4f227544b8493",
+    "name": "ShingSai Property Agency Limited",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-5260173833c35a8eafbc770d",
+    "name": "Shoe Repair Station",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-3dd7d6cba03bcbe1487c268e",
+    "name": "Shuyi Planttea",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-6ffbeea98f1a87e0ab104a17",
+    "name": "Sincere Way Property Agency",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-0f4a247035cdcf016073eb39",
+    "name": "Small Girl Money Exchange",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-9cfad716d8286c91b81a43f6",
+    "name": "Small Noodles",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-4b575b63363fdfbac0646d47",
+    "name": "Snack Express",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-9f3a4329d8325465f71ec2b2",
+    "name": "Subway",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-4ede9faa46c962d7d889ece9",
+    "name": "Sulwhasoo",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://hk.sulwhasoo.com/media/logo/stores/9/sulwhasoo_logo-amber_250224.png",
+    "candidateCount": 6
+  },
+  {
+    "id": "mtr-network-brand-ac3505381c519ed299ad7ccf",
+    "name": "Sushi Express",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://www.sushiexpress.com.hk/wp-content/themes/sushiexpress/images/logo_corporate_new.png",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-e4a69c79dd41c8f4b55c47f8",
+    "name": "T.K.O. Medical Centre",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-6da901155617f3e584be48b4",
+    "name": "Tai Cheong Bakery",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-17d46bc66d0d8259510d6b54",
+    "name": "Tai Tung Bakery",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-87c1e47fc251ababa25593e3",
+    "name": "Taiwan Gift Baskets",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-3a675c66be82508cd3768eff",
+    "name": "The Body Shop",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-3234c5f82028ecebeff1f7e5",
+    "name": "The Groom Shoes Repair and Polish",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-662cfa09f4b742c2e99e90b4",
+    "name": "The Han's",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-84b86d023b4650845e6c0e8d",
+    "name": "The Pie & Tart Specialists",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-918a14c549a2e56723cce20c",
+    "name": "Tin Tak Swallow's Nest Gift Shop",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://www.tin-tak.com/images/ttlogo.png",
+    "candidateCount": 3
+  },
+  {
+    "id": "mtr-network-brand-8b1e2dcffdc1f8b555372e02",
+    "name": "Tong Siu Yi Snack Food Shop",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-2bfb876797409b5b75fdb97b",
+    "name": "Tsing Yi Medicine & Holistic Health Center",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-5ca22bf802de251f27ac0cd4",
+    "name": "TTYY",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-4593b2cea761c0e4afae4771",
+    "name": "TWGB Treats",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-8224b8ad270a6b6c6214f06f",
+    "name": "UJI Bedding",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-1175ae9d2af930fb7fac0daf",
+    "name": "Unison Foreign Exchange Ltd",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-33e2eaac0e1d4a6ca0cb3bcd",
+    "name": "Uo-Show",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-bf106d27a4154d2deb8047f6",
+    "name": "uSMART",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-45b09e1357ba32d424921ce0",
+    "name": "V Cuisine",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-ab1cb712f2dca75610516080",
+    "name": "Victoria",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-31292f3f40d94877737645aa",
+    "name": "VICXXO Gallery Hong Kong",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-0f8f7f9fda4de8fc0e19fa25",
+    "name": "Vita Fresh Tea",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-239900215cd5000eb3eb2558",
+    "name": "Vitasoy",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-6f2ae7620bf3c73693e2da11",
+    "name": "Voyage Marketplace",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-1c132f6cd758820cdf8f242e",
+    "name": "Wanpo Tea Shop",
+    "status": "installed-local",
+    "format": "svg",
+    "sourceUrl": "https://www.wanpotea.com/images/logo-2-black.svg",
+    "candidateCount": 2
+  },
+  {
+    "id": "mtr-network-brand-bd9ab9c320ffa4b88d6393bb",
+    "name": "WeBite Space",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-635c76f25c7707bcf75564d2",
+    "name": "Wellcome",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-0d8f128e2241265abdab38b9",
+    "name": "WiFi BB",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-044ec1ac49a69edada5b2e35",
+    "name": "Wing Wah",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://www.wingwah.com/wp-content/themes/kkleo-theme-child/css/images/logo_wingwah.png",
+    "candidateCount": 3
+  },
+  {
+    "id": "mtr-network-brand-2ca16f6914f546db63edf6f6",
+    "name": "Xiao Noodles",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-99a93828843e25e4183c0714",
+    "name": "Yat Lok",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-8baabfb9861298484d19440b",
+    "name": "Yiu Fung Store",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://yiufungstore.hk/wp-content/uploads/2024/03/full.png",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-1a7816beeac0645af9b3c1d2",
+    "name": "Yomimi",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-dde2cc0631ac66cd7bee18bc",
+    "name": "Yoshinoya",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-b5515a4cbe93272820e4ddf2",
+    "name": "Yui Ngai",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-6c67c1226e356c8944909211",
+    "name": "Yum Me print",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://static.wixstatic.com/media/c0cdc0_f7bf5dcf9d6347d2be0a6a27763efa46~mv2.png/v1/fill/w_399,h_111,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/YMP%20logo_wordmark.png",
+    "candidateCount": 3
+  },
+  {
+    "id": "mtr-network-brand-dc70484a0acf3b2c4e59adae",
+    "name": "YVES ROCHER",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://yves-rocher.hk/cdn/shop/files/YR-logo.png?v=1768794806&width=320",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-a2882062c4a722a8cd74a349",
+    "name": "ZIMA",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-7da740993adda4c64edfe015",
+    "name": "らしんばんlashinbang",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-d74641a519e0a77037f9df68",
+    "name": "上環 D100",
+    "status": "installed-local",
+    "format": "png",
+    "sourceUrl": "https://www.d100.net/wp-content/uploads/2013/12/D100.png",
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-9b30b510a42cf298b9be9d59",
+    "name": "利強記北角雞蛋仔",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-388d2d67e1be1f78b272ee4a",
+    "name": "十足風味",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-d9accf9cb66cf990f16cefc3",
+    "name": "南昌士多",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-6ca453ee3774490aa1eaf946",
+    "name": "小伙FRESH",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-4e5b5088208b79ab136fd1f4",
+    "name": "心Bar Herbal Nutrition",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-90588d617e7b2fe7c72746a1",
+    "name": "思雨畫軒",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-a545fb5acfd5d02f3289ed8b",
+    "name": "日本貨好友站 x i Buddies",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-afc71736b126a2b35e537cab",
+    "name": "杏福補給站",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-5d079c1ad22f3072954a2190",
+    "name": "樓上◆招牌店",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-4b87620297480f1092d467ff",
+    "name": "蒸瀏記",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 4
+  },
+  {
+    "id": "mtr-network-brand-938afe895ac6680cfa37af65",
+    "name": "菓子本家",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 1
+  },
+  {
+    "id": "mtr-network-brand-184207c9dd724e87db25e01a",
+    "name": "西營盤理髮店",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-f9ac37d9390585f942816da7",
+    "name": "食家優惠店",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  },
+  {
+    "id": "mtr-network-brand-d36e699aa1fca4d3481a070f",
+    "name": "香江冰廳",
+    "status": "needs-source-or-review",
+    "format": null,
+    "sourceUrl": null,
+    "candidateCount": 0
+  }
+]
