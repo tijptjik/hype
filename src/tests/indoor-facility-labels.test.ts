@@ -1,3 +1,4 @@
+import { locationFacilityNames } from '../lib/locations/facilityNames'
 import { describe, expect, it } from 'vitest'
 import {
   canonicalFacilityLabel,
@@ -34,10 +35,40 @@ describe('imported facility terminology', () => {
     ['ATM', 'ATM'],
     ['Exit A2', 'Exit A2'],
     ['E3', 'E3'],
-    ['CUC', 'CUC'],
+    ['CUC', 'Customer Service Centre'],
+    ['Cuc', 'Customer Service Centre'],
+    ['CVC', 'Customer Service Centre'],
+    ['Customer Service Center', 'Customer Service Centre'],
   ])('%s becomes %s and is idempotent', (source, expected) => {
     expect(canonicalFacilityLabel(source)).toBe(expected)
     expect(canonicalFacilityLabel(expected)).toBe(expected)
+  })
+
+  it('corrects existing directory names and reapplies the rule to fresh upstream snapshots', () => {
+    expect(
+      locationFacilityNames('building_part', { en: 'CUC', 'zh-Hant': '客務中心' }),
+    ).toEqual({ en: 'Customer Service Centre', 'zh-Hant': '客務中心' })
+    for (const sourceName of ['CUC', 'Cuc', 'CVC', 'Customer Service Center']) {
+      const data = {
+        ...Object.fromEntries(layerNames.map(layer => [layer, collection([])])),
+        retrievedAt: '2026-11-16T00:00:00Z',
+      } as IndoorData
+      data.unit_polygon.features = [
+        feature({
+          unit_id: 'service-room',
+          unit_category: 'room',
+          unit_name_en: sourceName,
+        }),
+      ]
+      const refreshed = structuredClone(data)
+      normalizeMapFacilityLabels(refreshed)
+      normalizeMapFacilityLabels(refreshed)
+      expect(refreshed.unit_polygon.features[0].properties.unit_name_en).toBe(
+        'Customer Service Centre',
+      )
+      expect(places(data)[0].name.en).toBe('Customer Service Centre')
+      expect(data.unit_polygon.features[0].properties.unit_name_en).toBe(sourceName)
+    }
   })
 
   it('normalizes derived facility fields, preserves brands, and presents existing raw maps consistently', () => {

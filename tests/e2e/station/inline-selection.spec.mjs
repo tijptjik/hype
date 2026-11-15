@@ -35,7 +35,7 @@ for (const width of [1440, 390]) {
       await page.mouse.up()
     }
     const target = scene.getByRole('button', {
-      name: 'Customer Service Center',
+      name: 'Customer Service Centre',
       exact: true,
     })
     await expect(target).toHaveCount(1)
@@ -57,9 +57,9 @@ for (const width of [1440, 390]) {
     await target.click()
     const places = page.getByRole('region', { name: 'Places', exact: true })
     const card = places.getByRole('region', { name: 'Station place details' })
-    await expect(card).toContainText('Customer Service Center')
+    await expect(card).toContainText('Customer Service Centre')
     await expect(
-      places.getByText('Customer Service Center', { exact: true }),
+      places.getByText('Customer Service Centre', { exact: true }),
     ).toHaveCount(1)
     await expect(scene.locator('[data-selection-outline]')).toHaveAttribute(
       'data-selection-outline',
@@ -85,7 +85,7 @@ for (const width of [1440, 390]) {
     await page.screenshot({ path: join(output, `inline-service-${width}.png`) })
     // Old point links resolve to the same room-backed card and outline.
     await page.goto(`/premises/kennedy-town-mtr/places/${marker.properties.amenity_id}`)
-    await expect(card).toContainText('Customer Service Center', { timeout: 60000 })
+    await expect(card).toContainText('Customer Service Centre', { timeout: 60000 })
     await expect(scene.locator('[data-selection-outline]')).toHaveAttribute(
       'data-selection-outline',
       room.properties.unit_id,

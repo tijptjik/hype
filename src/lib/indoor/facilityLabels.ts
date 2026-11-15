@@ -5,8 +5,6 @@ const acronyms = new Set([
   'ATM',
   'AED',
   'MTR',
-  'CUC',
-  'CVC',
   'IPL',
   'EPL',
   'TCL',
@@ -41,6 +39,9 @@ const plurals: Readonly<Record<string, string>> = {
  */
 export function canonicalFacilityLabel(name: string): string {
   const text = name.trim().replace(/\s+/g, ' ')
+  // LandsD customer-service abbreviations must not leak into directory or refreshed map labels.
+  if (/^(cuc|cvc|customer service cent(?:er|re))$/i.test(text))
+    return 'Customer Service Centre'
   const generic = plurals[text.toLowerCase()]
   if (generic) return generic
   // Singularize known terminal facility nouns, never arbitrary words or line destinations.

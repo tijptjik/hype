@@ -60,7 +60,7 @@ for (const width of [1440, 390]) {
     await expect(entries.getByRole('button', { name: /railway track/i })).toHaveCount(0)
     await expect(entries.getByRole('button', { name: /^Cuc /i })).toHaveCount(0)
     expect(
-      await entries.getByRole('button', { name: /Customer Service Center/ }).count(),
+      await entries.getByRole('button', { name: /Customer Service Centre/ }).count(),
     ).toBeGreaterThan(0)
     expect(
       await entries.getByRole('button', { name: /^Corridor/ }).count(),

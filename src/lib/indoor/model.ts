@@ -127,7 +127,7 @@ export function places(data: IndoorData): Place[] {
           (named.length ? named : occupants)
             .map(f => value(f.properties, 'occupant_name_en'))
             .join(' · ') ||
-          (serviceMarker ? 'Customer Service Center' : '') ||
+          (serviceMarker ? 'Customer Service Centre' : '') ||
           value(p, 'unit_name_en') ||
           value(p, 'unit_category'),
         'zh-Hant':
