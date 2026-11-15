@@ -83,6 +83,10 @@ export function centre(feature: IndoorFeature): [number, number] {
 // Reference: https://www.mtr.com.hk/archive/en/services/shop/ket.pdf
 const verifiedShopCodes: Readonly<Record<string, string>> = {
   '90e0ec60-9ec2-4e2a-aa70-fac74bab2b06': 'KET 6',
+  // Sheung Wan source labels transpose SHW to SWH; MTR's SHW shop plan confirms these units.
+  '82553377-d9d9-43af-998b-292f31fb5ea4': 'SHW 3',
+  '0e4e859d-66c1-4d7e-b44f-7ee7b9a5e47e': 'SHW 2',
+  '03e314d3-c413-40e9-8f7b-91962d8f7cc8': 'SHW 9',
 }
 /** Joins source occupants and amenities. @param data Complete snapshot. @returns Display places with original identities. @remarks Multiple occupants remain on their source unit. */
 export function places(data: IndoorData): Place[] {
@@ -94,11 +98,14 @@ export function places(data: IndoorData): Place[] {
       f => f.properties.unit_id === p.unit_id,
     )
     const firstOccupant = occupants[0]
-    const code = /^[A-Z]{2,6}\s*\d+[A-Z]?(?:\s*[-/&]\s*\d+[A-Z]?)*$/i.test(
-      value(p, 'unit_name_en'),
-    )
-      ? value(p, 'unit_name_en')
-      : value(p, 'unit_unitnumbername') || verifiedShopCodes[value(p, 'unit_id')] || ''
+    const verifiedCode = verifiedShopCodes[value(p, 'unit_id')]
+    const code =
+      verifiedCode ||
+      (/^[A-Z]{2,6}\s*\d+[A-Z]?(?:\s*[-/&]\s*\d+[A-Z]?)*$/i.test(
+        value(p, 'unit_name_en'),
+      )
+        ? value(p, 'unit_name_en')
+        : value(p, 'unit_unitnumbername') || '')
     const named = occupants.filter(
       f => !/^[A-Z]{2,6}\s*\d+/i.test(value(f.properties, 'occupant_name_en')),
     )
@@ -128,6 +135,7 @@ export function places(data: IndoorData): Place[] {
             .map(f => value(f.properties, 'occupant_name_en'))
             .join(' · ') ||
           (serviceMarker ? 'Customer Service Centre' : '') ||
+          verifiedCode ||
           value(p, 'unit_name_en') ||
           value(p, 'unit_category'),
         'zh-Hant':
