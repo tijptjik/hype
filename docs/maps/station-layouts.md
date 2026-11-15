@@ -146,6 +146,12 @@ The existing taxonomy defines `premises` as a class of **built** Location, label
 shopping malls, transit sites and managed park premises; natural geographic features
 should keep their geographic classification.
 
+Outdoor station labels use the persistent `[longitude, latitude]` coordinate in
+`src/lib/routing/mtr-catalog.json`, keyed by station code. The label source emits one
+point per station independently of the footprint polygons; multipart footprints and tile
+boundaries must not introduce additional label anchors. Update the catalogue coordinate
+to reposition a station label. Footprints remain the outline and hit area.
+
 The omnibar searches the 98 MTR stations by English name, Chinese name or station code.
 The roster matches all 98 codes on the official MTR system-map index. This coverage is
 the indexed heavy-rail and Airport Express stations, not Light Rail stops or a separate
