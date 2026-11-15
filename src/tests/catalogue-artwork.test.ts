@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   CatalogueArtworkSchema,
   resolveCatalogueFormatArtwork,
+  resolveCatalogueDisplayLogo,
+  catalogueArtworkMeetsMinimum,
   catalogueGeneralLogo,
   resolveCatalogueMarker,
 } from '../lib/locations/catalogueArtwork'
@@ -12,6 +14,11 @@ const asset = (suffix: string, status: 'approved' | 'candidate' = 'approved') =>
   background: '#ffffff',
 })
 describe('catalogue artwork', () => {
+  it('makes new artwork active without a separate review step', () => {
+    const artwork = CatalogueArtworkSchema.parse({ logo: { src, format: 'svg' } })
+    expect(artwork.logo.status).toBe('approved')
+    expect(resolveCatalogueDisplayLogo({ artwork }, 'null-space', 'dark')).toBe(src)
+  })
   it('rejects malformed and non-web provenance without throwing', () => {
     for (const sourceUrl of [
       'invalid',
@@ -77,6 +84,57 @@ describe('catalogue artwork', () => {
         logo: { ...asset('2'), src: 'https://example.org/logo.png' },
       }).success,
     ).toBe(false)
+  })
+})
+
+describe('catalogue display quality', () => {
+  it('uses approved theme then mode then generic artwork, excluding candidates', () => {
+    const owner = {
+      logo: src,
+      artwork: {
+        'logo-breadline-light': asset('2'),
+        'marker-dark': asset('3'),
+        marker: asset('4'),
+        logo: asset('5', 'candidate'),
+      },
+    }
+    expect(resolveCatalogueDisplayLogo(owner, 'breadline-light', 'light')).toBe(
+      asset('2').src,
+    )
+    expect(resolveCatalogueDisplayLogo(owner, 'hype-black', 'dark')).toBe(
+      asset('3').src,
+    )
+    expect(resolveCatalogueDisplayLogo(owner, 'hype-light', 'light')).toBe(
+      asset('4').src,
+    )
+    expect(
+      resolveCatalogueDisplayLogo(
+        { logo: src, artwork: { logo: asset('5', 'candidate') } },
+        'hype-light',
+        'light',
+      ),
+    ).toBe(src)
+    expect(
+      resolveCatalogueDisplayLogo(owner, 'breadline-dark', 'dark', '/curated.svg'),
+    ).toBe('/curated.svg')
+  })
+  it('requires source detail instead of preview canvas dimensions', () => {
+    expect(
+      catalogueArtworkMeetsMinimum({
+        ...asset('2'),
+        sourceWidth: 32,
+        sourceHeight: 32,
+      }),
+    ).toBe(false)
+    expect(catalogueArtworkMeetsMinimum(asset('2'))).toBe(false)
+    expect(
+      catalogueArtworkMeetsMinimum({
+        ...asset('2'),
+        sourceWidth: 512,
+        sourceHeight: 512,
+      }),
+    ).toBe(true)
+    expect(catalogueArtworkMeetsMinimum({ ...asset('2'), format: 'svg' })).toBe(true)
   })
 })
 

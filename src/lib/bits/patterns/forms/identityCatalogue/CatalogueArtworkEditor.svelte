@@ -1,8 +1,6 @@
 <script lang="ts">
 // API
 import { uploadIdentityCatalogueLogo } from '#lib/api/identityCatalogue.remote.js'
-// COMPONENTS
-import CatalogueMarkerArtwork from '#lib/bits/patterns/identity/CatalogueMarkerArtwork.svelte'
 // TYPES
 import type { IdentityCatalogueContent } from '#lib/locations/identityCatalogue.js'
 let {
@@ -14,8 +12,6 @@ let {
   editable: boolean
   organisationId?: string
 } = $props()
-let previewTheme = $state('milk'),
-  previewMode = $state<'light' | 'dark'>('light')
 let slot = $state('logo'),
   background = $state('#ffffff'),
   sourceUrl = $state(''),
@@ -41,6 +37,14 @@ async function upload(event: Event): Promise<void> {
     if (sourceUrl && !URL.canParse(sourceUrl))
       throw new Error('Enter a complete source URL.')
     const bitmap = await createImageBitmap(file)
+    if (Math.min(bitmap.width, bitmap.height) < 512) {
+      bitmap.close()
+      throw new Error(
+        'Use an original image at least 512 pixels wide and tall. Enlarging a small icon does not add detail.',
+      )
+    }
+    const sourceWidth = bitmap.width,
+      sourceHeight = bitmap.height
     const canvas = document.createElement('canvas')
     canvas.width = canvas.height = 512
     const ctx = canvas.getContext('2d')
@@ -62,12 +66,16 @@ async function upload(event: Event): Promise<void> {
     })
     content = {
       ...content,
+      ...(slot === 'logo' ? { logo: result.logo, logoAttribution: undefined } : {}),
       artwork: {
         ...content.artwork,
         [slot]: {
           src: result.logo,
           background,
-          status: 'candidate',
+          status: 'approved',
+          format: 'png',
+          sourceWidth,
+          sourceHeight,
           ...(sourceUrl ? { sourceUrl } : {}),
         },
       },
@@ -82,23 +90,23 @@ async function upload(event: Event): Promise<void> {
 </script>
 <section class="border-border border-b p-5" aria-label="Logo library">
   <h3 class="font-semibold">Logo library</h3>
-  <p class="text-muted-foreground mt-1 text-xs">
-    Theme marker → light/dark marker → default marker → general logo with a white ring.
-    Candidates stay out of marker selection until approved.
-  </p>
   <div class="mt-4 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
     {#each Object.entries(content.artwork ?? {}) as [key, asset] (key)}
       <article class="border-border rounded-lg border p-3" data-artwork-slot={key}>
         <img
           src={asset.src}
-          alt={`${key} logo candidate`}
+          alt={key.replaceAll('-', ' ')}
           class="mx-auto size-24 rounded-lg object-contain"
           style:background={asset.background}
         >
-        <p class="mt-2 text-sm font-medium break-words">{key}</p>
-        <p class="text-muted-foreground text-xs">
-          {asset.status === 'approved' ? 'Approved' : 'Needs review'}
-        </p>
+        <div class="mt-2 flex flex-wrap items-baseline gap-2">
+          <p class="text-sm font-medium break-words">{key.replaceAll('-', ' ')}</p>
+          {#if asset.format}
+            <span class="text-muted-foreground text-[10px] uppercase"
+              >{asset.format}</span
+            >
+          {/if}
+        </div>
         {#if asset.sourceUrl}
           <a
             href={asset.sourceUrl}
@@ -108,48 +116,37 @@ async function upload(event: Event): Promise<void> {
             >Source ↗</a
           >
         {/if}
-        {#if asset.attribution || asset.license}
-          <p class="text-muted-foreground mt-1 text-xs">
-            {asset.attribution ?? ''} {asset.license ?? ''}
-          </p>
-        {/if}
-        {#if asset.notes}
-          <p class="text-muted-foreground mt-1 text-xs">{asset.notes}</p>
-        {/if}
         {#if editable}
-          <div class="mt-2 flex flex-wrap gap-2 text-xs">
-            <button
-              type="button"
-              class="text-primary"
-              onclick={() => {
+          <label class="mt-2 grid gap-1 text-xs">
+            Artwork type
+            <select
+              class="border-border bg-surface rounded border p-1"
+              aria-label={`Artwork type for ${key}`}
+              value={asset.composition ?? ''}
+              onchange={event => {
+                const composition = event.currentTarget.value
+                const updated = { ...asset }
+                if (composition === 'brand-mark' || composition === 'full-logo')
+                  updated.composition = composition
+                else delete updated.composition
                 content = {
                   ...content,
-                  ...(key === 'logo'
-                    ? {
-                        logoAttribution:
-                          asset.status === 'candidate' || content.logo === asset.src
-                            ? undefined
-                            : content.logoAttribution,
-                        logo:
-                          asset.status === 'candidate'
-                            ? asset.src
-                            : content.logo === asset.src
-                              ? null
-                              : content.logo,
-                      }
-                    : {}),
-                  artwork: {
-                    ...content.artwork,
-                    [key]: {
-                      ...asset,
-                      status: asset.status === 'approved' ? 'candidate' : 'approved',
-                    },
-                  },
+                  artwork: { ...content.artwork, [key]: updated },
                 }
               }}
             >
-              {asset.status === 'approved' ? 'Mark for review' : 'Approve'}
-            </button>
+              <option value="">Unclassified</option>
+              <option value="full-logo">Full logo</option>
+              <option value="brand-mark">Brand mark</option>
+            </select>
+          </label>
+        {:else if asset.composition}
+          <p class="mt-1 text-xs">
+            {asset.composition === 'brand-mark' ? 'Brand mark' : 'Full logo'}
+          </p>
+        {/if}
+        {#if editable}
+          <div class="mt-2 flex flex-wrap gap-2 text-xs">
             <button
               type="button"
               onclick={() => {
@@ -206,58 +203,7 @@ async function upload(event: Event): Promise<void> {
       >
     </div>
   {/if}
-  <details class="mt-4 text-xs">
-    <summary class="cursor-pointer">Marker fallback preview</summary>
-    <div class="mt-3 flex flex-wrap items-end gap-3">
-      <label class="grid gap-1"
-        >Theme code<input
-          class="border-border bg-surface rounded border p-2"
-          bind:value={previewTheme}
-        ></label
-      >
-      <label class="grid gap-1"
-        >Mode<select
-          class="border-border bg-surface rounded border p-2"
-          bind:value={previewMode}
-        >
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select></label
-      >
-      <div class="size-16 rounded-lg bg-neutral-600 p-2">
-        <CatalogueMarkerArtwork
-          owner={content}
-          theme={previewTheme}
-          mode={previewMode}
-          label="Selected marker artwork"
-        />
-      </div>
-    </div>
-    <p class="text-muted-foreground mt-2">
-      Only approved artwork appears here. Save the catalogue entry to publish approvals.
-    </p>
-  </details>
   {#if failure}
     <p role="alert" class="text-error mt-2 text-sm">{failure}</p>
-  {/if}
-  {#if content.evidence?.length}
-    <details class="mt-4 text-xs">
-      <summary class="cursor-pointer">Research sources</summary>
-      <ul class="mt-2 grid gap-2">
-        {#each content.evidence as evidence}
-          <li>
-            <a
-              class="text-primary underline"
-              href={evidence.url}
-              target="_blank"
-              rel="noreferrer"
-              >{evidence.kind}
-              ↗</a
-            >
-            · {evidence.note}
-          </li>
-        {/each}
-      </ul>
-    </details>
   {/if}
 </section>

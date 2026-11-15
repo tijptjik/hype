@@ -18,7 +18,7 @@ export const CatalogueArtworkSchema = z
       sourceHeight: z.number().int().positive().optional(),
       format: z.enum(['png', 'svg']).optional(),
       composition: z.enum(['full-logo', 'brand-mark']).optional(),
-      status: z.enum(['candidate', 'approved']).default('candidate'),
+      status: z.enum(['candidate', 'approved']).default('approved'),
       sourceUrl: z
         .string()
         .url()
@@ -151,4 +151,14 @@ export function resolveCatalogueDisplayLogo(
     if (asset?.status === 'approved') return asset.src
   }
   return owner.logo ?? null
+}
+
+/** Require source resolution rather than the dimensions of an enlarged preview.
+ * @param asset Source metadata. @returns Whether the source meets the display minimum.
+ */
+export function catalogueArtworkMeetsMinimum(asset: CatalogueArtwork[string]): boolean {
+  return (
+    asset.format === 'svg' ||
+    Math.min(asset.sourceWidth ?? 0, asset.sourceHeight ?? 0) >= 512
+  )
 }

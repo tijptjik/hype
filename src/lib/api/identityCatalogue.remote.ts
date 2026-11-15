@@ -216,6 +216,7 @@ export const uploadIdentityCatalogueLogo = guardedCommand(
     if (
       view.getUint32(16) > 1024 ||
       view.getUint32(20) > 1024 ||
+      Math.min(view.getUint32(16), view.getUint32(20)) < 512 ||
       !view.getUint32(16) ||
       !view.getUint32(20)
     )

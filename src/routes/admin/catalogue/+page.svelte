@@ -752,6 +752,12 @@ async function upload(
     if (!file) return
     if (file.size > 8 * 1024 * 1024) throw Error('Logo too large')
     const bitmap = await createImageBitmap(file)
+    if (Math.min(bitmap.width, bitmap.height) < 512) {
+      bitmap.close()
+      throw Error('Use an original image at least 512 pixels wide and tall')
+    }
+    const sourceWidth = bitmap.width,
+      sourceHeight = bitmap.height
     const canvas = document.createElement('canvas'),
       scale = 512 / Math.max(bitmap.width, bitmap.height)
     canvas.width = canvas.height = 512
@@ -773,12 +779,17 @@ async function upload(
     })
     content = {
       ...content,
+      logo: result.logo,
+      logoAttribution: sourceLogo?.attribution,
       artwork: {
         ...content.artwork,
         logo: {
           src: result.logo,
           background: '#ffffff',
-          status: 'candidate',
+          status: 'approved',
+          format: 'png',
+          sourceWidth,
+          sourceHeight,
           ...(sourceLogo
             ? {
                 sourceUrl: sourceLogo.sourceUrl,
@@ -1023,11 +1034,6 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
               class="bits-form__section border-border mx-auto my-6 max-w-4xl overflow-hidden rounded-xl border pb-0!"
               data-catalogue-card
             >
-              <CatalogueArtworkEditor
-                bind:content
-                {organisationId}
-                editable={isEditing && canEdit && !busy}
-              />
               <div
                 class="grid min-w-0 grid-cols-[12rem_minmax(0,1fr)]"
                 data-catalogue-columns
@@ -1474,6 +1480,11 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
                   </div>
                 </section>
               </div>
+              <CatalogueArtworkEditor
+                bind:content
+                {organisationId}
+                editable={isEditing && canEdit && !busy}
+              />
               {#if content && kind === 'brand'}
                 <section class="border-border mx-auto mb-6 max-w-4xl rounded-xl border">
                   <SectionHeader title="Location discovery" icon={LocationsIcon} />
