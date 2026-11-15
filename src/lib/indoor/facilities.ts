@@ -54,7 +54,7 @@ export const facilitySymbols: Record<string, FacilitySymbol> = {
     label: "Mother's room",
     color: '#9d174d',
     background: '#fdf2f8',
-    path: 'M7 4a2 2 0 1 0 4 0a2 2 0 1 0-4 0M9 8v5l5 3h5M5 10v7h7l3 5M3 21V10M15 9a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M11 11l4 2 4-1',
+    path: 'M5 5a3 3 0 1 0 6 0a3 3 0 1 0-6 0M5 5q4 0 5-3M6 10c-3 2-4 7-3 10q1 2 5 2h6M6 14v3q0 2 3 2h5q4-1 6-4M15.5 11a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M16 14q-4 0-5 3q4 1 8-2',
   },
   wheelchairassist: {
     label: 'Wheelchair assist',
@@ -127,7 +127,7 @@ export const facilitySymbols: Record<string, FacilitySymbol> = {
     label: 'Children’s play area',
     color: '#0369a1',
     background: '#f0f9ff',
-    path: 'M3 21 7 3h10l4 18M7 3l10 18M11 10h6M12 14h6M4 21h7',
+    path: 'M5 8a3 3 0 1 1 3-4m8 0a3 3 0 1 1 3 4M4 12a8 8 0 1 0 16 0a8 8 0 1 0-16 0M9 10h.1m5.8 0h.1M8 15a4 3 0 1 0 8 0a4 3 0 1 0-8 0M11 14h2l-1 1zM12 15v2',
   },
   drinkingfountain: {
     label: 'Drinking fountain',
