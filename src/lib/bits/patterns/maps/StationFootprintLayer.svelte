@@ -77,6 +77,7 @@ $effect(() => {
               ...feature,
               properties: {
                 ...feature.properties,
+                stationCode: feature.properties.stationCode,
                 indoorLabel: premisesLabel(
                   {
                     name: String(feature.properties.indoorName ?? ''),

@@ -135,7 +135,7 @@ function select(place: Place): void {
   station.select(place)
 }
 let listViewport: HTMLDivElement | undefined = $state()
-let listContent: HTMLDivElement | undefined = $state()
+let listContent: HTMLElement | undefined = $state()
 let listHeight = $state(0)
 // Reveal selected map anchors even when the directory was collapsed or filtered.
 $effect(() => {

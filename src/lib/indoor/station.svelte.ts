@@ -78,6 +78,7 @@ export class StationState {
   showInferred = $state(true)
   artworkOpacity = $state(0)
   data = $state.raw<IndoorData | null>(null)
+  private featuredUnits: () => ReadonlySet<string> | null = () => null
   private sourceEntries = $state.raw<Place[]>([])
   entries = $derived(
     visibleIndoorPlaces(this.sourceEntries, this.isMtr ? this.featuredUnits() : null),
@@ -85,7 +86,9 @@ export class StationState {
   /** Configure shop visibility without altering physical geometry.
    * @param featuredUnits Null exposes all shops; a set restricts shops to accepted Feature units.
    */
-  constructor(private featuredUnits: () => ReadonlySet<string> | null = () => null) {}
+  constructor(featuredUnits: () => ReadonlySet<string> | null = () => null) {
+    this.featuredUnits = featuredUnits
+  }
   floor = $state('')
   selected = $state<Place | null>(null)
   error = $state('')

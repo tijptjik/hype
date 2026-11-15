@@ -1,4 +1,7 @@
-<script lang="ts" generics="T extends Resource, G extends Record<string, unknown>">
+<script
+  lang="ts"
+  generics="T extends ResourceIndexEntity, G extends Record<string, unknown>"
+>
 // SVELTE
 import { untrack } from 'svelte'
 import { MediaQuery } from 'svelte/reactivity'
@@ -16,8 +19,10 @@ import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // ENUMS
 import { Panel } from '#lib/enums.js'
 // TYPES
-import type { Resource } from '#lib/types.js'
-import type { GroupedResourceIndexProps } from './resourceIndex.types'
+import type {
+  GroupedResourceIndexProps,
+  ResourceIndexEntity,
+} from './resourceIndex.types'
 import {
   RESOURCE_INDEX_LIST_HORIZONTAL_PADDING_PX,
   RESOURCE_INDEX_TOTAL_HORIZONTAL_PADDING_PX,
@@ -31,7 +36,10 @@ const TABLE_ROW_HEIGHT_PX = 72
 const TABLE_ROW_GAP_PX = 6
 const PANEL_TRANSITION_SETTLE_MS = 300
 
-type GroupedResourceIndexItem<T extends Resource, G extends Record<string, unknown>> =
+type GroupedResourceIndexItem<
+  T extends ResourceIndexEntity,
+  G extends Record<string, unknown>,
+> =
   | {
       kind: 'header'
       id: string

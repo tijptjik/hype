@@ -401,7 +401,7 @@ $effect(() => {
                     p =>
                       p.kind === 'facility' &&
                       (p.markerFeature ?? p.feature).geometry.type === 'Point' &&
-                      (legend.data?.coordinateSpace === 'image-pixels' ||
+                      (legend?.data?.coordinateSpace === 'image-pixels' ||
                         !isConnector(p.category)) &&
                       !['platform', 'faregate', 'entry'].includes(p.category),
                   )
@@ -483,7 +483,8 @@ $effect(() => {
                 { key: 'ramp', label: 'Ramp', dash: '0 4 5 4' },
                 { key: 'stairs', label: 'Stairs', dash: '0 4' },
               ].filter(
-                connection => indexMatches(legend.entries, connection.key).length,
+                connection =>
+                  indexMatches(legend?.entries ?? [], connection.key).length,
               ) as connection (connection.key)}
                 <li animate:flip={{ duration: prefersReducedMotion.current ? 0 : 220 }}>
                   <button

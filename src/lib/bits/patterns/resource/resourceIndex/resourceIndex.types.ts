@@ -26,7 +26,7 @@ export type ResourceIndexGridRow<T extends Resource> = {
 export type ResourceIndexItem<T extends Resource> = T | ResourceIndexGridRow<T>
 
 export type GroupedResourceIndexGroup<
-  T extends Resource,
+  T extends { id: string },
   G extends Record<string, unknown>,
 > = {
   group: G
@@ -34,7 +34,7 @@ export type GroupedResourceIndexGroup<
 }
 
 export type GroupedResourceIndexProps<
-  T extends Resource,
+  T extends { id: string },
   G extends Record<string, unknown>,
 > = {
   resource: NavigableResource
@@ -46,3 +46,6 @@ export type GroupedResourceIndexProps<
   listContainer?: HTMLElement | null
   scrollIndexByEntityId?: Map<string, number>
 }
+
+/** Minimal identity shared by Feature rows and system issue rows. */
+export type ResourceIndexEntity = { id: string }
