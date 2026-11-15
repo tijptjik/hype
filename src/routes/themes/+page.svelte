@@ -237,6 +237,11 @@ const panel: ResourcePanelModel = {
         class="text-muted-foreground hover:text-primary flex items-center gap-2 text-xs"
         >Map symbols <ArrowUpRight class="size-4" /></a
       >
+      <a
+        href="/themes/exits"
+        class="text-muted-foreground hover:text-primary flex items-center gap-2 text-xs"
+        >Exit signs <ArrowUpRight class="size-4" /></a
+      >
     </header>
 
     <div class="grid gap-10 py-10 lg:grid-cols-[1fr_520px] lg:items-center">

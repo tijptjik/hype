@@ -13,6 +13,14 @@ category filters and approved service colour palette. The reference and maps sha
 `src/lib/indoor/facilityColours.ts`; pictograms are defined in
 `src/lib/indoor/facilities.ts`.
 
+## Exit signs
+
+The hosted exit-sign reference is at `/themes/exits`, linked from `/themes`. It uses
+`ExitSign.svelte`, the same renderer as station exit markers. Each letter and number is
+centred together, with optical spacing adjustments for D6, G2 and the N series. The
+catalogue records 62 source exit codes across 98 station maps; regenerate it with
+`scripts/indoor/catalogue-exits.py` against the retained station baseline.
+
 ## Loading and bundle size
 
 Use a static, per-icon import:
