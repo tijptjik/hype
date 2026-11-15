@@ -214,8 +214,8 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
   ],
   feature: [
     ADMIN_FACETS.core,
-    ADMIN_FACETS.fields,
     ADMIN_FACETS.location,
+    ADMIN_FACETS.fields,
     ADMIN_FACETS.images,
     ADMIN_FACETS.updates,
   ],
