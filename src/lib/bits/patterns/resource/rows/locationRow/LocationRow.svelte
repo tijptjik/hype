@@ -6,6 +6,8 @@ import { goto } from '$app/navigation'
 import { Row } from '#lib/bits/custom/index.js'
 import LocationAvatar from '#lib/bits/custom/locationIcon/LocationAvatar.svelte'
 // DOMAIN
+import { facilitySymbol } from '#lib/indoor/facilities.js'
+import { canonicalFacilityLabel } from '#lib/indoor/facilityLabels.js'
 import { locationKindLabel } from '#lib/locations/kinds.i18n.js'
 import { lifecycleStatus } from '#lib/locations/lifecycle.js'
 import { lifecycleLabel } from '#lib/locations/lifecycle.i18n.js'
@@ -31,6 +33,13 @@ const name = $derived(
     entity.id,
 )
 const address = $derived(entity.facts?.location.address.fallbackDisplay)
+const buildingPartType = $derived(
+  entity.kind === 'building_part'
+    ? entity.indoorSource?.category
+      ? canonicalFacilityLabel(facilitySymbol(entity.indoorSource.category).label)
+      : locationKindLabel(entity.kind)
+    : null,
+)
 const operatorName = $derived(
   entity.operator?.names[locale] || entity.operator?.names.en,
 )
@@ -80,7 +89,7 @@ function open(): void {
   {index}
   entityId={entity.id}
   variant="resource"
-  class="h-[72px] grid-cols-1"
+  class="min-h-[72px] grid-cols-1"
   onclick={open}
   onkeydown={event => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -92,13 +101,21 @@ function open(): void {
   <div class="flex min-w-0 flex-1 items-center gap-4 px-4">
     <LocationAvatar kind={entity.kind} operator={entity.operator} />
     <div class="min-w-0 flex-1">
-      <a
-        {href}
-        class="block truncate font-semibold"
-        data-tooltip={name}
-        onclick={event => event.stopPropagation()}
-        >{name}</a
-      >
+      <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        <a
+          {href}
+          class="min-w-0 font-semibold break-words whitespace-normal"
+          data-tooltip={name}
+          onclick={event => event.stopPropagation()}
+          >{name}</a
+        >
+        {#if buildingPartType}
+          <span
+            class="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs break-words whitespace-normal"
+            >{buildingPartType}</span
+          >
+        {/if}
+      </div>
       <p class="text-muted-foreground truncate text-sm" data-tooltip={description}>
         {description}
       </p>

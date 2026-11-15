@@ -4,6 +4,16 @@ import type { LocationFacts } from './model'
 
 /** Standalone Location projection; source payloads and Feature associations stay private. */
 export type LocationResource = {
+  /** Retained upstream polygon identity, independent of the local Location ID. */
+  indoorSource?: {
+    category?: string | null
+    provider: string
+    layer: string
+    polygonId: string
+    sourceKey: string
+    mapId: string
+    href: string | null
+  } | null
   premisesMapId?: string | null
   premisesMap?: { id: string; href: string } | null
   /** Explicit operating body; independent of brand identity and access ownership. */
