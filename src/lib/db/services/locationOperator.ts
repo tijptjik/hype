@@ -3,7 +3,7 @@ import { and, eq, isNull } from 'drizzle-orm'
 // SCHEMA
 import { locationOperator, locationPremisesMap } from '../schema/operator'
 // DOMAIN
-import { premisesMaps } from '#lib/indoor/registry.js'
+import { premisesMap } from '../schema/premisesMap'
 // TYPES
 import type { Database } from '#lib/types.js'
 
@@ -74,13 +74,18 @@ export async function assignLocationOperator(
 /** Assign an explicit maintained map without replacing another map association.
  * @param db Authorized importer database. @param input Location, registry reference and actor.
  * @returns Nothing; throws for unknown maps or conflicting assignments.
- * @remarks Availability remains registry-derived; this does not grant access or infer containment.
+ * @remarks Availability comes from the published database pointer; this does not grant access or infer containment.
  */
 export async function assignLocationPremisesMap(
   db: Database,
   input: { locationId: string; mapId: string; actorId: string },
 ): Promise<void> {
-  if (!input.actorId.trim() || !premisesMaps.some(map => map.id === input.mapId))
+  const map = await db
+    .select({ id: premisesMap.id })
+    .from(premisesMap)
+    .where(eq(premisesMap.id, input.mapId))
+    .get()
+  if (!input.actorId.trim() || !map)
     throw new Error('Map assignment requires an actor and a known map reference')
   await db
     .insert(locationPremisesMap)
