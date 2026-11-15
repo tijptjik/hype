@@ -66,6 +66,11 @@ floors and paid/unpaid section metadata remain independent of occupants. See
 [the indoor onboarding contract](../../../docs/maps/indoor-handoff.md#location-onboarding-contract-15-november-2026-refs-194)
 for source ambiguities, migration, importer and verification boundaries.
 
+Kowloon Tong onboarding (Refs #194) preserves all 40 source occupants and six distinct
+7-Eleven units. The [shop index](../../../docs/maps/kowloon-tong-shops.md) records exact
+unit identities and reused local establishments. Reviewed occupancies do not rewrite
+Feature acceptance; the Breadline G1/KOT113 association remains pending review.
+
 Feature naming review (14 November 2026, Refs #194, parent #180): template creation is a
 separate modal step with fixed selectable expression blocks and persistent component
 options. Saving a template publishes its reusable definition and opens the application
