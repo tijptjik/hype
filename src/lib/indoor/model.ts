@@ -19,6 +19,9 @@ export const layerNames = [
 ] as const
 export type LayerName = (typeof layerNames)[number]
 export type IndoorData = Record<LayerName, Collection> & {
+  sourceDataset?: string
+  sourceSnapshotHash?: string
+  correctionIssues?: string[]
   attributionLogo?: string
   documents?: { kind: string; path: string }[]
   connections?: MapConnection[]

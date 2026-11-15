@@ -82,8 +82,18 @@ Explicit corrections take precedence in the saved draft.
 Existing published maps use the same facility-name formatter in the directory
 projection, without rewriting their retained source features or archive hashes.
 
-The correction service is concurrent work not included in the terminology commit.
-`scripts/indoor/facility-label-correction-integration.patch` preserves its exact
-normalization hook. The hook is already active in this working checkout; after
-integrating the correction service elsewhere, apply the patch only if absent. The
-directory normalization and its tests are independently committed.
+The correction replay service and import hook are integrated into `preview`, with
+normalization applied after raw retention and before explicit correction replay. The
+temporary integration patch has been removed. Migrations
+`0257_premises_map_correction.sql` and `0258_system_task.sql` are prerequisites for
+using the correction/import path in a new environment; this integration does not run
+migrations, import station drafts or publish maps.
+
+## Verified R2 upload — 15 November 2026
+
+The authorized upload completed to the private development bucket prefix above.
+`rclone check --download --one-way` reported **789 matching files and zero
+differences**. Remote inventory independently reported **789 objects totaling
+169,421,175 bytes**. The receipt is retained at
+`/home/io/.local/state/hype/mtr-baselines/2026-11-15-initial-upload.log`. Station
+imports, correction review and map publication remain on hold.

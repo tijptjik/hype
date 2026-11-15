@@ -5,6 +5,8 @@ import { getPlatformProxy } from 'wrangler'
 // DRIZZLE
 import { drizzle } from 'drizzle-orm/d1'
 import { eq, sql } from 'drizzle-orm'
+// SYSTEM TASKS
+import { prepareCorrectedMap } from '../../src/lib/db/services/premisesMapCorrection'
 // DOMAIN
 import { saveMapDraft, publishMapDraft } from '../../src/lib/db/services/premisesMap'
 import { retryBusyRead } from '../../src/lib/db/services/sqlite'
@@ -33,6 +35,7 @@ const entries: {
   name: string
   nameZh: string
   kind: 'station' | 'building'
+  sourceDataset?: string
   sourceDirectory: string
   bundle: string
 }[] = await Bun.file(input).json()
@@ -117,12 +120,29 @@ try {
           })
           .onConflictDoNothing()
     }
+    const correctedBundle = await prepareCorrectedMap(db, proxy.env.ASSET_RAW_DEV, {
+      id: entry.id,
+      sourceDataset:
+        entry.sourceDataset ?? (entry.kind === 'station' ? 'landsd-mtr' : entry.id),
+      bundle,
+    })
     const draft = await saveMapDraft(db, proxy.env.ASSET_RAW_DEV, {
       id: entry.id,
       expectedVersion: current.draftVersion,
-      bundle,
+      bundle: correctedBundle,
       actorId: 'local-map-import',
     })
+    if (correctedBundle.data.correctionIssues?.length) {
+      console.log(
+        JSON.stringify({
+          map: entry.id,
+          draft: draft.hash,
+          published: false,
+          issues: correctedBundle.data.correctionIssues,
+        }),
+      )
+      continue
+    }
     await publishMapDraft(db, proxy.env.ASSET_RAW_DEV, {
       id: entry.id,
       hash: draft.hash,

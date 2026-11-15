@@ -36,6 +36,10 @@ async function share(copy = false): Promise<void> {
   }
 }
 let query = $state('')
+/** Use the shared facility terminology while preserving shop spelling. @param place Directory entry. @returns Display name. */
+function displayName(place: Place): string {
+  return place.name.en
+}
 const levels = $derived(
   station.data?.level_polygon.features.toSorted(
     (a, b) => Number(b.properties.level_ordinal) - Number(a.properties.level_ordinal),
@@ -160,7 +164,7 @@ function select(place: Place): void {
                   <p class="text-primary text-xs">
                     {selected.code || (selected.kind === 'shop' ? 'Shop' : 'Facility')}
                   </p>
-                  <h3 class="font-semibold">{selected.name.en}</h3>
+                  <h3 class="font-semibold">{displayName(selected)}</h3>
                 </div>
                 <button
                   aria-label="Close place details"
@@ -230,7 +234,7 @@ function select(place: Place): void {
                 aria-pressed={selected?.id === place.id}
                 onclick={() => select(place)}
               >
-                <span class="text-sm font-medium">{place.name.en}</span>
+                <span class="text-sm font-medium">{displayName(place)}</span>
                 {#if place.code}
                   <span class="text-primary ml-2 text-xs">{place.code}</span>
                 {/if}

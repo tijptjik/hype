@@ -114,6 +114,10 @@ export async function publishMapDraft(
   },
 ): Promise<number> {
   const bundle = await readMapBundle(bucket, input.id, input.hash)
+  if (bundle.data.correctionIssues?.length)
+    throw new Error(
+      'MAP_CORRECTIONS_UNRESOLVED: repair corrections and rebuild the draft before publishing',
+    )
   const now = new Date().toISOString(),
     version = input.expectedPublishedVersion + 1
   // Publication is the editor's verification of every enabled connection.

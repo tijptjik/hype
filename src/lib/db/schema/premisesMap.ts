@@ -2,6 +2,7 @@
 import { sqliteTable, text, integer, primaryKey } from 'drizzle-orm/sqlite-core'
 // SCHEMA
 import { location } from './location'
+import { user } from './user'
 // TYPES
 import type { Collection } from '#lib/indoor/model.js'
 
@@ -62,4 +63,30 @@ export const premisesMapDraftRevision = sqliteTable(
     createdAt: text('createdAt').notNull(),
   },
   t => [primaryKey({ columns: [t.mapId, t.version] })],
+)
+
+/** Current label and connection corrections keyed by stable source identity; edits replace the row without revision history. */
+export const premisesMapCorrection = sqliteTable(
+  'premisesMapCorrection',
+  {
+    mapId: text('mapId')
+      .notNull()
+      .references(() => premisesMap.id),
+    sourceDataset: text('sourceDataset').notNull(),
+    sourceLayer: text('sourceLayer').notNull(),
+    sourceEntityId: text('sourceEntityId').notNull(),
+    field: text('field').notNull(),
+    originalValue: text('originalValue'),
+    correctedValue: text('correctedValue').notNull(),
+    sourceSnapshotHash: text('sourceSnapshotHash').notNull(),
+    reason: text('reason').notNull(),
+    authorUserId: text('authorUserId')
+      .notNull()
+      .references(() => user.id),
+  },
+  t => [
+    primaryKey({
+      columns: [t.mapId, t.sourceDataset, t.sourceLayer, t.sourceEntityId, t.field],
+    }),
+  ],
 )

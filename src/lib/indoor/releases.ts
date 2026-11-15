@@ -6,6 +6,11 @@ import { layerNames, type IndoorData } from './model'
 /** Stable object identifiers are local to a map, not display labels or coordinates. */
 export const mapIdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,99}$/)
 export const releaseHashSchema = z.string().regex(/^[a-f0-9]{64}$/)
+export const entranceSideSchema = z.strictObject({
+  polygonIndex: z.number().int().nonnegative(),
+  edgeIndex: z.number().int().nonnegative(),
+})
+export type EntranceSide = z.infer<typeof entranceSideSchema>
 export const connectionSchema = z.strictObject({
   from: z.string().min(1).max(200),
   to: z.string().min(1).max(200),
@@ -26,6 +31,8 @@ export const connectionSchema = z.strictObject({
     .optional(),
   direction: z.enum(['both', 'forward']).nullable(),
   enabled: z.boolean(),
+  fromEntrance: entranceSideSchema.nullable().optional(),
+  toEntrance: entranceSideSchema.nullable().optional(),
 })
 export type MapConnection = z.infer<typeof connectionSchema>
 export type MapBundle = {
@@ -157,6 +164,21 @@ export function validateMapBundle(input: unknown): MapBundle {
       c.fromLevel === c.toLevel
     )
       throw new Error('Invalid connection endpoints')
+    for (const [feature, side] of [
+      [from, c.fromEntrance],
+      [to, c.toEntrance],
+    ] as const) {
+      if (!side) continue
+      const polygons =
+        feature.geometry.type === 'Polygon'
+          ? [feature.geometry.coordinates]
+          : feature.geometry.type === 'MultiPolygon'
+            ? feature.geometry.coordinates
+            : []
+      const ring = polygons[side.polygonIndex]?.[0]
+      if (!ring || side.edgeIndex >= ring.length - 1)
+        throw new Error('Invalid connection entrance side')
+    }
     if (
       from.properties.unit_category !== c.category ||
       to.properties.unit_category !== c.category
