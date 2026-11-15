@@ -1,4 +1,14 @@
-import { searchPremises, findStation } from '#lib/indoor/registry.js'
+// SVELTE
+import { page } from '$app/state'
+import { goto } from '$app/navigation'
+// INDOOR
+import {
+  searchPremises,
+  findStation,
+  stations,
+  premisesPath,
+  premisesCode,
+} from '#lib/indoor/registry.js'
 // CONTEXT
 import { usePanelResources } from '#lib/context/panel-resources.svelte.js'
 // SEARCH
@@ -50,6 +60,30 @@ export function useOmnibarModel(
   getOmnibarProps: () => OmnibarProps
 } {
   let premisesExpanded = $state<'station' | 'mall' | null>(null)
+  const stationWalkIndex = $derived(
+    page.url.pathname.startsWith('/premises/') &&
+      page.url.searchParams.get('walk') === 'mtr-stations'
+      ? stations.findIndex(
+          station => station.id === premisesCode(page.url.pathname.split('/')[2] ?? ''),
+        )
+      : -1,
+  )
+
+  /** Opens one member of the temporary station walk. @param index Catalogue position. @returns Nothing. */
+  function selectStationWalkIndex(index: number): void {
+    const station = stations[index]
+    if (!station) return
+    omniCtx.closeTray()
+    void goto(`${premisesPath(station.id)}?walk=mtr-stations`)
+  }
+
+  /** Leaves the temporary walk while retaining the current premises. @returns Nothing. */
+  function closeStationWalk(): void {
+    omniCtx.resetToSearch(false)
+    const url = new URL(page.url)
+    url.searchParams.delete('walk')
+    void goto(url)
+  }
   const resourceTypes = ['layer', 'project', 'organisation'] as const
   const resourceLists = resourceTypes.map(type =>
     usePanelResources(
@@ -369,9 +403,29 @@ export function useOmnibarModel(
       {
         collectionType: OmniCollection.walk,
         loading: omniCtx.searchPending,
-        results: omniCtx.searchResults.walk ?? [],
+        results: [
+          ...(appCtx.showMtrStations &&
+          (!omniCtx.state.searchTerm.trim() ||
+            matchesResourceIndexSearch(
+              { id: 'mtr-stations', i18n: { en: { name: 'MTR stations 港鐵 港铁' } } },
+              omniCtx.state.searchTerm,
+            ))
+            ? [
+                {
+                  ref: 'mtr-stations',
+                  name: 'MTR stations',
+                  count: stations.length,
+                  collectionType: OmniCollection.walk,
+                },
+              ]
+            : []),
+          ...(omniCtx.searchResults.walk ?? []),
+        ],
         onLoadMore: () => void omniCtx.expandSearchSection(OmniCollection.walk),
-        onSelection: omniCtx.searchHandlers.walk,
+        onSelection: ref =>
+          ref === 'mtr-stations'
+            ? selectStationWalkIndex(0)
+            : omniCtx.searchHandlers.walk(ref),
       },
     ]
     return OMNIBAR_SEARCH_POLICY.filter(policy =>
@@ -398,12 +452,18 @@ export function useOmnibarModel(
 
   return {
     getOmnibarProps: () => {
-      const collectionItems = getCollectionItems()
-      const currentIndex = omniCtx.navIndex
+      const stationWalk = stationWalkIndex >= 0
+      const collectionItems = stationWalk
+        ? stations.map(station => ({
+            id: station.id,
+            label: getI18n(station, 'name', appCtx.view.getUserPreferences()),
+          }))
+        : getCollectionItems()
+      const currentIndex = stationWalk ? stationWalkIndex : omniCtx.navIndex
       const collectionLength = collectionItems.length
 
       return {
-        mode: omniCtx.state.mode,
+        mode: stationWalk ? OmniMode.navigation : omniCtx.state.mode,
         hasElevatedChrome: hasElevatedChrome(
           appCtx.view.layout.getEffectiveAppMainWidth(),
           responsiveCtx.visibleWindowHeight,
@@ -453,32 +513,46 @@ export function useOmnibarModel(
           isCardOpen: omniCtx.state.isCardOpen,
           isCardOpeningPending: omniCtx.isCardOpeningPending,
           showArrows:
-            omniCtx.state.mode !== OmniMode.feature &&
-            !omniCtx.isNewFeatureMode &&
-            collectionLength > 0,
+            stationWalk ||
+            (omniCtx.state.mode !== OmniMode.feature &&
+              !omniCtx.isNewFeatureMode &&
+              collectionLength > 0),
           showCollectionSwitcher:
-            omniCtx.state.mode !== OmniMode.feature && !omniCtx.isNewFeatureMode,
+            stationWalk ||
+            (omniCtx.state.mode !== OmniMode.feature && !omniCtx.isNewFeatureMode),
           leftDisabled: currentIndex <= 0,
           rightDisabled:
             collectionLength === 0 ||
-            (currentIndex >= collectionLength - 1 && !omniCtx.collectionHasMore),
-          hasMore: omniCtx.collectionHasMore,
-          loading: appCtx.view.resources.featureQueries.collection.loading,
+            (currentIndex >= collectionLength - 1 &&
+              (stationWalk || !omniCtx.collectionHasMore)),
+          hasMore: !stationWalk && omniCtx.collectionHasMore,
+          loading:
+            !stationWalk && appCtx.view.resources.featureQueries.collection.loading,
           onLoadMore: () => void omniCtx.loadMoreCollection(),
-          collectionMetaText: getCollectionMetaText(),
-          featureTitle: getFeatureTitle(),
-          navTitle: omniCtx.navTitle,
+          collectionMetaText: stationWalk
+            ? `MTR stations (${currentIndex + 1} of ${stations.length})`
+            : getCollectionMetaText(),
+          featureTitle: stationWalk
+            ? collectionItems[currentIndex].label
+            : getFeatureTitle(),
+          navTitle: stationWalk ? 'MTR stations' : omniCtx.navTitle,
           items: collectionItems,
           currentIndex,
-          onPrevious: () => omniCtx.navPrevious(),
-          onNext: () => omniCtx.navNext(),
+          onPrevious: () =>
+            stationWalk
+              ? selectStationWalkIndex(currentIndex - 1)
+              : omniCtx.navPrevious(),
+          onNext: () =>
+            stationWalk ? selectStationWalkIndex(currentIndex + 1) : omniCtx.navNext(),
           onToggleTray: handleToggleTray,
-          onToggleCard: handleToggleCard,
-          onClose: handleNavigationClose,
-          onSelectIndex: handleSelectCollectionIndex,
+          onToggleCard: stationWalk ? handleToggleTray : handleToggleCard,
+          onClose: stationWalk ? closeStationWalk : handleNavigationClose,
+          onSelectIndex: stationWalk
+            ? selectStationWalkIndex
+            : handleSelectCollectionIndex,
           onCloseTray: () => omniCtx.closeTray(),
         },
-        onDismiss: handleDismiss,
+        onDismiss: stationWalk ? closeStationWalk : handleDismiss,
       }
     },
   }

@@ -16,6 +16,7 @@ let { direction, disabled = false, onClick }: OmnibarNavigationArrowProps = $pro
   'right'
     ? 'w-140:rounded-r-md'
     : 'w-140:rounded-l-md'}"
+  aria-label={direction === 'left' ? 'Previous' : 'Next'}
   {disabled}
   onclick={onClick}
 >
