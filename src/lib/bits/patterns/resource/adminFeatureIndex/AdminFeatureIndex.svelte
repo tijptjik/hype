@@ -20,6 +20,7 @@ import type { FeatureIndexQuery } from '#lib/features/indexQuery.js'
 import { refreshRemoteQuery, readFreshRemoteQuery } from '#lib/remote/index.js'
 // SERVICES
 import { collectBulkSelection } from '#lib/client/services/bulkSelection.js'
+import { matchesFeaturePrisms } from '#lib/client/services/featureQuery.js'
 import { runBulkCommands } from '#lib/client/services/bulkCommands.js'
 import { patchBulkFeatureRows } from '#lib/client/services/bulkFeatureRows.js'
 import { getCachedFeatureRowModel } from '#lib/client/services/featureRow.js'
@@ -372,7 +373,6 @@ const ownerSignature = $derived(
     brandId,
     adminCtx.view.resources.scopeKey,
     adminCtx.view.cacheCtx.generation,
-    adminCtx.view.scope.prisms,
   ]),
 )
 const sortSignature = $derived.by(() => {
@@ -1178,7 +1178,7 @@ $effect(() => {
     entities = remoteMatchedEntities ?? []
     return
   }
-  // A changed account or prism cannot preview rows retained by the previous owner.
+  // A changed account or location cannot preview rows retained by the previous owner.
   // Provenance is server-owned and absent from optimistic cache rows; await its filtered page.
   if (
     adminCtx.view.filters.viewFilters.feature.origin ||
@@ -1191,16 +1191,26 @@ $effect(() => {
     remoteOwnerSignature === ownerSignature
       ? (remoteMatchedEntities ?? (locationScope || brandId ? [] : optimisticEntities))
       : []
+  // Keep matching rows mounted while the server resolves the new prism selection.
+  const prismMatches = retained.filter(feature =>
+    matchesFeaturePrisms(feature, adminCtx.view.scope.prisms, {
+      layerProjectId: id =>
+        adminCtx.view.queries.rows.layer.find(layer => layer.id === id)?.projectId,
+      projectOrganisationId: id =>
+        adminCtx.view.queries.rows.project.find(project => project.id === id)
+          ?.organisationId,
+    }),
+  )
   entities = adminCtx.view.filters.applyFeatureViewFilters(
     normalizedTextQuery
-      ? retained.filter(feature =>
+      ? prismMatches.filter(feature =>
           adminCtx.view.filters.textFilter(
             FirstClassResource.feature,
             feature,
             normalizedTextQuery,
           ),
         )
-      : retained,
+      : prismMatches,
   ) as Feature[]
 })
 
