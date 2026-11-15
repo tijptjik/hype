@@ -82,7 +82,7 @@ test('premises URLs restore exact places, share links and search stations', asyn
 }) => {
   test.setTimeout(120000)
   await page.setViewportSize({ width: 1440, height: 1000 })
-  const path = '/premises/mtr-ket/places/85dc0347-d11b-4c8c-9686-dc6697050317'
+  const path = '/premises/kennedy-town-mtr/places/85dc0347-d11b-4c8c-9686-dc6697050317'
   await page.goto(path, { waitUntil: 'domcontentloaded' })
   const session = await (await page.request.get('/api/auth/get-session')).json()
   expect(session.user.id).toBe('hype-local-agent-admin')
@@ -112,7 +112,7 @@ test('premises URLs restore exact places, share links and search stations', asyn
   await page.goBack()
   await expect(details).toContainText('KET 3', { timeout: 60000 })
   await page.screenshot({ path: join(output, 'hype-premises-shared-place.png') })
-  await page.goto('/premises/mtr-tik')
+  await page.goto('/premises/tiu-keng-leng-mtr')
   await expect(
     page.getByRole('heading', { name: 'Tiu Keng Leng' }).first(),
   ).toBeVisible({ timeout: 60000 })
@@ -132,8 +132,10 @@ test('premises URLs restore exact places, share links and search stations', asyn
     page.getByText('Kennedy Town · 堅尼地城 · KET', { exact: true }),
   ).toBeVisible()
   await page.getByText('Kennedy Town · 堅尼地城 · KET', { exact: true }).click()
-  await expect(page).toHaveURL(/\/premises\/mtr-ket$/)
-  await page.goto('/premises/mtr-ket/places/00000000-0000-0000-0000-000000000000')
+  await expect(page).toHaveURL(/\/premises\/kennedy-town-mtr$/)
+  await page.goto(
+    '/premises/kennedy-town-mtr/places/00000000-0000-0000-0000-000000000000',
+  )
   await expect(page.getByRole('alert')).toContainText('not available', {
     timeout: 60000,
   })
@@ -144,7 +146,7 @@ test('indoor camera rotates, tilts, pans and distinguishes reviewed links', asyn
 }) => {
   test.setTimeout(120000)
   await page.setViewportSize({ width: 1440, height: 1000 })
-  await page.goto('/premises/mtr-ket', { waitUntil: 'domcontentloaded' })
+  await page.goto('/premises/kennedy-town-mtr', { waitUntil: 'domcontentloaded' })
   const scene = page.locator('[data-station-scene]')
   await expect(scene).toBeVisible({ timeout: 60000 })
   expect((await (await page.request.get('/api/auth/get-session')).json()).user.id).toBe(
@@ -210,7 +212,7 @@ test('station outline offers indoor entry at close outdoor zoom', async ({ page 
   await page.screenshot({ path: join(output, 'hype-station-outdoor-outline.png') })
   // The map centre lies inside the source venue footprint at this URL.
   await page.mouse.click(600, 450)
-  await expect(page).toHaveURL(/premises\/mtr-ket/, { timeout: 15000 })
+  await expect(page).toHaveURL(/premises\/kennedy-town-mtr/, { timeout: 15000 })
 })
 
 test('modifier scroll and two-finger gestures manipulate the indoor camera', async ({
@@ -218,7 +220,7 @@ test('modifier scroll and two-finger gestures manipulate the indoor camera', asy
 }) => {
   test.setTimeout(120000)
   await page.setViewportSize({ width: 1200, height: 900 })
-  await page.goto('/premises/mtr-ket', { waitUntil: 'domcontentloaded' })
+  await page.goto('/premises/kennedy-town-mtr', { waitUntil: 'domcontentloaded' })
   const scene = page.locator('[data-station-scene]')
   await expect(scene).toBeVisible({ timeout: 60000 })
   expect((await (await page.request.get('/api/auth/get-session')).json()).user.id).toBe(
@@ -272,7 +274,7 @@ test('bread route highlights, flies to the concourse and can be interrupted', as
 }) => {
   test.setTimeout(120000)
   await page.setViewportSize({ width: 1440, height: 1000 })
-  await page.goto('/premises/mtr-ket', { waitUntil: 'domcontentloaded' })
+  await page.goto('/premises/kennedy-town-mtr', { waitUntil: 'domcontentloaded' })
   const scene = page.locator('[data-station-scene]')
   await expect(scene).toBeVisible({ timeout: 60000 })
   expect((await (await page.request.get('/api/auth/get-session')).json()).user.id).toBe(
@@ -314,7 +316,9 @@ test('bread route highlights, flies to the concourse and can be interrupted', as
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.getByRole('button', { name: '▶ Fly to 7-Eleven', exact: true }).click()
   await expect(scene).toHaveAttribute('data-route-mode', 'highlight')
-  await page.goto('/premises/mtr-ket/places/e4214678-8599-4e2b-9356-79d1630321ef')
+  await page.goto(
+    '/premises/kennedy-town-mtr/places/e4214678-8599-4e2b-9356-79d1630321ef',
+  )
   await expect(scene).toBeVisible({ timeout: 60000 })
   await expect(page.locator('image[href="/indoor/hana-musubi.png"]')).toHaveCount(1)
   await page.screenshot({ path: join(output, 'hype-station-hana-full-bleed.png') })
@@ -325,9 +329,12 @@ test('Hana-musubi artwork fills the pink shop footprint after image decode', asy
 }) => {
   test.setTimeout(90000)
   await page.setViewportSize({ width: 1440, height: 1000 })
-  await page.goto('/premises/mtr-ket/places/e4214678-8599-4e2b-9356-79d1630321ef', {
-    waitUntil: 'domcontentloaded',
-  })
+  await page.goto(
+    '/premises/kennedy-town-mtr/places/e4214678-8599-4e2b-9356-79d1630321ef',
+    {
+      waitUntil: 'domcontentloaded',
+    },
+  )
   await expect(page.locator('[data-station-scene="plan"]')).toBeVisible({
     timeout: 60000,
   })

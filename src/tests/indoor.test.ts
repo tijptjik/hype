@@ -210,7 +210,9 @@ describe('premises navigation and logos', () => {
     expect(stations).toHaveLength(98)
     for (const term of ['Kennedy Town', 'KET', '堅尼地城'])
       expect(searchStations(term).some(s => s.id === 'KET')).toBe(true)
-    expect(premisesPath('KET', 'unit-id')).toBe('/premises/mtr-ket/places/unit-id')
+    expect(premisesPath('KET', 'unit-id')).toBe(
+      '/premises/kennedy-town-mtr/places/unit-id',
+    )
   })
   it('retains every source unit as a distinct selectable space', () => {
     const data = dataset()

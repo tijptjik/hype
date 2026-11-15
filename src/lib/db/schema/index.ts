@@ -70,3 +70,4 @@ export * from './fieldResearch'
 export * from './staffRoleHistory'
 
 export * from './locationCanonicalDraft'
+export * from './operator'

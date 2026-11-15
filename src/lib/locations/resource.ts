@@ -4,6 +4,10 @@ import type { LocationFacts } from './model'
 
 /** Standalone Location projection; source payloads and Feature associations stay private. */
 export type LocationResource = {
+  premisesMapId?: string | null
+  premisesMap?: { id: string; href: string } | null
+  /** Explicit operating body; independent of brand identity and access ownership. */
+  operator?: import('./operator').LocationOperator | null
   /** Public provenance metadata; raw source payloads remain private. */
   metadata?: {
     createdAt: string

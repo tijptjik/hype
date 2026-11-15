@@ -5,6 +5,13 @@ import { sharedLocationFacts } from './locationShared'
 import { and, eq, gt, or, sql } from 'drizzle-orm'
 // SCHEMA
 import { location as locationTable, locationRevision } from '../schema/location'
+import {
+  operator,
+  locationOperator,
+  operatorI18n,
+  locationPremisesMap,
+} from '../schema/operator'
+import { availablePremisesMap } from '#lib/indoor/registry.js'
 // LOCATION
 import { locationTaxonomy } from '#lib/locations/taxonomy.js'
 import { locationSourceReference, type LocationKind } from '#lib/locations/kinds.js'
@@ -130,6 +137,12 @@ export async function listLocationResources(
   const rows = await db
     .select({
       id: locationTable.id,
+      operatorId: operator.id,
+      operatorReferenceCode: locationOperator.referenceCode,
+      premisesMapId: locationPremisesMap.mapId,
+      operatorLogo: operator.logo,
+      operatorWebsite: operator.website,
+      operatorNames: sql<string>`(SELECT json_group_object(locale,name) FROM ${operatorI18n} WHERE ${operatorI18n.operatorId}=${operator.id})`,
       draftVersion: sql<
         string | null
       >`CASE WHEN ${canonicalDraft} THEN ${locationRevision.contentHash} END`,
@@ -159,6 +172,9 @@ export async function listLocationResources(
     })
     .from(locationTable)
     .leftJoin(locationRevision, revisionJoin)
+    .leftJoin(locationOperator, eq(locationOperator.locationId, locationTable.id))
+    .leftJoin(locationPremisesMap, eq(locationPremisesMap.locationId, locationTable.id))
+    .leftJoin(operator, eq(operator.id, locationOperator.operatorId))
     .where(and(match, input.after ? gt(locationTable.id, input.after) : undefined))
     .orderBy(locationTable.id)
     .limit(26)
@@ -167,6 +183,11 @@ export async function listLocationResources(
       .slice(0, 25)
       .map(
         async ({
+          operatorId,
+          operatorReferenceCode,
+          operatorLogo,
+          operatorWebsite,
+          operatorNames,
           organisationOverrides,
           ownerOrganisationNames,
           editingOrganisationNames,
@@ -230,6 +251,16 @@ export async function listLocationResources(
           }
           return {
             ...row,
+            premisesMap: availablePremisesMap(row.premisesMapId),
+            operator: operatorId
+              ? {
+                  id: operatorId,
+                  referenceCode: operatorReferenceCode,
+                  names: JSON.parse(operatorNames),
+                  logo: operatorLogo,
+                  website: operatorWebsite,
+                }
+              : null,
             taxonomy: locationTaxonomy(row.kind),
             ownerOrganisationNames: JSON.parse(ownerOrganisationNames),
             editingOrganisationNames: JSON.parse(editingOrganisationNames),

@@ -67,11 +67,11 @@ Svelte validation uses `dev-remote typecheck`.
 
 ## Premises URLs and station directory
 
-`/premises/mtr-{code}` opens a station; `/premises/mtr-{code}/places/{source-id}` opens
-a particular unit or amenity on its floor. Card Copy link and Share use this address.
-Source IDs preserve identity independently of shop names or kiosk codes. Every source
-unit is selectable, including unoccupied rooms. These URLs do not create or imply a
-match to a Hype Location record.
+`/premises/{station-name}-mtr` opens a station;
+`/premises/{station-name}-mtr/places/{source-id}` opens a particular unit or amenity on
+its floor. Card Copy link and Share use this address. Source IDs preserve identity
+independently of shop names or kiosk codes. Every source unit is selectable, including
+unoccupied rooms. These URLs do not create or imply a match to a Hype Location record.
 
 The existing taxonomy defines `premises` as a class of **built** Location, labelled
 “Premises / site”, separate from the `address` kind. The namespace can accommodate
@@ -148,11 +148,11 @@ available in SaanSeoi at `docs/datasets/sources/hkgov-landsd/indoor-handoff.md`.
 
 ## Hong Kong station
 
-`/premises/mtr-hok` uses Lands Department venue `3c17605d-df03-4b09-90f5-bbca8cf1294d`.
-The raw snapshot in `static/indoor/hong-kong/` contains 953 features: one venue, nine
-levels, 249 units, 379 openings, 232 amenities and 83 occupant records. Its manifest
-records retrieval time, source URLs, counts, byte sizes and SHA-256 hashes. Retrieval is
-not a survey date.
+`/premises/hong-kong-mtr` uses Lands Department venue
+`3c17605d-df03-4b09-90f5-bbca8cf1294d`. The raw snapshot in `static/indoor/hong-kong/`
+contains 953 features: one venue, nine levels, 249 units, 379 openings, 232 amenities
+and 83 occupant records. Its manifest records retrieval time, source URLs, counts, byte
+sizes and SHA-256 hashes. Retrieval is not a survey date.
 
 The snapshot registry drives both indoor loading and outdoor discovery. Hong Kong's
 source footprint opens its own station route. The default detailed level is the Tung

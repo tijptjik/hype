@@ -6,6 +6,7 @@ import { Panel as RoutePanel } from '#lib/enums.js'
 import { getAppCtx } from '#lib/context/app.svelte.js'
 import { getSurfaceLayoutCtx } from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
+import { premisesCode } from '#lib/indoor/registry.js'
 import { Panel } from '#lib/enums.js'
 // COMPONENTS
 import StationScene from './StationScene.svelte'
@@ -16,11 +17,11 @@ const station = app.station
 const layout = getSurfaceLayoutCtx()
 const responsive = getResponsiveCtx()
 $effect(() => {
-  const match = /^\/premises\/mtr-([a-z]{3})(?:\/places\/([^/]+))?\/?$/.exec(
+  const match = /^\/premises\/([a-z0-9-]+)(?:\/places\/([^/]+))?\/?$/.exec(
     page.url.pathname,
   )
   untrack(() => {
-    const code = match ? match[1].toUpperCase() : undefined
+    const code = match ? premisesCode(match[1]) : undefined
     if (match && code) {
       const revealPanel = !station.active || station.code !== code || Boolean(match[2])
       void station.open(code, match[2], false)

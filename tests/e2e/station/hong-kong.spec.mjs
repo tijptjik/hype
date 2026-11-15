@@ -8,7 +8,7 @@ test('Hong Kong station loads, drills down, shares and survives station switchin
 }) => {
   test.setTimeout(180000)
   await page.setViewportSize({ width: 1440, height: 1000 })
-  await page.goto('/premises/mtr-hok', { waitUntil: 'domcontentloaded' })
+  await page.goto('/premises/hong-kong-mtr', { waitUntil: 'domcontentloaded' })
   await expect(page.locator('[data-station-level]')).toHaveCount(9, { timeout: 60000 })
   expect((await (await page.request.get('/api/auth/get-session')).json()).user.id).toBe(
     'hype-local-agent-admin',
@@ -23,7 +23,7 @@ test('Hong Kong station loads, drills down, shares and survives station switchin
     .first()
     .click()
   await expect(page).toHaveURL(
-    /\/premises\/mtr-hok\/places\/f78b733e-3d9f-4674-b974-11cdc2dbc65a$/,
+    /\/premises\/hong-kong-mtr\/places\/f78b733e-3d9f-4674-b974-11cdc2dbc65a$/,
   )
   const details = page.getByRole('region', { name: 'Station place details' })
   await expect(details).toContainText('HOK 4')
@@ -43,7 +43,7 @@ test('Hong Kong station loads, drills down, shares and survives station switchin
   await page.reload()
   await expect(details).toContainText('HOK 4', { timeout: 60000 })
   await page.screenshot({ path: join(output, 'hong-kong-place.png') })
-  await page.goto('/premises/mtr-ket')
+  await page.goto('/premises/kennedy-town-mtr')
   await expect(page.locator('[data-station-level]')).toHaveCount(6, { timeout: 60000 })
   await page.goBack()
   await expect(details).toContainText('HOK 4', { timeout: 60000 })
@@ -71,7 +71,7 @@ test('Hong Kong outdoor footprint opens its own station', async ({ page }) => {
   await expect(page.getByTestId('map')).toHaveCSS('opacity', '1')
   await page.screenshot({ path: join(output, 'hong-kong-outdoor.png') })
   await page.mouse.click(600, 450)
-  await expect(page).toHaveURL(/\/premises\/mtr-hok$/, { timeout: 20000 })
+  await expect(page).toHaveURL(/\/premises\/hong-kong-mtr$/, { timeout: 20000 })
   await expect(page.locator('[data-station-level]')).toHaveCount(9, { timeout: 60000 })
 })
 
@@ -80,7 +80,7 @@ test('shared route planner resets between stations and reports missing connectio
 }) => {
   test.setTimeout(120000)
   await page.setViewportSize({ width: 1440, height: 1000 })
-  await page.goto('/premises/mtr-hok')
+  await page.goto('/premises/hong-kong-mtr')
   await expect(page.locator('[data-station-level]')).toHaveCount(9, { timeout: 60000 })
   expect((await (await page.request.get('/api/auth/get-session')).json()).user.id).toBe(
     'hype-local-agent-admin',
@@ -96,7 +96,7 @@ test('shared route planner resets between stations and reports missing connectio
     timeout: 30000,
   })
   await expect(page.locator('[data-indoor-route]')).toHaveCount(0)
-  await page.goto('/premises/mtr-ket')
+  await page.goto('/premises/kennedy-town-mtr')
   await expect(page.locator('[data-station-level]')).toHaveCount(6, { timeout: 60000 })
   await page.getByText('Route preview', { exact: true }).click()
   await expect(origin.locator('option')).toHaveCount(6)

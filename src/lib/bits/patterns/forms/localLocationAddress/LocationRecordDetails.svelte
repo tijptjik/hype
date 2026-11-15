@@ -4,6 +4,7 @@ import { curationText } from '#lib/locations/curationIdentity.js'
 // I18N
 import { getLocaleKey, m } from '#lib/i18n.js'
 // COMPONENTS
+import LocationAvatar from '#lib/bits/custom/locationIcon/LocationAvatar.svelte'
 import { locationTaxonomy } from '#lib/locations/taxonomy.js'
 import { locationTaxonomyLabel } from '#lib/locations/taxonomy.i18n.js'
 // VALUE FORMATTING
@@ -87,6 +88,11 @@ const brandNames = $derived(
     </div>
   </div>
   {#each [
+    {
+      label: 'Operator',
+      value: place.operator?.names[tag] || place.operator?.names.en,
+    },
+    { label: 'Operator code', value: place.operator?.referenceCode },
     { label: 'Branch', value: curationText(place.facts?.branch, tag) },
     { label: 'Format', value: curationText(place.facts?.format, tag) },
     { label: 'Branch ID', value: place.facts?.branchId },
@@ -94,10 +100,26 @@ const brandNames = $derived(
     {#if field.value}
       <div class="space-y-1">
         <h3 class="text-muted-foreground text-sm">{field.label}</h3>
-        <p class="break-words">{field.value}</p>
+        <div class="flex items-center gap-2">
+          {#if field.label === 'Operator'}
+            <LocationAvatar
+              kind={place.kind}
+              operator={place.operator}
+              class="size-6"
+            />
+          {/if}
+          <p class="break-words">{field.value}</p>
+        </div>
       </div>
     {/if}
   {/each}
+  {#if place.premisesMap}
+    <a
+      href={place.premisesMap.href}
+      class="text-primary inline-flex font-medium underline underline-offset-4"
+      >View premises map</a
+    >
+  {/if}
   {#if place.facts}
     {#if !isEditing}
       <div class="space-y-2">

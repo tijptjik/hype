@@ -1,3 +1,35 @@
+Premises map references (15 November 2026, Refs #194): `locationOperator.referenceCode`
+stores the operator-scoped premises code, with uniqueness within each operator.
+`locationPremisesMap` stores an optional explicit registry ID independently of operator
+identity. Migration `0254_location_premises_map.sql` backfills all imported MTR station
+codes by exact source key and links KET to `kennedy-town-mtr` and HOK to
+`hong-kong-mtr`. The maintained registry resolves these IDs to existing asset
+directories; only enabled, ready entries expose a detail-map action. No availability
+boolean is stored in the database. All station routes use descriptive
+`<station-name>-mtr` slugs, including stations with PDF references only. Code-based
+`mtr-XXX` URLs are not accepted or redirected. Station imports retain codes and map
+references.
+
+Location operators (15 November 2026, Refs #194, parent #180): an operating body is a
+separate `operator` entity with localized `operatorI18n` names and shared logo and
+website. It need not be a company or catalogue group: public departments and other
+organisations are valid operators. `locationOperator` records the explicitly assigned
+current operator and assigning actor. It does not confer access, ownership, brand
+affiliation, or an operator on contained units or occupants. This initial contract
+supports one current operator per Location; joint operation needs an explicit future
+extension.
+
+Migration `0253_location_operator.sql` seeds MTR Corporation using the existing
+attributed MTR symbol. The local `scripts/indoor/apply-mtr-operators.ts` backfill
+matches the complete station cohort by `locationCanonicalDraft.sourceKey`, requires
+shared unpublished premises, and atomically assigns MTR and changes only English working
+titles to `<station name> MTR`. It retains a database backup, source evidence, other
+locales, physical units, relationships and Location IDs. Replays are idempotent;
+conflicting operator assignments require review. New station imports use the same naming
+rule and explicit operator assignment. Directory rows display the operator logo with the
+existing kind icon as fallback; record details name the operator. Operator
+administration and production rollout are separate follow-up work.
+
 Mutable upstream drafts (15 November 2026, Refs #194, parent #180): the Locations index
 exposes Published/Draft publication filtering to SuperAdmins only. Published selects
 records with an upstream ID; Draft selects ownerless unresolved canonical drafts, not

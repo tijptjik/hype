@@ -3,6 +3,12 @@ import { existsSync, readFileSync, realpathSync } from 'node:fs'
 // DOMAIN
 import { openSqliteDomain } from '../locations/lib/sqlite-domain'
 import { createCanonicalLocationDraft } from '../../src/lib/db/services/locationCanonicalDraft'
+import {
+  assignLocationOperator,
+  assignLocationPremisesMap,
+} from '../../src/lib/db/services/locationOperator'
+import { premisesMaps } from '../../src/lib/indoor/registry'
+import { mtrLocationTitles } from './mtr-location-titles'
 import { appendLocationRelationship } from '../../src/lib/db/services/locationRelationships'
 import { deriveLocationId } from '../../src/lib/locations/id.server'
 import { LocalLocationFootprintSchema } from '../../src/lib/locations/footprint'
@@ -160,7 +166,7 @@ async function main(): Promise<void> {
         kind: unit ? 'building_part' : 'premises',
         actorId,
         facts: facts(
-          row.names,
+          unit ? row.names : mtrLocationTitles(row.names),
           unit
             ? row.rawSource.geometry
             : (row.indoorSource?.venue.geometry ?? row.geometry),
@@ -172,6 +178,25 @@ async function main(): Promise<void> {
         },
       })
       refs.set(row.ref, result.locationId)
+      if (!unit) {
+        if (!row.ref.startsWith('mtr-station:'))
+          throw new Error('Unexpected station source key')
+        await assignLocationOperator(domain.db, {
+          locationId: result.locationId,
+          operatorId: 'mtr-corporation',
+          referenceCode: row.ref.slice('mtr-station:'.length),
+          actorId,
+        })
+        const map = premisesMaps.find(
+          map => map.code === row.ref.slice('mtr-station:'.length),
+        )
+        if (map)
+          await assignLocationPremisesMap(domain.db, {
+            locationId: result.locationId,
+            mapId: map.id,
+            actorId,
+          })
+      }
     }
     for (const member of plan.memberships) {
       const child = refs.get(member.childRef),

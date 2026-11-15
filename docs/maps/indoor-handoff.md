@@ -8,9 +8,9 @@ files in both repositories. No commit or deployment was requested.
 
 ## Start here
 
-- Preview: <http://localhost:4173/premises/mtr-ket>.
+- Preview: <http://localhost:4173/premises/kennedy-town-mtr>.
 - Exact place example:
-  <http://localhost:4173/premises/mtr-ket/places/85dc0347-d11b-4c8c-9686-dc6697050317>.
+  <http://localhost:4173/premises/kennedy-town-mtr/places/85dc0347-d11b-4c8c-9686-dc6697050317>.
 - Hype implementation notes: `docs/maps/station-layouts.md`.
 - SaanSeoi source notes: `docs/datasets/sources/hkgov-landsd/indoor.md`.
 - Read the applicable AGENTS.md before editing. Use the existing managed admin preview
@@ -32,9 +32,9 @@ browser history navigation. Source places are not automatically linked to Hype F
 or Locations.
 
 `premises` is a **built Location class**, labelled Premises / site, not the address
-kind. `/premises/mtr-{code}/places/{source-id}` is the current public namespace. Managed
-mall/park sites can fit a future premises registry; natural geographic features should
-not be silently reclassified.
+kind. `/premises/{station-name}-mtr/places/{source-id}` is the current public namespace.
+Managed mall/park sites can fit a future premises registry; natural geographic features
+should not be silently reclassified.
 
 All 98 stations on MTR's official system-map index are searchable by English name,
 Traditional Chinese name or station code. Searching MTR exposes the expandable full
@@ -229,14 +229,14 @@ source IDs and provenance if building a reusable SaanSeoi dataset/API.
 
 ## Hong Kong addition (15 November 2026)
 
-Hong Kong is now available at `/premises/mtr-hok`, with nine levels, 249 units, 379
-openings, 232 amenities and 83 occupant records. Venue:
+Hong Kong is now available at `/premises/hong-kong-mtr`, with nine levels, 249 units,
+379 openings, 232 amenities and 83 occupant records. Venue:
 `3c17605d-df03-4b09-90f5-bbca8cf1294d`. Raw layers and hashes are in
 `static/indoor/hong-kong/`; collection uses `scripts/indoor/download-geometry.py`. The
 snapshot registry in `src/lib/indoor/registry.ts` drives indoor loading and outdoor
 footprints. Combined HOK kiosk codes preserve one source polygon. Exact-place example:
-`/premises/mtr-hok/places/f78b733e-3d9f-4674-b974-11cdc2dbc65a` (HOK 4). The Kennedy
-Town route-preview experiment remains confined to Kennedy Town; Hong Kong has no
+`/premises/hong-kong-mtr/places/f78b733e-3d9f-4674-b974-11cdc2dbc65a` (HOK 4). The
+Kennedy Town route-preview experiment remains confined to Kennedy Town; Hong Kong has no
 reviewed walking network. See `station-layouts.md` for the source and test details.
 
 ## Reusable navigation refactor

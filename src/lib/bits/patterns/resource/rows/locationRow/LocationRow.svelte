@@ -4,7 +4,7 @@ import { isCanonicalLocationDraft } from '#lib/locations/canonicalDraft.js'
 import { goto } from '$app/navigation'
 // BITS
 import { Row } from '#lib/bits/custom/index.js'
-import LocationIcon from '#lib/bits/custom/locationIcon/LocationIcon.svelte'
+import LocationAvatar from '#lib/bits/custom/locationIcon/LocationAvatar.svelte'
 // DOMAIN
 import { locationKindLabel } from '#lib/locations/kinds.i18n.js'
 import { lifecycleStatus } from '#lib/locations/lifecycle.js'
@@ -31,10 +31,14 @@ const name = $derived(
     entity.id,
 )
 const address = $derived(entity.facts?.location.address.fallbackDisplay)
+const operatorName = $derived(
+  entity.operator?.names[locale] || entity.operator?.names.en,
+)
 const description = $derived(
   address?.[locale] ||
     address?.en ||
     Object.values(address ?? {}).find(Boolean) ||
+    operatorName ||
     entity.id,
 )
 const owner = $derived(
@@ -86,7 +90,7 @@ function open(): void {
   }}
 >
   <div class="flex min-w-0 flex-1 items-center gap-4 px-4">
-    <LocationIcon kind={entity.kind} class="text-muted-foreground size-7 shrink-0" />
+    <LocationAvatar kind={entity.kind} operator={entity.operator} />
     <div class="min-w-0 flex-1">
       <a
         {href}
