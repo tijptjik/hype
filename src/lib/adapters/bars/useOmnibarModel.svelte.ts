@@ -472,6 +472,11 @@ export function useOmnibarModel(
         ? stations.map(station => ({
             id: station.id,
             label: getI18n(station, 'name', appCtx.view.getUserPreferences()),
+            lineBadges: stationLines(station.id).map(line => ({
+              id: line.id,
+              color: line.color,
+              label: getI18n(line, 'name', appCtx.view.getUserPreferences()),
+            })),
           }))
         : getCollectionItems()
       const currentIndex = stationWalk ? stationWalkIndex : omniCtx.navIndex

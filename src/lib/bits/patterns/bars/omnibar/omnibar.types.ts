@@ -19,6 +19,7 @@ export type OmnibarResultSection = {
 export type OmnibarCollectionItem = {
   id: string
   label: string
+  lineBadges?: SearchResult['lineBadges']
 }
 
 export type OmnibarSearchProps = {

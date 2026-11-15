@@ -150,11 +150,11 @@ $effect(() => {
           <li>
             <button
               type="button"
-              class={OMNIBAR_COLLECTION_ITEM_CLASSES}
+              class={`${OMNIBAR_COLLECTION_ITEM_CLASSES} w-full text-left`}
               onclick={() => handleItemClick(index)}
             >
               {#if isNavigationMode}
-                <div class="relative h-2 w-2 rounded-full">
+                <div class="relative h-2 w-2 shrink-0 rounded-full">
                   <div
                     class="bg-primary absolute top-0 left-0 h-2 w-2 rounded-full group-hover:opacity-100"
                     style="opacity: {indicatorOpacities.primaryOpacity}%"
@@ -165,9 +165,28 @@ $effect(() => {
                   ></div>
                 </div>
               {/if}
-              <span class={OMNIBAR_COLLECTION_ITEM_TITLE_CLASSES}>
+              <span
+                class={`${OMNIBAR_COLLECTION_ITEM_TITLE_CLASSES} min-w-0 flex-1 break-words whitespace-normal`}
+              >
                 {'label' in item ? item.label : ''}
               </span>
+              {#if 'lineBadges' in item && item.lineBadges?.length}
+                <span
+                  class="flex shrink-0 items-center justify-end gap-1"
+                  data-station-lines
+                >
+                  {#each item.lineBadges as line (line.id)}
+                    <span
+                      class="size-3 shrink-0"
+                      style:background-color={line.color}
+                      role="img"
+                      aria-label={line.label}
+                      title={line.label}
+                      data-station-line={line.id}
+                    ></span>
+                  {/each}
+                </span>
+              {/if}
             </button>
           </li>
         {/each}

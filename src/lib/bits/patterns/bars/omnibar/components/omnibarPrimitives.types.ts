@@ -6,6 +6,7 @@ import type { OmniMode } from '#lib/enums.js'
 import type { SearchResult, OmniSearchCollection } from '#lib/context/omni.types.js'
 import type { Snippet } from 'svelte'
 import type {
+  OmnibarCollectionItem,
   OmnibarNavigationProps,
   OmnibarResultSection,
   OmnibarSearchProps,
@@ -51,7 +52,7 @@ export type OmnibarEntryProps = {
 
 export type OmnibarCollectionProps = {
   mode: 'results' | 'navigation'
-  items: Array<{ id: string; label: string }> | (FeatureFromCollection | Feature)[]
+  items: OmnibarCollectionItem[] | (FeatureFromCollection | Feature)[]
   hasElevatedChrome?: boolean
   effectiveAppMainWidth?: number
   currentIndex?: number
