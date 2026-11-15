@@ -44,6 +44,7 @@ export type MapBundle = {
   documents: { kind: string; path: string }[]
 }
 export type MapCatalogueEntry = {
+  operator?: { id: string; logo: string | null; name: string | null } | null
   id: string
   code: string
   name: string

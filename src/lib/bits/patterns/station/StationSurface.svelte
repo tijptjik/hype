@@ -21,6 +21,7 @@ import { isConnector } from '#lib/indoor/spatial.js'
 import { facilitySymbol, facilityLegendRank } from '#lib/indoor/facilities.js'
 import ChevronDown from 'virtual:icons/proicons/chevron-down'
 import StationScene from './StationScene.svelte'
+import StationIdentity from './StationIdentity.svelte'
 import StationMapTools from './StationMapTools.svelte'
 import StationLevelLabel from './StationLevelLabel.svelte'
 import { stationLevelOptions } from '#lib/indoor/levels.js'
@@ -255,6 +256,7 @@ $effect(() => {
         </div>
       {/if}
     </div>
+    <StationIdentity {station} />
     {#if legend}
       {#if !app.view.panels.isPanelOpenOrVisual(Panel.prisms)}
         <nav

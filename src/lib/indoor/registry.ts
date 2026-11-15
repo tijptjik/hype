@@ -15,6 +15,7 @@ export const stations = catalogue.stations.map(station => ({
     .replace(/^-|-$/g, '')}-mtr`,
 }))
 type PremisesRecord = {
+  operator?: MapCatalogueEntry['operator']
   kind: MapCatalogueEntry['kind']
   id: string
   slug: string
@@ -98,6 +99,7 @@ export async function loadPremisesCatalogue(
     ready: Boolean(map.publishedHash),
   }))
   publishedPremises = maps.map(m => ({
+    operator: m.operator,
     id: m.code,
     kind: m.kind,
     slug: m.id,
@@ -108,6 +110,7 @@ export async function loadPremisesCatalogue(
   buildings = maps
     .filter(m => m.kind !== 'station')
     .map(m => ({
+      operator: m.operator,
       id: m.code,
       kind: m.kind,
       slug: m.id,
