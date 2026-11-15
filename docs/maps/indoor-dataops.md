@@ -82,3 +82,17 @@ automatically.
 systemctl --user list-timers hype-indoor-monthly.timer
 journalctl --user -u hype-indoor-monthly.service
 ```
+
+Legacy maps with retained originals can acquire a verified baseline without replacing
+their published or draft curations:
+
+```sh
+bun run dataops -- indoor:reconcile-baseline --target local --map MAP_ID --source ORIGINAL_DIRECTORY --actor-user-id USER_ID
+```
+
+The default is a read-only plan. Add `--apply` to upload immutable resources and
+atomically attach the baseline and reconstructed corrections. Each of the six original
+layers must match its retained manifest checksum. Geometry differences are rejected.
+Published and draft views remain separate, existing correction authors and reasons
+survive, and the corresponding missing-baseline task is resolved. Local application
+uploads to development R2 before changing local pointers.

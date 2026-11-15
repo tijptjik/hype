@@ -353,8 +353,16 @@ export async function publishSnapshot(
         )
         const expected = structuredClone(baseline)
         normalizeMapFacilityLabels(expected.data)
-        for (const correction of corrections) applyMapCorrection(expected, correction)
-        if (contentHash(expected) !== contentHash(previous))
+        const expectedOriginal = structuredClone(baseline)
+        for (const correction of corrections) {
+          applyMapCorrection(expected, correction)
+          applyMapCorrection(expectedOriginal, correction)
+        }
+        // Retained legacy publications may predate shared facility-label formatting.
+        if (
+          contentHash(expected) !== contentHash(previous) &&
+          contentHash(expectedOriginal) !== contentHash(previous)
+        )
           throw new ReviewRequired(
             'Published polygon edits are not represented by corrections; curate before refresh',
           )

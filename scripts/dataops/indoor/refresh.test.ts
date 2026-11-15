@@ -427,3 +427,92 @@ test('interrupted importer drafts resume only for the identical source content',
     )?.status,
   ).toBe('blocked')
 })
+
+test('legacy repair verifies originals and preserves separate published and draft curations', async () => {
+  const { loadLegacyOriginal, reconcileLegacyBaseline, reconstructLegacyCorrections } =
+    await import('./legacy')
+  const { layerNames } = await import('../../../src/lib/indoor/model')
+  const { mapHash, mapReleaseKey } = await import('../../../src/lib/indoor/releases')
+  const directory = await mkdtemp(join(root, 'legacy-'))
+  const original = source()
+  const entries = []
+  for (const layer of layerNames) {
+    const text = JSON.stringify(original.data[layer])
+    await Bun.write(join(directory, `${layer}.json`), text)
+    entries.push({
+      layer,
+      sha256: sha256(text),
+      bytes: Buffer.byteLength(text),
+      count: original.data[layer].features.length,
+    })
+  }
+  await Bun.write(
+    join(directory, 'manifest.json'),
+    JSON.stringify({ venueId: venue, retrievedAt: '2026-01-01', entries }),
+  )
+  const baseline = await loadLegacyOriginal(directory, 'landsd-building')
+  const published = structuredClone(baseline),
+    draft = structuredClone(baseline)
+  published.data.level_polygon.features[0].properties.level_name_en = 'Published floor'
+  draft.data.level_polygon.features[0].properties.level_name_en = 'Draft floor'
+  const mapId = 'legacy-test'
+  const hashes = []
+  for (const bundle of [published, draft]) {
+    const text = JSON.stringify(bundle),
+      hash = await mapHash(text)
+    hashes.push(hash)
+    await bucket.put(mapReleaseKey(mapId, hash), text)
+  }
+  await db.insert(premisesMap).values({
+    id: mapId,
+    code: mapId,
+    name: 'Legacy',
+    nameZh: '',
+    kind: 'building',
+    publishedHash: hashes[0],
+    draftHash: hashes[1],
+    publishedVersion: 1,
+    draftVersion: 2,
+    updatedBy: 'reviewer',
+    updatedAt: '2026-01-01',
+  })
+  const existing = await reconstructLegacyCorrections(
+    baseline,
+    draft,
+    mapId,
+    'reviewer',
+  )
+  existing[0].reason = 'Original curator reason'
+  await db.insert(premisesMapCorrection).values(existing[0])
+  const result = await reconcileLegacyBaseline(db, bucket, {
+    id: mapId,
+    sourceDirectory: directory,
+    actorId: 'reviewer',
+    apply: true,
+  })
+  expect(result.preservedDraft).toBe(true)
+  expect(
+    (await readMapBundle(bucket, mapId, result.publishedHash)).data.level_polygon,
+  ).toEqual(published.data.level_polygon)
+  expect(
+    (await readMapBundle(bucket, mapId, result.draftHash)).data.level_polygon,
+  ).toEqual(draft.data.level_polygon)
+  expect(
+    (await readMapBundle(bucket, mapId, result.sourceHash)).data.connections,
+  ).toEqual([])
+  const saved = await db
+    .select()
+    .from(premisesMapCorrection)
+    .where(eq(premisesMapCorrection.mapId, mapId))
+  expect(saved[0].reason).toBe('Original curator reason')
+  expect(saved[0].sourceSnapshotHash).toBe(result.sourceHash)
+  const wrong = structuredClone(draft)
+  wrong.data.level_polygon.features[0].geometry = { type: 'Polygon', coordinates: [] }
+  await expect(
+    reconstructLegacyCorrections(baseline, wrong, mapId, 'reviewer'),
+  ).rejects.toThrow('geometry differs')
+  await Bun.write(join(directory, 'level_polygon.json'), '{}')
+  await expect(loadLegacyOriginal(directory, 'landsd-building')).rejects.toThrow(
+    'checksum mismatch',
+  )
+})

@@ -7,6 +7,7 @@ import { parseArgs } from 'node:util'
 import { fetchSnapshot, type Target } from './fetch'
 import { compareSnapshot, publishSnapshot, readSnapshot } from './refresh'
 import { openStorage } from './storage'
+import { reconcileLegacyBaseline } from './legacy'
 
 // TOC: Explicit CLI selection | Monthly catch-up | Command dispatch
 /** Parse a strictly selected environment. @param value CLI option. @returns Valid target. */
@@ -28,11 +29,15 @@ export async function main(args: string[]): Promise<void> {
       snapshot: { type: 'string' },
       out: { type: 'string' },
       help: { type: 'boolean' },
+      map: { type: 'string' },
+      source: { type: 'string' },
+      'actor-user-id': { type: 'string' },
+      apply: { type: 'boolean' },
     },
   })
   if (parsed.values.help || !parsed.positionals.length) {
     console.log(
-      'bun run dataops -- indoor:fetch-mtr|indoor:fetch-buildings --target local|prod [--out NEW_DIRECTORY]\nbun run dataops -- indoor:compare|indoor:publish --target local|prod --snapshot DIRECTORY\nbun run dataops -- indoor:monthly --target local|prod',
+      'bun run dataops -- indoor:fetch-mtr|indoor:fetch-buildings --target local|prod [--out NEW_DIRECTORY]\nbun run dataops -- indoor:compare|indoor:publish --target local|prod --snapshot DIRECTORY\nbun run dataops -- indoor:monthly --target local|prod\nbun run dataops -- indoor:reconcile-baseline --target local|prod --map MAP_ID --source ORIGINAL_DIRECTORY --actor-user-id USER_ID [--apply]',
     )
     return
   }
@@ -46,6 +51,7 @@ export async function main(args: string[]): Promise<void> {
       'indoor:compare',
       'indoor:publish',
       'indoor:monthly',
+      'indoor:reconcile-baseline',
     ].includes(command)
   )
     throw new Error('Unknown indoor Data Ops command')
@@ -56,6 +62,29 @@ export async function main(args: string[]): Promise<void> {
     throw new Error('Less than 1 GiB free; refusing a new map operation')
   const newDirectory = (family: string): string =>
     join(state, `${new Date().toISOString().replace(/[:.]/g, '-')}-${family}`)
+  if (command === 'indoor:reconcile-baseline') {
+    const { map, source, 'actor-user-id': actorId, apply } = parsed.values
+    if (!map || !source || !actorId)
+      throw new Error('--map, --source and --actor-user-id are required')
+    const storage = await openStorage(target, Boolean(apply))
+    try {
+      console.log(
+        JSON.stringify(
+          await reconcileLegacyBaseline(storage.db, storage.bucket, {
+            id: map,
+            sourceDirectory: resolve(source),
+            actorId,
+            apply: Boolean(apply),
+          }),
+          null,
+          2,
+        ),
+      )
+    } finally {
+      await storage.dispose()
+    }
+    return
+  }
   if (command.startsWith('indoor:fetch-')) {
     const dataset = command === 'indoor:fetch-mtr' ? 'mtr' : 'buildings'
     const directory = parsed.values.out
