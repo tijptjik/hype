@@ -86,7 +86,9 @@ function select(place: Place): void {
 {#snippet itemPreview(id: string)}
   {@const option = levelOptions.find(option => option.value === id)}
   <span class="text-muted-foreground whitespace-nowrap"
-    >{option?.exit ? `Exit ${option.exit}` : (option?.line ?? '')}</span
+    >{[option?.exit ? `Exit ${option.exit}` : '', option?.line]
+      .filter(Boolean)
+      .join(' · ')}</span
   >
 {/snippet}
 

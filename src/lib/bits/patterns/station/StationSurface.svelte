@@ -164,7 +164,7 @@ const _offset = $derived(responsive.isMobile ? 0 : (layout?.getAppMainOffsetX() 
       {#if !app.view.panels.isPanelOpenOrVisual(Panel.prisms)}
         <nav
           aria-label="Indoor levels"
-          class="pointer-events-auto absolute top-1/2 left-3 z-20 max-h-[calc(100%-15rem)] w-40 max-w-[40vw] -translate-y-1/2 overflow-y-auto px-3 py-2 text-left text-sm text-[var(--station-legend-ink)] sm:left-5 sm:w-52"
+          class="pointer-events-auto absolute top-1/2 left-3 z-20 max-h-[calc(100%-15rem)] w-64 max-w-[45vw] -translate-y-1/2 overflow-y-auto px-3 py-2 text-left text-sm text-[var(--station-legend-ink)] sm:left-5 sm:w-72 sm:max-w-[calc(100vw-2rem)]"
         >
           <details
             class="group [interpolate-size:allow-keywords] [&::details-content]:h-0 [&::details-content]:overflow-hidden [&::details-content]:opacity-0 [&::details-content]:[transition:height_240ms_ease,opacity_240ms_ease,content-visibility_240ms_allow-discrete] motion-reduce:[&::details-content]:transition-none [&[open]::details-content]:h-auto [&[open]::details-content]:opacity-100"
@@ -198,7 +198,9 @@ const _offset = $derived(responsive.isMobile ? 0 : (layout?.getAppMainOffsetX() 
                   />
                   {#if option.exit || option.line}
                     <span class="text-muted-foreground pl-7 text-xs"
-                      >{option.exit ? `Exit ${option.exit}` : option.line}</span
+                      >{[option.exit ? `Exit ${option.exit}` : '', option.line]
+                        .filter(Boolean)
+                        .join(' · ')}</span
                     >
                   {/if}
                 </button>
@@ -370,8 +372,8 @@ const _offset = $derived(responsive.isMobile ? 0 : (layout?.getAppMainOffsetX() 
               {#each [
                 { key: 'elevator', label: 'Lift', dash: undefined },
                 { key: 'escalator', label: 'Escalator', dash: '5 4' },
-                { key: 'stairs', label: 'Stair', dash: '0 4' },
                 { key: 'ramp', label: 'Ramp', dash: '0 4 5 4' },
+                { key: 'stairs', label: 'Stairs', dash: '0 4' },
               ] as connection (connection.key)}
                 {#if indexMatches(station.entries, connection.key).length}
                   <li>

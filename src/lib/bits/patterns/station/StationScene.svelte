@@ -14,6 +14,7 @@ import {
 import IndoorFloorLayer from './IndoorFloorLayer.svelte'
 import { shopArtwork } from '#lib/indoor/artwork.js'
 import { cameraTravel, floorInViewport } from '#lib/indoor/cameraTransition.js'
+import { stationFloorCallout } from '#lib/indoor/levels.js'
 import { stationProjection } from '#lib/indoor/scene.js'
 import { connectionCandidates, stairTreads } from '#lib/indoor/spatial.js'
 import type { StationState } from '#lib/indoor/station.svelte.js'
@@ -674,10 +675,7 @@ function chooseFloor(id: string): void {
         {#each levels as level}
           {@const id = value(level.properties, 'level_id')}
           {@const floorAnchor = projection.anchor(level)}
-          {@const title = value(level.properties, 'level_name_en')
-            .replace(' Ground Level', ' · G')
-            .replace(' Mezzanine Level', ' · M')
-            .replace(' Level', '')}
+          {@const title = stationFloorCallout(value(level.properties, 'level_name_en'))}
           {@const titleX = Math.min(
             floorAnchor[0],
             baseView[0] +
