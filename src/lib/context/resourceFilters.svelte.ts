@@ -1469,7 +1469,11 @@ export class ResourceFilters {
     const filters = this.viewFilters.task
     if (!filters) return tasks
 
+    if (filters.resource === 'system' || filters.resource === 'premisesMap') return []
     return tasks.filter(task => {
+      const locationTask = Boolean(task.locationTask)
+      if (filters.resource === 'feature' && locationTask) return false
+      if (filters.resource === 'location' && !locationTask) return false
       if (!this.filterTaskByStatus(task, filters)) return false
       if (!this.filterTaskByType(task, filters)) return false
       return true
@@ -2006,6 +2010,7 @@ export function createDefaultViewFilters(): ViewFilters {
       properties: {} as Record<Id, FilterTriState>,
     },
     task: {
+      resource: null,
       // Status related
       isReviewed: false,
       reviewOutcome: null,

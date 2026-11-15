@@ -122,6 +122,7 @@ type LayerViewFilters = {
 }
 
 type TaskViewFilters = {
+  resource: import('#lib/tasks.system.js').TaskResource | null
   // Status related
   isReviewed: FilterTriState
   reviewOutcome: FilterTriState

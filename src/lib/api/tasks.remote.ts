@@ -1,6 +1,9 @@
 // REMOTE
 import { guardedCommand, guardedForm, guardedQuery } from '#lib/api/server/guarded.js'
 import { error } from '@sveltejs/kit'
+// SYSTEM TASKS
+import { listSystemTasks } from '#lib/db/services/systemTask.js'
+import { systemTasksOnly } from '#lib/tasks.system.js'
 // LIFECYCLE
 import { hasFeatureLifecycleStorage } from '#lib/db/services/featureLifecycle.js'
 import {
@@ -314,6 +317,9 @@ function locationIdentityTaskCondition(ctx: GuardedBaseContext) {
 const getTasksQuery = guardedQuery(GetTasksSchema, async (params, ctx) => {
   const { db, event, user, userRoles, isAdminRequest } = ctx
   const profile = toTaskProfile(params.meta?.profile, 'list')
+  const systemOnly = systemTasksOnly(params.resource)
+  if (params.resource && (!isAdminRequest || !user.superAdmin || user.isAnonymous))
+    error(403, 'INSUFFICIENT_ROLE')
   const normalizedConditions = Object.fromEntries(
     Object.entries(params.conditions ?? {}).filter(
       ([, value]) => value !== null && value !== undefined,
@@ -354,28 +360,99 @@ const getTasksQuery = guardedQuery(GetTasksSchema, async (params, ctx) => {
     conditions.push(
       sql`task.type IN ('locationFacts','locationPosition','locationIdentity','locationMerge')`,
     )
-  const result = await listTasks(
-    db,
-    getTaskWithRelations(profile),
-    conditions,
-    {
-      ...event.locals.hub,
-      isSuperAdmin: Boolean(user.superAdmin),
-      includeLocationReviews: true,
-      mockLocationFeatureId: import.meta.env.DEV
-        ? params.mockLocationFeatureId
-        : undefined,
-    },
-    params.pagination,
-    params.sorting,
-    {
-      q: params.q,
-      filtersToApply,
-      locale: getLocale(),
-    },
+  if (params.resource === 'feature')
+    conditions.push(
+      sql`task.type NOT IN ('locationFacts','locationPosition','locationIdentity','locationMerge')`,
+    )
+  if (params.resource === 'location')
+    conditions.push(
+      sql`task.type IN ('locationFacts','locationPosition','locationIdentity','locationMerge')`,
+    )
+  const includeSystem = Boolean(
+    isAdminRequest &&
+      user.superAdmin &&
+      !user.isAnonymous &&
+      !params.locationOnly &&
+      params.resource !== 'feature' &&
+      (systemOnly ||
+        (!params.conditions?.type &&
+          !params.conditions?.reviewAction &&
+          !params.conditions?.featureId &&
+          !Object.values(normalizedPrisms ?? {}).some(ids => ids.length))),
   )
+  const systemRows = includeSystem
+    ? await listSystemTasks(db, {
+        resource: params.resource,
+        isReviewed: params.conditions?.isReviewed,
+        reviewOutcome: params.conditions?.reviewOutcome,
+        q: params.q,
+      })
+    : []
+  const result = systemOnly
+    ? { data: [], totalCount: 0 }
+    : await listTasks(
+        db,
+        getTaskWithRelations(profile),
+        conditions,
+        {
+          ...event.locals.hub,
+          isSuperAdmin: Boolean(user.superAdmin),
+          includeLocationReviews: true,
+          mockLocationFeatureId: import.meta.env.DEV
+            ? params.mockLocationFeatureId
+            : undefined,
+        },
+        includeSystem ? undefined : params.pagination,
+        params.sorting,
+        {
+          q: params.q,
+          filtersToApply,
+          locale: getLocale(),
+        },
+      )
 
-  return await toListResponseShape(result, profile)
+  const response = await toListResponseShape(result, profile)
+  if (!includeSystem) return { ...response, systemTasks: [] }
+  // Page both resource families together so totals and offsets describe the same queue.
+  const sortBy = params.sorting?.sortBy ?? 'modifiedAt'
+  const direction = params.sorting?.sortOrder === 'asc' ? 1 : -1
+  const combined = [
+    ...response.data.map(row => ({
+      id: row.id,
+      row,
+      system: false,
+      key:
+        sortBy === 'title'
+          ? (Object.values(row.feature?.i18n ?? {})[0]?.title ?? '')
+          : String(row[sortBy as 'modifiedAt' | 'createdAt' | 'type'] ?? ''),
+    })),
+    ...systemRows.map(row => ({
+      id: row.id,
+      row,
+      system: true,
+      key: String(
+        row[sortBy as 'title' | 'modifiedAt' | 'createdAt' | 'type'] ?? row.modifiedAt,
+      ),
+    })),
+  ].sort((a, b) => direction * a.key.localeCompare(b.key) || a.id.localeCompare(b.id))
+  const offset = params.pagination?.offset ?? 0
+  const limit = params.pagination?.limit
+  const selected = combined.slice(offset, limit == null ? undefined : offset + limit)
+  const hasMore = offset + selected.length < combined.length
+  return {
+    ...response,
+    data: selected
+      .filter(item => !item.system)
+      .map(item => item.row) as typeof response.data,
+    systemTasks: selected
+      .filter(item => item.system)
+      .map(item => item.row) as typeof systemRows,
+    totalCount: combined.length,
+    offset,
+    limit,
+    hasMore,
+    nextOffset: hasMore ? offset + selected.length : null,
+  }
 })
 export const getTasks = getTasksQuery as typeof getTasksQuery &
   (<P extends TaskProfile = 'list'>(

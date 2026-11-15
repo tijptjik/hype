@@ -24,6 +24,8 @@ import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import { FirstClassResource, type HierarchicalResource } from '#lib/enums.js'
 // GUARDS
 import { isTask } from '#lib/utils/resourceGuards.js'
+// SYSTEM TASKS
+import type { SystemTask } from '#lib/tasks.system.js'
 // TYPES
 import type { ListResponse, Id, Code, Resource, NavigableResource } from '#lib/types.js'
 import type { FacetType } from '#lib/context/facets.js'
@@ -248,11 +250,14 @@ export class AdminCtx {
   // ADMIN QUERY KEYS
   // ═══════════════════════
 
+  systemTasks = $state.raw<SystemTask[]>([])
+
   get tasksQueryKey() {
     return [
       FirstClassResource.task,
       this.view.resources.scopeKey,
       this.taskPreviewFeatureId,
+      this.view.filters.viewFilters.task.resource,
       this.view.filters.values.task.text,
       this.view.filters.viewFilters.task.reviewAction,
       this.view.filters.viewFilters.task.reviewOutcome,
@@ -591,32 +596,39 @@ export class AdminCtx {
     const isCurrent = this.beginMetadataRead('task', () => this.tasksQueryKey)
     const taskPrisms = this.getTaskListPrisms()
     try {
-      const result = toSafeListResponse<Task>(
-        (await runRemoteQuery(
-          getTasks({
-            q: this.view.filters.values.task.text,
-            mockLocationFeatureId: import.meta.env.DEV
-              ? this.taskPreviewFeatureId
-              : undefined,
-            conditions: {
-              reviewAction: this.view.filters.viewFilters.task.reviewAction || null,
-              reviewOutcome:
-                this.view.filters.viewFilters.task.reviewOutcome == null
-                  ? null
-                  : this.view.filters.viewFilters.task.reviewOutcome
-                    ? 'accepted'
-                    : 'rejected',
-              isReviewed:
-                this.view.filters.viewFilters[FirstClassResource.task].isReviewed,
-              type: this.view.filters.viewFilters[FirstClassResource.task].type,
-            },
-            prisms: taskPrisms,
-            sorting: this.view.filters.sorting.task,
-            meta: { ...this.view.resources.queryMeta },
-          }),
-        )) as ListResponse<Task> | undefined,
-      )
-      if (isCurrent()) this.view.setListQueryMeta(this.tasksQueryKey, result)
+      const rawResult = (await runRemoteQuery(
+        getTasks({
+          resource: this.view.isSuperAdmin()
+            ? this.view.filters.viewFilters.task.resource
+            : undefined,
+          q: this.view.filters.values.task.text,
+          mockLocationFeatureId: import.meta.env.DEV
+            ? this.taskPreviewFeatureId
+            : undefined,
+          conditions: {
+            reviewAction: this.view.filters.viewFilters.task.reviewAction || null,
+            reviewOutcome:
+              this.view.filters.viewFilters.task.reviewOutcome == null
+                ? null
+                : this.view.filters.viewFilters.task.reviewOutcome
+                  ? 'accepted'
+                  : 'rejected',
+            isReviewed:
+              this.view.filters.viewFilters[FirstClassResource.task].isReviewed,
+            type: this.view.filters.viewFilters[FirstClassResource.task].type,
+          },
+          prisms: taskPrisms,
+          sorting: this.view.filters.sorting.task,
+          meta: { ...this.view.resources.queryMeta },
+        }),
+      )) as (ListResponse<Task> & { systemTasks?: SystemTask[] }) | undefined
+      const result = toSafeListResponse<Task>(rawResult)
+      if (isCurrent()) {
+        this.systemTasks = this.view.isSuperAdmin()
+          ? (rawResult?.systemTasks ?? [])
+          : []
+        this.view.setListQueryMeta(this.tasksQueryKey, result)
+      }
       return result.data
     } catch (error) {
       if (

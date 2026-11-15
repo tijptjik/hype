@@ -1,3 +1,5 @@
+// SYSTEM TASKS
+import { taskResourceSchema } from '#lib/tasks.system.js'
 // FEATURE CONTENT LOCALES
 import { contentLocaleMap } from '#lib/i18n/contentRecords.js'
 import { FeatureRevisionContentSchema } from '#lib/revisions/featureContent.js'
@@ -298,6 +300,7 @@ export const GetTaskEditorDataSchema = z.object({
 })
 
 export const GetTasksSchema = ListQueryParamsSchema.extend({
+  resource: taskResourceSchema.nullish(),
   locationOnly: z.boolean().optional(),
   mockLocationFeatureId: z.string().min(1).optional(),
   conditions: z

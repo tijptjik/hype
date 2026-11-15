@@ -3,6 +3,9 @@
 import { page } from '$app/state'
 import { onMount, untrack } from 'svelte'
 import { preloadCode } from '$app/navigation'
+import SystemTaskRows from '#lib/bits/patterns/tasks/SystemTaskRows.svelte'
+import type { SystemTask } from '#lib/tasks.system.js'
+import { systemTasksOnly } from '#lib/tasks.system.js'
 // LOCATION TASKS
 import { LOCATION_TASK_TYPES, locationTaskLabel } from '#lib/locations/tasks.js'
 // CONTEXT
@@ -36,7 +39,11 @@ import type { Task } from '#lib/db/zod/schema/task.types.js'
 import type { ImageCtxEnvelope } from '#lib/db/zod/schema/image.types.js'
 import type { Project } from '#lib/db/zod/schema/project.types.js'
 
-const filters = {
+// CONTEXT
+const adminCtx = getAdminCtx()
+const headerCtrl = getHeaderCtrl()
+
+const filters = $derived({
   resource: FirstClassResource.task,
   sections: [
     {
@@ -44,31 +51,51 @@ const filters = {
       title: m.filters__filter_by(),
       icon: FunnelIcon,
       filters: [
-        createSelectFilter('type', {
-          label: m.filters__type(),
-          placeholder: `${m.filters__all()} ${m.filters__type().toLowerCase()}`,
-          allowDeselect: true,
-          refreshResource: FirstClassResource.task,
-          options: [
-            { value: 'newFeature', label: m.smart_crazy_cuckoo_play() },
-            { value: 'newPhoto', label: m.aware_sea_goose_nail() },
-            { value: 'reportedMissing', label: m.noble_zany_crow_dance() },
-            ...LOCATION_TASK_TYPES.map(type => ({
-              value: type,
-              label: locationTaskLabel(type),
-            })),
-          ],
-        }),
-        createSelectFilter('reviewAction', {
-          label: m.filters__action(),
-          placeholder: `${m.filters__all()} ${m.filters__action().toLowerCase()}`,
-          allowDeselect: true,
-          refreshResource: FirstClassResource.task,
-          options: reviewActions.map(action => ({
-            value: action,
-            label: getTaskReviewActionLabel(action),
-          })),
-        }),
+        ...(adminCtx.view.isSuperAdmin()
+          ? [
+              createSelectFilter('resource', {
+                label: 'Resource',
+                placeholder: 'All resources',
+                allowDeselect: true,
+                refreshResource: FirstClassResource.task,
+                options: [
+                  { value: 'feature', label: 'Feature' },
+                  { value: 'location', label: 'Location' },
+                  { value: 'premisesMap', label: 'Premises map' },
+                  { value: 'system', label: 'System tasks' },
+                ],
+              }),
+            ]
+          : []),
+        ...(!systemTasksOnly(adminCtx.view.filters.viewFilters.task.resource)
+          ? [
+              createSelectFilter('type', {
+                label: m.filters__type(),
+                placeholder: `${m.filters__all()} ${m.filters__type().toLowerCase()}`,
+                allowDeselect: true,
+                refreshResource: FirstClassResource.task,
+                options: [
+                  { value: 'newFeature', label: m.smart_crazy_cuckoo_play() },
+                  { value: 'newPhoto', label: m.aware_sea_goose_nail() },
+                  { value: 'reportedMissing', label: m.noble_zany_crow_dance() },
+                  ...LOCATION_TASK_TYPES.map(type => ({
+                    value: type,
+                    label: locationTaskLabel(type),
+                  })),
+                ],
+              }),
+              createSelectFilter('reviewAction', {
+                label: m.filters__action(),
+                placeholder: `${m.filters__all()} ${m.filters__action().toLowerCase()}`,
+                allowDeselect: true,
+                refreshResource: FirstClassResource.task,
+                options: reviewActions.map(action => ({
+                  value: action,
+                  label: getTaskReviewActionLabel(action),
+                })),
+              }),
+            ]
+          : []),
         createToggleFilter('reviewOutcome', {
           label: m.filters__result(),
           falseLabel: m.alive_north_albatross_lead(),
@@ -84,7 +111,7 @@ const filters = {
       ],
     },
   ],
-} satisfies ResourceControlBarConfig
+} satisfies ResourceControlBarConfig)
 
 const sortables = createSortables([
   createSortable('modifiedAt', m.sort__updated()),
@@ -93,9 +120,13 @@ const sortables = createSortables([
   createSortable('type', m.filters__type()),
 ])
 
-// CONTEXT
-const adminCtx = getAdminCtx()
-const headerCtrl = getHeaderCtrl()
+// System queues retain result/reviewed filters but discard Feature-specific controls.
+$effect(() => {
+  if (systemTasksOnly(adminCtx.view.filters.viewFilters.task.resource)) {
+    adminCtx.view.filters.viewFilters.task.type = null
+    adminCtx.view.filters.viewFilters.task.reviewAction = null
+  }
+})
 
 // Warm the editor modules while the queue is visible, before a task is selected.
 onMount(() => {
@@ -130,7 +161,7 @@ const indexQuery = useAdminIndexQuery(adminCtx, 'task')
 let entities: Task[] = $derived(indexQuery.rows as Task[])
 
 // Group tasks by project
-let groupedEntities: Array<{ group: Project; entities: Task[] }> = $derived(
+let featureGroups: Array<{ group: Project; entities: Task[] }> = $derived(
   Object.entries(
     entities.reduce(
       (acc, task) => {
@@ -157,6 +188,24 @@ let groupedEntities: Array<{ group: Project; entities: Task[] }> = $derived(
     })
     .filter(({ group }) => group != null), // Filter out genuinely unresolved projects during navigation
 )
+
+const groupedEntities: Array<{
+  group: Record<string, unknown>
+  entities: (Task | SystemTask)[]
+}> = $derived([
+  ...(adminCtx.view.isSuperAdmin() &&
+  !indexQuery.countLoading &&
+  !indexQuery.failed &&
+  adminCtx.systemTasks.length
+    ? [
+        {
+          group: { id: 'system-tasks', name: 'System tasks' },
+          entities: adminCtx.systemTasks,
+        },
+      ]
+    : []),
+  ...featureGroups,
+])
 
 $effect(() => {
   headerCtrl.setHeaderForIndex(m.navbar__tasks(), TaskIcon, {
@@ -211,13 +260,20 @@ function openModal(_image: ImageCtxEnvelope, task: Task): void {
     bind:scrollIndexByEntityId
   >
     {#snippet row(entity, index)}
-      <TaskRow
-        {entity}
-        {index}
-        {adminCtx}
-        onImageClick={openModal}
-        isSelected={selectedTask?.id === entity.id && selectedImage !== null}
-      />
+      {#if 'resource' in entity}
+        <SystemTaskRows
+          tasks={[entity]}
+          onreview={() => adminCtx.invalidateAndRefresh(FirstClassResource.task)}
+        />
+      {:else}
+        <TaskRow
+          {entity}
+          {index}
+          {adminCtx}
+          onImageClick={openModal}
+          isSelected={selectedTask?.id === entity.id && selectedImage !== null}
+        />
+      {/if}
     {/snippet}
   </GroupedResourceIndex>
 </div>
