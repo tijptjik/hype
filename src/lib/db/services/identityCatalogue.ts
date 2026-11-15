@@ -1,3 +1,5 @@
+import { catalogueQualitySql } from './catalogueQualitySql'
+import type { LogoQualityFilters } from '#lib/locations/catalogueQuality'
 import {
   identityCatalogue,
   identityCatalogueRevision,
@@ -81,7 +83,11 @@ export async function searchIdentityCatalogue(
   excludeDescendantsOf?: string,
   isArchived: boolean | null = false,
   independent: boolean | null = null,
-  page?: { after?: { name: string; id: string } },
+  page?: {
+    after?: { name: string; id: string }
+    quality?: LogoQualityFilters
+    origin?: string
+  },
 ): Promise<IdentityCatalogueRecord[]> {
   const rows = await db.all<{
     id: string
@@ -89,7 +95,7 @@ export async function searchIdentityCatalogue(
     version: number
     content: string
   }>(
-    sql`SELECT c.id,c.kind,c.version,r.content FROM identityCatalogue c JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version WHERE c.kind=${kind} AND (${isArchived === null ? null : Number(isArchived)} IS NULL OR coalesce(json_extract(r.content,'$.isArchived'),0)=${isArchived === null ? null : Number(isArchived)}) AND (${independent === null ? null : Number(independent)} IS NULL OR (c.groupId IS NULL)=${independent === null ? null : Number(independent)}) AND c.id NOT IN (WITH RECURSIVE descendants(id) AS (SELECT id FROM identityCatalogue WHERE id=${excludeDescendantsOf ?? null} UNION SELECT child.id FROM identityCatalogue child JOIN descendants parent ON child.groupId=parent.id) SELECT id FROM descendants) AND (${search}='' OR instr(lower(coalesce(json_extract(r.content,'$.code'),c.id)),lower(${search}))>0 OR EXISTS(SELECT 1 FROM identityCatalogueI18n names WHERE names.catalogueId=c.id AND names.version=c.version AND instr(lower(names.name),lower(${search}))>0)) AND (${page?.after?.id ?? null} IS NULL OR coalesce(json_extract(r.content,'$.i18n.en.name'),'') > ${page?.after?.name ?? ''} OR (coalesce(json_extract(r.content,'$.i18n.en.name'),'') = ${page?.after?.name ?? ''} AND c.id > ${page?.after?.id ?? ''})) ORDER BY coalesce(json_extract(r.content,'$.i18n.en.name'),''),c.id LIMIT ${page ? 51 : 50}`,
+    sql`SELECT c.id,c.kind,c.version,r.content FROM identityCatalogue c JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version WHERE c.kind=${kind} AND (${catalogueQualitySql(page?.quality)}) AND (${page?.origin ?? null} IS NULL OR (${page?.origin ?? null}='unrecorded' AND NOT EXISTS(SELECT 1 FROM identityCatalogueSource source WHERE source.catalogueId=c.id)) OR EXISTS(SELECT 1 FROM identityCatalogueSource source WHERE source.catalogueId=c.id AND source.source=${page?.origin ?? null})) AND (${isArchived === null ? null : Number(isArchived)} IS NULL OR coalesce(json_extract(r.content,'$.isArchived'),0)=${isArchived === null ? null : Number(isArchived)}) AND (${independent === null ? null : Number(independent)} IS NULL OR (c.groupId IS NULL)=${independent === null ? null : Number(independent)}) AND c.id NOT IN (WITH RECURSIVE descendants(id) AS (SELECT id FROM identityCatalogue WHERE id=${excludeDescendantsOf ?? null} UNION SELECT child.id FROM identityCatalogue child JOIN descendants parent ON child.groupId=parent.id) SELECT id FROM descendants) AND (${search}='' OR instr(lower(coalesce(json_extract(r.content,'$.code'),c.id)),lower(${search}))>0 OR EXISTS(SELECT 1 FROM identityCatalogueI18n names WHERE names.catalogueId=c.id AND names.version=c.version AND instr(lower(names.name),lower(${search}))>0)) AND (${page?.after?.id ?? null} IS NULL OR coalesce(json_extract(r.content,'$.i18n.en.name'),'') > ${page?.after?.name ?? ''} OR (coalesce(json_extract(r.content,'$.i18n.en.name'),'') = ${page?.after?.name ?? ''} AND c.id > ${page?.after?.id ?? ''})) ORDER BY coalesce(json_extract(r.content,'$.i18n.en.name'),''),c.id LIMIT ${page ? 51 : 50}`,
   )
   return rows.map(row => ({
     id: row.id,

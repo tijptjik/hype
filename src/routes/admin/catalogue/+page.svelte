@@ -1,4 +1,9 @@
 <script lang="ts">
+import CatalogueFilterBar from '#lib/bits/patterns/resource/catalogueQuality/CatalogueFilterBar.svelte'
+import {
+  qualityFiltersFromUrl,
+  type LogoQualityKey,
+} from '#lib/locations/catalogueQuality'
 // TRANSLATION REVIEW
 import { MultilingualReview } from '#lib/forms/multilingualReview.svelte.js'
 import MultilingualReviewPanel from '#lib/bits/patterns/forms/translationReview/MultilingualReviewPanel.svelte'
@@ -7,6 +12,7 @@ let reviewForm = $state<HTMLFormElement>()
 
 // SVELTE
 import { page } from '$app/state'
+import type { Snapshot } from './$types'
 import { onDestroy, untrack } from 'svelte'
 import { toast } from 'svelte-sonner'
 import { prefersReducedMotion } from 'svelte/motion'
@@ -14,9 +20,9 @@ import { fade, slide } from 'svelte/transition'
 import { goto } from '$app/navigation'
 // ICONS
 import LayoutGrid from 'virtual:icons/lucide/layout-grid'
-import List from 'virtual:icons/lucide/list'
+import GridSmall from 'virtual:icons/lucide/grid-3x3'
+import CatalogueGrid from '#lib/bits/patterns/resource/catalogueGrid/CatalogueGrid.svelte'
 import Building from 'virtual:icons/lucide/building-2'
-import IndexCard from '#lib/bits/patterns/cards/indexCard/IndexCard.svelte'
 import FeatureIcon from 'virtual:icons/proicons/location'
 import Tags from 'virtual:icons/lucide/tags'
 import ListTree from 'virtual:icons/lucide/list-tree'
@@ -29,6 +35,8 @@ import ImageIcon from 'virtual:icons/lucide/image'
 import PhotoIcon from 'virtual:icons/proicons/photo'
 import Dropzone from '#lib/bits/patterns/images/components/Dropzone.svelte'
 import Download from 'virtual:icons/lucide/download'
+import FilterIcon from 'virtual:icons/proicons/filter'
+import FilterOffIcon from 'virtual:icons/lucide/funnel-x'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
@@ -40,6 +48,7 @@ import {
   publishIdentityCatalogueLocations,
   findIdentityCatalogue,
   listIdentityCatalogue,
+  listIdentityCatalogueOrigins,
   getIdentityCatalogue,
   publishIdentityCatalogue,
   uploadIdentityCatalogueLogo,
@@ -55,7 +64,6 @@ import { SectionHeader, TextInput } from '#lib/bits/custom/form/index.js'
 import ResourceIcon from '#lib/bits/custom/resourceIcon/ResourceIcon.svelte'
 import SearchSelect from '#lib/bits/core/searchSelect/SearchSelect.svelte'
 import FormI18nInlineRow from '#lib/bits/patterns/forms/formI18nSection/components/FormI18nInlineRow.svelte'
-import ResourceRow from '#lib/bits/patterns/resource/rows/ResourceRow/ResourceRow.svelte'
 import LocaleToolbar from '#lib/bits/custom/localeControls/LocaleToolbar.svelte'
 import {
   displayedLocales,
@@ -92,7 +100,14 @@ admin.setResourceType(false)
 let importStatus = $state('')
 let kind = $state<'brand' | 'group'>('brand')
 let search = $state('')
-let catalogueLayout = $state<'list' | 'card'>('card')
+let catalogueLayout = $state<'compact' | 'card'>('card')
+// Restore the chosen card size when returning from a catalogue detail page.
+export const snapshot: Snapshot<'compact' | 'card'> = {
+  capture: () => catalogueLayout,
+  restore: value => {
+    catalogueLayout = value
+  },
+}
 let groupSearch = $state('')
 let groups = $state<IdentityCatalogueRecord[]>([])
 let newGroup = $state<{ id: string; i18n: IdentityCatalogueContent['i18n'] } | null>(
@@ -126,6 +141,8 @@ async function loadMore(): Promise<void> {
       search,
       after: nextCursor,
       isArchived: false,
+      quality: qualityFilters,
+      origin: catalogueOrigin || undefined,
     })
     if (retry) await request.refresh()
     const value = await request
@@ -155,7 +172,50 @@ $effect(() => {
   observer.observe(sentinel)
   return () => observer.disconnect()
 })
-
+let filtersVisible = $state(false)
+const catalogueOrigin = $derived(page.url.searchParams.get('catalogue-origin') ?? '')
+let catalogueOrigins = $state<string[]>([])
+$effect(() => {
+  let cancelled = false
+  void listIdentityCatalogueOrigins(kind)
+    .then(values => {
+      if (!cancelled) catalogueOrigins = values
+    })
+    .catch(() => {
+      if (!cancelled) catalogueOrigins = []
+    })
+  return () => {
+    cancelled = true
+  }
+})
+/** Keep catalogue provenance filtering in the shareable index URL.
+ * @param origin Source namespace or empty for all sources. @returns Nothing.
+ */
+function setCatalogueOrigin(origin: string): void {
+  const url = new URL(page.url)
+  if (origin) url.searchParams.set('catalogue-origin', origin)
+  else url.searchParams.delete('catalogue-origin')
+  void goto(url, { replace: true, reset: false })
+}
+const qualityFilters = $derived(qualityFiltersFromUrl(page.url.searchParams))
+/** Update one quality filter while preserving the other URL context.
+ * @param key Quality dimension. @param value Yes, no or either. @returns Nothing.
+ */
+function setQualityFilter(key: LogoQualityKey, value: boolean | null): void {
+  const url = new URL(page.url)
+  if (value === null) url.searchParams.delete(`logo-${key}`)
+  else url.searchParams.set(`logo-${key}`, value ? 'yes' : 'no')
+  void goto(url, { replace: true, reset: false })
+}
+/** Clear quality filters without losing organisation or unrelated query parameters.
+ * @returns Nothing.
+ */
+function resetQualityFilters(): void {
+  const url = new URL(page.url)
+  url.searchParams.delete('catalogue-origin')
+  for (const key of Object.keys(qualityFilters)) url.searchParams.delete(`logo-${key}`)
+  void goto(url, { replace: true, reset: false })
+}
 let groupNamesBeforeEdit: Record<string, string> = {}
 let namesBeforeEdit: Record<string, string> = {}
 $effect(() => {
@@ -399,10 +459,13 @@ $effect(() => {
       ? `New ${kind}`
       : 'Entity Catalog'
   const activeKind = kind
+  const showFilters = filtersVisible
   const cards = catalogueLayout === 'card'
   const isDetail = detail
   const isLocations = locationsActive
   const isFeatures = featuresActive
+  // Catalogue views own their filters; never retain a feature index control bar.
+  if (!isFeatures) header.clearControlBar()
   const hasFeatures = selected?.kind === 'brand'
   const controls = {
     content: isFeatures || isLocations ? null : localeControl,
@@ -492,15 +555,27 @@ $effect(() => {
 
       header.setViewActions([
         {
-          text: cards ? 'Show rows' : 'Show cards',
-          icon: cards ? List : LayoutGrid,
+          text: showFilters ? 'Hide filters' : 'Show filters',
+          icon: showFilters ? FilterOffIcon : FilterIcon,
           color: 'neutral',
           style: 'ghost',
           class: 'px-4',
           alwaysHideLabel: true,
           hideLabelInstantly: true,
           onClick: () => {
-            catalogueLayout = cards ? 'list' : 'card'
+            filtersVisible = !filtersVisible
+          },
+        },
+        {
+          text: cards ? 'Show smaller cards' : 'Show larger cards',
+          icon: cards ? GridSmall : LayoutGrid,
+          color: 'neutral',
+          style: 'ghost',
+          class: 'px-4',
+          alwaysHideLabel: true,
+          hideLabelInstantly: true,
+          onClick: () => {
+            catalogueLayout = cards ? 'compact' : 'card'
           },
         },
       ])
@@ -513,10 +588,12 @@ $effect(() => {
         {
           active: activeKind,
           onFacetChange: value => {
-            if (value === 'brand' || value === 'group')
-              void goto(
-                `/admin/catalogue?kind=${value}${organisationId ? `&organisation=${organisationId}` : ''}`,
-              )
+            if (value === 'brand' || value === 'group') {
+              const url = new URL(page.url)
+              url.pathname = '/admin/catalogue'
+              url.searchParams.set('kind', value)
+              void goto(url)
+            }
           },
         },
       )
@@ -555,6 +632,8 @@ $effect(() => {
     kind: type,
     search: query,
     isArchived: false,
+    quality: qualityFilters,
+    origin: catalogueOrigin || undefined,
   })
   void (indexRetry || refresh ? request.refresh().then(() => request) : request)
     .then(value => {
@@ -925,53 +1004,30 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
     admin.view.layout.setMainDimensions(width, height)}
 >
   {#if !detail}
+    {#if filtersVisible}
+      <CatalogueFilterBar
+        quality={qualityFilters}
+        origin={catalogueOrigin}
+        origins={catalogueOrigins}
+        count={records.length}
+        {loading}
+        onQuality={setQualityFilter}
+        onOrigin={setCatalogueOrigin}
+        onReset={() => {
+          resetQualityFilters()
+        }}
+      />
+    {/if}
     <div class="p-6">
-      <div
-        class={catalogueLayout === 'card'
-          ? 'grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4'
-          : 'grid gap-1.5'}
-      >
-        {#each records as record, index (record.id)}
-          {#if catalogueLayout === 'card'}
-            <IndexCard
-              title={catalogueDisplayName(record)}
-              description={record.code ?? record.id}
-              imageSrc={catalogueDisplayLogo(record, theme.selected, artworkMode) ??
-                catalogueLogoFallbacks(record)[0] ??
-                ''}
-              imageFallbackSrcs={catalogueLogoFallbacks(record)}
-              imageAlt={catalogueDisplayName(record)}
-              imageLayout="contain"
-              imageInset={true}
-              imageBackground={catalogueLogoBackground(
-                record,
-                theme.selected,
-                artworkMode,
-              )}
-              onNavigate={() => openRecord(record)}
-            />
-          {:else}
-            <ResourceRow
-              {index}
-              title={catalogueDisplayName(record)}
-              description={record.code ?? record.id}
-              imageSrc={catalogueDisplayLogo(record, theme.selected, artworkMode) ??
-                catalogueLogoFallbacks(record)[0] ??
-                ''}
-              imageFallbackSrcs={catalogueLogoFallbacks(record)}
-              imageAlt={catalogueDisplayName(record)}
-              onNavigate={() => openRecord(record)}
-            />
-          {/if}
-        {/each}
-      </div>
-      {#if loading && !records.length}
-        <div
-          role="status"
-          aria-label="Loading catalogue"
-          class="bg-muted h-40 animate-pulse rounded-xl"
-        ></div>
-      {/if}
+      <CatalogueGrid
+        {records}
+        compact={catalogueLayout === 'compact'}
+        {loading}
+        {loadingMore}
+        theme={theme.selected}
+        mode={artworkMode}
+        onNavigate={openRecord}
+      />
       {#if !loading && !records.length}
         <p class="text-muted-foreground p-6 text-sm">
           {search
@@ -1635,15 +1691,13 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
   {/if}
   {#if !detail && nextCursor}
     <div bind:this={sentinel} class="flex justify-center p-6">
-      <Button
-        text={loadingMore
-          ? 'Loading…'
-          : moreFailed
-            ? 'Retry loading more'
-            : 'Load more'}
-        style="ghost"
-        onClick={() => void loadMore()}
-      />
+      {#if !loadingMore}
+        <Button
+          text={moreFailed ? 'Retry loading more' : 'Load more'}
+          style="ghost"
+          onClick={() => void loadMore()}
+        />
+      {/if}
       {#if moreFailed}
         <p role="alert">Unable to load more records.</p>
       {/if}

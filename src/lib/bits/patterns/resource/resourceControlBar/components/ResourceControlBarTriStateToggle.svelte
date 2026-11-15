@@ -8,6 +8,7 @@ import type { ResourceControlBarTriStateToggleProps } from './resourceControlBar
 
 let {
   label,
+  alwaysShowLabels = false,
   tooltip,
   currentValue = null,
   falseLabel = '',
@@ -46,7 +47,7 @@ function handleTrueClick(event: MouseEvent): void {
   <div class="bits-theme bits-resource-filter-bar__tri-toggle-control">
     <button
       type="button"
-      class="bits-resource-filter-bar__tri-toggle-side-label bits-resource-filter-bar__tri-toggle-side-label--left"
+      class={`bits-resource-filter-bar__tri-toggle-side-label bits-resource-filter-bar__tri-toggle-side-label--left ${alwaysShowLabels ? 'text-base-content/70! flex items-center gap-1.5' : ''}`}
       onclick={handleFalseClick}
     >
       {falseLabel}
@@ -75,7 +76,7 @@ function handleTrueClick(event: MouseEvent): void {
     </div>
     <button
       type="button"
-      class="bits-resource-filter-bar__tri-toggle-side-label bits-resource-filter-bar__tri-toggle-side-label--right"
+      class={`bits-resource-filter-bar__tri-toggle-side-label bits-resource-filter-bar__tri-toggle-side-label--right ${alwaysShowLabels ? 'text-base-content/70! flex items-center gap-1.5' : ''}`}
       onclick={handleTrueClick}
     >
       {trueLabel}

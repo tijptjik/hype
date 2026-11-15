@@ -1,3 +1,4 @@
+import { LogoQualityFiltersSchema } from '#lib/locations/catalogueQuality'
 // SVELTE
 import { error } from '@sveltejs/kit'
 // VALIDATION
@@ -69,6 +70,8 @@ export const listIdentityCatalogue = guardedQuery(
     isArchived: z.boolean().nullable().optional(),
     independent: z.boolean().nullable().optional(),
     after: z.object({ name: z.string(), id: z.string().min(1).max(200) }).optional(),
+    quality: LogoQualityFiltersSchema.optional(),
+    origin: z.string().min(1).max(200).optional(),
   }),
   async (input, ctx) => {
     if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
@@ -85,7 +88,7 @@ export const listIdentityCatalogue = guardedQuery(
       undefined,
       input.isArchived,
       input.independent,
-      { after: input.after },
+      { after: input.after, quality: input.quality, origin: input.origin },
     )
     const records = rows.slice(0, 50)
     const last = records.at(-1)
@@ -286,5 +289,19 @@ export const getWikidataBrand = guardedQuery(
   async (input, ctx) => {
     if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
     return readWikidataBrand(input.id)
+  },
+)
+
+/** List recorded catalogue source namespaces for the Origin filter.
+ * @param kind Catalogue kind. @returns Distinct recorded sources.
+ */
+export const listIdentityCatalogueOrigins = guardedQuery(
+  z.enum(['brand', 'group']),
+  async (kind, ctx) => {
+    if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
+    const rows = await ctx.db.all<{ source: string }>(
+      sql`SELECT DISTINCT s.source FROM identityCatalogueSource s JOIN identityCatalogue c ON c.id=s.catalogueId WHERE c.kind=${kind} ORDER BY s.source`,
+    )
+    return rows.map(row => row.source)
   },
 )
