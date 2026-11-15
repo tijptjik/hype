@@ -1,12 +1,17 @@
 <script lang="ts">
+// SVELTE
 import { untrack } from 'svelte'
+// I18N
+import { getLocale } from '#lib/i18n.js'
+// DOMAIN
+import { premisesLabel, premisesTypography } from '#lib/indoor/premisesLabels.js'
 import { divisionHighlightColors } from '#lib/map/divisionHighlights.js'
 import type { MapMarkerTheme } from '#lib/map/styles/catalog.js'
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import {
   loadPremisesCatalogue,
-  findStation,
   findPremises,
+  findStation,
   premisesPath,
 } from '#lib/indoor/registry.js'
 import { bounds } from '#lib/indoor/model.js'
@@ -16,6 +21,7 @@ let {
   theme,
   showMtrStations = true,
 }: { map: MapLibreMap; theme: MapMarkerTheme; showMtrStations?: boolean } = $props()
+const locale = $derived(getLocale())
 let available = $state<string[]>([])
 let data = $state.raw<Collection | null>(null)
 $effect(() => {
@@ -30,7 +36,8 @@ $effect(() => {
             properties: {
               ...feature.properties,
               stationCode: entry.code,
-              indoorLabel: entry.name,
+              indoorName: entry.name,
+              indoorNameZh: entry.nameZh,
               isStation: entry.kind === 'station',
             },
           })),
@@ -43,13 +50,28 @@ $effect(() => {
   return () => controller.abort()
 })
 $effect(() => {
+  const activeLocale = locale
   const source = data
       ? {
           ...data,
-          features: data.features.filter(
-            feature =>
-              showMtrStations || !findStation(String(feature.properties.stationCode)),
-          ),
+          features: data.features
+            .filter(
+              feature =>
+                showMtrStations || !findStation(String(feature.properties.stationCode)),
+            )
+            .map(feature => ({
+              ...feature,
+              properties: {
+                ...feature.properties,
+                indoorLabel: premisesLabel(
+                  {
+                    name: String(feature.properties.indoorName ?? ''),
+                    nameZh: String(feature.properties.indoorNameZh ?? ''),
+                  },
+                  activeLocale,
+                ),
+              },
+            })),
         }
       : null,
     colour = divisionHighlightColors[theme],
@@ -57,10 +79,34 @@ $effect(() => {
   if (!source) return
   return untrack(() => {
     let rendering = false
-    const render = () => {
+    // Rasterize the supplied official SVG at its original aspect ratio for MapLibre.
+    let disposed = false
+    let logoReady = false
+    const canvas = document.createElement('canvas')
+    canvas.width = 50
+    canvas.height = 40
+    const ctx = canvas.getContext('2d')
+    const logo = new Image()
+    logo.onload = () => {
+      if (disposed || !ctx) return
+      ctx.drawImage(logo, 0, 0, canvas.width, canvas.height)
+      logoReady = true
+      render()
+    }
+    logo.src = '/brands/mtr.svg'
+    /** Restore footprint layers after style changes. @returns Nothing. */
+    const render = (): void => {
       if (rendering || !target.getStyle()) return
       rendering = true
       try {
+        if (ctx && logoReady && !target.hasImage('hype-indoor-mtr'))
+          target.addImage(
+            'hype-indoor-mtr',
+            ctx.getImageData(0, 0, canvas.width, canvas.height),
+            {
+              pixelRatio: 2,
+            },
+          )
         if (!target.getSource('hype-station-footprint'))
           target.addSource('hype-station-footprint', {
             type: 'geojson',
@@ -72,7 +118,10 @@ $effect(() => {
             type: 'fill',
             source: 'hype-station-footprint',
             minzoom: 16,
-            paint: { 'fill-color': colour, 'fill-opacity': 0.12 },
+            paint: {
+              'fill-color': colour,
+              'fill-opacity': ['interpolate', ['linear'], ['zoom'], 16, 0, 17, 0.12],
+            },
           })
         if (!target.getLayer('hype-station-footprint-line'))
           target.addLayer({
@@ -80,8 +129,19 @@ $effect(() => {
             type: 'line',
             source: 'hype-station-footprint',
             minzoom: 16,
-            paint: { 'line-color': colour, 'line-width': 2, 'line-dasharray': [3, 2] },
+            paint: {
+              'line-color': colour,
+              'line-width': 2,
+              'line-dasharray': [3, 2],
+              'line-opacity': ['interpolate', ['linear'], ['zoom'], 16, 0, 17, 1],
+            },
           })
+        const road = target
+          .getStyle()
+          .layers.find(layer => layer.id === 'roads_labels_major')
+        const typography = premisesTypography(
+          road?.type === 'symbol' ? road : undefined,
+        )
         if (!target.getLayer('hype-station-footprint-label'))
           target.addLayer({
             id: 'hype-station-footprint-label',
@@ -89,18 +149,30 @@ $effect(() => {
             source: 'hype-station-footprint',
             minzoom: 16.5,
             layout: {
-              'text-field': ['get', 'indoorLabel'],
-              'text-size': 15,
+              ...typography.layout,
+              'text-field': [
+                'case',
+                ['get', 'isStation'],
+                [
+                  'format',
+                  ['image', 'hype-indoor-mtr'],
+                  { 'vertical-align': 'center' },
+                  ' ',
+                  {},
+                  ['get', 'indoorLabel'],
+                  { 'vertical-align': 'center' },
+                ],
+                ['get', 'indoorLabel'],
+              ],
+              'text-max-width': 20,
               'text-anchor': 'bottom',
               'text-offset': [0, -1],
               'text-allow-overlap': false,
             },
             paint: {
-              // Neutral ink and paper keep labels readable on every basemap palette.
-              'text-color': '#263d49',
-              'text-halo-color': '#ffffff',
-              'text-halo-width': 2,
-              'text-halo-blur': 0,
+              // Use the same ink and halo as major streets in the active theme.
+              ...typography.paint,
+              'text-opacity': ['interpolate', ['linear'], ['zoom'], 16.5, 0, 17.25, 1],
             },
           })
       } catch (error) {
@@ -143,6 +215,8 @@ $effect(() => {
     target.on('mouseleave', 'hype-station-footprint-fill', leave)
     render()
     return () => {
+      disposed = true
+      logo.onload = null
       target.off('style.load', render)
       target.off('styledata', render)
       target.off('idle', render)
@@ -155,6 +229,7 @@ $effect(() => {
         'hype-station-footprint-fill',
       ])
         if (target.getLayer(id)) target.removeLayer(id)
+      if (target.hasImage('hype-indoor-mtr')) target.removeImage('hype-indoor-mtr')
       if (target.getSource('hype-station-footprint'))
         target.removeSource('hype-station-footprint')
     }
@@ -166,6 +241,6 @@ $effect(() => {
   <a
     href={premisesPath(code)}
     class="focus:bg-panel focus:text-primary sr-only focus:not-sr-only focus:absolute focus:right-4 focus:bottom-12 focus:z-50 focus:rounded-lg focus:p-3"
-    >Open {findPremises(code)?.name} indoor map</a
+    >Open {premisesLabel(findPremises(code), locale)} indoor map</a
   >
 {/each}

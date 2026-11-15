@@ -1,4 +1,7 @@
 <script lang="ts">
+// I18N
+import { getLocale } from '#lib/i18n.js'
+import { premisesLabel } from '#lib/indoor/premisesLabels.js'
 // CONTEXT
 import { getAppCtx } from '#lib/context/app.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
@@ -81,7 +84,9 @@ function select(place: Place): void {
       {#if !model.panel.isNarrow}
         <div>
           <p class="text-primary text-xs tracking-widest uppercase">Station layout</p>
-          <h2 class="text-lg font-semibold">{station.metadata?.name}</h2>
+          <h2 class="text-lg font-semibold">
+            {premisesLabel(station.metadata, getLocale())}
+          </h2>
           <p class="text-muted-foreground text-xs">
             {station.metadata?.nameZh}
             · {station.code}

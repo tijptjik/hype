@@ -1,4 +1,7 @@
 <script lang="ts">
+// I18N
+import { getLocale } from '#lib/i18n.js'
+import { premisesLabel } from '#lib/indoor/premisesLabels.js'
 import { page } from '$app/state'
 import { untrack } from 'svelte'
 import { Panel as RoutePanel } from '#lib/enums.js'
@@ -95,7 +98,7 @@ const offset = $derived(responsive.isMobile ? 0 : (layout?.getAppMainOffsetX() ?
 {#if station.active || indoorMatch}
   <section
     class="absolute inset-0 z-10 overflow-hidden bg-[var(--station-canvas)]"
-    aria-label={`${station.metadata?.name} indoor layout`}
+    aria-label={`${premisesLabel(station.metadata, getLocale())} indoor layout`}
     data-station-surface
   >
     <div
@@ -136,7 +139,9 @@ const offset = $derived(responsive.isMobile ? 0 : (layout?.getAppMainOffsetX() ?
         />
       {:else}
         <div class="bg-panel text-base-content mx-auto mt-16 max-w-md rounded-xl p-6">
-          <h2 class="text-xl font-semibold">{station.metadata?.name}</h2>
+          <h2 class="text-xl font-semibold">
+            {premisesLabel(station.metadata, getLocale())}
+          </h2>
           <p class="text-muted-foreground mt-2 text-sm">
             Explore the official station maps. Interactive floor plans are not available
             for this station yet.
