@@ -26,7 +26,13 @@ let {
   data,
   connections = $bindable(),
   disabled = false,
-}: { data: IndoorData; connections: MapConnection[]; disabled?: boolean } = $props()
+  onFloorsChange,
+}: {
+  data: IndoorData
+  connections: MapConnection[]
+  disabled?: boolean
+  onFloorsChange?: (label: string) => void
+} = $props()
 let leftFloor = $state('')
 let rightFloor = $state('')
 let leftId = $state('')
@@ -104,6 +110,14 @@ const rightEntrance = $derived(
     ? ((pair.from === rightId ? pair.fromEntrance : pair.toEntrance) ?? null)
     : pendingRightEntrance,
 )
+
+// Report the visible floor context for the browser title without coupling camera state to it.
+$effect(() => {
+  const names = [leftFloor, rightFloor]
+    .map(id => floorItems.find(item => item.value === id)?.label)
+    .filter(Boolean)
+  onFloorsChange?.(names.join(' ↔ '))
+})
 
 /** Cycle direction and apply it directly to an existing draft pair. @returns Nothing. */
 function cycleDirection(): void {

@@ -53,6 +53,8 @@ try {
         .first(),
     ).toBeVisible()
     await expect(page.getByText('Reason for connection changes')).toHaveCount(0)
+    await expect(page).toHaveTitle(/^ᴰᴱⱽ Kennedy Town · .+ · HYPE\.HK$/)
+
     const source = left.locator('[data-facility]').filter({ has: page.locator('svg') })
     assert((await source.count()) > 0)
     // A new pair requires two independent selections and an explicit connect action.
@@ -140,7 +142,9 @@ try {
     await expect(
       page.getByRole('button', { name: 'Save label correction', exact: true }),
     ).toBeVisible()
+    await expect(page).toHaveTitle(/^ᴰᴱⱽ Kennedy Town · Level labels · HYPE\.HK$/)
     await page.getByRole('tab', { name: 'Saved corrections', exact: true }).click()
+    await expect(page).toHaveTitle('ᴰᴱⱽ Kennedy Town · Saved corrections · HYPE.HK')
     await expect(
       page.getByText('Overrides applied to the upstream map source.'),
     ).toBeVisible()

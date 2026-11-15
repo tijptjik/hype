@@ -2,6 +2,8 @@
 // SVELTE
 import { onDestroy, untrack } from 'svelte'
 import { page } from '$app/state'
+// NAVIGATION
+import { resolveTitle } from '#lib/navigation/title.js'
 // CONTEXT
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // ICONS
@@ -45,14 +47,38 @@ let correctionValue = $state('')
 let correctionReason = $state('')
 const header = getHeaderCtrl()
 let tab = $state('connections')
+let connectionFloors = $state('')
 const editorTabs = [
   { value: 'connections', label: 'Floor connections' },
   { value: 'labels', label: 'Level labels' },
   { value: 'corrections', label: 'Saved corrections' },
   { value: 'history', label: 'Published history' },
 ]
+const premisesName = $derived(
+  maps.find(map => map.id === selected)?.name ?? 'Premises maps',
+)
+const titleDetail = $derived(
+  tab === 'connections'
+    ? connectionFloors || 'Floor connections'
+    : tab === 'labels'
+      ? String(
+          loaded?.bundle?.data.level_polygon.features.find(
+            level => String(level.properties.level_id) === correctionLevel,
+          )?.properties.level_name_en ?? 'Level labels',
+        )
+      : tab === 'history' && inspectedVersion !== null
+        ? `Published history · Version ${inspectedVersion}`
+        : editorTabs.find(item => item.value === tab)?.label,
+)
+const documentTitle = $derived(
+  resolveTitle(
+    `${premisesName}${titleDetail ? ` · ${titleDetail}` : ''} · HYPE.HK`,
+    page.data.titleEnvironmentLabel,
+  ),
+)
+
 $effect(() => {
-  const title = maps.find(map => map.id === selected)?.name ?? 'Premises maps'
+  const title = premisesName
   untrack(() => {
     header.setHeaderForEntity(title, MapIcon, new Map(), {
       showNew: false,
@@ -80,6 +106,7 @@ let dirty = $derived(
 /** Load the exact draft and concurrency fences. @returns Completion. */
 async function load(): Promise<void> {
   if (!selected) return
+  connectionFloors = ''
   const query = getPremisesMapDraft({ id: selected })
   await query.refresh()
   loaded = await query
@@ -115,6 +142,8 @@ $effect(() => {
   })
 })
 </script>
+
+<svelte:head><title>{documentTitle}</title></svelte:head>
 
 <Main.Root class="min-h-0 overflow-y-auto! overscroll-contain px-0! pt-0!">
   <FormSurface>
@@ -170,6 +199,9 @@ $effect(() => {
                     {#key selected}
                       <ConnectionMapEditor
                         data={loaded.bundle.data}
+                        onFloorsChange={label => {
+                          connectionFloors = label
+                        }}
                         bind:connections
                         disabled={busy}
                       />
