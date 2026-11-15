@@ -10,6 +10,7 @@ export type ConnectorRelief = {
   descending: boolean
   opening: string
   bridges: string[]
+  bridgeFaces: { path: string; upper: Point; lower: Point }[]
   surface: string
   depthEdges: string[]
   recessFaces: string[]
@@ -263,6 +264,7 @@ export function prepareConnectorReliefs(
         descending: direction < 0,
         opening: projection.path(unit),
         bridges: [],
+        bridgeFaces: [],
         surface: line(unit),
         depthEdges,
         recessFaces,
@@ -321,15 +323,36 @@ export function prepareConnectorReliefs(
       const neighbour = profiles.get(pair.b)!
       const path = (points: Point[]): string =>
         points.map((point, i) => `${i ? 'L' : 'M'}${point.join(',')}`).join(' ') + 'Z'
-      result
-        .get(pair.a)!
-        .bridges.push(
-          path(
-            pair.ring.map((point, index) =>
-              (index < 2 ? profile : neighbour).project(projection, point),
-            ),
+      const levelId = value(profile.unit.properties, 'level_id')
+      const vertices = pair.ring.map((point, index) =>
+        (index < 2 ? profile : neighbour).project(projection, point),
+      )
+      const relief = result.get(pair.a)!
+      relief.bridges.push(path(vertices))
+      // A shared sliver is an exposed wall, not a walking surface. Interpolate actual
+      // elevations on each triangle so unequal slopes meet without restarting the shade.
+      const depths = pair.ring.map((point, index) => {
+        const ground = projection.project(point, levelId)
+        const full = projection.project(point, levelId, profile.descending ? -1.8 : 1.8)
+        const height =
+          Math.abs(full[1] - ground[1]) < 1e-10
+            ? 0
+            : (vertices[index][1] - ground[1]) / (full[1] - ground[1])
+        return profile.descending ? height : 1 - height
+      })
+      for (const indices of [
+        [0, 1, 2],
+        [0, 2, 3],
+      ]) {
+        const triangle = indices.map(index => vertices[index])
+        relief.bridgeFaces.push({
+          path: path(triangle),
+          ...elevationLighting(
+            triangle,
+            indices.map(index => depths[index]),
           ),
-        )
+        })
+      }
       const gap = path(
         pair.ring.map(point =>
           projection.project(point, value(profile.unit.properties, 'level_id')),

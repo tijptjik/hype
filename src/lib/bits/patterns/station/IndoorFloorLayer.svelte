@@ -175,6 +175,25 @@ const facilityMarkers = $derived.by(() => {
             />
           </linearGradient>
         {/each}
+        {#each relief.bridgeFaces as face, index}
+          <linearGradient
+            id={`${openingId}-bridge-${index}`}
+            gradientUnits="userSpaceOnUse"
+            x1={face.upper[0]}
+            y1={face.upper[1]}
+            x2={face.lower[0]}
+            y2={face.lower[1]}
+          >
+            <stop
+              offset="0"
+              stop-color="color-mix(in srgb, var(--station-connector) 24%, var(--station-connector-fill))"
+            />
+            <stop
+              offset="1"
+              stop-color={`color-mix(in srgb, var(--station-connector) ${relief.descending ? 55 : 40}%, var(--station-connector-fill))`}
+            />
+          </linearGradient>
+        {/each}
         <clipPath id={openingId} clipPathUnits="userSpaceOnUse">
           <path d={relief.opening} />
         </clipPath>
@@ -207,10 +226,10 @@ const facilityMarkers = $derived.by(() => {
           />
         {/each}
       {:else}
-        {#each relief.bridges as bridge}
+        {#each relief.bridgeFaces as face, index}
           <path
-            d={bridge}
-            fill={`url(#${openingId}-depth)`}
+            d={face.path}
+            fill={`url(#${openingId}-bridge-${index})`}
             data-connector-shared-surface
           />
         {/each}
