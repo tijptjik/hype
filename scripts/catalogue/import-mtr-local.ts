@@ -15,6 +15,7 @@ import {
   saveIdentityCatalogue,
 } from '../../src/lib/db/services/identityCatalogue'
 import { DEV_PERSONAS } from '../../src/lib/auth/dev-personas'
+import { retryBusyRead } from '../../src/lib/db/services/sqlite'
 // TYPES
 import type { Database } from '../../src/lib/types'
 import type { D1Database, R2Bucket } from '@cloudflare/workers-types'
@@ -42,10 +43,24 @@ type Artwork = {
   sourceUrl: string
   background: string
   notes: string
+  format: 'svg' | 'png'
+  mimeType: string
+  sourceWidth?: number
+  sourceHeight?: number
 }
 const apply = process.argv.includes('--apply')
-if (process.argv.slice(2).some(arg => arg !== '--apply'))
-  throw new Error('Only --apply is supported; this importer is local-only')
+const activateArtwork = process.argv.includes('--activate-artwork')
+const refreshCandidates = process.argv.includes('--refresh-candidates')
+if (
+  process.argv
+    .slice(2)
+    .some(
+      arg => !['--apply', '--refresh-candidates', '--activate-artwork'].includes(arg),
+    )
+)
+  throw new Error(
+    'Only --apply, --refresh-candidates and --activate-artwork are supported; this importer is local-only',
+  )
 const root = '.research/catalogue/mtr'
 const brands: Entity[] = await Bun.file('scripts/catalogue/mtr-brands.json').json()
 const groups: Entity[] = await Bun.file('scripts/catalogue/mtr-groups.json').json()
@@ -59,7 +74,9 @@ try {
   const db = drizzle(proxy.env.DB) as Database
   const ids = new Map<string, string>()
   for (const group of groups) {
-    const existing = await readIdentityCatalogueByCode(db, 'group', group.code)
+    const existing = await retryBusyRead(() =>
+      readIdentityCatalogueByCode(db, 'group', group.code),
+    )
     ids.set(group.code, existing?.id ?? `mtr-group-${group.code}`)
   }
   // Parents precede children in the reviewed manifest; reject a misordered import.
@@ -68,7 +85,9 @@ try {
     const kind = groups.includes(entity) ? 'group' : 'brand'
     if (entity.parent && !complete.has(entity.parent))
       throw new Error(`Parent must precede child: ${entity.code}`)
-    const existing = await readIdentityCatalogueByCode(db, kind, entity.code)
+    const existing = await retryBusyRead(() =>
+      readIdentityCatalogueByCode(db, kind, entity.code),
+    )
     const id = existing?.id ?? `mtr-${kind}-${entity.code}`
     const {
       id: _id,
@@ -128,12 +147,26 @@ try {
         ].map(e => [`${e.kind}:${e.url}`, e]),
       ).values(),
     ]
+    // Withdraw the verified hosting-provider favicon, preserving the prior revision.
+    if (
+      refreshCandidates &&
+      entity.code === 'joint-host' &&
+      content.artwork?.logo?.status === 'candidate' &&
+      content.artwork.logo.sourceUrl ===
+        'https://jointhost.com.hk/manus-storage/favicon-180_54f6e742.png'
+    ) {
+      delete content.artwork.logo
+    }
     const asset = assets.find(a => a.code === entity.code)
-    if (asset && !content.artwork?.logo) {
+    if (
+      asset &&
+      (!content.artwork?.logo ||
+        (refreshCandidates && content.artwork.logo.status === 'candidate'))
+    ) {
       const bytes = new Uint8Array(await Bun.file(asset.file).arrayBuffer())
       if (createHash('sha256').update(bytes).digest('hex') !== asset.sha256)
         throw new Error(`Asset changed: ${asset.code}`)
-      const key = `identity-catalogue/${asset.assetId}.png`
+      const key = `identity-catalogue/${asset.assetId}.${asset.format}`
       if (apply) {
         const old = await proxy.env.ASSET_PUBLIC_DEV.get(key)
         if (
@@ -145,18 +178,38 @@ try {
           throw new Error(`Immutable asset conflict: ${key}`)
         if (!old)
           await proxy.env.ASSET_PUBLIC_DEV.put(key, bytes, {
-            httpMetadata: { contentType: 'image/png' },
+            httpMetadata: { contentType: asset.mimeType },
           })
       }
+      content.logo = `/api/identity-catalogue/logos/${asset.assetId}`
+      content.logoAttribution = undefined
       content.artwork = {
         ...content.artwork,
         logo: {
           src: `/api/identity-catalogue/logos/${asset.assetId}`,
           background: asset.background,
-          status: 'candidate',
+          status: 'approved',
+          format: asset.format,
+          ...(asset.sourceWidth
+            ? { sourceWidth: asset.sourceWidth, sourceHeight: asset.sourceHeight }
+            : {}),
           sourceUrl: asset.sourceUrl,
           notes: asset.notes,
         },
+      }
+    }
+    // Activate sourced artwork on explicit request, keeping existing theme variants intact.
+    if (activateArtwork && content.artwork) {
+      for (const [slot, artwork] of Object.entries(content.artwork)) {
+        if (slot.endsWith('-research')) {
+          delete content.artwork[slot]
+        } else if (artwork.status === 'candidate') {
+          artwork.status = 'approved'
+          if (slot === 'logo') {
+            content.logo = artwork.src
+            content.logoAttribution = artwork.attribution
+          }
+        }
       }
     }
     const parsed = IdentityCatalogueContentSchema.parse(content)

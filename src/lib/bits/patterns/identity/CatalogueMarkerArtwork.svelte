@@ -9,15 +9,17 @@ let {
   theme,
   mode,
   genericIcon,
+  format,
   label = '',
 }: {
   owner: CatalogueArtworkOwner
   theme: string
   mode: 'light' | 'dark'
   genericIcon?: string
+  format?: string | Record<string, string>
   label?: string
 } = $props()
-const asset = $derived(resolveCatalogueMarker(owner, theme, mode, genericIcon))
+const asset = $derived(resolveCatalogueMarker(owner, theme, mode, genericIcon, format))
 </script>
 {#if asset}
   <img

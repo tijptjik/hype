@@ -4,7 +4,10 @@ import { sql } from 'drizzle-orm'
 import { readLocationFacts } from '#lib/locations/factsSnapshot.js'
 import { currentLocationFacts } from './locationReadProjection'
 import { readIdentityCatalogue } from './identityCatalogue'
-import { catalogueGeneralLogo } from '#lib/locations/catalogueArtwork.js'
+import {
+  catalogueGeneralLogo,
+  resolveCatalogueFormatArtwork,
+} from '#lib/locations/catalogueArtwork.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { ShopArtwork } from '#lib/indoor/artwork.js'
@@ -40,11 +43,14 @@ export async function premisesMapArtwork(
     if (!facts.brandId) continue
     const brand = await readIdentityCatalogue(db, facts.brandId)
     if (brand?.kind !== 'brand' || brand.isArchived) continue
-    const src = catalogueGeneralLogo(brand)
+    const formatArtwork = resolveCatalogueFormatArtwork(brand, facts.format)
+    const src = formatArtwork?.src ?? catalogueGeneralLogo(brand)
     if (!src) continue
-    const asset = Object.values(brand.artwork ?? {}).find(
-      a => a.src === src && a.status === 'approved',
-    )
+    const asset =
+      formatArtwork ??
+      Object.values(brand.artwork ?? {}).find(
+        a => a.src === src && a.status === 'approved',
+      )
     const byBrand = candidates.get(row.unitId) ?? new Map<string, ShopArtwork>()
     byBrand.set(`${brand.id}:${src}`, {
       src,

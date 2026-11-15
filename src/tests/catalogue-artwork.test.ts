@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   CatalogueArtworkSchema,
+  resolveCatalogueFormatArtwork,
   catalogueGeneralLogo,
   resolveCatalogueMarker,
 } from '../lib/locations/catalogueArtwork'
@@ -76,5 +77,47 @@ describe('catalogue artwork', () => {
         logo: { ...asset('2'), src: 'https://example.org/logo.png' },
       }).success,
     ).toBe(false)
+  })
+})
+
+describe('establishment format artwork', () => {
+  const owner = {
+    code: 'eslite',
+    artwork: {
+      logo: asset('2'),
+      'marker-dark': asset('3'),
+      'logo-format-flavor': asset('4'),
+      'logo-format-flavor-dark': asset('5'),
+      'logo-format-flavor-null-space': asset('6'),
+    },
+  }
+  it('selects a format before brand artwork and supports localized or brand-prefixed labels', () => {
+    expect(
+      resolveCatalogueMarker(owner, 'milk', 'light', undefined, {
+        en: 'eslite flavor',
+        'zh-Hant': '知味',
+      })?.src,
+    ).toBe(asset('4').src)
+    expect(
+      resolveCatalogueMarker(owner, 'other', 'dark', undefined, 'flavor')?.src,
+    ).toBe(asset('5').src)
+    expect(
+      resolveCatalogueMarker(owner, 'null-space', 'dark', undefined, 'flavor')?.src,
+    ).toBe(asset('6').src)
+  })
+  it('uses the general format for unthemed station surfaces and falls back for missing formats', () => {
+    expect(resolveCatalogueFormatArtwork(owner, 'flavor')?.src).toBe(asset('4').src)
+    expect(
+      resolveCatalogueMarker(owner, 'other', 'dark', undefined, 'unknown')?.src,
+    ).toBe(asset('3').src)
+    expect(resolveCatalogueFormatArtwork(owner, undefined)).toBeNull()
+  })
+  it('does not select unapproved format assets', () => {
+    const candidate = {
+      artwork: { logo: asset('2'), 'logo-format-flavor': asset('4', 'candidate') },
+    }
+    expect(
+      resolveCatalogueMarker(candidate, 'milk', 'light', undefined, 'flavor')?.src,
+    ).toBe(asset('2').src)
   })
 })

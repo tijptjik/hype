@@ -5,8 +5,8 @@
     "pageUrl": "https://www.7-eleven.com.hk/"
   },
   "a1-bakery": {
-    "sha256": "ac606f57544062823bbd88a3bef7968965d4fee7c19500f527defef929125ba3",
-    "sourceUrl": "https://www.a-1bakery.com.hk/favicon.ico",
+    "sha256": "a6b2ce477dde2c6eadf8a2236372e196cb751cbaa9716e078a316bf450db72f5",
+    "sourceUrl": "https://www.a-1bakery.com.hk/img/common/logo.svg",
     "pageUrl": "https://www.a-1bakery.com.hk/"
   },
   "arome": {
@@ -20,8 +20,8 @@
     "pageUrl": "https://www.berlinoptical.com/"
   },
   "calzedonia": {
-    "sha256": "021d7aa39cfee3e6b806a9e67bd8cbce2b1e9741554b45241bb5123b2f4ccfc3",
-    "sourceUrl": "https://www.calzedonia.com/mobify/bundle/2403/static/ico/favicon.ico",
+    "sha256": "88b7886e8f529408cee931db1eb8287e12015b3a3995ccaad422ad61611b6726",
+    "sourceUrl": "https://www.calzedonia.com/on/demandware.static/-/Library-Sites-CalzedoniaContentLibrary/zh_HK/Calzedonia_logo.svg",
     "pageUrl": "https://www.calzedonia.com/hk/"
   },
   "colourmix": {
@@ -35,14 +35,16 @@
     "pageUrl": "https://comvita.com.hk/"
   },
   "fotomax": {
-    "sha256": "5a403b9414202f03ef5d7ef5acb6977de2303292e186d63a715607ec83dc550c",
-    "sourceUrl": "https://www.fotomax.com/favicon.ico",
-    "pageUrl": "https://www.fotomax.com/"
+    "sha256": "d7225fb4fc5a0c6b1d54cb7095e784645c38956968fc75c6741f835fe263d986",
+    "sourceUrl": "https://www.fotomax.com/#logo",
+    "pageUrl": "https://www.fotomax.com/",
+    "inlineSymbol": "logo"
   },
   "global-exchange": {
-    "sha256": "290e4d67cf8005286d1193db4f5fe43d50802f7fddf28541e738d3b4c9e0f637",
-    "sourceUrl": "https://www.globalexchange.hk/favicon.ico",
-    "pageUrl": "https://www.globalexchange.hk/"
+    "sha256": "390bcd5569ce9000960fbc89cfdce97333d130b0e4661c67541c378852155f6f",
+    "sourceUrl": "https://assets-sharedcontent.global-exchange.com/1dced37c-b424-4190-a730-3c9ce29c6369.svg",
+    "pageUrl": "https://www.globalexchange.hk/",
+    "background": "#202020"
   },
   "green-dot-dot": {
     "sha256": "918e97e19de0a7a0b328455b135d77354613522ac8650edcecbc2777b1df7233",
@@ -50,14 +52,14 @@
     "pageUrl": "https://www.greendotdot.com/"
   },
   "hang-seng-bank": {
-    "sha256": "9d40bc7de25856427ba5ca9bcb6951652765cb0344ed14974d4ddc4ea17f9e65",
-    "sourceUrl": "https://www.hangseng.com/etc.clientlibs/hase/clientlibs/clientlib-header/resources/favicon.ico",
-    "pageUrl": "https://www.hangseng.com/en-hk/home/"
+    "sha256": "172dce356f7103b63a96e637eb74f732c2156a9ec1527d9f5078060020b5fa5a",
+    "sourceUrl": "https://companieslogo.com/img/orig/0011.HK-024a8be8.svg?t=1746539466&download=true",
+    "pageUrl": "https://companieslogo.com/hang-seng-bank/logo/"
   },
   "hertz": {
-    "sha256": "2b85d61524302f4fb8c733038fa68d60510455a5983a371a269a45e6d28256e3",
-    "sourceUrl": "https://www.hertz.com.hk/rentacar/assets/images/favicon.ico?v=2",
-    "pageUrl": "https://www.hertz.com.hk/rentacar/reservation/"
+    "sha256": "ab85e212f1f7a970eec07d34fcb0a22229d46b2a4698e457447b035572080a58",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/4/42/Hertz_Car_Rental_logo.svg",
+    "pageUrl": "https://en.wikipedia.org/wiki/Hertz_Global_Holdings"
   },
   "hiwalk": {
     "sha256": "4ecae36c5e9555906568217465fb120f4c69e3b13b4e660a0e24034e55d8d3ca",
@@ -74,35 +76,30 @@
     "sourceUrl": "https://www.italiantomato.com.hk/assets/img/favicon.png",
     "pageUrl": "https://www.italiantomato.com.hk/"
   },
-  "joint-host": {
-    "sha256": "9c8ffeeb986955033bc570f0d187b548e00a86761e3f572bf49d86a41b29b335",
-    "sourceUrl": "https://jointhost.com.hk/manus-storage/favicon-180_54f6e742.png",
-    "pageUrl": "https://jointhost.com.hk/"
-  },
   "juewei": {
     "sha256": "455157314b593b9fa6e248f5aa4cc77cc78d469bdd1a650277afc00014131ad6",
     "sourceUrl": "https://www.juewei.cn/image/favicon.png?_v_=598880",
     "pageUrl": "https://www.juewei.cn/"
   },
   "keen-health": {
-    "sha256": "a8090f3b3c0e54b239388c7c3a7c51f5cdf927b6e40ed42b4b8c34a38e95d731",
-    "sourceUrl": "https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=180,h=180,fit=crop,f=png/6i2wfCv9UHZ1yk4V/favicon-m2Wp1eqkMoSnow42.jpg",
-    "pageUrl": "https://keenhealth.com.hk/"
+    "sha256": "167e7ec1d8222bc208db8ef86b2284f1d83fdf53666f78f008369b5fb4efff14",
+    "sourceUrl": "https://assets.zyrosite.com/6i2wfCv9UHZ1yk4V/keen-health-logo-mk3z0GDNGGt99a9n.jpg",
+    "pageUrl": "https://www.keenhealth.com.hk/"
   },
   "marks-and-spencer-food": {
-    "sha256": "bcbdaf2ac26deb6cf4b4bcc9efca18639eb58e5e5f01f857fe8cf5d1cc11fcb5",
-    "sourceUrl": "https://static.marksandspencer.com/images/favicon.ico",
+    "sha256": "f278a4edc92d1df4d7bd92ffb15cff139a44f74558b8a031506ac0b43a4ece54",
+    "sourceUrl": "https://static.marksandspencer.com/images/MAndSLogo-v2.svg?key=v3",
     "pageUrl": "https://www.marksandspencer.com/"
   },
   "mos-burger": {
-    "sha256": "60bede7a959ff15a68662912e5f03e7d8745bf72d88ec671377b29f0e69a24cb",
-    "sourceUrl": "https://mosburger-hk.com/_nuxt/logo.BV8nGcF6.png",
-    "pageUrl": "https://mosburger-hk.com/"
+    "sha256": "c40df651af721ee0978abfdddba2a94e3bf5a2f1a6c74550e192cebc21cc7894",
+    "sourceUrl": "https://global.mos.jp/common/img/logo.svg",
+    "pageUrl": "https://global.mos.jp/"
   },
   "mannings": {
-    "sha256": "6ef9067b09993c2e4df3a951b3ec35ca4e4dcb5fee8ac87c7016619a2148cc4e",
-    "sourceUrl": "https://www.mannings.com.hk/venia-static-assets/favicon.ico",
-    "pageUrl": "https://www.mannings.com.hk/zh-hant/"
+    "sha256": "92ac7ab1b11b6f6d737b46d4512b3836e05dcb31d1f6cbc772a9bad5e60c0571",
+    "sourceUrl": "https://cdn.freebiesupply.com/logos/large/2x/mannings-logo-svg-vector.svg",
+    "pageUrl": "https://freebiesupply.com/logos/mannings-logo/"
   },
   "max-sight": {
     "sha256": "e60cf51ef4ad4597a260234203794d562f3c02efffeefc90b9fb2a6a37d991b7",
@@ -110,13 +107,13 @@
     "pageUrl": "https://www.maxsightgroup.com/"
   },
   "mrs-fields": {
-    "sha256": "8bb72b13cd840a962d31ce0a9d52178eb8caaa1ac170232139e8f4dbf49abd64",
-    "sourceUrl": "https://mrsfields.com.hk/wp-content/uploads/2026/04/cropped-187-180x180.jpg",
-    "pageUrl": "https://mrsfields.com.hk/"
+    "sha256": "639e9a3d6612576fdc1f595b6a9faf924e25a9ecde4424608626fc87697de1d8",
+    "sourceUrl": "https://mrsfields.com.hk/wp-content/uploads/2023/05/Mrs_o.png",
+    "pageUrl": "https://www.mrsfields.com.hk/"
   },
   "okashi-land": {
-    "sha256": "207b6cb803495ceb18b8806388d1b8f192726ecb321fded7d2cf6dd00057fe15",
-    "sourceUrl": "https://www.okashiland.com/wp-content/uploads/2021/07/cropped-favicon-180x180.png",
+    "sha256": "7155063be199cbcfab9f5ca834d0c051737d1f35d66cbc08fa3cb94ba8f12322",
+    "sourceUrl": "https://www.okashiland.com/wp-content/uploads/2021/09/App-icon.png",
     "pageUrl": "https://www.okashiland.com/"
   },
   "organic-nature": {
@@ -125,13 +122,13 @@
     "pageUrl": "https://www.ausupreme.com/"
   },
   "original-taste-workshop": {
-    "sha256": "58085e7b816a63d9ee073815c1ee260ac72cece9a616eebce31265b5d466148c",
-    "sourceUrl": "https://otw.com.hk/wp-content/uploads/2026/04/cropped-favicon-180x180.png",
+    "sha256": "69814fff1ce6ee133ac2e17a14b9543269d33fd46a9d8dec404d2d00d57b7f08",
+    "sourceUrl": "https://otw.com.hk/wp-content/uploads/2026/04/cropped-favicon.png",
     "pageUrl": "https://otw.com.hk/"
   },
   "pit": {
-    "sha256": "35913492dd26cfbadc39cfb2a3fa699be66c4b5baefaeba0041c453be9a4b2a8",
-    "sourceUrl": "https://static.wixstatic.com/media/3af56b_dfd18685a6964d18b97968fb574e9f3e%7Emv2.jpg/v1/fill/w_180%2Ch_180%2Clg_1%2Cusm_0.66_1.00_0.01/3af56b_dfd18685a6964d18b97968fb574e9f3e%7Emv2.jpg",
+    "sha256": "44534a9180fd83a82503ce3d89284f28b784bac5e9171563b9eb55330c36ca4f",
+    "sourceUrl": "https://static.wixstatic.com/media/3af56b_dfd18685a6964d18b97968fb574e9f3e%7Emv2.jpg",
     "pageUrl": "https://www.pit.cc/shop"
   },
   "sarasei": {
@@ -145,14 +142,14 @@
     "pageUrl": "https://walnut.com.hk/"
   },
   "super-super": {
-    "sha256": "e860068f9cb800118856e4496e11050aa91e42b35014391c69b9373ed5400747",
-    "sourceUrl": "https://www.supersuper.com.hk/tc/images/supersuper_logo.jpg",
-    "pageUrl": "https://www.supersuper.com.hk/tc/"
+    "sha256": "8ea9632c326e9792c1f7d9f773f35fd0109bccc0bc702b35fc67b8bf0a793b3f",
+    "sourceUrl": "https://www.cafedecoral.com/share/img/logo/logo-super.svg",
+    "pageUrl": "https://www.cafedecoral.com/eng/main/index.jsp"
   },
   "tonymoly": {
-    "sha256": "de357dd4006f688d4daa1332e66467f81583c2461bbe1492209cb4877a9df57f",
-    "sourceUrl": "https://tonymoly.com.hk/image/custom/favicon-32x32.png",
-    "pageUrl": "https://tonymoly.com.hk/"
+    "sha256": "7168d6b641bc0bb2829d616fc6c4cea8d8849ef4a61ae3699e78dc4ebd5aa1ee",
+    "sourceUrl": "https://tonymoly.us/cdn/shop/files/TM_Logo_Hi_Res.png?height=628&pad_color=fff&v=1719247928&width=1200",
+    "pageUrl": "https://tonymoly.us/"
   },
   "yamazaki": {
     "sha256": "6ab7176de744f73f823c6a259dcfd0ef4dfb433f74edb6c99902d6d29513c370",
@@ -160,8 +157,8 @@
     "pageUrl": "https://www.yamazaki.hk/"
   },
   "ans": {
-    "sha256": "f2e689a41b66e6b3bca9300d78061750154f4c61cb10c2c8d736e5f7e2357c0f",
-    "sourceUrl": "https://img.shoplineapp.com/media/image_clips/5a39d424552115e500001f53/original.jpg?1513739299",
+    "sha256": "bfd266e384fedc87a99da898a5a10faf12b9d9218c67115dcd12573ef4584961",
+    "sourceUrl": "https://img.shoplineapp.com/media/image_clips/5a39d4bd552115e4ad001e62/original.jpg",
     "pageUrl": "https://www.ans.com.hk/"
   },
   "eslite": {
@@ -170,43 +167,43 @@
     "pageUrl": "https://www.eslitecorp.com/eslite/index.jsp"
   },
   "tim-ho-wan": {
-    "sha256": "7c47da788c33c11af6ad0089a9b120f53791be31dd887c01713f3c1b3f8552ff",
-    "sourceUrl": "https://cdn.prod.website-files.com/68afff38752a0c887d2ab567/6941384cab7b0c4086eff837_thw-tab-logo-256x256.jpg",
+    "sha256": "62c70f4abebe438daf0a6527e7e45cf430537a8a68bedcb51add9e1fee48fc57",
+    "sourceUrl": "https://cdn.prod.website-files.com/68afff38752a0c887d2ab567/6aa22005d7f8d3adfc4021aa_thw-logo-2026.png",
     "pageUrl": "https://www.timhowan.com/"
   },
   "watsons": {
-    "sha256": "56da23a7cd2acd4bf160d75ad69afd58e0fa6b418e44c15e18e8d968936a2cda",
-    "sourceUrl": "https://www.watsons.com.hk/favicon.ico",
-    "pageUrl": "https://www.watsons.com.hk/"
+    "sha256": "1373f7be7727f8a978f91c0b4bb641c8b44413e25629da44222df0cc76c83f84",
+    "sourceUrl": "https://brandlogos.net/wp-content/uploads/2023/08/Watsons-logo-scaled.png",
+    "pageUrl": "https://brandlogos.net/watsons-logo-vector-svg-ai-formats-103597.html"
   },
   "muji": {
-    "sha256": "fcd4dde6527436d74e270e8fcd33351240689cf2fe4791640c88f602afd43737",
-    "sourceUrl": "https://www.muji.com/favicon.ico",
-    "pageUrl": "https://www.muji.com/hk/"
+    "sha256": "21173a8b7529ab57b21d34cc6fa6a8989a8c9cc56a9ee570487084e8c3b4113f",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/6/60/MUJI_logo.svg",
+    "pageUrl": "https://en.wikipedia.org/wiki/Muji"
   },
   "dfi": {
-    "sha256": "129ba16d0ed2b0d80988021192a78ab47ed22e2b2f25e54b408a7ca2d9c33535",
-    "sourceUrl": "https://www.dfiretailgroup.com/media/1ikj4buy/favicon.png",
-    "pageUrl": "https://www.dfiretailgroup.com/"
+    "sha256": "817502349f61caeefc9fb381471d4c72a74363bf3198e0dd01423c3c0efd9d92",
+    "sourceUrl": "https://companieslogo.com/img/orig/D01.SI-c24bf45d.svg?t=1720244491&download=true",
+    "pageUrl": "https://companieslogo.com/dairy-farm/logo/"
   },
   "yamazaki-group": {
-    "sha256": "2ad134143f49dd2cb30128a8a8e7b8a9779419bc105328ee185ff45984cf910c",
-    "sourceUrl": "https://www.yamazakipan.co.jp/english/img/logo.gif",
-    "pageUrl": "https://www.yamazakipan.co.jp/english/"
+    "sha256": "b6abfa803f9bfb1ff5a4d758ba13c2275ca8f538933ee31246222def696fda95",
+    "sourceUrl": "https://companieslogo.com/img/orig/2212.T-c1c7d230.svg?t=1781723291&download=true",
+    "pageUrl": "https://companieslogo.com/yamazaki-baking/logo/"
   },
   "ck-hutchison": {
-    "sha256": "a980e39f423ed5206a2efff9f74088b6daca45306b3b539adce9b13009a5a00c",
-    "sourceUrl": "https://www.ckh.com.hk/apple-touch-icon.png",
-    "pageUrl": "https://www.ckh.com.hk/en/global/home.php"
+    "sha256": "c16dbb26c7ed1f00a790339e92e10e4c5f755d095fd74e42dd48d05477acd332",
+    "sourceUrl": "https://companieslogo.com/img/orig/0001.HK-8b6f3c00.svg?t=1745069170&download=true",
+    "pageUrl": "https://companieslogo.com/ck-hutchison-holdings/logo/"
   },
   "four-seas": {
-    "sha256": "55c78a01dfe63ae3bb7d42676f4c5b713e0e5699f379a62b3a96fc8b5610008b",
-    "sourceUrl": "https://www.fourseasgroup.com.hk/wp-content/uploads/2025/05/cropped-FSML-Logo_Purple_RGB-2-03-scaled-1-180x180.png",
+    "sha256": "d224205c227d19361966349d1307a5435a240c5b5a340bf67b1b2c4efedaa223",
+    "sourceUrl": "https://www.fourseasgroup.com.hk/wp-content/uploads/2025/05/cropped-FSML-Logo_Purple_RGB-2-03-scaled-1.png",
     "pageUrl": "https://www.fourseasgroup.com.hk/"
   },
   "jollibee-foods": {
-    "sha256": "a3e58b0d8bd1994495c053944cc4ee466d284604033e350cfba88f2649cfa78f",
-    "sourceUrl": "https://www.jollibeegroup.com/apple-touch-icon.png",
+    "sha256": "3b3dc42a111bea8efffedb1f17799d88fb64702e5a3c80d3698b90085482a9a9",
+    "sourceUrl": "https://www.jollibeegroup.com/img/jfc_2025_transparent_logo.png",
     "pageUrl": "https://www.jollibeegroup.com/"
   },
   "mos-food-services": {
@@ -215,38 +212,40 @@
     "pageUrl": "https://www.mos.co.jp/global/"
   },
   "giordano-international": {
-    "sha256": "a14f6bfbdcb7512a2976865152307bdf60aa6d46bf12ec65c9758b3a1e25831f",
-    "sourceUrl": "https://corp.giordano.com.hk/img/favicon.ico",
-    "pageUrl": "https://corp.giordano.com.hk/en/"
+    "sha256": "2fd8b7970c0be6d32238903fbe1c3235b6ad915fc340c12fa4984e4ea1f67b95",
+    "sourceUrl": "https://corp.giordano.com.hk/img/logo_footer.svg",
+    "pageUrl": "https://corp.giordano.com.hk/",
+    "background": "#202020"
   },
   "oniverse": {
-    "sha256": "30bd5a869b0a3eedfa28c4b8d6f9f4c7e11be284fa69247abc63626eb1473bdd",
-    "sourceUrl": "https://www.oniverse.it/docroot/dist/img/favicon/favicon-oniverse.ico",
-    "pageUrl": "https://www.oniverse.it/"
+    "sha256": "d4e4292c724b02134eaee82be157de2fdf884c0673fca674c432f65eaa50da8e",
+    "sourceUrl": "https://www.oniverse.it/docroot/dist/img/ONIVERSE.svg",
+    "pageUrl": "https://www.oniverse.it/docroot/dist/img/ONIVERSE.svg",
+    "background": "#202020"
   },
   "china-hong-kong-photo": {
-    "sha256": "5afe62b225809f9bef4ca87c148d721a27bb9a23489926c9027a844fb41ace7b",
-    "sourceUrl": "https://www.chinahkphoto.com.hk/chkp_small.jpg",
-    "pageUrl": "https://www.chinahkphoto.com.hk/"
+    "sourceUrl": "https://www.chinahkphoto.com.hk/assets/chkp_transparent-BAf1O3uZ.png",
+    "pageUrl": "https://www.chinahkphoto.com.hk/",
+    "sha256": "01809a163627526d4ae6692746206d280122fb6ee3b6e7bee16b01f81dd3bd1c"
   },
   "hsbc": {
-    "sha256": "e326fc1e0be7ac7178e594a446e9a7d6c4ee510153b10af24fc5afd12c6d12bb",
-    "sourceUrl": "https://www.hsbc.com/apple-touch-icon.png",
+    "sha256": "c54ff461737c5f44be46d9d1f9e4b3a64db412af82d795736f78b9bc3298ca2c",
+    "sourceUrl": "https://www.hsbc.com/-/files/hsbc/header/hsbc-logo-200x25.svg",
     "pageUrl": "https://www.hsbc.com/"
   },
   "hsbc-asia-pacific": {
-    "sha256": "4f6074e3e0e55ff51452cce43b23b5cd2f5b0b293191c5f621db7d1581ec2bba",
-    "sourceUrl": "https://www.about.hsbc.com.hk/assets/pws171/images/touchicon/HSBC_touch-icon.png",
+    "sha256": "9615877cfdd16992d70adb93bade8980e225558c9d4a4fd64c204e909fd14aa3",
+    "sourceUrl": "https://www.about.hsbc.com.hk/-/media/pws171/Logos/HSBC-logo.svg",
     "pageUrl": "https://www.about.hsbc.com.hk/"
   },
   "bank-of-china-hong-kong": {
-    "sha256": "088db75252ff39b8f88d2c0acbf13241533325002fa738bab61704118b316b8f",
-    "sourceUrl": "https://www.bochk.com/etc/designs/bochk_web/images/icon/boc-logo-96.png",
-    "pageUrl": "https://www.bochk.com/en/home.html"
+    "sha256": "21eb44193117f9c35a97a832f01dc2b984fe5eb2c4c57b1c551424f37ed43d23",
+    "sourceUrl": "https://companieslogo.com/img/orig/601988.SS-1ff844da.svg?t=1720244490&download=true",
+    "pageUrl": "https://companieslogo.com/bank-of-china/logo/"
   },
   "cafe-de-coral": {
-    "sha256": "d4a2b76d8c1ca93fdbc753714b7f46b50b7ff8ff369a63fe6c9fc123799c85b5",
-    "sourceUrl": "https://www.cafedecoral.com/share/img/favicon.ico",
+    "sha256": "f4a38ed54a8a93cdea41939de017ae7f23dd6b17c344cf0e2971cbdeb362a68f",
+    "sourceUrl": "https://www.cafedecoral.com/share/img/logo-cdc.svg",
     "pageUrl": "https://www.cafedecoral.com/eng/main/index.jsp"
   },
   "hana-musubi": {
@@ -270,9 +269,9 @@
     "pageUrl": "https://www.starbucks.com/"
   },
   "giordano": {
-    "sha256": "a14f6bfbdcb7512a2976865152307bdf60aa6d46bf12ec65c9758b3a1e25831f",
-    "sourceUrl": "https://corp.giordano.com.hk/img/favicon.ico",
-    "pageUrl": "https://corp.giordano.com.hk/en/"
+    "sha256": "ef9bb19ab10cda490617aee8a1466b6a670b633e70d6a07d07246d9e4ac04dc7",
+    "sourceUrl": "https://companieslogo.com/img/orig/0709.HK-a80767de.svg?t=1720244490&download=true",
+    "pageUrl": "https://companieslogo.com/giordano/logo/"
   },
   "starbucks-corporation": {
     "sha256": "db870aa1ba725cf13e132e1164b25b7ac49791fd13b1ed786d0774bf22b99bde",
@@ -280,13 +279,55 @@
     "pageUrl": "https://www.starbucks.com/"
   },
   "marks-and-spencer-group": {
-    "sha256": "3c740271a4f482b4462f508229f7e77e5369e1fca177cda0ad9c3dc2ac6a6d01",
-    "sourceUrl": "https://corporate.marksandspencer.com/sites/marksandspencer/files/ms-favicon.jpg",
-    "pageUrl": "https://corporate.marksandspencer.com/"
+    "sourceUrl": "https://static.marksandspencer.com/images/MAndSLogo-v2.svg?key=v3",
+    "pageUrl": "https://www.marksandspencer.com/",
+    "sha256": "f278a4edc92d1df4d7bd92ffb15cff139a44f74558b8a031506ac0b43a4ece54"
   },
   "ausupreme": {
     "sha256": "665c80efd58c65724e7a4a471894dafd00c77da6802099e37c6476d02c440814",
     "sourceUrl": "https://img.cdn.91app.hk/webapi/images/t/512/512/ShopIcon/33/0/11150239",
     "pageUrl": "https://www.ausupreme.com/"
+  },
+  "natural-is-best": {
+    "sourceUrl": "https://media.hanglungmalls.com/custom-import/cmsUpload/a94ff570-632a-11ee-83fd-d3e6865a9fa4.jpg",
+    "pageUrl": "https://www.hanglungmalls.com/en/peak-galleria/dining/natural-is-best",
+    "sha256": "6e87358b1bbde77e725ccd37b9370b64457f2d28ca83c6605df28062878d37ae",
+    "background": "#f9a500"
+  },
+  "as-watson": {
+    "sourceUrl": "https://brandlogos.net/wp-content/uploads/2026/10/as-watson-logo.png",
+    "pageUrl": "https://brandlogos.net/a-s-watson-group-118923.html",
+    "sha256": "36ae973366dc873234c6c617583988bee4d31c6360bf16d3206e8fee7521d60c"
+  },
+  "ryohin-keikaku": {
+    "sourceUrl": "https://companieslogo.com/img/orig/7453.T_BIG-c324802d.svg?t=1720244490&download=true",
+    "pageUrl": "https://companieslogo.com/ryohin-keikaku/logo/",
+    "sha256": "2441bef2dace911f515afaeec89901e2032c1a621c05df60409421df66184ed2"
+  },
+  "cafe-de-coral-holdings": {
+    "sourceUrl": "https://www.cafedecoral.com/share/img/logo-cdc.svg",
+    "pageUrl": "https://www.cafedecoral.com/eng/main/index.jsp",
+    "sha256": "f4a38ed54a8a93cdea41939de017ae7f23dd6b17c344cf0e2971cbdeb362a68f"
+  },
+  "global-exchange-group": {
+    "sourceUrl": "https://assets-sharedcontent.global-exchange.com/1dced37c-b424-4190-a730-3c9ce29c6369.svg",
+    "pageUrl": "https://www.globalexchange.hk/",
+    "sha256": "390bcd5569ce9000960fbc89cfdce97333d130b0e4661c67541c378852155f6f",
+    "background": "#202020"
+  },
+  "bank-of-china": {
+    "sourceUrl": "https://companieslogo.com/img/orig/601988.SS-1ff844da.svg?t=1720244490&download=true",
+    "pageUrl": "https://companieslogo.com/bank-of-china/logo/",
+    "sha256": "21eb44193117f9c35a97a832f01dc2b984fe5eb2c4c57b1c551424f37ed43d23"
+  },
+  "boc-hong-kong-holdings": {
+    "sourceUrl": "https://companieslogo.com/img/orig/601988.SS-1ff844da.svg?t=1720244490&download=true",
+    "pageUrl": "https://companieslogo.com/bank-of-china/logo/",
+    "sha256": "21eb44193117f9c35a97a832f01dc2b984fe5eb2c4c57b1c551424f37ed43d23"
+  },
+  "veeko": {
+    "sourceUrl": "https://static.wixstatic.com/media/39557f_c4d90641e4e54fdfb02f0fdabb96e1b6~mv2.png",
+    "pageUrl": "https://www.veeko.com.hk/",
+    "sha256": "f36c51ec5757ca792f0abe4d55297a81eba578072437fb7f744a0b6869a33a04"
   }
 }

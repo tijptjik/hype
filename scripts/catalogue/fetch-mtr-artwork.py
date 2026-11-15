@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Fetch source logo candidates for local review; never generates marker derivatives."""
+import re, html
 import sys, concurrent.futures, hashlib, html.parser, json, pathlib, urllib.request, urllib.parse
 ROOT=pathlib.Path('.research/catalogue/mtr'); ROOT.mkdir(parents=True,exist_ok=True)
 class Assets(html.parser.HTMLParser):
@@ -57,11 +58,19 @@ if __name__=='__main__':
   cached=previous.get(code,{})
   matching=[c for c in cached.get('candidates',[]) if c['sha256']==source['sha256'] and c['sourceUrl']==source['sourceUrl'] and pathlib.Path(c['path']).exists()]
   if matching:continue
-  body,_,mime=fetch(source['sourceUrl'])
+  body,_,mime=fetch(source['pageUrl'] if source.get('inlineSymbol') else source['sourceUrl'])
+  if source.get('inlineSymbol'):
+   # Extract the pinned symbol without changing its drawing geometry.
+   markup=html.unescape(body.decode('utf-8')).replace('\\/','/')
+   ident=re.escape(source['inlineSymbol'])
+   match=re.search(r'<symbol\b[^>]*id=[\"\']'+ident+r'[\"\'][^>]*>.*?</symbol>',markup,re.S)
+   if not match:raise ValueError(f'Selected inline symbol missing: {code}')
+   body=re.sub(r'^<symbol\b','<svg xmlns="http://www.w3.org/2000/svg"',match[0]).replace('</symbol>','</svg>').encode()
+   mime='image/svg+xml'
   if hashlib.sha256(body).hexdigest()!=source['sha256']:raise ValueError(f'Selected source changed: {code}')
   folder=ROOT/'sources'/code;folder.mkdir(parents=True,exist_ok=True)
   path=folder/('selected.svg' if 'svg' in mime else 'selected.png');path.write_bytes(body)
-  previous[code]={'code':code,'website':source['pageUrl'],'candidates':[{**source,'path':str(path),'score':100}]}
+  previous[code]={**cached,'code':code,'website':source['pageUrl'],'candidates':[*cached.get('candidates',[]),{**source,'path':str(path),'score':100}]}
 
  pending=[r for r in records if (not sys.argv[1:] or r['code'] in sys.argv[1:]) and r['code'] not in selected and (not previous.get(r['code'],{}).get('candidates') or previous[r['code']]['website']!=r['website'])]
  with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool: refreshed=list(pool.map(crawl,pending))

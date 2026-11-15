@@ -1,7 +1,7 @@
 // VALIDATION
 import { z } from 'zod'
 const assetPath = z.string().regex(/^\/api\/identity-catalogue\/logos\/[a-f0-9-]{36}$/)
-/** Revisioned source artwork; marker derivatives are added only after review. */
+/** Revisioned logo and marker variants; new artwork is active when saved. */
 export const CatalogueArtworkSchema = z
   .record(
     z
@@ -17,6 +17,7 @@ export const CatalogueArtworkSchema = z
       sourceWidth: z.number().int().positive().optional(),
       sourceHeight: z.number().int().positive().optional(),
       format: z.enum(['png', 'svg']).optional(),
+      composition: z.enum(['full-logo', 'brand-mark']).optional(),
       status: z.enum(['candidate', 'approved']).default('candidate'),
       sourceUrl: z
         .string()
@@ -31,16 +32,64 @@ export const CatalogueArtworkSchema = z
   )
   .refine(v => Object.keys(v).length <= 40, 'At most forty artwork variants')
 export type CatalogueArtwork = z.infer<typeof CatalogueArtworkSchema>
-export type CatalogueArtworkOwner = { logo?: string | null; artwork?: CatalogueArtwork }
+export type CatalogueArtworkOwner = {
+  code?: string
+  logo?: string | null
+  artwork?: CatalogueArtwork
+}
 export type ResolvedCatalogueArtwork = {
   src: string
   background: string
   whiteRing: boolean
   slot: string
 }
+/** Resolve optional format artwork before falling back to the containing brand.
+ * @param owner Brand and its artwork slots. @param format Localized establishment format.
+ * @param theme Active theme. @param mode Active luminance.
+ * @returns Approved format artwork or null when the brand fallback should be used.
+ */
+export function resolveCatalogueFormatArtwork(
+  owner: CatalogueArtworkOwner,
+  format?: string | Record<string, string>,
+  theme?: string,
+  mode?: 'light' | 'dark',
+): (ResolvedCatalogueArtwork & CatalogueArtwork[string]) | null {
+  const values =
+    typeof format === 'string' ? [format] : [format?.en, ...Object.values(format ?? {})]
+  const keys = [
+    ...new Set(
+      values
+        .filter((value): value is string => Boolean(value))
+        .map(value => {
+          const key = value
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '')
+          return owner.code && key.startsWith(`${owner.code}-`)
+            ? key.slice(owner.code.length + 1)
+            : key
+        })
+        .filter(Boolean),
+    ),
+  ]
+  for (const suffix of [
+    ...new Set([theme, mode, ''].filter(value => value !== undefined)),
+  ]) {
+    for (const key of keys) {
+      for (const type of ['marker', 'logo']) {
+        const slot = `${type}-format-${key}${suffix ? `-${suffix}` : ''}`
+        const asset = owner.artwork?.[slot]
+        if (asset?.status === 'approved') return { ...asset, slot, whiteRing: false }
+      }
+    }
+  }
+  return null
+}
 /** Resolve approved marker artwork in explicit priority order.
  * @param owner Catalogue content. @param theme Stable theme code, such as null-space or milk.
  * @param mode Theme luminance, independent of its name. @param genericIcon Last-resort icon.
+ * @param format Optional localized establishment format, selected before brand artwork.
  * @returns Chosen asset and fallback ring treatment, or null without any asset.
  */
 export function resolveCatalogueMarker(
@@ -48,7 +97,10 @@ export function resolveCatalogueMarker(
   theme: string,
   mode: 'light' | 'dark',
   genericIcon?: string,
+  format?: string | Record<string, string>,
 ): ResolvedCatalogueArtwork | null {
+  const specific = resolveCatalogueFormatArtwork(owner, format, theme, mode)
+  if (specific) return specific
   for (const slot of [...new Set([`marker-${theme}`, `marker-${mode}`, 'marker'])]) {
     const asset = owner.artwork?.[slot]
     if (asset?.status === 'approved') return { ...asset, slot, whiteRing: false }
