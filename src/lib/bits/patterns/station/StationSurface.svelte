@@ -536,11 +536,8 @@ $effect(() => {
           target="_blank"
           rel="noreferrer"
           class="text-muted-foreground absolute right-3 bottom-2 z-10 flex items-center gap-2 rounded-lg bg-[var(--station-canvas)] px-2 py-1 text-[9px]"
-          ><img
-            src={station.data.attributionLogo}
-            alt="Lands Department"
-            class="h-4 w-auto"
-          >Lands Department</a
+          ><img src="/logos/landsd.jpg" alt="" class="h-4 w-auto shrink-0">Lands
+          Department</a
         >
       {/if}
     {/if}
