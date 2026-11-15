@@ -1,0 +1,188 @@
+[
+  {
+    "code": "759-store",
+    "file": "static/brands/catalogue-refresh/759-store.png",
+    "format": "png",
+    "sha256": "9e68890fed69fb8d98f3d67943aaf521c9e6c71271c4e2fb3e2e8bf2504e3ed9",
+    "sourceUrl": "https://www.759store.com/images/big_logo.png",
+    "notes": "Authentic source artwork retained at native resolution; transparent where supplied.",
+    "sourceWidth": 580,
+    "sourceHeight": 436
+  },
+  {
+    "code": "berlin-optical",
+    "file": "static/brands/catalogue-refresh/berlin-optical.svg",
+    "format": "svg",
+    "sha256": "9482ee4230cfc9739149b7ee4733e1745288cc63eee21724a211d95eaee3bd02",
+    "sourceUrl": "https://cdn.prod.website-files.com/60d585f8410568b834845fa3/60d7541718b6477ec16fea56_berlin-optical-hong-kong-logo-svg.svg",
+    "notes": "Authentic source artwork retained at native resolution; transparent where supplied."
+  },
+  {
+    "code": "arome",
+    "file": "static/brands/catalogue-refresh/arome.svg",
+    "format": "svg",
+    "sha256": "f0829286d2b72e17ba8b39752f8ddedc3515fca5e3e6e4421047852e64655cc9",
+    "sourceUrl": "https://www.aromebakery.com.hk/arome/images/common/arome-logo-white_v2.svg",
+    "notes": "Official current wordmark, gold foreground; Chinese/Japanese lettering. English variant not yet verified."
+  },
+  {
+    "code": "circle-k",
+    "file": "static/brands/catalogue-refresh/circle-k.svg",
+    "format": "svg",
+    "sha256": "34a9a30aec257e3e2b7f615cb76e2182fd48ec194a5f62b6328bad278df66852",
+    "sourceUrl": "https://www.circlek.com/profiles/custom/ck/themes/circlek/assets/images/logo-mobile.svg",
+    "notes": "Authentic source artwork retained at native resolution; transparent where supplied."
+  },
+  {
+    "code": "chateraise",
+    "file": "static/brands/catalogue-refresh/chateraise.svg",
+    "format": "svg",
+    "sha256": "2682ffc544798afac55eabfb10fe0bd3cdb1afdb10212281d37a01214acd8eaa",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/commons/c/cf/Chateraise_logo_%282022%29.svg",
+    "notes": "Authentic source artwork retained at native resolution; transparent where supplied."
+  },
+  {
+    "code": "jardine-matheson",
+    "file": "static/brands/catalogue-refresh/jardine-matheson.svg",
+    "format": "svg",
+    "sha256": "84bcf7337e8d1d161c072ec4780193dab73c4b792be89f20a6700ddd40ccd38e",
+    "sourceUrl": "https://upload.wikimedia.org/wikipedia/en/3/3a/Jardine_Matheson_Holdings_logo.svg",
+    "notes": "Authentic source artwork retained at native resolution; transparent where supplied."
+  },
+  {
+    "code": "joint-host",
+    "file": "static/brands/catalogue-refresh/joint-host.png",
+    "format": "png",
+    "sha256": "756390e94f2b03e6fcfaceccfee1ec4f50c31b35ddaaabe439b31cb53cdcb522",
+    "sourceUrl": "https://d2xsxph8kpxj0f.cloudfront.net/109947770/TiugN52R8tEgQNZ9xU7akN/jointhost_logo_e6f3d824.png",
+    "notes": "Authentic source artwork retained at native resolution; transparent where supplied.",
+    "sourceWidth": 230,
+    "sourceHeight": 65
+  },
+  {
+    "code": "maxims-cakes",
+    "file": "static/brands/catalogue-refresh/maxims-cakes.png",
+    "format": "png",
+    "sha256": "530fd3107c413e16665dd0a4171595d5386369719a2d1322248c042d78ef3132",
+    "sourceUrl": "https://www.maximscakes.com.hk/cakes/images/logo/logo.png",
+    "notes": "Authentic source artwork retained at native resolution; transparent where supplied.",
+    "sourceWidth": 300,
+    "sourceHeight": 113
+  },
+  {
+    "code": "comvita",
+    "file": "static/brands/catalogue-refresh/comvita.png",
+    "format": "png",
+    "sha256": "eeb22417827c6941bf7d2eb8b5bf0b2d279ab2e799e72144c9871d4e66c890e0",
+    "sourceUrl": "https://comvita.co.nz/cdn/shop/files/comvita-2.png?v=1740191985",
+    "notes": "Authentic source artwork retained at native resolution; transparent where supplied.",
+    "sourceWidth": 548,
+    "sourceHeight": 154
+  },
+  {
+    "code": "italian-tomato",
+    "file": "static/brands/catalogue-refresh/italian-tomato.png",
+    "format": "png",
+    "sha256": "0850a1f6a8abb62ee6e477875199a2a1371151ba6817673e1cc98f1ca8d286b3",
+    "sourceUrl": "https://www.italiantomato.com.hk/assets/img/it_logo.png",
+    "notes": "Authentic source artwork retained at native resolution; transparent where supplied.",
+    "sourceWidth": 743,
+    "sourceHeight": 80
+  },
+  {
+    "code": "colourmix",
+    "file": "static/brands/catalogue-refresh/colourmix.png",
+    "format": "png",
+    "sha256": "8f732793380ae7e1993db6249bd382e5d8de73828eabfd1bad6e1d3bee722a73",
+    "sourceUrl": "https://cms-static.cdn.91app.hk/images/original/87/ce15aad7-0617-4398-9b09-c73a6d2e032d-1744691779-idzh3f89h1_d.png",
+    "notes": "Authentic source artwork retained at native resolution; transparent where supplied.",
+    "sourceWidth": 300,
+    "sourceHeight": 88,
+    "background": "#fa78ca"
+  },
+  {
+    "code": "hungry-korean",
+    "file": "static/brands/catalogue-refresh/hungry-korean.png",
+    "format": "png",
+    "sha256": "7f6e8c65025acf2ace3d511f92ec4f8bd775e15dd5d136cd9cf7190e18070bd1",
+    "sourceUrl": "https://play-lh.googleusercontent.com/_g5M68Siw0o-i3t3iRscgXyXJ5uVx-tJNtziUS8yEtxwzPbN3zT6PxpR43irZb0cPkfLKCAy-bqJio1OHeXkNR8=s512",
+    "notes": "Authentic source artwork retained at native resolution; transparent where supplied.",
+    "sourceWidth": 512,
+    "sourceHeight": 512
+  },
+  {
+    "code": "mannings",
+    "file": "static/brands/catalogue-refresh/mannings.svg",
+    "format": "svg",
+    "sha256": "2ac02edcd0b789d3d8ef98ba190be7f2e1faf006dfb6c9cab3c3ee62156bd9d3",
+    "sourceUrl": "https://cdn.freebiesupply.com/logos/large/2x/mannings-logo-svg-vector.svg",
+    "notes": "Bird and orange disc extracted from original vector paths; wordmark and blue banner omitted."
+  },
+  {
+    "code": "mimi-sham-dietitian",
+    "file": "static/brands/catalogue-refresh/mimi-sham-dietitian.svg",
+    "format": "svg",
+    "sha256": "b5a600ae3ed779af2f5615c5ff04a8d061b3e9d759511e847612a2fff1d879c9",
+    "notes": "Original flat vector illustration commissioned by user: red apple, green leaf and turquoise hand; no gloss or background."
+  },
+  {
+    "code": "juewei",
+    "file": "static/brands/catalogue-refresh/juewei.png",
+    "format": "png",
+    "sha256": "5f9f890cc5df81fcc73f378bb36be32f40137bf9845f88fcd278836c2dd9d4f1",
+    "sourceUrl": "https://www.juewei.cn/image/logo.png?_v_=598880",
+    "sourceWidth": 466,
+    "sourceHeight": 246,
+    "notes": "Original brand source at native resolution. Replaces favicon; no upscaling."
+  },
+  {
+    "code": "green-dot-dot",
+    "file": "static/brands/catalogue-refresh/green-dot-dot.png",
+    "format": "png",
+    "sha256": "57d468da4559ba3dd9b5f76aaff096dcfa7053242476c0ac146f6011d09506a0",
+    "sourceUrl": "https://id.hkbrand.org/upload/brand/c50a3327f9d6a35abba2dd82db8c7ee1.jpeg?v6",
+    "sourceWidth": 600,
+    "sourceHeight": 450,
+    "notes": "Original brand source at native resolution. Replaces favicon; no upscaling."
+  },
+  {
+    "code": "kam-kee",
+    "file": "static/brands/catalogue-refresh/kam-kee.png",
+    "format": "png",
+    "sha256": "594fa50db6acc481531011bd05b40348e182c61379fc48c2a12cbc2d085445fb",
+    "sourceUrl": "https://media.hanglungmalls.com/custom-import/605a2e571db6a30008c2ea93.png",
+    "sourceWidth": 1000,
+    "sourceHeight": 1000,
+    "notes": "Authentic original source, retained without added background or upscaling."
+  },
+  {
+    "code": "hung-fook-tong",
+    "file": "static/brands/catalogue-refresh/hung-fook-tong.png",
+    "format": "png",
+    "sha256": "70f8db2e21685ce2e5ab28e7188e737127169875dbdc3fd648e124d01a02b031",
+    "sourceUrl": "https://www.hungfooktongholdings.com/img/logo_ver2.png",
+    "sourceWidth": 216,
+    "sourceHeight": 109,
+    "notes": "Authentic original source, retained without added background or upscaling."
+  },
+  {
+    "code": "global-exchange",
+    "slot": "logo",
+    "file": "static/brands/catalogue-refresh/global-exchange.svg",
+    "format": "svg",
+    "sha256": "0b72e2945a2a705b36330debde65f03567894a6ad1584547df4ca072d2acf717",
+    "sourceUrl": "https://assets-sharedcontent.global-exchange.com/1dced37c-b424-4190-a730-3c9ce29c6369.svg",
+    "background": "transparent",
+    "notes": "Original vector paths; transparent monochrome positive/negative artwork for light/dark contrast."
+  },
+  {
+    "code": "global-exchange",
+    "slot": "logo-dark",
+    "file": "static/brands/catalogue-refresh/global-exchange-dark.svg",
+    "format": "svg",
+    "sha256": "390bcd5569ce9000960fbc89cfdce97333d130b0e4661c67541c378852155f6f",
+    "sourceUrl": "https://assets-sharedcontent.global-exchange.com/1dced37c-b424-4190-a730-3c9ce29c6369.svg",
+    "background": "transparent",
+    "notes": "Original vector paths; transparent monochrome positive/negative artwork for light/dark contrast."
+  }
+]
