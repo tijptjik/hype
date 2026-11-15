@@ -1,4 +1,6 @@
 <script lang="ts">
+// COMPONENTS
+import StationExitMarkers from './StationExitMarkers.svelte'
 // DATA
 import { facilitySymbol } from '#lib/indoor/facilities.js'
 import { centre, value, type IndoorFeature, type Place } from '#lib/indoor/model.js'
@@ -580,6 +582,20 @@ const facilityMarkers = $derived.by(() => {
       pointer-events="none"
       data-floor-artwork
     />
+  {/if}
+  <!-- Source entry labels remain above reference artwork and never imply a routing edge. -->
+  {#if detailOpacity > 0 && !exploded}
+    <g opacity={detailOpacity} data-exit-markers>
+      <StationExitMarkers
+        {entries}
+        levelId={id}
+        {projection}
+        {textScale}
+        {selectedId}
+        {dragged}
+        {onSelectPlace}
+      />
+    </g>
   {/if}
   <!-- Paint selection last: logos, neighbour fills and the reference overlay cannot cover its perimeter. -->
   {#each units.filter(
