@@ -24,10 +24,18 @@ export function stationLevelOptions(levels: IndoorFeature[]): LevelOption[] {
       .map(level => {
         const name = value(level.properties, 'level_name_en')
         const exit = name.match(/^Exit\s+(\S+)\s+/i)?.[1] ?? ''
-        const platform = name.match(/^Platform(?:\s+Level)?\s*\(([^)]+)\)$/i)
-        const line = platform?.[1].trim() ?? ''
-        const floor = platform
-          ? 'Platform'
+        // Separate service subtitles for both concourses and platforms across stations.
+        const serviceFloor = name.match(
+          /^(Platform|Concourse)(?:\s+Level)?\s*\(([^)]+)\)$/i,
+        )
+        const service = serviceFloor?.[2].trim() ?? ''
+        const line = /^Airport Express(?:\s|$)/i.test(service)
+          ? 'Airport Express'
+          : service
+        const floor = serviceFloor
+          ? /^platform$/i.test(serviceFloor[1])
+            ? 'Platform'
+            : 'Concourse'
           : name.replace(/^Exit\s+\S+\s+/i, '').replace(/\s+Level$/i, '')
         return {
           value: value(level.properties, 'level_id'),
