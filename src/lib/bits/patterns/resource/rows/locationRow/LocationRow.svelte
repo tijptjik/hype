@@ -8,6 +8,7 @@ import LocationAvatar from '#lib/bits/custom/locationIcon/LocationAvatar.svelte'
 // DOMAIN
 import { facilitySymbol } from '#lib/indoor/facilities.js'
 import { canonicalFacilityLabel } from '#lib/indoor/facilityLabels.js'
+import { buildingPartDisplay } from '#lib/locations/buildingPartDisplay.js'
 import { locationKindLabel } from '#lib/locations/kinds.i18n.js'
 import { lifecycleStatus } from '#lib/locations/lifecycle.js'
 import { lifecycleLabel } from '#lib/locations/lifecycle.i18n.js'
@@ -32,7 +33,7 @@ const name = $derived(
     Object.values(entity.facts?.names ?? {}).find(Boolean) ||
     entity.id,
 )
-const address = $derived(entity.facts?.location.address.fallbackDisplay)
+const address = $derived(buildingPartDisplay(entity))
 const buildingPartType = $derived(
   entity.kind === 'building_part'
     ? entity.indoorSource?.category
@@ -116,7 +117,10 @@ function open(): void {
           >
         {/if}
       </div>
-      <p class="text-muted-foreground truncate text-sm" data-tooltip={description}>
+      <p
+        class="text-muted-foreground text-sm break-words whitespace-normal"
+        data-tooltip={description}
+      >
         {description}
       </p>
     </div>

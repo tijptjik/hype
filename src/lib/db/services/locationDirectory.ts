@@ -1,3 +1,4 @@
+import { locationBuildingPartContext } from './locationBuildingPart'
 import { locationReadFields } from './locationReadProjection'
 import { sharedLocationFacts } from './locationShared'
 // SNAPSHOT CONTRACT
@@ -262,8 +263,13 @@ export async function listLocationResources(
           // Present imported facility labels consistently without rewriting retained source facts.
           if (facts)
             facts = { ...facts, names: locationFacilityNames(row.kind, facts.names) }
+          const partContext =
+            row.kind === 'building_part'
+              ? await locationBuildingPartContext(db, row.id, input.organisationId)
+              : {}
           return {
             ...row,
+            ...partContext,
             premisesMap: availablePremisesMap(row.premisesMapId, mapRegistry),
             operator: operatorId
               ? {

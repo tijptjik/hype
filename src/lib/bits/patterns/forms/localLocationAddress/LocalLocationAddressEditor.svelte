@@ -54,6 +54,7 @@ import { locationKindLabel } from '#lib/locations/kinds.i18n.js'
 import type { LocationKind } from '#lib/locations/kinds.js'
 import type { LocationDiscoveryType } from '#lib/locations/kinds.js'
 // DOMAIN
+import { buildingPartDisplay } from '#lib/locations/buildingPartDisplay.js'
 import {
   emptyFeatureAddress,
   getAddressDisplay,
@@ -191,10 +192,19 @@ const retainedAddress = $derived<FeatureAddress>({
 })
 // Older local records retain display text only; parse a view copy without changing saved evidence.
 const presentationAddress = $derived.by(() => {
+  // Containment provides display text, not a street-address parsing candidate.
+  if (place.kind === 'building_part' && place.parentLocation)
+    return {
+      ...retainedAddress,
+      source: {
+        ...retainedAddress.source,
+        fallbackDisplay: buildingPartDisplay(place),
+      },
+    }
   if (retainedAddress.source.authored || retainedAddress.source.rawSource.data)
     return retainedAddress
   const preview = localAddressDraft(prepareLocalLocationAddress(retainedAddress))
-  preview.source.fallbackDisplay = retainedAddress.source.fallbackDisplay
+  preview.source.fallbackDisplay = buildingPartDisplay(place)
   preview.source.divisionOverrides = retainedAddress.source.divisionOverrides
   return preview
 })
@@ -911,6 +921,7 @@ $effect(() => {
                   localeState={editorLocaleState}
                   translations={localeState.expanded}
                   showLocaleToolbar={false}
+                  hideDisplayAddress={!editing}
                   onLocaleStateChange={next => (localeState = next)}
                   suggestionKey={JSON.stringify([place.id, point])}
                   onSuggestStreetNumber={async () =>
@@ -1015,6 +1026,7 @@ $effect(() => {
 >
   {#if place.facts}
     <FormFeatureAddress
+      displayAddressInToolbar={true}
       locationKind={activeKind}
       {address}
       coordinates={point}

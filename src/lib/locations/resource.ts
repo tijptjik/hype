@@ -4,6 +4,12 @@ import type { LocationFacts } from './model'
 
 /** Standalone Location projection; source payloads and Feature associations stay private. */
 export type LocationResource = {
+  /** Explicit, accessible current parent; absent when containment is ambiguous. */
+  parentLocation?: {
+    id: string
+    names: Record<string, string>
+    displayAddress: Record<string, string>
+  } | null
   /** Retained upstream polygon identity, independent of the local Location ID. */
   indoorSource?: {
     category?: string | null

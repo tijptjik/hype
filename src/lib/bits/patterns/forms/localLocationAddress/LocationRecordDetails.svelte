@@ -113,12 +113,17 @@ const brandNames = $derived(
       </div>
     {/if}
   {/each}
-  {#if place.premisesMap}
-    <a
-      href={place.premisesMap.href}
-      class="text-primary inline-flex font-medium underline underline-offset-4"
-      >View premises map</a
-    >
+  {#if place.parentLocation}
+    <div class="space-y-1">
+      <h3 class="text-muted-foreground text-sm">Part of</h3>
+      <a
+        href={`/admin/locations/${encodeURIComponent(place.parentLocation.id)}`}
+        class="text-primary break-words underline underline-offset-4"
+        >{place.parentLocation.names[tag] ||
+          place.parentLocation.names.en ||
+          place.parentLocation.id}</a
+      >
+    </div>
   {/if}
   {#if place.facts}
     {#if !isEditing}
@@ -230,7 +235,12 @@ const brandNames = $derived(
       <div>
         <dt class="text-muted-foreground mb-1 text-xs">{m.location_record_source()}</dt>
         <dd class="text-sm">
-          {#if place.metadata.origin === 'local'}
+          {#if place.indoorSource}
+            <span class="inline-flex items-center gap-2">
+              <img src="/logos/landsd.jpg" alt="" class="h-5 w-auto shrink-0">
+              {place.indoorSource.provider}
+            </span>
+          {:else if place.metadata.origin === 'local'}
             {m.location_record_local_source()}
           {:else}
             <a
@@ -261,6 +271,24 @@ const brandNames = $derived(
       </div>
     {/if}
   </dl>
+  {#if place.indoorSource}
+    <dl
+      class="border-border space-y-3 border-t pt-4"
+      aria-label="Upstream map identifiers"
+    >
+      {#each [
+        { label: 'Source layer', value: place.indoorSource.layer },
+        { label: 'Polygon ID', value: place.indoorSource.polygonId },
+        { label: 'Source key', value: place.indoorSource.sourceKey },
+        { label: 'Map ID', value: place.indoorSource.mapId },
+      ] as item}
+        <div>
+          <dt class="text-muted-foreground mb-1 text-xs">{item.label}</dt>
+          <dd class="font-mono text-xs break-all">{item.value}</dd>
+        </div>
+      {/each}
+    </dl>
+  {/if}
   <details class="border-border border-t pt-4">
     <summary class="text-muted-foreground cursor-pointer text-sm">
       {m.location_record_identifiers()}
