@@ -1,0 +1,227 @@
+{
+  "scope": "Current local active brand catalogue; archived identities and corporate groups excluded",
+  "activeBrandsScanned": 349,
+  "method": "Compared all English names, exact names across locales, and shared logo URLs; manually reviewed fuzzy matches and plausible aliases. This is candidate discovery, not proof of identity.",
+  "mergesApplied": 5,
+  "candidates": [
+    {
+      "status": "merged-local",
+      "confidence": "high",
+      "brands": [
+        {
+          "id": "mtr-brand-gachapoint",
+          "name": "GACHAPOINT",
+          "version": 1,
+          "url": "/admin/catalogue?kind=brand&id=mtr-brand-gachapoint",
+          "logo": "/api/identity-catalogue/logos/558c6952-ef81-51b2-9abb-814a5991af50",
+          "sourceEvidence": []
+        },
+        {
+          "id": "mtr-network-brand-3cc5a451644da53fa4c0f915",
+          "name": "Gatchapoint",
+          "version": 1,
+          "url": "/admin/catalogue?kind=brand&id=mtr-network-brand-3cc5a451644da53fa4c0f915",
+          "logo": null,
+          "sourceEvidence": [
+            {
+              "kind": "directory",
+              "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt86154407cf5a8664",
+              "note": "MTR capture 2026-11-14: Gatchapoint by Supernova; 1 listings. Reviewed label mtr-business-9fae791897a157445b94588b2d9444f76f429044a60c5c0149245bcc03fa9c53. Listing status does not establish current operation; full source IDs retained in the reconciliation manifest."
+            }
+          ]
+        }
+      ],
+      "reason": "Likely spelling variant. The newer record comes from MTR's Gatchapoint by Supernova label; the mall directory calls it Gachapoint by Supernova. Confirm the existing approved record is the same operator.",
+      "suggestedCanonicalName": "GACHAPOINT",
+      "evidenceUrls": [
+        "https://www.harbourcity.com.hk/en/shop/gachapoint-by-supernova/",
+        "https://hk.k11.com/shop/gachapoint-by-supernova-ltd/"
+      ],
+      "canonicalId": "mtr-brand-gachapoint",
+      "canonicalName": "Gatchapoint",
+      "archivedId": "mtr-network-brand-3cc5a451644da53fa4c0f915"
+    },
+    {
+      "status": "merged-local",
+      "confidence": "high",
+      "brands": [
+        {
+          "id": "tko-brand-olivers-super-sandwiches",
+          "name": "Oliver's Super Sandwiches",
+          "version": 2,
+          "url": "/admin/catalogue?kind=brand&id=tko-brand-olivers-super-sandwiches",
+          "logo": null,
+          "sourceEvidence": [
+            {
+              "kind": "directory",
+              "url": "https://www.tkoplaza.com.hk/en/shops_list/shop/125",
+              "note": "TKO Plaza unit L1-003; source identity ss-38120877-b998-5a80-84dd-4cf4e4961cb7."
+            }
+          ]
+        },
+        {
+          "id": "82aed0a9-6e1d-4ed8-b1e9-756aba56bfb7",
+          "name": "Oliver’s Supersandwiches City plaza",
+          "version": 1,
+          "url": "/admin/catalogue?kind=brand&id=82aed0a9-6e1d-4ed8-b1e9-756aba56bfb7",
+          "logo": null,
+          "sourceEvidence": []
+        }
+      ],
+      "reason": "The second catalogue name contains a branch location. The operator's report names Oliver’s Super Sandwiches at Cityplaza; likely one brand with separate locations.",
+      "suggestedCanonicalName": "Oliver's Super Sandwiches",
+      "evidenceUrls": [
+        "https://www.cafedecoral.com/eng/sustainability/sustainability-reports/images/Cafe%20de%20Coral%20Group%20Sustainability%20Report%202023-24_EN%20.pdf"
+      ],
+      "canonicalId": "tko-brand-olivers-super-sandwiches",
+      "canonicalName": "Oliver’s Super Sandwiches",
+      "archivedId": "82aed0a9-6e1d-4ed8-b1e9-756aba56bfb7"
+    },
+    {
+      "status": "merged-local",
+      "confidence": "medium",
+      "brands": [
+        {
+          "id": "mtr-network-brand-a91b2c6495e62281a05aa5c8",
+          "name": "Japan Fitness Meal",
+          "version": 1,
+          "url": "/admin/catalogue?kind=brand&id=mtr-network-brand-a91b2c6495e62281a05aa5c8",
+          "logo": null,
+          "sourceEvidence": [
+            {
+              "kind": "directory",
+              "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltc14a9034b43772d2",
+              "note": "MTR capture 2026-11-14: Japan Fitness Meal; 1 listings. Reviewed label mtr-business-1011b4f408cd7d2098c47a7e60c60a70c7ae297016adb372d4c31de281c2ac22. Listing status does not establish current operation; full source IDs retained in the reconciliation manifest."
+            }
+          ]
+        },
+        {
+          "id": "mtr-network-brand-05c12ee57a7846716f67093b",
+          "name": "JP Fitness Meal",
+          "version": 1,
+          "url": "/admin/catalogue?kind=brand&id=mtr-network-brand-05c12ee57a7846716f67093b",
+          "logo": null,
+          "sourceEvidence": [
+            {
+              "kind": "directory",
+              "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt9ea2c9c602cab990",
+              "note": "MTR capture 2026-11-14: JP Fitness Meal; 1 listings. Reviewed label mtr-business-05c12ee57a7846716f67093b7a16c01d24dfe345f7ece83b4d1aec326993c3b0. Listing status does not establish current operation; full source IDs retained in the reconciliation manifest."
+            }
+          ]
+        }
+      ],
+      "reason": "Strong name similarity. The official JP Fitness Meal page uses artwork reading JAPAN FOOD FITNESS MEAL. Confirm both MTR source listings belong to the same brand before linking.",
+      "suggestedCanonicalName": "JP Fitness Meal",
+      "evidenceUrls": ["https://www.sakuramitsuya.com/pages/jp-fitness-meal"],
+      "canonicalId": "mtr-network-brand-a91b2c6495e62281a05aa5c8",
+      "canonicalName": "Japan Fitness Meal",
+      "archivedId": "mtr-network-brand-05c12ee57a7846716f67093b"
+    },
+    {
+      "status": "merged-local",
+      "confidence": "medium",
+      "brands": [
+        {
+          "id": "mtr-network-brand-1db59f4f479f6c22580ef8d1",
+          "name": "Japan Home Centre",
+          "version": 1,
+          "url": "/admin/catalogue?kind=brand&id=mtr-network-brand-1db59f4f479f6c22580ef8d1",
+          "logo": null,
+          "sourceEvidence": [
+            {
+              "kind": "directory",
+              "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blta8f7ca926599bc84",
+              "note": "MTR capture 2026-11-14: Japan Home Centre; 1 listings. Reviewed label mtr-business-48f866fac823d7e8e4f632cdb0ca41a832a50b4616cc4c6fbbd2e34f38860a30. Listing status does not establish current operation; full source IDs retained in the reconciliation manifest."
+            }
+          ]
+        },
+        {
+          "id": "mtr-network-brand-6abdb761e1c3a7a1a817f9e5",
+          "name": "JHC",
+          "version": 2,
+          "url": "/admin/catalogue?kind=brand&id=mtr-network-brand-6abdb761e1c3a7a1a817f9e5",
+          "logo": "/api/identity-catalogue/logos/3291dc0f-2941-5999-a482-4cf050640be4",
+          "sourceEvidence": [
+            {
+              "kind": "directory",
+              "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt9a7e61d28f7f24a0",
+              "note": "MTR capture 2026-11-14: JHC; 1 listings. Reviewed label mtr-business-6abdb761e1c3a7a1a817f9e5a098b9c01be52582aca5a75bf38d10320ad90bbf. Listing status does not establish current operation; full source IDs retained in the reconciliation manifest."
+            }
+          ]
+        }
+      ],
+      "reason": "Likely old full name versus abbreviated/rebranded name. Verify the Chinese identity: the group also operates a distinct Japan Home brand, which must not be merged just because it shares an owner.",
+      "suggestedCanonicalName": "JHC",
+      "evidenceUrls": [
+        "https://www.jhceshop.com/",
+        "https://www.hkexnews.hk/listedco/listconews/sehk/2026/0831/2026083101857.pdf"
+      ],
+      "canonicalId": "mtr-network-brand-6abdb761e1c3a7a1a817f9e5",
+      "canonicalName": "JHC",
+      "archivedId": "mtr-network-brand-1db59f4f479f6c22580ef8d1"
+    },
+    {
+      "status": "merged-local",
+      "confidence": "medium",
+      "brands": [
+        {
+          "id": "mtr-brand-okashi-land",
+          "name": "Okashi Land",
+          "version": 4,
+          "url": "/admin/catalogue?kind=brand&id=mtr-brand-okashi-land",
+          "logo": "/api/identity-catalogue/logos/3f066ee8-040e-5def-b2cc-d9e31c4e2251",
+          "sourceEvidence": [
+            {
+              "kind": "directory",
+              "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?query_type=search&start=39",
+              "note": "MTR shop directory for hong-kong; categories mapped to the existing place taxonomy."
+            },
+            {
+              "kind": "ownership",
+              "url": "https://www.fourseasgroup.com.hk/en/our-businesses/food-distribution/",
+              "note": "Official group portfolio includes Okashi Land."
+            },
+            {
+              "kind": "website",
+              "url": "https://www.okashiland.com/",
+              "note": "Research source; not proof of parent ownership."
+            }
+          ]
+        },
+        {
+          "id": "mtr-network-brand-050c8b196af2689e5afc2106",
+          "name": "Okashi Galleria by 零食物語",
+          "version": 1,
+          "url": "/admin/catalogue?kind=brand&id=mtr-network-brand-050c8b196af2689e5afc2106",
+          "logo": null,
+          "sourceEvidence": [
+            {
+              "kind": "directory",
+              "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltfe49c4d93e55fade",
+              "note": "MTR capture 2026-11-14: Okashi Galleria by 零食物語; 1 listings. Reviewed label mtr-business-ce82b0320f4efaeb6382ded2a3c82a3fc600ff324a53ad7e9d5171904b898392. Listing status does not establish current operation; full source IDs retained in the reconciliation manifest."
+            }
+          ]
+        }
+      ],
+      "reason": "The owner lists Okashi Galleria locations under Okashi Land. Decide whether Galleria is a store format of one brand or a separately maintained sub-brand.",
+      "suggestedCanonicalName": "Okashi Land",
+      "evidenceUrls": ["https://www.fourseasgroup.com.hk/en/retail/okashi-land/"],
+      "canonicalId": "mtr-brand-okashi-land",
+      "canonicalName": "Okashi Land",
+      "archivedId": "mtr-network-brand-050c8b196af2689e5afc2106"
+    }
+  ],
+  "excludedNameMatches": [
+    "Gingko Bakery / King Bakery",
+    "Home Market / HOMESmart",
+    "Hong Kong Property / Hong Kong Post",
+    "S.F. Express / Snack Express / Sushi Express",
+    "Tai Cheong Bakery / Tai Tung Bakery"
+  ],
+  "keepDistinctPendingEvidence": [
+    "Tong Bao Dim / Tong Kee Bao Dim: related ownership alone does not establish one brand.",
+    "DGG by LBuy / LBuy: possible format or sub-brand.",
+    "K CASH Supreme / Paykool by KCash: different offerings.",
+    "Maxim’s corporate group / Maxim’s Cakes: different entity kinds."
+  ]
+}

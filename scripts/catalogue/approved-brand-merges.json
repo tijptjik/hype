@@ -1,0 +1,28 @@
+[
+  {
+    "from": "mtr-network-brand-3cc5a451644da53fa4c0f915",
+    "to": "mtr-brand-gachapoint",
+    "name": "Gatchapoint"
+  },
+  {
+    "from": "82aed0a9-6e1d-4ed8-b1e9-756aba56bfb7",
+    "to": "tko-brand-olivers-super-sandwiches",
+    "name": "Oliver’s Super Sandwiches"
+  },
+  {
+    "from": "mtr-network-brand-05c12ee57a7846716f67093b",
+    "to": "mtr-network-brand-a91b2c6495e62281a05aa5c8",
+    "name": "Japan Fitness Meal"
+  },
+  {
+    "from": "mtr-network-brand-1db59f4f479f6c22580ef8d1",
+    "to": "mtr-network-brand-6abdb761e1c3a7a1a817f9e5",
+    "name": "JHC"
+  },
+  {
+    "from": "mtr-network-brand-050c8b196af2689e5afc2106",
+    "to": "mtr-brand-okashi-land",
+    "name": "Okashi Land",
+    "format": "Galleria"
+  }
+]
