@@ -5094,11 +5094,14 @@ async function refreshLocationSource(): Promise<void> {
                       rule={profileNameRule}
                       scopeId={layerIdValue}
                       {locale}
-                      fromLocation={profileNameRule?.base === 'location' ||
-                        (!profileNameRule &&
-                          Object.values(profileLocationNames).some(name =>
-                            name.trim(),
-                          ))}
+                      fromLocation={(isNewFeatureRef
+                        ? Boolean(draftLocalKind || draftPlaceSource)
+                        : Boolean(acceptedNameSource?.current)) &&
+                        (profileNameRule?.base === 'location' ||
+                          (!profileNameRule &&
+                            Object.values(profileLocationNames).some(name =>
+                              name.trim(),
+                            )))}
                       custom={profileNameRule
                         ? profileNameOverrides[canonicalContentTag(locale)] !==
                           undefined

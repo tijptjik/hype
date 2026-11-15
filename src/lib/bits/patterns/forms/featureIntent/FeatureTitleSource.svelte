@@ -34,7 +34,10 @@ let {
   onLocation: () => void
 } = $props()
 let expanded = $state(false)
-const template = $derived(Boolean(rule?.conditions.length || rule?.base === 'feature'))
+// A retained naming template does not imply that a Location is still associated.
+const template = $derived(
+  Boolean(rule?.registry || rule?.conditions.length || rule?.base === 'feature'),
+)
 const automatic = $derived(!custom && (fromLocation || Boolean(rule)))
 const actionClass =
   'text-primary decoration-primary/40 focus-visible:outline-primary rounded py-1 underline underline-offset-4 hover:decoration-current focus-visible:outline-2 focus-visible:outline-offset-2'
@@ -75,7 +78,7 @@ async function customize(event: MouseEvent): Promise<void> {
     <div
       class="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1"
     >
-      {#if template}
+      {#if template && !rule?.registry}
         <Dialog.Trigger type="button" class={actionClass}
           >{m.feature_title_view_template()}</Dialog.Trigger
         >

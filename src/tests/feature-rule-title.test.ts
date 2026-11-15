@@ -90,3 +90,29 @@ it('distinguishes direct location inheritance from a feature-based template', ()
   expect(screen.getByRole('button', { name: 'Customize title' })).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'Go to location' })).toBeNull()
 })
+
+it('removes Location provenance after detachment while retaining the registered template', async () => {
+  const view = render(FeatureTitleSource, {
+    scopeId: 'layer',
+    locale: 'en',
+    editable: true,
+    rule: {
+      base: 'location',
+      conditions: [],
+      registry: { id: '2966d49c-fa7d-4902-97c9-9e7b94f9c75a', version: 2 },
+    },
+    fromLocation: true,
+    onCustomize: vi.fn(),
+    onRestore: vi.fn(),
+    onLocation: vi.fn(),
+  })
+  expect(screen.getByText('Template · From location')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Go to location' })).toBeTruthy()
+  await view.rerender({ fromLocation: false })
+  expect(screen.getByText('Template')).toBeTruthy()
+  expect(screen.queryByText(/From location/)).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Go to location' })).toBeNull()
+  // The legacy condition inspector cannot explain a registered expression.
+  expect(screen.queryByRole('button', { name: 'View template' })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Customize title' })).toBeTruthy()
+})
