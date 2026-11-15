@@ -68,3 +68,22 @@ application release validator.
 The upload dry run passed for all 789 files. No remote objects were written; the remote
 baseline prefix remained empty after verification. Evidence is retained at
 `/home/io/.local/state/hype/mtr-baselines/2026-11-15-initial-upload-dry-run.log`.
+
+## Imported facility terminology
+
+`prepareCorrectedMap` retains the raw source bundle first, then applies
+`normalizeMapFacilityLabels` to the derived draft before replaying explicit corrections.
+Facility names use title case, known generic facility nouns use singular forms, and
+`Stair`/`Step` become the natural plurals `Stairs`/`Steps`. Acronyms such as ATM and AED
+and numbered exit/equipment codes are preserved. Occupied and retail unit names keep
+their brand spelling. Source IDs, categories and non-English fields remain unchanged.
+Explicit corrections take precedence in the saved draft.
+
+Existing published maps use the same facility-name formatter in the directory
+projection, without rewriting their retained source features or archive hashes.
+
+The correction service is concurrent work not included in the terminology commit.
+`scripts/indoor/facility-label-correction-integration.patch` preserves its exact
+normalization hook. The hook is already active in this working checkout; after
+integrating the correction service elsewhere, apply the patch only if absent. The
+directory normalization and its tests are independently committed.

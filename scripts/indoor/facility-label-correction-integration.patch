@@ -1,0 +1,35 @@
+--- a/src/lib/db/services/premisesMapCorrection.ts
++++ b/src/lib/db/services/premisesMapCorrection.ts
+@@ -4,6 +4,7 @@
+ import { premisesMapCorrection } from '../schema/premisesMap'
+ import { systemTask } from '../schema/systemTask'
+ // DOMAIN
++import { normalizeMapFacilityLabels } from '#lib/indoor/facilityLabels.js'
+ import {
+   applyMapCorrection,
+   assessMapCorrection,
+@@ -49,6 +50,8 @@
+     httpMetadata: { contentType: 'application/json' },
+   })
+   const corrected = structuredClone(raw)
++  // Apply shared terminology only to derived content; explicit corrections take precedence.
++  normalizeMapFacilityLabels(corrected.data)
+   corrected.data.sourceSnapshotHash = sourceHash
+   corrected.data.correctionIssues = []
+   const corrections =
+--- a/src/lib/bits/patterns/station/StationPanel.svelte
++++ b/src/lib/bits/patterns/station/StationPanel.svelte
+@@ -76,11 +76,9 @@
+ let showAmenities = $state(true)
+ let indexOpen = $state(true)
+ let levelsOpen = $state(true)
+-/** Capitalize generic facility labels without changing shop names or source records. @param place Directory entry. @returns Display name. */
++/** Use the shared facility terminology while preserving shop spelling. @param place Directory entry. @returns Display name. */
+ function displayName(place: Place): string {
+-  return place.kind === 'facility'
+-    ? place.name.en.replace(/\b[a-z]/g, letter => letter.toUpperCase())
+-    : place.name.en
++  return place.name.en
+ }
+ const levels = $derived(
+   station.data?.level_polygon.features.toSorted(

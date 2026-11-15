@@ -1,3 +1,5 @@
+// FACILITY LABELS
+import { canonicalFacilityLabel } from './facilityLabels'
 import type { MapConnection } from './releases'
 import type { ShopArtwork } from './artwork'
 import type { Feature, FeatureCollection, Geometry } from 'geojson'
@@ -137,6 +139,11 @@ export function places(data: IndoorData): Place[] {
       occupants: [],
       kind: 'facility',
     })
+  }
+  // Older published maps receive the same directory terminology without mutating source features.
+  for (const place of result) {
+    if (place.kind === 'facility' && !/^(retail|shop)/i.test(place.category))
+      place.name.en = canonicalFacilityLabel(place.name.en)
   }
   return result.sort((a, b) =>
     (a.code || a.name.en).localeCompare(b.code || b.name.en, 'en', { numeric: true }),
