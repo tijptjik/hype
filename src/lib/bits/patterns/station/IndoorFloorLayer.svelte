@@ -354,9 +354,9 @@ const facilityMarkers = $derived.by(() => {
             brand(unit)?.padding,
           ),
           brand(unit)?.aspect,
-          screenAlignedLogos,
+          true,
         )}
-        <!-- Screen-aligned marks lie on the tilted floor and stay clipped to the rotating shop footprint. -->
+        <!-- Both modes lie on the floor and stay clipped to the shop; magic mode only changes their orientation. -->
         {#if placement}
           <g clip-path={`url(#${maskId}-${value(unit.properties, 'unit_id')})`}>
             <image
