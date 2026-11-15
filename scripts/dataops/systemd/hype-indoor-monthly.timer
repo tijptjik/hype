@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh indoor maps monthly, catching up after downtime
+
+[Timer]
+OnCalendar=*-*-01 03:00:00 Asia/Hong_Kong
+Persistent=true
+RandomizedDelaySec=10m
+Unit=hype-indoor-monthly.service
+
+[Install]
+WantedBy=timers.target

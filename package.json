@@ -138,7 +138,8 @@
     "check:workers": "bash scripts/dev-check.sh bash -c 'turbo run check --filter=@hype/* \"$@\"' --",
     "test:workers": "bash scripts/dev-check.sh bash -c 'bun test scripts/messaging/dev-worker.test.ts && turbo run test --filter=@hype/* \"$@\"' --",
     "dev:messaging": "turbo run dev --filter=./workers/*",
-    "build:all": "bun run build:workers && bun run build"
+    "build:all": "bun run build:workers && bun run build",
+    "dataops": "bash scripts/dataops/run.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.5",
