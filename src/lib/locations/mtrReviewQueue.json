@@ -1,0 +1,803 @@
+[
+  {
+    "businessKey": "mtr-business-197517397a64c5dd1e3a1a2f6169ce79985206c8437f4712923b4a7d62452a36",
+    "name": "\"iAM Smart\" Self-Registration Kiosk",
+    "entries": 2,
+    "sourceRecordIds": ["blt152842a706721703", "blt91ff4121f29973d2"],
+    "action": "review",
+    "reason": "MTR service point; preserve source aliases and use the canonical singular display name.",
+    "sources": [
+      {
+        "id": "blt152842a706721703",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt152842a706721703"
+      },
+      {
+        "id": "blt91ff4121f29973d2",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt91ff4121f29973d2"
+      }
+    ],
+    "entityClass": "service_point"
+  },
+  {
+    "businessKey": "mtr-business-2ea96234b421173ec05a045aa2966a632becab6938180431d0a359787af6dd04",
+    "name": "“iAM Smart” Self-Registration Kiosk",
+    "entries": 13,
+    "sourceRecordIds": [
+      "blt25fdd35d5e897f78",
+      "blt3cd18bb3d316a9d0",
+      "blt3e2b09e045ce8746",
+      "blt46ded31d2fa929b3",
+      "blt7245294e7b3c1993",
+      "blt9384cd2a704dc08f",
+      "blt9c09608a9429e9e1",
+      "blta788b8821822be10",
+      "bltaa9c9853e6407a75",
+      "bltbfe7615ac263c11b",
+      "bltc147ee61ce97c046",
+      "bltdcd512e9f4a96939",
+      "blte56167ddec8f3f74"
+    ],
+    "action": "review",
+    "reason": "MTR service point; preserve source aliases and use the canonical singular display name.",
+    "sources": [
+      {
+        "id": "blt25fdd35d5e897f78",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt25fdd35d5e897f78"
+      },
+      {
+        "id": "blt3cd18bb3d316a9d0",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt3cd18bb3d316a9d0"
+      },
+      {
+        "id": "blt3e2b09e045ce8746",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt3e2b09e045ce8746"
+      },
+      {
+        "id": "blt46ded31d2fa929b3",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt46ded31d2fa929b3"
+      },
+      {
+        "id": "blt7245294e7b3c1993",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt7245294e7b3c1993"
+      },
+      {
+        "id": "blt9384cd2a704dc08f",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt9384cd2a704dc08f"
+      },
+      {
+        "id": "blt9c09608a9429e9e1",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt9c09608a9429e9e1"
+      },
+      {
+        "id": "blta788b8821822be10",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blta788b8821822be10"
+      },
+      {
+        "id": "bltaa9c9853e6407a75",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltaa9c9853e6407a75"
+      },
+      {
+        "id": "bltbfe7615ac263c11b",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltbfe7615ac263c11b"
+      },
+      {
+        "id": "bltc147ee61ce97c046",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltc147ee61ce97c046"
+      },
+      {
+        "id": "bltdcd512e9f4a96939",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltdcd512e9f4a96939"
+      },
+      {
+        "id": "blte56167ddec8f3f74",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blte56167ddec8f3f74"
+      }
+    ],
+    "entityClass": "service_point"
+  },
+  {
+    "businessKey": "mtr-business-0139638a5463a2c10a1aa9beff619a72607f77ba283d543cee0c7ebdc2e10b9a",
+    "name": "Art Gallery",
+    "entries": 1,
+    "sourceRecordIds": ["bltda838840a1bdabe9"],
+    "action": "review",
+    "reason": "Generic facility label; operator not identified.",
+    "sources": [
+      {
+        "id": "bltda838840a1bdabe9",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltda838840a1bdabe9"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-dbccd83f0fba9d2b3a55c4ac6f18763afce8b7c80175692296c130dcf81f8177",
+    "name": "Bank of East Asia ATM",
+    "entries": 3,
+    "sourceRecordIds": [
+      "blt02c8d47fae12d838",
+      "blt2600c952511aaed8",
+      "blt95a743d08637ef5c"
+    ],
+    "action": "review",
+    "reason": "ATM label; confirm canonical banking brand.",
+    "sources": [
+      {
+        "id": "blt02c8d47fae12d838",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt02c8d47fae12d838"
+      },
+      {
+        "id": "blt2600c952511aaed8",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt2600c952511aaed8"
+      },
+      {
+        "id": "blt95a743d08637ef5c",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt95a743d08637ef5c"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-ad9be18cbabbff5ec5f910ddd7a73a7362b495bd427183b7e583d6e358f31dd4",
+    "name": "Beard Papa's",
+    "entries": 1,
+    "sourceRecordIds": ["bltd0dfd6304ad5be18"],
+    "action": "review",
+    "reason": "All captured entries are marked closed; confirm current brand identity before adding.",
+    "sources": [
+      {
+        "id": "bltd0dfd6304ad5be18",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltd0dfd6304ad5be18"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-b125a667c6a00396e1245550d379debe313d0f86bde2f93ff3e91afa418b246b",
+    "name": "Citibank ATM",
+    "entries": 1,
+    "sourceRecordIds": ["blt4c4064dd11bf64c5"],
+    "action": "review",
+    "reason": "ATM label; confirm canonical banking brand.",
+    "sources": [
+      {
+        "id": "blt4c4064dd11bf64c5",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt4c4064dd11bf64c5"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-137fbc40c7ffee5957b4157bfc87356e43bc8f4fe764eddd7d226546a967cab2",
+    "name": "DHL Service Point",
+    "entries": 2,
+    "sourceRecordIds": ["blt1050cda9e7490653", "blt56fda0503275b639"],
+    "action": "review",
+    "reason": "Service-point format; confirm canonical courier brand.",
+    "sources": [
+      {
+        "id": "blt1050cda9e7490653",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt1050cda9e7490653"
+      },
+      {
+        "id": "blt56fda0503275b639",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt56fda0503275b639"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-6ac1ef81082b2cde2a2a43e1b3f828efc4deaf7043a3e84f6520479a7e4c8cbe",
+    "name": "Foreign Exchange",
+    "entries": 3,
+    "sourceRecordIds": [
+      "blt226bd7d7b918e8d1",
+      "blt6e5fd10dac88b7ea",
+      "blt8ca4e5db0bdcf3e8"
+    ],
+    "action": "review",
+    "reason": "Generic service label; operator not identified.",
+    "sources": [
+      {
+        "id": "blt226bd7d7b918e8d1",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt226bd7d7b918e8d1"
+      },
+      {
+        "id": "blt6e5fd10dac88b7ea",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt6e5fd10dac88b7ea"
+      },
+      {
+        "id": "blt8ca4e5db0bdcf3e8",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt8ca4e5db0bdcf3e8"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-9fae791897a157445b94588b2d9444f76f429044a60c5c0149245bcc03fa9c53",
+    "name": "Gatchapoint by Supernova",
+    "entries": 1,
+    "sourceRecordIds": ["blt86154407cf5a8664"],
+    "action": "review",
+    "reason": "All captured entries are marked closed; confirm current brand identity before adding.",
+    "sources": [
+      {
+        "id": "blt86154407cf5a8664",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt86154407cf5a8664"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-814626f139eae5df866450edebefac3a8d982ba389e1662d294f022be1b95df0",
+    "name": "Hong Kong Police Self-service Kiosk",
+    "entries": 4,
+    "sourceRecordIds": [
+      "blt5f5e8c8e05f23f14",
+      "blt67351fd77e384c63",
+      "bltb2af88c028a1f8f9",
+      "blte1169d171b9ce2f1"
+    ],
+    "action": "review",
+    "reason": "Government service kiosk, not a storefront brand.",
+    "sources": [
+      {
+        "id": "blt5f5e8c8e05f23f14",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt5f5e8c8e05f23f14"
+      },
+      {
+        "id": "blt67351fd77e384c63",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt67351fd77e384c63"
+      },
+      {
+        "id": "bltb2af88c028a1f8f9",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltb2af88c028a1f8f9"
+      },
+      {
+        "id": "blte1169d171b9ce2f1",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blte1169d171b9ce2f1"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-4841e7b37ed3248d02307c281c3395c0b32de5d1b8107ff0851b2da50027e28b",
+    "name": "i'AM Smart",
+    "entries": 1,
+    "sourceRecordIds": ["blt61232a6cce8d7ace"],
+    "action": "review",
+    "reason": "Government service label; confirm identity and resource kind.",
+    "sources": [
+      {
+        "id": "blt61232a6cce8d7ace",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt61232a6cce8d7ace"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-6abdb761e1c3a7a1a817f9e5a098b9c01be52582aca5a75bf38d10320ad90bbf",
+    "name": "JHC",
+    "entries": 1,
+    "sourceRecordIds": ["blt9a7e61d28f7f24a0"],
+    "action": "review",
+    "reason": "Potential alias of Japan Home Centre; review before consolidating.",
+    "sources": [
+      {
+        "id": "blt9a7e61d28f7f24a0",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt9a7e61d28f7f24a0"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-05c12ee57a7846716f67093b7a16c01d24dfe345f7ece83b4d1aec326993c3b0",
+    "name": "JP Fitness Meal",
+    "entries": 1,
+    "sourceRecordIds": ["blt9ea2c9c602cab990"],
+    "action": "review",
+    "reason": "Potential alias of Japan Fitness Meal; insufficient identity evidence.",
+    "sources": [
+      {
+        "id": "blt9ea2c9c602cab990",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt9ea2c9c602cab990"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-b19caeae7f5f9f072b205ff84bed32b42077ce10d13debd01520292516c06c1b",
+    "name": "K Station powered by K Fest",
+    "entries": 1,
+    "sourceRecordIds": ["blt013582e86dda0a2e"],
+    "action": "review",
+    "reason": "All captured entries are marked closed; confirm current brand identity before adding.",
+    "sources": [
+      {
+        "id": "blt013582e86dda0a2e",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt013582e86dda0a2e"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-f02dc24359a75e05be4bde2b5c5904af85d18bc7c16a5a16624fbe1c702d7508",
+    "name": "Left Baggage",
+    "entries": 2,
+    "sourceRecordIds": ["blt10c2fd3f1e4b0667", "bltdee05c9d49970ef8"],
+    "action": "review",
+    "reason": "Generic service label; operator not identified.",
+    "sources": [
+      {
+        "id": "blt10c2fd3f1e4b0667",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt10c2fd3f1e4b0667"
+      },
+      {
+        "id": "bltdee05c9d49970ef8",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltdee05c9d49970ef8"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-2caab54c47e7c6c33a9cba335fe6958daae4dd98f0dd6aba2c5791cd38e868ba",
+    "name": "Nanyang Commercial Bank - Cross-border Wealth Management Centre",
+    "entries": 1,
+    "sourceRecordIds": ["blt124093f1686f56a0"],
+    "action": "review",
+    "reason": "Branch/service format; confirm canonical banking brand.",
+    "sources": [
+      {
+        "id": "blt124093f1686f56a0",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt124093f1686f56a0"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-7341088fb8ff10eaf42197965ae3d8f5b33b80bc9a07537c18829c4054369473",
+    "name": "Octopus Service Point",
+    "entries": 1,
+    "sourceRecordIds": ["blt912002aaf45897da"],
+    "action": "review",
+    "reason": "MTR service point; preserve source aliases and use the canonical singular display name.",
+    "sources": [
+      {
+        "id": "blt912002aaf45897da",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt912002aaf45897da"
+      }
+    ],
+    "entityClass": "service_point"
+  },
+  {
+    "businessKey": "mtr-business-08adca1e6adeae9ccc7c45bd134ddc1a9de1b91d5af753ec85b439b45610ebed",
+    "name": "Octopus Service Points",
+    "entries": 46,
+    "sourceRecordIds": [
+      "blt01d127fc9d15c52f",
+      "blt023324b3d7ec93e6",
+      "blt02638c92c25ea67e",
+      "blt069936f3446842a5",
+      "blt095ccbf11e6f860c",
+      "blt095dd061e400e285",
+      "blt14618064f85e6126",
+      "blt18ef3a6b83137676",
+      "blt21715d91568709ef",
+      "blt2770abe2017643db",
+      "blt2c15d9ba972e829d",
+      "blt30f813b1331c4ba8",
+      "blt339ba8a2279d3393",
+      "blt3e362d9173e4e6e5",
+      "blt41b0790b489e56e9",
+      "blt4e67ee9ca37a6382",
+      "blt552aa2dbfedd7fc8",
+      "blt5719844013a0c654",
+      "blt5daa575aff6a530c",
+      "blt6423b51b37a9b192",
+      "blt64fdb922d9906b43",
+      "blt65dc399586cd9908",
+      "blt696f338a3a4a488a",
+      "blt6a5c3856b1a195bd",
+      "blt6ddd3bc0162b9120",
+      "blt771c1e142fd3475b",
+      "blt8406f070d3f34ede",
+      "blt869756456e397101",
+      "blt87b5c667e22244fb",
+      "blt90cb5942707d192b",
+      "blt978015c764118100",
+      "blt9be164c8f1ddc0a6",
+      "blt9f0766b21a472f70",
+      "blta67b559b77746726",
+      "blta6aa64651a1a907f",
+      "blta89a507a74508f39",
+      "bltb4fb1d4357fb89b0",
+      "bltb7d898e693d11bf3",
+      "bltb9ce7baf111f19e5",
+      "bltbf964ac9e72280a1",
+      "bltc13b4085bfcf3efa",
+      "bltd7e84c956104bbce",
+      "blte3cae17ecb335d51",
+      "blte7576168064b7076",
+      "bltf88554e92c3474b7",
+      "bltf9021b918b2d51a9"
+    ],
+    "action": "review",
+    "reason": "MTR service point; preserve source aliases and use the canonical singular display name.",
+    "sources": [
+      {
+        "id": "blt01d127fc9d15c52f",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt01d127fc9d15c52f"
+      },
+      {
+        "id": "blt023324b3d7ec93e6",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt023324b3d7ec93e6"
+      },
+      {
+        "id": "blt02638c92c25ea67e",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt02638c92c25ea67e"
+      },
+      {
+        "id": "blt069936f3446842a5",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt069936f3446842a5"
+      },
+      {
+        "id": "blt095ccbf11e6f860c",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt095ccbf11e6f860c"
+      },
+      {
+        "id": "blt095dd061e400e285",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt095dd061e400e285"
+      },
+      {
+        "id": "blt14618064f85e6126",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt14618064f85e6126"
+      },
+      {
+        "id": "blt18ef3a6b83137676",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt18ef3a6b83137676"
+      },
+      {
+        "id": "blt21715d91568709ef",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt21715d91568709ef"
+      },
+      {
+        "id": "blt2770abe2017643db",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt2770abe2017643db"
+      },
+      {
+        "id": "blt2c15d9ba972e829d",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt2c15d9ba972e829d"
+      },
+      {
+        "id": "blt30f813b1331c4ba8",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt30f813b1331c4ba8"
+      },
+      {
+        "id": "blt339ba8a2279d3393",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt339ba8a2279d3393"
+      },
+      {
+        "id": "blt3e362d9173e4e6e5",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt3e362d9173e4e6e5"
+      },
+      {
+        "id": "blt41b0790b489e56e9",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt41b0790b489e56e9"
+      },
+      {
+        "id": "blt4e67ee9ca37a6382",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt4e67ee9ca37a6382"
+      },
+      {
+        "id": "blt552aa2dbfedd7fc8",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt552aa2dbfedd7fc8"
+      },
+      {
+        "id": "blt5719844013a0c654",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt5719844013a0c654"
+      },
+      {
+        "id": "blt5daa575aff6a530c",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt5daa575aff6a530c"
+      },
+      {
+        "id": "blt6423b51b37a9b192",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt6423b51b37a9b192"
+      },
+      {
+        "id": "blt64fdb922d9906b43",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt64fdb922d9906b43"
+      },
+      {
+        "id": "blt65dc399586cd9908",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt65dc399586cd9908"
+      },
+      {
+        "id": "blt696f338a3a4a488a",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt696f338a3a4a488a"
+      },
+      {
+        "id": "blt6a5c3856b1a195bd",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt6a5c3856b1a195bd"
+      },
+      {
+        "id": "blt6ddd3bc0162b9120",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt6ddd3bc0162b9120"
+      },
+      {
+        "id": "blt771c1e142fd3475b",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt771c1e142fd3475b"
+      },
+      {
+        "id": "blt8406f070d3f34ede",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt8406f070d3f34ede"
+      },
+      {
+        "id": "blt869756456e397101",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt869756456e397101"
+      },
+      {
+        "id": "blt87b5c667e22244fb",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt87b5c667e22244fb"
+      },
+      {
+        "id": "blt90cb5942707d192b",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt90cb5942707d192b"
+      },
+      {
+        "id": "blt978015c764118100",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt978015c764118100"
+      },
+      {
+        "id": "blt9be164c8f1ddc0a6",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt9be164c8f1ddc0a6"
+      },
+      {
+        "id": "blt9f0766b21a472f70",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt9f0766b21a472f70"
+      },
+      {
+        "id": "blta67b559b77746726",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blta67b559b77746726"
+      },
+      {
+        "id": "blta6aa64651a1a907f",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blta6aa64651a1a907f"
+      },
+      {
+        "id": "blta89a507a74508f39",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blta89a507a74508f39"
+      },
+      {
+        "id": "bltb4fb1d4357fb89b0",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltb4fb1d4357fb89b0"
+      },
+      {
+        "id": "bltb7d898e693d11bf3",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltb7d898e693d11bf3"
+      },
+      {
+        "id": "bltb9ce7baf111f19e5",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltb9ce7baf111f19e5"
+      },
+      {
+        "id": "bltbf964ac9e72280a1",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltbf964ac9e72280a1"
+      },
+      {
+        "id": "bltc13b4085bfcf3efa",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltc13b4085bfcf3efa"
+      },
+      {
+        "id": "bltd7e84c956104bbce",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltd7e84c956104bbce"
+      },
+      {
+        "id": "blte3cae17ecb335d51",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blte3cae17ecb335d51"
+      },
+      {
+        "id": "blte7576168064b7076",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blte7576168064b7076"
+      },
+      {
+        "id": "bltf88554e92c3474b7",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltf88554e92c3474b7"
+      },
+      {
+        "id": "bltf9021b918b2d51a9",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltf9021b918b2d51a9"
+      }
+    ],
+    "entityClass": "service_point"
+  },
+  {
+    "businessKey": "mtr-business-c379708d317a22b9d4aaefada5ac26966b2d0e34f3cb57d2eecffd980ba728f9",
+    "name": "Official Franchised Product Store of the National Games",
+    "entries": 1,
+    "sourceRecordIds": ["bltc87e36b9689e3088"],
+    "action": "review",
+    "reason": "Event-specific generic label; operator not identified.",
+    "sources": [
+      {
+        "id": "bltc87e36b9689e3088",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltc87e36b9689e3088"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-1701cad3fa50ceb3aa2f10237d67b3a8c15c2166382cf27bdaa37a50f50b7e99",
+    "name": "Salvation Army",
+    "entries": 1,
+    "sourceRecordIds": ["blt6966554974a5f0a4"],
+    "action": "review",
+    "reason": "Charitable operator; confirm retail brand versus institution.",
+    "sources": [
+      {
+        "id": "blt6966554974a5f0a4",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt6966554974a5f0a4"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-873ab01d5723b0c6e1de5782060b756f0a3f9bd7f9a5e323c116c07c19ce912e",
+    "name": "Swire Coca Cola",
+    "entries": 1,
+    "sourceRecordIds": ["bltdd64d1ed06a4702e"],
+    "action": "review",
+    "reason": "Vending operator versus consumer brand requires review.",
+    "sources": [
+      {
+        "id": "bltdd64d1ed06a4702e",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltdd64d1ed06a4702e"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-0fa44f9cb1c1b09caac8782e76b640718c188058a00d83233c1aacb22f607b30",
+    "name": "Swire Coca Cola HK",
+    "entries": 20,
+    "sourceRecordIds": [
+      "blt272643ddbf97c5a6",
+      "blt285040517577d05c",
+      "blt2aaabb9a98b07006",
+      "blt3142945bbae74776",
+      "blt3a392f30af17cf4b",
+      "blt3ed71636420e765e",
+      "blt41f514889e06b934",
+      "blt5a3831595420b4e0",
+      "blt5eaa3ea0d4f35e0a",
+      "blt859af273281a1b06",
+      "blt88f4bafdb0281eb3",
+      "blt9e3ceac408dd559c",
+      "bltafa214909a900589",
+      "bltb269e9614287ab7b",
+      "bltb29191b3dee2880d",
+      "bltb73e56da4ef1f802",
+      "bltcb240df9a1c534a0",
+      "bltd931745b435fd935",
+      "bltdde0d42952a1e49d",
+      "bltf67e899c018fd5e6"
+    ],
+    "action": "review",
+    "reason": "Regional vending operator versus consumer brand requires review.",
+    "sources": [
+      {
+        "id": "blt272643ddbf97c5a6",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt272643ddbf97c5a6"
+      },
+      {
+        "id": "blt285040517577d05c",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt285040517577d05c"
+      },
+      {
+        "id": "blt2aaabb9a98b07006",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt2aaabb9a98b07006"
+      },
+      {
+        "id": "blt3142945bbae74776",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt3142945bbae74776"
+      },
+      {
+        "id": "blt3a392f30af17cf4b",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt3a392f30af17cf4b"
+      },
+      {
+        "id": "blt3ed71636420e765e",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt3ed71636420e765e"
+      },
+      {
+        "id": "blt41f514889e06b934",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt41f514889e06b934"
+      },
+      {
+        "id": "blt5a3831595420b4e0",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt5a3831595420b4e0"
+      },
+      {
+        "id": "blt5eaa3ea0d4f35e0a",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt5eaa3ea0d4f35e0a"
+      },
+      {
+        "id": "blt859af273281a1b06",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt859af273281a1b06"
+      },
+      {
+        "id": "blt88f4bafdb0281eb3",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt88f4bafdb0281eb3"
+      },
+      {
+        "id": "blt9e3ceac408dd559c",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt9e3ceac408dd559c"
+      },
+      {
+        "id": "bltafa214909a900589",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltafa214909a900589"
+      },
+      {
+        "id": "bltb269e9614287ab7b",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltb269e9614287ab7b"
+      },
+      {
+        "id": "bltb29191b3dee2880d",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltb29191b3dee2880d"
+      },
+      {
+        "id": "bltb73e56da4ef1f802",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltb73e56da4ef1f802"
+      },
+      {
+        "id": "bltcb240df9a1c534a0",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltcb240df9a1c534a0"
+      },
+      {
+        "id": "bltd931745b435fd935",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltd931745b435fd935"
+      },
+      {
+        "id": "bltdde0d42952a1e49d",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltdde0d42952a1e49d"
+      },
+      {
+        "id": "bltf67e899c018fd5e6",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=bltf67e899c018fd5e6"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-79722cb6ed59e58b58803af902e9d3633900762852221ac7c707ec91848cce4a",
+    "name": "Swire Coca-Cola",
+    "entries": 2,
+    "sourceRecordIds": ["blt1e243edfd2260be9", "blt24782fca3820e8ce"],
+    "action": "review",
+    "reason": "Vending operator versus consumer brand requires review.",
+    "sources": [
+      {
+        "id": "blt1e243edfd2260be9",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt1e243edfd2260be9"
+      },
+      {
+        "id": "blt24782fca3820e8ce",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt24782fca3820e8ce"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-bf5681e5a05cb2b5a09707436aa8bb6538b4f9879e6430b2d6131faab661d087",
+    "name": "The Pie & Tart Express",
+    "entries": 2,
+    "sourceRecordIds": ["blt7bec811432034668", "blta25546b21b27803d"],
+    "action": "review",
+    "reason": "Potential distinct brand versus The Pie & Tart Specialists; review before consolidating.",
+    "sources": [
+      {
+        "id": "blt7bec811432034668",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt7bec811432034668"
+      },
+      {
+        "id": "blta25546b21b27803d",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blta25546b21b27803d"
+      }
+    ]
+  },
+  {
+    "businessKey": "mtr-business-539952fd7f0df9dad97257e1fb00c9a904ef7e2db2fa351111eff9d25d1f61a2",
+    "name": "UNICUBE",
+    "entries": 1,
+    "sourceRecordIds": ["blt1dcae8431ed9b4c9"],
+    "action": "review",
+    "reason": "All captured entries are marked closed; confirm current brand identity before adding.",
+    "sources": [
+      {
+        "id": "blt1dcae8431ed9b4c9",
+        "url": "https://www.mtr.com.hk/en/customer/shops/shop_search.php?id=blt1dcae8431ed9b4c9"
+      }
+    ]
+  }
+]
