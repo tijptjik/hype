@@ -136,7 +136,6 @@ function select(place: Place): void {
 }
 let listViewport: HTMLDivElement | undefined = $state()
 let listContent: HTMLElement | undefined = $state()
-let listHeight = $state(0)
 // Reveal selected map anchors even when the directory was collapsed or filtered.
 $effect(() => {
   if (selected?.id) indexOpen = true
@@ -324,7 +323,6 @@ $effect(() => {
               <FilterBar bind:searchTerm={query} label="Search places" />
               <div
                 bind:this={listViewport}
-                bind:clientHeight={listHeight}
                 data-place-scroll
                 class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 pb-4"
               >
@@ -337,8 +335,7 @@ $effect(() => {
                 {/if}
                 <section
                   bind:this={listContent}
-                  class="grid shrink-0 gap-1 transition-[padding] duration-240 motion-reduce:transition-none"
-                  style:padding-block={selected ? `${listHeight / 2}px` : '0px'}
+                  class="grid shrink-0 gap-1"
                   aria-label="Places"
                 >
                   {#each entries as place (place.id)}

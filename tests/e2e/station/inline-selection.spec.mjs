@@ -5,7 +5,7 @@ import { join } from 'node:path'
 const output = process.env.DEV_RUNNER_ARTIFACTS
 
 for (const width of [1440, 390]) {
-  test(`map selection expands and centers one inline service card at ${width}px`, async ({
+  test(`map selection expands and reveals one inline service card at ${width}px`, async ({
     page,
   }) => {
     test.setTimeout(90000)
@@ -68,7 +68,8 @@ for (const width of [1440, 390]) {
     const centered = async () => {
       const row = await card.boundingBox()
       const list = await page.locator('[data-place-scroll]').boundingBox()
-      return Math.abs(row.y + row.height / 2 - list.y - list.height / 2)
+      // Cards near either end stay visible without adding artificial list padding.
+      return Math.max(list.y - row.y, row.y + row.height - list.y - list.height, 0)
     }
     await expect.poll(centered).toBeLessThan(5)
     const frames = await page.evaluate(() => {
