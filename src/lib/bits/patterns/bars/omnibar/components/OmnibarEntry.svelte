@@ -54,7 +54,10 @@ function handleKeyDown(event: KeyboardEvent): void {
     ></span>
     <span class="min-w-0 break-words whitespace-normal">{result.name}</span>
     {#if result.lineBadges?.length}
-      <span class="flex shrink-0 items-center justify-end gap-1" data-station-lines>
+      <span
+        class="flex shrink-0 items-center justify-end gap-1 pr-2.5"
+        data-station-lines
+      >
         {#each result.lineBadges as line (line.id)}
           <span
             class="size-3 shrink-0"
