@@ -140,7 +140,9 @@ $effect(() => {
       >
         Discard unsaved edits
       </button>
-      <a class="text-primary p-2 underline" href={`/premises/${selected}`}
+      <a
+        class="text-primary p-2 underline"
+        href={`/${loaded.map.kind === 'building' ? 'buildings' : 'premises'}/${selected}`}
         >Open published map</a
       >
     </div>

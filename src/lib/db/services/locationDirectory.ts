@@ -59,6 +59,7 @@ export async function listLocationResources(
   const mapRegistry = (await db.select().from(premisesMapTable)).map(m => ({
     id: m.id,
     code: m.code,
+    kind: m.kind,
     basePath: `/api/premises-maps/${m.id}`,
     enabled: Boolean(m.publishedHash),
     ready: Boolean(m.publishedHash),

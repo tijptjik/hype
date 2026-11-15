@@ -11,7 +11,6 @@ import type { Map as MapLibreMap } from 'maplibre-gl'
 import {
   loadPremisesCatalogue,
   findPremises,
-  findStation,
   premisesPath,
   indoorSnapshots,
 } from '#lib/indoor/registry.js'
@@ -23,7 +22,15 @@ let {
   map,
   theme,
   showMtrStations = true,
-}: { map: MapLibreMap; theme: MapMarkerTheme; showMtrStations?: boolean } = $props()
+  showComplexInteriorMaps = true,
+  showBuildingInteriorMaps = true,
+}: {
+  map: MapLibreMap
+  theme: MapMarkerTheme
+  showMtrStations?: boolean
+  showComplexInteriorMaps?: boolean
+  showBuildingInteriorMaps?: boolean
+} = $props()
 const locale = $derived(getLocale())
 let available = $state<string[]>([])
 let data = $state.raw<Collection | null>(null)
@@ -42,6 +49,7 @@ $effect(() => {
               indoorName: entry.name,
               indoorNameZh: entry.nameZh,
               isStation: entry.kind === 'station',
+              indoorKind: entry.kind,
             },
           })),
         ),
@@ -58,9 +66,12 @@ $effect(() => {
       ? {
           ...data,
           features: data.features
-            .filter(
-              feature =>
-                showMtrStations || !findStation(String(feature.properties.stationCode)),
+            .filter(feature =>
+              feature.properties.indoorKind === 'station'
+                ? showMtrStations
+                : feature.properties.indoorKind === 'complex'
+                  ? showComplexInteriorMaps
+                  : showBuildingInteriorMaps,
             )
             .map(feature => ({
               ...feature,

@@ -248,3 +248,44 @@ it.each([
     'EAL',
   ])
 })
+
+it('independently hides building and complex map search results', async () => {
+  const { loadPremisesCatalogue } = await import('../lib/indoor/registry')
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () =>
+        ['building', 'complex'].map(kind => ({
+          id: `sample-${kind}`,
+          code: kind.toUpperCase(),
+          kind,
+          name: `Sample ${kind}`,
+          nameZh: '',
+          publishedHash: 'a'.repeat(64),
+          footprint: null,
+        })),
+    }),
+  )
+  try {
+    await loadPremisesCatalogue()
+    const { app, omni, search } = setup()
+    omni.state.searchTerm = 'Sample'
+    const results = () =>
+      search()
+        .sections.find(section => section.collectionType === 'mall')
+        ?.results.map(row => row.ref)
+    expect(results()).toEqual(['BUILDING', 'COMPLEX'])
+    Object.assign(app, { showBuildingInteriorMaps: false })
+    expect(results()).toEqual(['COMPLEX'])
+    Object.assign(app, {
+      showBuildingInteriorMaps: true,
+      showComplexInteriorMaps: false,
+    })
+    expect(results()).toEqual(['BUILDING'])
+    Object.assign(app, { showBuildingInteriorMaps: false })
+    expect(results()).toEqual([])
+  } finally {
+    vi.unstubAllGlobals()
+  }
+})

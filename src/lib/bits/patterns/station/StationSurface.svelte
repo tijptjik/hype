@@ -17,7 +17,7 @@ const responsive = getResponsiveCtx()
 // Same-path navigation must not restart catalogue resolution or replace the scene.
 const pathname = $derived(page.url.pathname)
 const indoorMatch = $derived(
-  /^\/premises\/([a-z0-9-]+)(?:\/places\/([^/]+))?\/?$/.exec(pathname),
+  /^\/(?:premises|buildings)\/([a-z0-9-]+)(?:\/places\/([^/]+))?\/?$/.exec(pathname),
 )
 const _hasCurrentScene = $derived(
   Boolean(station.data && indoorMatch && premisesCode(indoorMatch[1]) === station.code),

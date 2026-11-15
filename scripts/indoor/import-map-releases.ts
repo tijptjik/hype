@@ -34,7 +34,7 @@ const entries: {
   code: string
   name: string
   nameZh: string
-  kind: 'station' | 'building'
+  kind: 'station' | 'building' | 'complex'
   sourceDataset?: string
   sourceDirectory: string
   bundle: string

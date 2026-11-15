@@ -7,6 +7,7 @@ import type { MapCatalogueEntry } from './releases'
 // Public station URLs use descriptive names consistently, including PDF-only stations.
 export const stations = catalogue.stations.map(station => ({
   ...station,
+  kind: 'station' as const,
   i18n: premisesNameI18n(station),
   slug: `${station.name
     .toLowerCase()
@@ -14,6 +15,7 @@ export const stations = catalogue.stations.map(station => ({
     .replace(/^-|-$/g, '')}-mtr`,
 }))
 type PremisesRecord = {
+  kind: MapCatalogueEntry['kind']
   id: string
   slug: string
   name: string
@@ -56,7 +58,7 @@ export const findStation = (code: string) =>
 export function premisesPath(code: string, id?: string): string {
   const venue = findPremises(code)
   if (!venue) throw new Error(`Unknown premises code: ${code}`)
-  return `/premises/${venue.slug}${id ? `/places/${encodeURIComponent(id)}` : ''}`
+  return `/${venue.kind === 'building' ? 'buildings' : 'premises'}/${venue.slug}${id ? `/places/${encodeURIComponent(id)}` : ''}`
 }
 /** Searches bilingual station names and codes. @param query Search text. @returns Matching stations. */
 export function searchStations(query: string): typeof stations {
@@ -72,6 +74,7 @@ export function searchStations(query: string): typeof stations {
 
 /** Maintained map metadata; data directories remain stable independently of public map IDs. */
 export type PremisesMap = {
+  kind?: MapCatalogueEntry['kind']
   id: string
   code: string
   basePath: string
@@ -88,6 +91,7 @@ export async function loadPremisesCatalogue(
   const maps: MapCatalogueEntry[] = await response.json()
   premisesMaps = maps.map(map => ({
     id: map.id,
+    kind: map.kind,
     code: map.code,
     basePath: `/api/premises-maps/${map.id}`,
     enabled: true,
@@ -95,15 +99,17 @@ export async function loadPremisesCatalogue(
   }))
   publishedPremises = maps.map(m => ({
     id: m.code,
+    kind: m.kind,
     slug: m.id,
     name: m.name,
     nameZh: m.nameZh,
     i18n: premisesNameI18n(m),
   }))
   buildings = maps
-    .filter(m => m.kind === 'building')
+    .filter(m => m.kind !== 'station')
     .map(m => ({
       id: m.code,
+      kind: m.kind,
       slug: m.id,
       name: m.name,
       nameZh: m.nameZh,
@@ -121,7 +127,12 @@ export function availablePremisesMap(
   registry = premisesMaps,
 ): (PremisesMap & { href: string }) | null {
   const map = registry.find(entry => entry.id === id && entry.enabled && entry.ready)
-  return map ? { ...map, href: `/premises/${map.id}` } : null
+  return map
+    ? {
+        ...map,
+        href: `/${map.kind === 'building' ? 'buildings' : 'premises'}/${map.id}`,
+      }
+    : null
 }
 
 /** Find a ready map by its registry venue code. @param code Venue code. @returns Available map or null. */

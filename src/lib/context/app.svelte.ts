@@ -145,6 +145,14 @@ export class AppCtx {
     !this.mtrProjectFlags.length ||
       this.mtrProjectFlags.some(flags => flags?.showMtrStations !== false),
   )
+  showComplexInteriorMaps = $derived(
+    !this.mtrProjectFlags.length ||
+      this.mtrProjectFlags.some(flags => flags?.showComplexInteriorMaps !== false),
+  )
+  showBuildingInteriorMaps = $derived(
+    !this.mtrProjectFlags.length ||
+      this.mtrProjectFlags.some(flags => flags?.showBuildingInteriorMaps !== false),
+  )
   onlyFeaturedMtrShops = $derived(
     this.mtrProjectFlags.length > 0 &&
       this.mtrProjectFlags.every(flags => flags?.onlyFeaturedMtrShops === true),

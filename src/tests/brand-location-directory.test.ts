@@ -38,6 +38,10 @@ function fixture() {
     'CREATE TABLE IF NOT EXISTS locationCanonicalDraft(locationId TEXT PRIMARY KEY,sourceKey TEXT)',
   )
   f.sqlite.exec(readFileSync('migrations/0254_location_premises_map.sql', 'utf8'))
+  f.sqlite.exec(readFileSync('migrations/0255_premises_map_releases.sql', 'utf8'))
+  f.sqlite.exec(
+    "INSERT INTO premisesMap(id,code,name,nameZh,kind,publishedHash,updatedBy,updatedAt) VALUES ('kennedy-town-mtr','KET','Kennedy Town','','station','hash','actor','now')",
+  )
   const add = (
     id: string,
     ssId: string | null = null,
@@ -234,4 +238,7 @@ it('keeps premises codes operator-scoped and maps explicitly assigned', async ()
   const result = await listLocationResources(f.db, { id: 'station' })
   expect(result.data[0].operator?.referenceCode).toBe('KET')
   expect(result.data[0].premisesMap?.href).toBe('/premises/kennedy-town-mtr')
+  f.sqlite.exec("UPDATE premisesMap SET kind='building' WHERE id='kennedy-town-mtr'")
+  const buildingResult = await listLocationResources(f.db, { id: 'station' })
+  expect(buildingResult.data[0].premisesMap?.href).toBe('/buildings/kennedy-town-mtr')
 })

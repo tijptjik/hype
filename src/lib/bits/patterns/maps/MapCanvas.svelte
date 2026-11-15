@@ -1006,6 +1006,8 @@ $effect(() => {
     <StationFootprintLayer
       map={activeMapInstance}
       showMtrStations={appCtx.showMtrStations}
+      showComplexInteriorMaps={appCtx.showComplexInteriorMaps}
+      showBuildingInteriorMaps={appCtx.showBuildingInteriorMaps}
       theme={getMapStyleDefinition(resolvedMapStyleCode).markerTheme}
     />
     {#if journey}

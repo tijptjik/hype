@@ -12,7 +12,7 @@ export const premisesMap = sqliteTable('premisesMap', {
   code: text('code').notNull().unique(),
   name: text('name').notNull(),
   nameZh: text('nameZh').notNull(),
-  kind: text('kind', { enum: ['station', 'building'] }).notNull(),
+  kind: text('kind', { enum: ['station', 'building', 'complex'] }).notNull(),
   footprint: text('footprint', { mode: 'json' }).$type<Collection>(),
   draftHash: text('draftHash'),
   draftVersion: integer('draftVersion').notNull().default(0),

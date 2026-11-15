@@ -45,7 +45,7 @@ export type MapCatalogueEntry = {
   code: string
   name: string
   nameZh: string
-  kind: 'station' | 'building'
+  kind: 'station' | 'building' | 'complex'
   publishedHash: string | null
   footprint: IndoorData['venue_polygon'] | null
 }

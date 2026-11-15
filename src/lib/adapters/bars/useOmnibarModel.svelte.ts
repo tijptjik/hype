@@ -62,7 +62,7 @@ export function useOmnibarModel(
 } {
   let premisesExpanded = $state<'station' | 'mall' | null>(null)
   const stationWalkIndex = $derived(
-    page.url.pathname.startsWith('/premises/') &&
+    /^\/(?:premises|buildings)\//.test(page.url.pathname) &&
       page.url.searchParams.get('walk') === 'mtr-stations'
       ? stations.findIndex(
           station => station.id === premisesCode(page.url.pathname.split('/')[2] ?? ''),
@@ -370,7 +370,10 @@ export function useOmnibarModel(
           .filter(venue =>
             collectionType === 'station'
               ? appCtx.showMtrStations && Boolean(findStation(venue.id))
-              : !findStation(venue.id),
+              : !findStation(venue.id) &&
+                (venue.kind === 'complex'
+                  ? appCtx.showComplexInteriorMaps !== false
+                  : appCtx.showBuildingInteriorMaps !== false),
           )
           .map(venue => ({
             ref: venue.id,

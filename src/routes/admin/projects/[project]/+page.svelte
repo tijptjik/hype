@@ -735,6 +735,8 @@ function setShow3dAddressOptions(checked: boolean | null): void {
 function setImagePublicationFlag(
   key:
     | 'showMtrStations'
+    | 'showComplexInteriorMaps'
+    | 'showBuildingInteriorMaps'
     | 'onlyFeaturedMtrShops'
     | 'showHistoricalLayers'
     | 'allowFeatureDescriptions'
@@ -3558,7 +3560,7 @@ $effect(() => {
           <SectionHeader
             title="Map display"
             icon={DataModelIcon}
-            description="Control MTR station layouts and shops on this project's map."
+            description="Control station, complex and building interior maps and MTR shops."
           />
           <div
             class="mx-6 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,max(480px,calc((100%_-_2rem)/2))),1fr))] gap-x-8 gap-y-3"
@@ -3568,6 +3570,16 @@ $effect(() => {
                 key: 'showMtrStations' as const,
                 label: 'Show MTR stations',
                 help: 'Show station outlines and indoor-map entry points. On by default.',
+              },
+              {
+                key: 'showComplexInteriorMaps' as const,
+                label: 'Show complex interior maps',
+                help: 'Show complex outlines and indoor-map entry points when available. On by default.',
+              },
+              {
+                key: 'showBuildingInteriorMaps' as const,
+                label: 'Show building interior maps',
+                help: 'Show building outlines and indoor-map entry points when available. On by default.',
               },
               {
                 key: 'onlyFeaturedMtrShops' as const,
@@ -3592,9 +3604,9 @@ $effect(() => {
                 >
                   <Switch
                     id={`project-${setting.key}`}
-                    checked={setting.key === 'showMtrStations'
-                      ? projectFlags.showMtrStations !== false
-                      : projectFlags.onlyFeaturedMtrShops === true}
+                    checked={setting.key === 'onlyFeaturedMtrShops'
+                      ? projectFlags[setting.key] === true
+                      : projectFlags[setting.key] !== false}
                     disabled={!isEditing || formCtx.submitting}
                     size="sm"
                     onCheckedChange={checked =>
