@@ -368,9 +368,15 @@ const handle_session_auth: Handle = async ({ event, resolve }) => {
         event.locals.devPersona = persona
       }
     }
-  } catch (error) {
-    console.error('🔴 Session auth error:', error)
-    // Don't fail the request, just leave session/user undefined
+  } catch (cause) {
+    console.error('🔴 Session auth error:', cause)
+    // A local lookup outage is not proof of logout: stop before auth redirects
+    // or guest bootstrap can replace the user's still-valid session.
+    if (import.meta.env.DEV && isDevPersonaHost(event.url, event.request.headers)) {
+      event.setHeaders({ 'retry-after': '1', 'cache-control': 'no-store' })
+      error(503, 'Session temporarily unavailable. Please retry.')
+    }
+    // Outside local development, leave session/user undefined as before.
     event.locals.session = undefined
     event.locals.user = undefined
   }
