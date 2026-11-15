@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { onDestroy, untrack } from 'svelte'
+import { replaceState } from '$app/navigation'
+import { page } from '$app/state'
 // CONTEXT
 import { usePanelResources } from '#lib/context/panel-resources.svelte.js'
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
@@ -24,8 +26,8 @@ import {
   lifecycleStatus as getLifecycleStatus,
 } from '#lib/locations/lifecycle.js'
 import { foldFeatureSearchText } from '#lib/features/search.js'
+import { LocationKindSchema, type LocationKind } from '#lib/locations/kinds.js'
 // TYPES
-import type { LocationKind } from '#lib/locations/kinds.js'
 import type { LifecycleStatus } from '#lib/locations/lifecycle.js'
 import type { LocationResource } from '#lib/locations/resource.js'
 
@@ -33,11 +35,34 @@ const admin = getAdminCtx()
 const header = getHeaderCtrl()
 admin.setFacet(false, false, FirstClassResource.location)
 const organisations = usePanelResources(admin.view, 'organisation', () => '')
-let publication = $state<'published' | 'draft'>('published')
-let query = $state('')
-let organisationId = $state('')
-let kind = $state<LocationKind | ''>('')
-let lifecycleStatus = $state<LifecycleStatus | ''>('')
+// Sidebar changes use the shallow URL; history navigation restores these controls.
+const currentUrl = $derived(page.shallow?.url ?? page.url)
+const query = $derived((currentUrl.searchParams.get('q') ?? '').slice(0, 200))
+const organisationId = $derived(currentUrl.searchParams.get('organisationId') ?? '')
+const kind = $derived(
+  LocationKindSchema.safeParse(currentUrl.searchParams.get('kind')).data ?? '',
+)
+const publication = $derived(
+  currentUrl.searchParams.get('publication') === 'draft' ? 'draft' : 'published',
+)
+const lifecycleStatus = $derived.by(() => {
+  const value = currentUrl.searchParams.get('lifecycleStatus') as LifecycleStatus | null
+  return value && lifecycleStatusesForKind(kind).includes(value) ? value : ''
+})
+
+/** Persist controls on this history entry so returning from a location restores them.
+ * @param changes Filter parameters to replace; empty values remove the parameter.
+ * @returns Nothing.
+ * @remarks Preserve unrelated parameters and SvelteKit history state.
+ */
+function updateFilters(changes: Record<string, string>): void {
+  const next = new URL(currentUrl.href)
+  for (const [key, value] of Object.entries(changes)) {
+    if (value) next.searchParams.set(key, value)
+    else next.searchParams.delete(key)
+  }
+  if (next.href !== currentUrl.href) replaceState(next, page.state)
+}
 let rows = $state.raw<LocationResource[]>([])
 let totalCount = $state<number | null>(null)
 let cursor = $state<string | null>(null)
@@ -157,25 +182,28 @@ $effect(() => {
   header.setSearch({
     query,
     placeholder: m.location_directory_search(),
-    onFilter: value => (query = value),
+    onFilter: value => updateFilters({ q: value }),
   })
   header.setControlBar(
     LocationControlBar,
     {
       publication,
       showPublication: admin.view.isSuperAdmin(),
-      onPublicationChange: (value: string) =>
-        (publication = value as 'published' | 'draft'),
+      onPublicationChange: (value: string) => updateFilters({ publication: value }),
       count: totalCount,
       countLoading: loading && totalCount === null,
       kind,
       onKindChange: (value: string) => {
-        kind = value as LocationKind | ''
-        if (
-          lifecycleStatus &&
-          !lifecycleStatusesForKind(kind).includes(lifecycleStatus)
-        )
-          lifecycleStatus = ''
+        updateFilters({
+          kind: value,
+          lifecycleStatus:
+            lifecycleStatus &&
+            lifecycleStatusesForKind(value as LocationKind | '').includes(
+              lifecycleStatus,
+            )
+              ? lifecycleStatus
+              : '',
+        })
       },
       organisationId,
       lifecycleStatus,
@@ -186,14 +214,15 @@ $effect(() => {
           organisation.i18n?.en?.name ||
           organisation.id,
       })),
-      onOrganisationChange: (value: string) => (organisationId = value),
-      onLifecycleChange: (value: string) =>
-        (lifecycleStatus = value as LifecycleStatus | ''),
+      onOrganisationChange: (value: string) => updateFilters({ organisationId: value }),
+      onLifecycleChange: (value: string) => updateFilters({ lifecycleStatus: value }),
       onReset: () => {
-        publication = 'published'
-        organisationId = ''
-        kind = ''
-        lifecycleStatus = ''
+        updateFilters({
+          organisationId: '',
+          kind: '',
+          lifecycleStatus: '',
+          publication: '',
+        })
       },
       hasMoreOrganisations: organisations.list.hasMore,
       loadingOrganisations: organisations.list.loading,
