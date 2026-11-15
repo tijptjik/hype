@@ -274,7 +274,7 @@
   "validation__at_least_one_image_as_evidence": "Please upload a photo as evidence",
   "validation__at_least_five_characters": "Add more detail",
   "validation__username_invalid": "Username must contain only lowercase letters, numbers, or underscores, up to 32 characters.",
-  "omni__title_walks": "Walks",
+  "omni__title_walks": "Collections",
   "omni__title_neighbourhoods": "Hoods",
   "omni__title_features": "Features",
   "omni__title_star_walks": "My Starred",
