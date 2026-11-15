@@ -191,8 +191,11 @@ $effect(() => {
               'text-allow-overlap': false,
             },
             paint: {
-              // Use the same ink and halo as major streets in the active theme.
+              // Keep road typography, but use solid labels without an outlined dark interior.
               ...typography.paint,
+              'text-color':
+                theme === 'light' || theme === 'etch-light' ? '#263d49' : '#ffffff',
+              'text-halo-width': 0,
               'text-opacity': ['interpolate', ['linear'], ['zoom'], 16.5, 0, 17.25, 1],
             },
           })
