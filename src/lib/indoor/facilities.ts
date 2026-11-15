@@ -6,19 +6,27 @@ export type FacilitySymbol = {
   text?: string
 }
 
+// A relaxed walking figure is shared by both pedestrian symbols.
+const walkingPersonPath =
+  'M10 4a2 2 0 1 0 4 0a2 2 0 1 0-4 0M12 8l-1 6m1-5-3 3-2 1m5-4 2 3h3M11 14l-2 7m2-7 3 3 1 4'
+
+// Matching toilet figures share their head, shoulders and relaxed arms.
+const toiletFigurePath =
+  'M10 4a2 2 0 1 0 4 0a2 2 0 1 0-4 0M7 13V10a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3'
+
 /** Shared facility pictograms in a 24px square, used by markers and their legend. */
 export const facilitySymbols: Record<string, FacilitySymbol> = {
   'restroom.male': {
     color: '#1d4ed8',
     background: '#eff6ff',
     label: 'Male toilet',
-    path: 'M10 4a2 2 0 1 0 4 0a2 2 0 1 0-4 0 M8 12V9h8v3M10 9v12m4-12v12',
+    path: `${toiletFigurePath}M9 11v10h2l1-6 1 6h2V11M9 14h6`,
   },
   'restroom.female': {
     color: '#9d174d',
     background: '#fdf2f8',
     label: 'Female toilet',
-    path: 'M10 4a2 2 0 1 0 4 0a2 2 0 1 0-4 0 M12 8l-5 9h10zM10 17v4m4-4v4',
+    path: `${toiletFigurePath}M10 11l-2 6h8l-2-6M10 17v4m4-4v4`,
   },
   'restroom.accessible': {
     color: '#6d28d9',
@@ -78,7 +86,7 @@ export const facilitySymbols: Record<string, FacilitySymbol> = {
     label: 'Moving walkway',
     color: '#0f766e',
     background: '#f0fdfa',
-    path: 'M8 3a2 2 0 1 0 4 0a2 2 0 1 0-4 0M10 7v6m-3-3 3-3 3 3h3M10 13l-3 4m3-4 3 4M2 18h20v4H2zM17 7h5m-2-2 2 2-2 2',
+    path: 'M10.5 3a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0M12 6l-1 5m1-4-3 2-1 1m4-3 2 2h2M11 11l-2 6m2-6 3 3 1 3M18 4h5m-2-2 2 2-2 2M4 19h16a2 2 0 0 1 0 4H4a2 2 0 0 1 0-4z',
   },
   parking: {
     label: 'Parking',
@@ -90,16 +98,16 @@ export const facilitySymbols: Record<string, FacilitySymbol> = {
     label: 'Unisex toilet',
     color: '#475569',
     background: '#f1f5f9',
-    path: 'M3 4h18v16H3zM6 8v7l2-4 2 4V8m8 1a3 3 0 1 0 0 5',
+    path: 'M3 3h18v18H3zM6 8v8l2-4 2 4V8M18 9a3 4 0 1 0 0 6',
   },
   phone: {
     label: 'Telephone',
     color: '#0369a1',
     background: '#f0f9ff',
-    path: 'M5 13V9a7 7 0 0 1 14 0v4M5 10H3v7h4v-7zM19 10h2v7h-4v-7zM19 17v2l-6 2h-2',
+    path: 'M5 2 2 5c0 8 9 17 17 17l3-3-5-5-3 3a17 17 0 0 1-7-7l3-3z',
   },
   'phone.emergency': {
-    label: 'Emergency intercom',
+    label: 'SOS Intercom',
     color: '#b91c1c',
     background: '#fef2f2',
     path: 'M3 7V4c5-3 13-3 18 0v3h-5V5H8v2z',
@@ -109,19 +117,19 @@ export const facilitySymbols: Record<string, FacilitySymbol> = {
     label: 'Check-in point',
     color: '#4338ca',
     background: '#eef2ff',
-    path: 'M12 2 3 6v6c0 5 9 10 9 10s9-5 9-10V6zM12 5.5l1.5 3 3.3.5-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3L7.2 9l3.3-.5z',
+    path: 'M8 4H4v18h16V4h-4M8 2h8v4H8zM8 13l3 3 5-6',
   },
   atm: {
     label: 'ATM',
     color: '#0369a1',
     background: '#f0f9ff',
-    path: 'M3 3h18v18H3zM6 6h12v5H6zM7 15h10M9 18h6',
+    path: 'M3 3h18v18H3zM12 6v12m3-10h-5a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H9',
   },
   bank: {
     label: 'Bank',
     color: '#0369a1',
     background: '#f0f9ff',
-    path: 'M2 8l10-6 10 6zM4 21h16M5 10v8m5-8v8m4-8v8m5-8v8M2 21h20',
+    path: 'M2 7l10-5 10 5zM4 10v8m16-8v8M2 21h20M12 9v10m2-9h-3a2 2 0 0 0 0 4h2a2 2 0 0 1 0 4h-3',
   },
   childplayarea: {
     label: 'Children’s play area',
@@ -133,7 +141,7 @@ export const facilitySymbols: Record<string, FacilitySymbol> = {
     label: 'Drinking fountain',
     color: '#0369a1',
     background: '#f0f9ff',
-    path: 'M3 11h12v4H3zM6 15v6m6-6v6M15 11V7a3 3 0 0 1 6 0M17 10v1m3-1v2',
+    path: 'M12 2C10 6 5 10 5 15a7 7 0 0 0 14 0c0-5-5-9-7-13zM8 15a4 4 0 0 0 4 4',
   },
   fieldofplay: {
     label: 'Playing area',
@@ -163,7 +171,7 @@ export const facilitySymbols: Record<string, FacilitySymbol> = {
     label: 'Lobby',
     color: '#0369a1',
     background: '#f0f9ff',
-    path: 'M3 21V3h18v18M8 21V9h8v12M3 6h18M11 15h.1',
+    path: 'M2 5h5v8H2zM10 5h5v8h-5zM18 5h4v8h-4zM1 16h22M3 13v3m9-3v3m8-3v3M4 16v5m16-5v5',
   },
   mailbox: {
     label: 'Mailbox',
@@ -187,19 +195,19 @@ export const facilitySymbols: Record<string, FacilitySymbol> = {
     label: 'Payphone',
     color: '#0369a1',
     background: '#f0f9ff',
-    path: 'M5 2h14v20H5zM8 7V5h8v2M9 10v5l3 3 3-3M9 10l2 1m2 4 2 0',
+    path: 'M5 2 2 5c0 8 9 17 17 17l3-3-5-5-3 3a17 17 0 0 1-7-7l3-3z',
   },
   photobooth: {
     label: 'Photo booth',
     color: '#0369a1',
     background: '#f0f9ff',
-    path: 'M3 2h18v20H3zM14 2v20M6 6h5M7 10a2 2 0 1 0 4 0a2 2 0 1 0-4 0M6 18v-2a3 3 0 0 1 6 0v2M17 5v14',
+    path: 'M2 6h5l2-3h6l2 3h5v15H2zM8 13a4 4 0 1 0 8 0a4 4 0 1 0-8 0M18 9h.1',
   },
   police: {
     label: 'Police',
     color: '#0369a1',
     background: '#f0f9ff',
-    path: 'M12 2 3 6v6c0 5 9 10 9 10s9-5 9-10V6zM12 7l1.5 3 3.5.5-2.5 2.5.5 3.5-3-1.5-3 1.5.5-3.5L7 10.5l3.5-.5z',
+    path: 'M5 8 3 4l9-3 9 3-2 4zM5 8h14l-3 3H8zM8 11v3a4 4 0 0 0 8 0v-3M5 22c0-6 14-6 14 0M12 4v1',
   },
   publiclibrary: {
     label: 'Public library',
@@ -259,7 +267,7 @@ export const facilitySymbols: Record<string, FacilitySymbol> = {
     label: 'Walkway',
     color: '#0369a1',
     background: '#f0f9ff',
-    path: 'M8 3a2 2 0 1 0 4 0a2 2 0 1 0-4 0M10 7l-3 5H3m7-5 4 5h5M10 7v7l-5 7m5-7 6 7M2 23h20',
+    path: walkingPersonPath,
   },
   platform: {
     label: 'Platform',
@@ -283,7 +291,7 @@ export const facilitySymbols: Record<string, FacilitySymbol> = {
     label: 'Vending machine',
     color: '#92400e',
     background: '#fffbeb',
-    path: 'M5 2h14v20H5zM8 6h8v5H8zM8 16h8',
+    path: 'M3 2h18v20H3zM6 5h7v9H6zM16 6h2m-2 4h2M6 18h12',
   },
 }
 /** Resolve source aliases to shared symbol identities.
@@ -317,9 +325,17 @@ export function facilitySymbol(category: string, sourceName = ''): FacilitySymbo
     background: '#f1f5f9',
   }
   if (category === 'checkin' && /police/i.test(sourceName))
-    return { ...symbol, label: 'Police sign-in box' }
+    return {
+      ...facilitySymbols.police,
+      label: 'Police sign-in box',
+      path: facilitySymbols.police.path,
+    }
   if (category === 'vendingmachine' && /ticket/i.test(sourceName))
-    return { ...symbol, label: 'Ticket machine' }
+    return {
+      ...symbol,
+      label: 'Ticket machine',
+      path: 'M2 4h20v5a3 3 0 0 0 0 6v5H2v-5a3 3 0 0 0 0-6zM9 7h7v8H9zM9 11h7M10 15l-2 3m7-3 2 3M5 6v1m0 10v1',
+    }
   if (category === 'phone' && /helpline/i.test(sourceName))
     return { ...symbol, label: 'Helpline' }
   return symbol

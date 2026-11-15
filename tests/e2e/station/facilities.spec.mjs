@@ -23,7 +23,7 @@ test('facility legend distinguishes accessible toilets and station services', as
     'Male toilet',
     'Female toilet',
     'Helpline',
-    'Emergency intercom',
+    'SOS Intercom',
     'Police sign-in box',
     'Ticket machine',
   ]) {
@@ -103,7 +103,7 @@ test('facility legend distinguishes accessible toilets and station services', as
     })),
   )
   const services = symbols.filter(item =>
-    /Helpline|Emergency intercom|Police sign-in box|Ticket machine/.test(item.label),
+    /Helpline|SOS Intercom|Police sign-in box|Ticket machine/.test(item.label),
   )
   expect(new Set(services.map(item => item.path)).size).toBe(4)
   expect(new Set(services.map(item => item.color)).size).toBe(4)

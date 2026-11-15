@@ -29,7 +29,7 @@ for (const width of [1440, 390]) {
         'Ticket machine',
         'Helpline',
         'Defibrillator',
-        'Emergency intercom',
+        'SOS Intercom',
         'Police sign-in box',
       ])
     }
