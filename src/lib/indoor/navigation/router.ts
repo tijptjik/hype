@@ -1,5 +1,6 @@
 // MODEL
 import { bounds } from '../model'
+import { areaClearance, type Clearance } from './clearance'
 import type { FloorRepository } from './floors'
 import { contains, distance, insideSegment, intersects, type Point } from './geometry'
 import type {
@@ -13,8 +14,19 @@ import type {
 // TOC: Floor graph compilation | Endpoint attachment | Unpaid-first search
 
 type Edge = { to: number; cost: number; connectionId?: string }
-type Node = { point: Point; floorId: string; area: NavigationArea; edges: Edge[] }
-type FloorGraph = { floor: NavigationFloor; nodes: Node[]; access: Map<string, number> }
+type Node = {
+  point: Point
+  floorId: string
+  area: NavigationArea
+  edges: Edge[]
+  clearance: number
+}
+type FloorGraph = {
+  floor: NavigationFloor
+  nodes: Node[]
+  access: Map<string, number>
+  margins: Map<string, Clearance>
+}
 const step = 0.75
 
 /** Tests solid barriers independently of the area's outline. @param floor Floor module. @param a Start. @param b End. @returns Whether no barrier is touched. */
@@ -24,8 +36,11 @@ function clear(floor: NavigationFloor, a: Point, b: Point): boolean {
 /** Compiles one floor once; neighbouring areas remain disconnected until a declared connection joins them. @param floor Independent floor. @returns Cached planar graph. */
 function compile(floor: NavigationFloor): FloorGraph {
   const nodes: Node[] = [],
-    access = new Map<string, number>()
+    access = new Map<string, number>(),
+    margins = new Map<string, Clearance>()
   for (const area of floor.areas) {
+    const margin = areaClearance(floor, area)
+    margins.set(area.id, margin)
     const [x0, y0, x1, y1] = bounds(area.geometry),
       index = new Map<string, number>()
     const first = nodes.length
@@ -34,7 +49,13 @@ function compile(floor: NavigationFloor): FloorGraph {
         const point: Point = [x * step, y * step]
         if (!contains(point, area.geometry)) continue
         index.set(`${x}:${y}`, nodes.length)
-        nodes.push({ point, floorId: floor.id, area, edges: [] })
+        nodes.push({
+          point,
+          floorId: floor.id,
+          area,
+          edges: [],
+          clearance: margin.at(point),
+        })
       }
     }
     for (let i = first; i < nodes.length; i++) {
@@ -54,7 +75,10 @@ function compile(floor: NavigationFloor): FloorGraph {
           !clear(floor, node.point, nodes[j].point)
         )
           continue
-        const cost = distance(node.point, nodes[j].point)
+        const cost =
+          (distance(node.point, nodes[j].point) *
+            (margin.weight(node.clearance) + margin.weight(nodes[j].clearance))) /
+          2
         node.edges.push({ to: j, cost })
         nodes[j].edges.push({ to: i, cost })
       }
@@ -70,17 +94,23 @@ function compile(floor: NavigationFloor): FloorGraph {
           insideSegment(port.point, n.point, area.geometry) &&
           clear(floor, port.point, n.point)
         )
-          neighbours.push({ to: i, cost })
+          neighbours.push({ to: i, cost: margin.cost(port.point, n.point) })
       }
       if (!neighbours.length) continue
       const id = nodes.length
       for (const edge of neighbours)
         nodes[edge.to].edges.push({ to: id, cost: edge.cost })
-      nodes.push({ point: port.point, floorId: floor.id, area, edges: neighbours })
+      nodes.push({
+        point: port.point,
+        floorId: floor.id,
+        area,
+        edges: neighbours,
+        clearance: margin.at(port.point),
+      })
       access.set(port.id, id)
     }
   }
-  return { floor, nodes, access }
+  return { floor, nodes, access, margins }
 }
 
 /** Reusable router; caches per-floor graphs, and never routes on display-only candidates. */
@@ -143,7 +173,8 @@ export class IndoorRouter {
     )
     const nodes: Node[] = [],
       ports = new Map<string, number>(),
-      floorMap = new Map(graphs.map(g => [g.floor.id, g.floor]))
+      floorMap = new Map(graphs.map(g => [g.floor.id, g.floor])),
+      margins = new Map(graphs.map(g => [g.floor.id, g.margins]))
     for (const graph of graphs) {
       const offset = nodes.length
       nodes.push(
@@ -194,10 +225,18 @@ export class IndoorRouter {
       )
       if (!candidates.length) return []
       const id = nodes.length,
-        area = nodes[candidates[0]].area
-      nodes.push({ point, floorId: floor.id, area, edges: [] })
+        area = nodes[candidates[0]].area,
+        margin = margins.get(floor.id)?.get(area.id)
+      if (!margin) return []
+      nodes.push({
+        point,
+        floorId: floor.id,
+        area,
+        edges: [],
+        clearance: margin.at(point),
+      })
       for (const i of candidates.filter(i => nodes[i].area.id === area.id)) {
-        const cost = distance(point, nodes[i].point)
+        const cost = margin.cost(point, nodes[i].point)
         nodes[id].edges.push({ to: i, cost })
         nodes[i].edges.push({ to: id, cost })
       }
@@ -259,12 +298,58 @@ export class IndoorRouter {
         if (ends.has(id)) {
           const chain: number[] = []
           for (let i = id; i !== -1; i = previous[i]) chain.unshift(i)
+          // Pull straight, visible strings within each area; declared connection endpoints stay fixed.
+          const simplified = [chain[0]]
+          let anchor = 0
+          while (anchor < chain.length - 1) {
+            let limit = anchor + 1
+            while (
+              limit < chain.length &&
+              !links.has(chain[limit]) &&
+              nodes[chain[limit]].floorId === nodes[chain[anchor]].floorId &&
+              nodes[chain[limit]].area.id === nodes[chain[anchor]].area.id
+            )
+              limit++
+            let next = anchor + 1
+            const a = nodes[chain[anchor]],
+              floor = floorMap.get(a.floorId),
+              margin = margins.get(a.floorId)?.get(a.area.id)
+            if (!floor || !margin) throw new Error('Missing compiled navigation area')
+            for (let candidate = limit - 1; candidate > anchor + 1; candidate--) {
+              const b = nodes[chain[candidate]]
+              if (
+                insideSegment(a.point, b.point, a.area.geometry) &&
+                clear(floor, a.point, b.point) &&
+                margin.along(a.point, b.point) + 1e-9 >=
+                  Math.min(a.clearance, b.clearance) &&
+                margin.cost(a.point, b.point) <=
+                  (costs[chain[candidate]] - costs[chain[anchor]]) * 1.001
+              ) {
+                next = candidate
+                break
+              }
+            }
+            simplified.push(chain[next])
+            anchor = next
+          }
+          // Report the actual smoothed walking distance, never the clearance penalty used by search.
+          const metres = simplified.slice(1).reduce((sum, index, i) => {
+            const a = nodes[simplified[i]],
+              b = nodes[index],
+              from = floorMap.get(a.floorId),
+              to = floorMap.get(b.floorId)
+            if (!from || !to) throw new Error('Missing compiled navigation floor')
+            return (
+              sum +
+              Math.hypot(distance(a.point, b.point), from.elevation - to.elevation)
+            )
+          }, 0)
           return {
-            points: chain.map(i => ({
+            points: simplified.map(i => ({
               point: nodes[i].point,
               floorId: nodes[i].floorId,
             })),
-            metres: cost,
+            metres,
             requiresPaidAccess: chain.some(i => nodes[i].area.access === 'paid'),
             connectionIds: chain.flatMap(i =>
               links.has(i) ? [links.get(i) as string] : [],

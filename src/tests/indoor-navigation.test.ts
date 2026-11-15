@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { intersects } from '../lib/indoor/navigation/geometry'
 import { FloorRepository } from '../lib/indoor/navigation/floors'
 import { IndoorRouter } from '../lib/indoor/navigation/router'
 import type {
@@ -246,5 +247,68 @@ describe('independent indoor navigation', () => {
     await expect(one).rejects.toThrow('offline')
     expect(await repo.load('f')).toBe(f)
     await expect(repo.load('missing')).rejects.toThrow('Unknown floor')
+  })
+})
+
+describe('route smoothing and preferred wall clearance', () => {
+  it('reduces an unobstructed diagonal to its endpoints and reports geometric metres', async () => {
+    const f = floor('open', [area('hall', 0, 0, 30, 20)])
+    const result = await router([f]).route(
+      { floorId: f.id, point: [4, 4] },
+      { floorId: f.id, point: [25, 15] },
+    )
+    expect(result?.points.map(p => p.point)).toEqual([
+      [4, 4],
+      [25, 15],
+    ])
+    expect(result?.metres).toBeCloseTo(Math.hypot(21, 11), 8)
+  })
+
+  it('moves into the three-metre interior instead of following a nearby wall', async () => {
+    const f = floor('wide', [area('hall', 0, 0, 36, 12)])
+    const result = await router([f]).route(
+      { floorId: f.id, point: [3, 0.75] },
+      { floorId: f.id, point: [33, 0.75] },
+    )
+    expect(result).not.toBeNull()
+    if (!result) throw new Error('Missing route')
+    expect(result.points.some(p => p.point[1] >= 3)).toBe(true)
+    expect(result.points.length).toBeLessThan(20)
+    expect(result.points[0].point).toEqual([3, 0.75])
+    expect(result.points.at(-1)?.point).toEqual([33, 0.75])
+  })
+
+  it('keeps a corridor narrower than six metres reachable and straight', async () => {
+    const f = floor('narrow', [area('hall', 0, 0, 20, 3)])
+    const result = await router([f]).route(
+      { floorId: f.id, point: [1.5, 1.5] },
+      { floorId: f.id, point: [18, 1.5] },
+    )
+    expect(result?.points.map(p => p.point)).toEqual([
+      [1.5, 1.5],
+      [18, 1.5],
+    ])
+    expect(result?.metres).toBeCloseTo(16.5, 8)
+  })
+
+  it('never straightens through a thin solid barrier', async () => {
+    const f = floor('barrier', [area('hall', 0, 0, 24, 20)])
+    f.barriers.push({ id: 'wall', from: [12, 0], to: [12, 12] })
+    const result = await router([f]).route(
+      { floorId: f.id, point: [4, 6] },
+      { floorId: f.id, point: [20, 6] },
+    )
+    expect(result).not.toBeNull()
+    if (!result) throw new Error('Missing route')
+    for (let i = 1; i < result.points.length; i++) {
+      expect(
+        intersects(
+          result.points[i - 1].point,
+          result.points[i].point,
+          [12, 0],
+          [12, 12],
+        ),
+      ).toBe(false)
+    }
   })
 })
