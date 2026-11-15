@@ -8,6 +8,7 @@ import {
   assignLocationPremisesMap,
 } from '../../src/lib/db/services/locationOperator'
 import { premisesMaps } from '../../src/lib/indoor/registry'
+import { indoorUnitNames } from '../../src/lib/locations/indoorUnitNames'
 import { mtrLocationTitles } from './mtr-location-titles'
 import { appendLocationRelationship } from '../../src/lib/db/services/locationRelationships'
 import { deriveLocationId } from '../../src/lib/locations/id.server'
@@ -166,7 +167,13 @@ async function main(): Promise<void> {
         kind: unit ? 'building_part' : 'premises',
         actorId,
         facts: facts(
-          unit ? row.names : mtrLocationTitles(row.names),
+          unit
+            ? indoorUnitNames(
+                row.names,
+                row.rawSource.properties,
+                plan.occupantEvidence.filter(o => o.unitRef === row.ref),
+              )
+            : mtrLocationTitles(row.names),
           unit
             ? row.rawSource.geometry
             : (row.indoorSource?.venue.geometry ?? row.geometry),
