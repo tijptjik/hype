@@ -53,7 +53,20 @@ function handleKeyDown(event: KeyboardEvent): void {
         : 'bg-base-content/60'}"
     ></span>
     <span class="min-w-0 break-words whitespace-normal">{result.name}</span>
-    {#if result.count > 0 && result.collectionType !== OmniCollection.feature}
+    {#if result.lineBadges?.length}
+      <span class="flex shrink-0 items-center justify-end gap-1" data-station-lines>
+        {#each result.lineBadges as line (line.id)}
+          <span
+            class="size-3 shrink-0"
+            style:background-color={line.color}
+            role="img"
+            aria-label={line.label}
+            title={line.label}
+            data-station-line={line.id}
+          ></span>
+        {/each}
+      </span>
+    {:else if result.count > 0 && result.collectionType !== OmniCollection.feature}
       <span class="text-base-content/60 w-8 text-center font-mono select-none">
         {result.count}
       </span>

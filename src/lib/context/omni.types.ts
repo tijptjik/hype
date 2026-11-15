@@ -14,6 +14,7 @@ export type SearchResult = {
   count: number
   collectionType: OmniSearchCollection
   ref: string
+  lineBadges?: { id: string; color: string; label: string }[]
   enabled?: boolean
   control?: {
     kind: 'filter' | 'target'

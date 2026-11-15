@@ -240,5 +240,11 @@ it.each([
     section => section.collectionType === 'station',
   )
   expect(station?.results).toHaveLength(1)
-  expect(station?.results[0].name).toBe(`${name} · ADM`)
+  expect(station?.results[0].name).toBe(name)
+  expect(station?.results[0].lineBadges?.map(line => line.id)).toEqual([
+    'TWL',
+    'ISL',
+    'SIL',
+    'EAL',
+  ])
 })

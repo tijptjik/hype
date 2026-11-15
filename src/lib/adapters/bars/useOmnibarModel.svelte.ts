@@ -11,6 +11,7 @@ import {
 } from '#lib/indoor/registry.js'
 // CONTEXT
 import { usePanelResources } from '#lib/context/panel-resources.svelte.js'
+import { stationLines } from '#lib/routing/mtrLines.js'
 // SEARCH
 import { matchesResourceIndexSearch } from '#lib/resources/indexQuery.js'
 // UI
@@ -373,7 +374,18 @@ export function useOmnibarModel(
           )
           .map(venue => ({
             ref: venue.id,
-            name: `${getI18n(venue, 'name', appCtx.view.getUserPreferences())} · ${venue.id}`,
+            name:
+              collectionType === 'station'
+                ? getI18n(venue, 'name', appCtx.view.getUserPreferences())
+                : `${getI18n(venue, 'name', appCtx.view.getUserPreferences())} · ${venue.id}`,
+            lineBadges:
+              collectionType === 'station'
+                ? stationLines(venue.id).map(line => ({
+                    id: line.id,
+                    color: line.color,
+                    label: getI18n(line, 'name', appCtx.view.getUserPreferences()),
+                  }))
+                : undefined,
             count: 0,
             collectionType,
           })),
