@@ -15,6 +15,7 @@ let {
   class: className = '',
   image,
   imageSrc,
+  imageInset = false,
   imageFallbackSrcs,
   imageFallback,
   alt = 'Resource image',
@@ -43,6 +44,7 @@ let {
     <RowPrimitive.RowTitleSection
       {image}
       {imageSrc}
+      {imageInset}
       {imageFallbackSrcs}
       {imageFallback}
       {alt}

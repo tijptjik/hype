@@ -12,8 +12,11 @@ export const CatalogueArtworkSchema = z
       src: assetPath,
       background: z
         .string()
-        .regex(/^#[a-fA-F0-9]{6}$/)
+        .regex(/^(?:#[a-fA-F0-9]{6}|transparent)$/)
         .default('#ffffff'),
+      sourceWidth: z.number().int().positive().optional(),
+      sourceHeight: z.number().int().positive().optional(),
+      format: z.enum(['png', 'svg']).optional(),
       status: z.enum(['candidate', 'approved']).default('candidate'),
       sourceUrl: z
         .string()
@@ -73,4 +76,27 @@ export function catalogueGeneralLogo(
   return asset && (review || asset.status === 'approved')
     ? asset.src
     : (owner.logo ?? null)
+}
+
+/** Select approved artwork for a catalogue card or profile, never research candidates.
+ * @param owner Revisioned catalogue content. @param theme Effective theme ID.
+ * @param mode Effective luminance. @param themeFallback Existing bundled treatment for this theme.
+ * @returns Display logo URL or null when no reviewed artwork exists.
+ */
+export function resolveCatalogueDisplayLogo(
+  owner: CatalogueArtworkOwner,
+  theme: string,
+  mode: 'light' | 'dark',
+  themeFallback?: string,
+): string | null {
+  for (const slot of [`logo-${theme}`, `marker-${theme}`]) {
+    const asset = owner.artwork?.[slot]
+    if (asset?.status === 'approved') return asset.src
+  }
+  if (themeFallback) return themeFallback
+  for (const slot of [`logo-${mode}`, `marker-${mode}`, 'marker', 'logo']) {
+    const asset = owner.artwork?.[slot]
+    if (asset?.status === 'approved') return asset.src
+  }
+  return owner.logo ?? null
 }

@@ -12,6 +12,7 @@ let {
   class: className = '',
   rounded = 'rounded-2xl',
   showBackdrop = true,
+  transparentBackground = false,
   enableSourceTransition = true,
   revealOnLoad = false,
 }: ImageProps = $props()
@@ -38,6 +39,6 @@ const item = $derived(
     {showBackdrop}
     {enableSourceTransition}
     {revealOnLoad}
-    class="h-full w-full"
+    class={transparentBackground ? 'h-full w-full bg-transparent!' : 'h-full w-full'}
   />
 </div>

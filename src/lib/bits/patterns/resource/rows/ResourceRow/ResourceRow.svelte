@@ -23,6 +23,7 @@ let {
   title,
   description,
   imageSrc,
+  imageInset = false,
   imageFallbackSrcs,
   imageAlt,
   footerStatus = null,
@@ -99,6 +100,7 @@ const statusTone = $derived.by(() => {
   onclick={event => handleNavigate(event)}
   onkeydown={handleRowKeyDown}
   {imageSrc}
+  {imageInset}
   {imageFallbackSrcs}
   alt={imageAlt}
   onImageClick={onImageClick ? handleImageClick : undefined}

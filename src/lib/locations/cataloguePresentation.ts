@@ -1,5 +1,7 @@
 // SHARED FALLBACK ARTWORK
 import { getFeatureIdenticonUrl } from '#lib/utils/identicon.js'
+import { resolveBrandIdentity } from '#lib/features/brandIdentity.js'
+import { resolveCatalogueDisplayLogo } from './catalogueArtwork'
 // I18N
 import { resolveContentField } from '#lib/i18n/automatic.js'
 // TYPES
@@ -35,4 +37,52 @@ export function catalogueDisplayName(record: IdentityCatalogueRecord): string {
   return record.kind === 'group'
     ? name.replace(/(?:,?\s+(?:Co\.?\s*,?\s*)?(?:Limited|Ltd\.?))$/i, '')
     : name
+}
+
+/** Resolve catalogue display artwork using the active theme and existing curated vectors.
+ * @param record Catalogue identity. @param theme Effective theme ID. @param mode Theme luminance.
+ * @returns Approved display artwork, excluding research previews.
+ */
+export function catalogueDisplayLogo(
+  record: IdentityCatalogueRecord,
+  theme: string,
+  mode: 'light' | 'dark',
+): string | null {
+  const bundled =
+    record.kind === 'brand' && record.code
+      ? resolveBrandIdentity(record.code)?.logoSrc
+      : undefined
+  return resolveCatalogueDisplayLogo(
+    record,
+    theme,
+    mode,
+    theme === 'breadline-light' ? bundled : undefined,
+  )
+}
+
+/** Choose the reviewed backing, including transparency, for the active artwork.
+ * @param record Catalogue identity and its artwork variants. @param theme Effective theme ID.
+ * @param mode Theme luminance. @returns Reviewed artwork background or a contrast-safe neutral.
+ */
+export function catalogueLogoBackground(
+  record: IdentityCatalogueRecord,
+  theme: string,
+  mode: 'light' | 'dark',
+): string {
+  const source = catalogueDisplayLogo(record, theme, mode)
+  const artwork = Object.values(record.artwork ?? {}).find(
+    asset => asset.status === 'approved' && asset.src === source,
+  )
+  const background =
+    artwork?.background ?? (theme === 'breadline-light' ? '#f5f0e5' : '#ffffff')
+  const channels =
+    background.match(/[a-f\d]{2}/gi)?.map(value => Number.parseInt(value, 16)) ?? []
+  const lightNeutral =
+    channels.length === 3 &&
+    Math.min(...channels) >= 210 &&
+    Math.max(...channels) - Math.min(...channels) < 35
+  // Dim neutral backing in dark palettes without changing coloured brand backgrounds.
+  if (mode === 'dark' && lightNeutral)
+    return 'color-mix(in oklab, var(--theme-muted) 20%, var(--theme-surface))'
+  return background
 }

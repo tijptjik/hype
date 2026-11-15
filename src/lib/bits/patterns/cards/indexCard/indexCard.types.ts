@@ -21,6 +21,8 @@ export type IndexCardProps = {
   description: string
   imageSrc: string
   imageFallbackSrcs?: string[]
+  imageInset?: boolean
+  imageBackground?: string
   imageAlt: string
   imageLayout?: ImagePresentation
   cardWidth?: number
@@ -44,6 +46,8 @@ export type IndexCardRootProps = {
 export type IndexCardHeaderProps = {
   imageSrc: string
   imageFallbackSrcs?: string[]
+  imageInset?: boolean
+  imageBackground?: string
   imageAlt: string
   imageLayout: ImagePresentation
   onImageClick?: (event: MouseEvent) => void

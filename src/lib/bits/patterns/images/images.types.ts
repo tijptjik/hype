@@ -104,6 +104,8 @@ export type RenderableImageProps = {
 }
 
 export type ImageProps = {
+  /** Let the containing card provide one continuous background behind padded logos. */
+  transparentBackground?: boolean
   onError?: () => void
   src: string | null
   alt: string

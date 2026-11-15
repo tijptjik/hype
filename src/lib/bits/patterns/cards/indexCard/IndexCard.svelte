@@ -7,6 +7,8 @@ let {
   description,
   imageSrc,
   imageFallbackSrcs,
+  imageBackground,
+  imageInset = false,
   imageAlt,
   imageLayout = 'cover',
   cardWidth = 0,
@@ -59,6 +61,8 @@ function handleHeaderImageClick(event: MouseEvent): void {
     <IndexCardPrimitive.Header
       {imageSrc}
       {imageFallbackSrcs}
+      {imageBackground}
+      {imageInset}
       {imageAlt}
       {imageLayout}
       onImageClick={handleHeaderImageClick}

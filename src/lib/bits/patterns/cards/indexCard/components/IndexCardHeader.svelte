@@ -8,6 +8,8 @@ import type { IndexCardHeaderProps } from '../indexCard.types'
 let {
   imageSrc,
   imageFallbackSrcs = [],
+  imageBackground,
+  imageInset = false,
   imageAlt,
   imageLayout,
   onImageClick,
@@ -32,25 +34,35 @@ function handleImageError(): void {
 }
 </script>
 
-<div class="bits-index-card__header">
-  {#if imageLayout === 'contain' && displayedSrc}
+<div
+  class="bits-index-card__header"
+  style:background-color={imageBackground}
+  data-solid-image-background={imageBackground || undefined}
+>
+  {#if imageLayout === 'contain' && displayedSrc && !imageBackground}
     <ImageBackdrop src={displayedSrc} blurClass="bits-index-card__header-blur" />
   {/if}
-  {#if imageLayout !== 'cast-edges'}
+  {#if imageLayout !== 'cast-edges' && !imageBackground}
     <div class="bits-index-card__header-overlay"></div>
   {/if}
-  <Image
-    src={displayedSrc}
-    onError={handleImageError}
-    alt={imageAlt}
-    class="bits-index-card__header-image"
-    fit={imageLayout === 'cover' ? 'cover' : 'fit'}
-    presentationMode={imageLayout}
-    rounded="rounded-t-2xl rounded-b-none"
-    showBackdrop={imageLayout === 'cast-edges'}
-    enableSourceTransition={false}
-    revealOnLoad={true}
-  />
+  <div
+    class="absolute inset-0 box-border"
+    style:padding={imageInset ? '3%' : undefined}
+  >
+    <Image
+      src={displayedSrc}
+      onError={handleImageError}
+      alt={imageAlt}
+      class="bits-index-card__header-image"
+      fit={imageLayout === 'cover' ? 'cover' : 'fit'}
+      presentationMode={imageLayout}
+      rounded={imageInset ? 'rounded-none' : 'rounded-t-2xl rounded-b-none'}
+      transparentBackground={imageInset || Boolean(imageBackground)}
+      showBackdrop={imageLayout === 'cast-edges' && !imageBackground}
+      enableSourceTransition={false}
+      revealOnLoad={true}
+    />
+  </div>
   {#if onImageClick}
     <button
       type="button"

@@ -76,6 +76,7 @@ declare global {
         ASSET_RAW_DEV: R2Bucket
         ASSET_RAW_PREVIEW: R2Bucket
         ASSET_RAW_PRODUCTION: R2Bucket
+        CATALOGUE_LOCAL_ASSETS?: R2Bucket
         ASSET_PUBLIC_DEV: R2Bucket
         ASSET_PUBLIC_PREVIEW: R2Bucket
         ASSET_PUBLIC_PRODUCTION: R2Bucket

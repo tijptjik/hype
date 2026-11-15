@@ -11,6 +11,7 @@ import type { RowThumbnailProps } from '../row.types'
 let {
   image = null,
   imageSrc,
+  imageInset = false,
   imageFallbackSrcs = [],
   imageFallback,
   alt = 'Resource image',
@@ -88,6 +89,8 @@ function handleClick(event: Event): void {
       decoding="async"
       fetchpriority="low"
       class={rowThumbnailImageClass}
+      style:padding={imageInset ? '10%' : undefined}
+      style:object-fit={imageInset ? 'contain' : undefined}
       onerror={handleImageError}
     >
   {:else}

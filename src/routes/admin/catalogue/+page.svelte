@@ -65,11 +65,14 @@ import { placeTaxonomy, type PlaceTaxonomyNode } from '#lib/locations/placeTaxon
 import { placeCategoryLabel } from '#lib/locations/placeSearchFilters.js'
 import { getLocaleKey } from '#lib/i18n.js'
 import CatalogueArtworkEditor from '#lib/bits/patterns/forms/identityCatalogue/CatalogueArtworkEditor.svelte'
-import { catalogueGeneralLogo } from '#lib/locations/catalogueArtwork.js'
+import { getThemeModel } from '#lib/themes/theme.svelte.js'
+import { THEMES } from '#lib/themes/themes.js'
 import { canonicalContentTag } from '#lib/i18n/contentRecords.js'
 // DOMAIN
 import {
   catalogueDisplayName,
+  catalogueDisplayLogo,
+  catalogueLogoBackground,
   catalogueLogoFallbacks,
 } from '#lib/locations/cataloguePresentation.js'
 import {
@@ -79,7 +82,11 @@ import {
 } from '#lib/locations/identityCatalogue.js'
 
 const admin = getAdminCtx(),
-  header = getHeaderCtrl()
+  header = getHeaderCtrl(),
+  theme = getThemeModel()
+const artworkMode = $derived(
+  THEMES.find(entry => entry.id === theme.selected)?.mode ?? 'dark',
+)
 admin.setResourceType(false)
 let importStatus = $state('')
 let kind = $state<'brand' | 'group'>('brand')
@@ -269,7 +276,9 @@ let logoFailed = $state(false)
 let logoSourceIndex = $state(0)
 const profileLogoSources = $derived(
   [
-    content ? catalogueGeneralLogo(content, true) : null,
+    content && selected
+      ? catalogueDisplayLogo({ ...selected, ...content }, theme.selected, artworkMode)
+      : null,
     ...(selected ? catalogueLogoFallbacks(selected) : []),
   ].filter((source): source is string => Boolean(source)),
 )
@@ -278,6 +287,7 @@ let logoRetry = $state(0)
 $effect(() => {
   content?.logo
   content?.artwork
+  theme.selected
   selected?.id
   logoSourceIndex = 0
   logoFailed = false
@@ -854,12 +864,18 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
             <IndexCard
               title={catalogueDisplayName(record)}
               description={record.code ?? record.id}
-              imageSrc={catalogueGeneralLogo(record, true) ??
+              imageSrc={catalogueDisplayLogo(record, theme.selected, artworkMode) ??
                 catalogueLogoFallbacks(record)[0] ??
                 ''}
               imageFallbackSrcs={catalogueLogoFallbacks(record)}
               imageAlt={catalogueDisplayName(record)}
               imageLayout="contain"
+              imageInset={true}
+              imageBackground={catalogueLogoBackground(
+                record,
+                theme.selected,
+                artworkMode,
+              )}
               onNavigate={() => openRecord(record)}
             />
           {:else}
@@ -867,7 +883,7 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
               {index}
               title={catalogueDisplayName(record)}
               description={record.code ?? record.id}
-              imageSrc={catalogueGeneralLogo(record, true) ??
+              imageSrc={catalogueDisplayLogo(record, theme.selected, artworkMode) ??
                 catalogueLogoFallbacks(record)[0] ??
                 ''}
               imageFallbackSrcs={catalogueLogoFallbacks(record)}
@@ -986,7 +1002,12 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
                         }}
                       >
                         <div
-                          class="border-border bg-muted/30 relative flex size-28 items-center justify-center overflow-hidden rounded-xl border"
+                          class="border-border relative flex size-28 items-center justify-center overflow-hidden rounded-xl border"
+                          style:background-color={catalogueLogoBackground(
+                            { ...selected, ...content },
+                            theme.selected,
+                            artworkMode,
+                          )}
                         >
                           {#if profileLogo}
                             <img
@@ -999,7 +1020,7 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
                               onload={() => (logoFailed = false)}
                               class:hidden={logoFailed}
                               alt="Catalogue logo"
-                              class="size-full object-contain p-2"
+                              class="size-4/5 object-contain"
                             >
                             {#if logoFailed}
                               <ImageIcon class="text-muted-foreground size-10" />

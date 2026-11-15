@@ -22,6 +22,7 @@ export type RowRootProps = {
 
 export type RowThumbnailProps = {
   image?: unknown
+  imageInset?: boolean
   imageSrc?: string
   imageFallbackSrcs?: string[]
   imageFallback?: Snippet
@@ -31,6 +32,7 @@ export type RowThumbnailProps = {
 
 export type RowTitleProps = {
   image?: unknown
+  imageInset?: boolean
   imageSrc?: string
   imageFallbackSrcs?: string[]
   imageFallback?: Snippet

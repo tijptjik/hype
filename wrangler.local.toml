@@ -51,6 +51,12 @@ bucket_name = "hype-assets-raw-preview"
 binding = "ASSET_RAW_PRODUCTION"
 bucket_name = "hype-assets-raw-prod"
 
+# Local catalogue research shares the importer persistence without changing published assets.
+[[r2_buckets]]
+binding = "CATALOGUE_LOCAL_ASSETS"
+bucket_name = "hype-assets-dev"
+remote = false
+
 [[r2_buckets]]
 binding = "ASSET_PUBLIC_DEV"
 bucket_name = "hype-assets-dev"

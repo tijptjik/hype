@@ -7,6 +7,7 @@ import type { RowTitleProps } from '../row.types'
 let {
   image,
   imageSrc,
+  imageInset = false,
   imageFallbackSrcs,
   imageFallback,
   alt = 'Resource image',
@@ -22,6 +23,7 @@ let {
   <RowThumbnail
     {image}
     {imageSrc}
+    {imageInset}
     {imageFallbackSrcs}
     {imageFallback}
     {alt}

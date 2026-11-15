@@ -6,6 +6,7 @@ import type { RowTitleSectionProps } from '../row.types'
 let {
   image,
   imageSrc,
+  imageInset = false,
   imageFallbackSrcs,
   imageFallback,
   alt = 'Resource image',
@@ -21,6 +22,7 @@ let {
   <RowTitle
     {image}
     {imageSrc}
+    {imageInset}
     {imageFallbackSrcs}
     {imageFallback}
     {alt}
