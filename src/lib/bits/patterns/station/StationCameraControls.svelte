@@ -7,6 +7,8 @@ import type { StationState } from '#lib/indoor/station.svelte.js'
 // STYLES
 import { sliderClasses } from './StationCameraControls.styles'
 let { station }: { station: StationState } = $props()
+// Match the compass heading while keeping the scene's clockwise rotation convention.
+const rotationHeading = $derived(((-station.bearing % 360) + 360) % 360)
 </script>
 <div class="grid w-44 max-w-full gap-3 text-sm" oninput={() => station.stopFly()}>
   {#if station.data?.coordinateSpace === 'image-pixels'}
@@ -30,10 +32,13 @@ let { station }: { station: StationState } = $props()
       aria-label="Station rotation"
       type="range"
       class={sliderClasses}
-      min="-180"
-      max="180"
+      min="0"
+      max="359"
       step="1"
-      bind:value={station.bearing}
+      value={rotationHeading}
+      oninput={e => {
+        station.bearing = -e.currentTarget.valueAsNumber
+      }}
     ></label
   >
   <label class="grid min-w-0 gap-1"
