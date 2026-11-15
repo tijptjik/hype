@@ -7,7 +7,7 @@ test('facility legend distinguishes accessible toilets and station services', as
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
-  await page.goto('/premises/kennedy-town')
+  await page.goto('/premises/kennedy-town-mtr')
   await expect(page.getByRole('list', { name: 'Map symbol legend' })).toBeVisible({
     timeout: 60000,
   })
@@ -16,8 +16,6 @@ test('facility legend distinguishes accessible toilets and station services', as
   )
   const legend = page.getByRole('list', { name: 'Map symbol legend' })
   for (const label of [
-    'Paid area',
-    'Unpaid area',
     'Level change',
     'Accessible toilet',
     'Male toilet',
@@ -29,24 +27,26 @@ test('facility legend distinguishes accessible toilets and station services', as
   ]) {
     await expect(legend).toContainText(label)
   }
+  const concourse = page.getByRole('list', { name: 'Concourse legend' })
+  await expect(concourse).toContainText('Paid area')
+  await expect(concourse).toContainText('Unpaid area')
+  await legend.getByRole('button', { name: 'Find Information', exact: true }).click()
   const panel = page.getByRole('region', { name: 'Station layout panel' })
   await expect(panel.getByText('Paid area', { exact: true })).toHaveCount(0)
   await page.getByRole('combobox', { name: 'Station level' }).click()
-  await page.getByRole('option', { name: 'Concourse Level', exact: true }).click()
+  await page.getByRole('option', { name: 'Concourse', exact: true }).click()
   await expect(page.locator('[data-station-scene="plan"]')).toBeVisible()
-  await page.getByRole('searchbox', { name: 'Search location index' }).fill('7-Eleven')
+  await page.getByRole('searchbox', { name: 'Search places' }).fill('7-Eleven')
   await expect(panel).toContainText('7-Eleven')
-  await page.getByRole('searchbox', { name: 'Search location index' }).fill('')
-  await panel.getByRole('button', { name: 'Location index', exact: true }).click()
-  await expect(
-    page.getByRole('searchbox', { name: 'Search location index' }),
-  ).toHaveCount(0)
-  await panel.getByRole('button', { name: 'Location index', exact: true }).click()
+  await page.getByRole('searchbox', { name: 'Search places' }).fill('')
+  await panel.getByRole('button', { name: 'Places', exact: true }).click()
+  await expect(page.getByRole('searchbox', { name: 'Search places' })).toHaveCount(0)
+  await panel.getByRole('button', { name: 'Places', exact: true }).click()
   await panel.getByRole('button', { name: 'Levels', exact: true }).click()
   await expect(page.getByRole('combobox', { name: 'Station level' })).toHaveCount(0)
   await panel.getByRole('button', { name: 'Levels', exact: true }).click()
   const indexBounds = await panel
-    .getByRole('button', { name: 'Location index', exact: true })
+    .getByRole('button', { name: 'Places', exact: true })
     .boundingBox()
   const levelBounds = await panel
     .getByRole('button', { name: 'Levels', exact: true })
@@ -66,14 +66,14 @@ test('facility legend distinguishes accessible toilets and station services', as
   await page.getByRole('button', { name: 'Keyboard shortcuts', exact: true }).click()
   await expect(page.getByRole('dialog')).toContainText('Map shortcuts')
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByRole('dialog')).toBeHidden()
   await settings.focus()
   await page.keyboard.press('?')
   await expect(page.getByRole('dialog')).toBeVisible()
   await page.keyboard.press('Escape')
-  await page.getByRole('searchbox', { name: 'Search location index' }).fill('?')
-  await expect(page.getByRole('dialog')).toHaveCount(0)
-  await page.getByRole('searchbox', { name: 'Search location index' }).fill('')
+  await page.getByRole('searchbox', { name: 'Search places' }).fill('?')
+  await expect(page.getByRole('dialog')).toBeHidden()
+  await page.getByRole('searchbox', { name: 'Search places' }).fill('')
   await page.getByRole('button', { name: 'Route preview', exact: true }).click()
   await expect(page.getByRole('combobox', { name: 'Route entrance' })).toBeVisible()
   await page.getByRole('button', { name: 'Close map controls' }).click()
@@ -85,11 +85,13 @@ test('facility legend distinguishes accessible toilets and station services', as
       await item.evaluate(el => parseFloat(getComputedStyle(el).borderRadius)),
     ).toBeGreaterThan(0)
   }
-  const legendStyle = await legend.locator('..').evaluate(el => ({
-    background: getComputedStyle(el).backgroundColor,
-    border: getComputedStyle(el).borderTopWidth,
-    centre: el.getBoundingClientRect().y + el.getBoundingClientRect().height / 2,
-  }))
+  const legendStyle = await page
+    .locator('[data-station-legend="symbols"]')
+    .evaluate(el => ({
+      background: getComputedStyle(el).backgroundColor,
+      border: getComputedStyle(el).borderTopWidth,
+      centre: el.getBoundingClientRect().y + el.getBoundingClientRect().height / 2,
+    }))
   expect(legendStyle.background).toBe('rgba(0, 0, 0, 0)')
   expect(legendStyle.border).toBe('0px')
   expect(Math.abs(legendStyle.centre - 500)).toBeLessThan(2)
@@ -106,7 +108,7 @@ test('facility legend distinguishes accessible toilets and station services', as
     /Helpline|SOS Intercom|Police sign-in box|Ticket machine/.test(item.label),
   )
   expect(new Set(services.map(item => item.path)).size).toBe(4)
-  expect(new Set(services.map(item => item.color)).size).toBe(4)
+  expect(new Set(services.map(item => item.color)).size).toBe(3)
   await page.screenshot({ path: join(output, 'facility-colours-desktop.png') })
   await page.setViewportSize({ width: 390, height: 844 })
   await page.getByRole('button', { name: 'Close station panel', exact: true }).click()

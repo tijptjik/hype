@@ -128,7 +128,14 @@ function keydown(event: KeyboardEvent): void {
     >
     <Dialog.Portal>
       <Dialog.Overlay class="fixed inset-0 z-[1000] bg-black/40 backdrop-blur-sm" />
+      <!-- Keep Escape inside keyboard help so the global panel handler cannot consume it. -->
       <Dialog.Content
+        onkeydown={event => {
+          if (event.key !== 'Escape') return
+          event.preventDefault()
+          event.stopPropagation()
+          shortcuts = false
+        }}
         class="bits-theme border-border bg-panel text-foreground fixed top-1/2 left-1/2 z-[1001] max-h-[90dvh] w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border p-6 shadow-2xl"
       >
         <div class="flex items-center justify-between gap-4">
