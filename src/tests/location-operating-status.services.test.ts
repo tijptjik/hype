@@ -24,6 +24,11 @@ import {
   mapOperatingStatus,
 } from '#lib/locations/lifecycle.js'
 import { persistSaanSeoiPlace } from '#lib/db/services/locationSource.js'
+// SNAPSHOT CONTRACT
+import {
+  readLocationFacts,
+  serializeLocationFacts,
+} from '#lib/locations/factsSnapshot.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { D1Database } from '@cloudflare/workers-types'
@@ -36,13 +41,13 @@ function setup(includeScope = false, includeAddressKind = true) {
   const sqlite = new DatabaseSync(':memory:')
   stores.push(sqlite)
   sqlite.exec(`PRAGMA foreign_keys=ON;
-    CREATE TABLE organisation(id TEXT PRIMARY KEY);
+    CREATE TABLE organisation(id TEXT PRIMARY KEY,settings TEXT NOT NULL DEFAULT '{}');
     CREATE TABLE organisationI18n(organisationId TEXT,locale TEXT,name TEXT,nameShort TEXT);
-    INSERT INTO organisation VALUES ('p'),('other');
+    INSERT INTO organisation(id) VALUES ('p'),('other');
     CREATE TABLE project(id TEXT PRIMARY KEY, modifiedAt TEXT DEFAULT 'original',
       organisationId TEXT, code TEXT, capabilities TEXT, markerStyleCode TEXT,
       cardStyleCode TEXT, useAllInOrgContext INTEGER);
-    CREATE TABLE feature(id TEXT PRIMARY KEY, projectId TEXT, isDraft INTEGER DEFAULT 0, modifiedAt TEXT DEFAULT 'original', geometry TEXT, addressMeta TEXT, isIntangible INTEGER DEFAULT 0);
+    CREATE TABLE feature(id TEXT PRIMARY KEY, featureType TEXT, nameTemplate TEXT, kind TEXT, targetContext TEXT, associationRelation TEXT, layerId TEXT, isArchived INTEGER DEFAULT 0, projectId TEXT, isDraft INTEGER DEFAULT 0, modifiedAt TEXT DEFAULT 'original', geometry TEXT, addressMeta TEXT, isIntangible INTEGER DEFAULT 0);
     CREATE TABLE featureI18n(featureId TEXT,locale TEXT,title TEXT,displayAddress TEXT);
     CREATE TABLE hub(id TEXT PRIMARY KEY,code TEXT);
     CREATE TABLE property(id TEXT PRIMARY KEY,key TEXT,scope TEXT,hubId TEXT,audience TEXT NOT NULL DEFAULT 'public');
@@ -70,6 +75,13 @@ function setup(includeScope = false, includeAddressKind = true) {
   sqlite.exec(readFileSync('migrations/0121_place_refresh_identity_scan.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0122_simplify_place_refresh.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0138_location_storage.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0253_location_operator.sql', 'utf8'))
+  // Legacy fixtures add current taxonomy columns later; install the new empty tables before that adaptation.
+  sqlite.exec(
+    readFileSync('migrations/0254_location_premises_map.sql', 'utf8').split(
+      '-- Exact imported station identities',
+    )[0],
+  )
   sqlite.exec(readFileSync('migrations/0249_location_manual_match_attempt.sql', 'utf8'))
   sqlite.exec(
     readFileSync('migrations/0139_organisation_location_corrections.sql', 'utf8'),
@@ -90,6 +102,40 @@ function setup(includeScope = false, includeAddressKind = true) {
   sqlite.exec(readFileSync('migrations/0151_location_placement_acceptance.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0153_location_relationship_review.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0154_location_version_names.sql', 'utf8'))
+  // Install the current taxonomy and revision contracts used by the real service writers.
+  sqlite.exec(readFileSync('migrations/0157_location_rematching.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0155_location_accessibility.sql', 'utf8'))
+  for (const [file, name] of [
+    ['0142_location_facts_snapshots', 'location_revision_snapshot_insert'],
+    ['0144_location_address_contract', 'location_revision_unknown_details'],
+  ]) {
+    const trigger = readFileSync(`migrations/${file}.sql`, 'utf8').match(
+      new RegExp(`CREATE TRIGGER ${name}[\\s\\S]*?END;`),
+    )?.[0]
+    if (!trigger) throw new Error(`Missing fixture trigger ${name}`)
+    sqlite.exec(trigger)
+  }
+  sqlite.exec('CREATE INDEX feature_target_context ON feature(layerId,targetContext)')
+  for (const migration of [
+    '0213_building_parts',
+    '0215_location_physical_kinds',
+    '0216_location_taxonomy',
+    '0217_location_thoroughfare',
+    '0218_location_address_service_classes',
+    '0219_address_location_classification',
+  ])
+    sqlite.exec(readFileSync(`migrations/${migration}.sql`, 'utf8'))
+  sqlite.exec(
+    readFileSync('migrations/0238_location_i18n.sql', 'utf8').split(
+      'DROP VIEW featureAcceptedNamingLocation;',
+    )[0],
+  )
+  sqlite.exec(
+    readFileSync(
+      'migrations/0241_authoritative_revision_translations.sql',
+      'utf8',
+    ).split('DROP TRIGGER identity_catalogue_i18n_revision;')[0],
+  )
   // Scope-focused cases explicitly install their guards after arranging legacy input.
   if (!includeScope)
     sqlite.exec(`DROP TRIGGER feature_location_scope_insert;
@@ -627,15 +673,33 @@ describe('operating state and historical adoption', () => {
     ).toHaveLength(1)
   })
 
-  it('reads retained flat legacy status and names alongside versioned snapshots', async () => {
+  it('reads migrated legacy status and names alongside newer snapshots', async () => {
     const { db, sqlite, locationId, revisionId, associationRevision } =
       await linkedFixture()
-    // Append retained pre-versioning evidence without changing any immutable fixture revision.
+    // Preserve the original flat evidence while writing its migrated content through the current contract.
+    const legacyFacts = { ...facts, operatingStatus: closure }
+    const migratedFacts = readLocationFacts(legacyFacts)
+    expect(migratedFacts.operatingStatus).toBe(closure)
     sqlite
-      .prepare(`INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts)
-      SELECT 'legacy-operating',locationId,version+1,'local','legacy-operating','{}',?
+      .prepare(`INSERT INTO locationRevisionContent(id,locationId,version,origin,contentHash,rawSource,facts)
+      SELECT 'legacy-operating',locationId,version+1,'local','legacy-operating',?,?
       FROM locationRevision WHERE id=?`)
-      .run(JSON.stringify({ ...facts, operatingStatus: closure }), revisionId)
+      .run(
+        JSON.stringify(legacyFacts),
+        serializeLocationFacts(migratedFacts, 'establishment'),
+        revisionId,
+      )
+    expect(
+      JSON.parse(
+        (
+          sqlite
+            .prepare(
+              "SELECT rawSource FROM locationRevision WHERE id='legacy-operating'",
+            )
+            .get() as { rawSource: string }
+        ).rawSource,
+      ),
+    ).toEqual(legacyFacts)
     const adoption = prepareFeatureLocationAssociationWrite(db, {
       featureId: 'f',
       projectId: 'p',
