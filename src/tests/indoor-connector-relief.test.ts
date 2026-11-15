@@ -239,6 +239,41 @@ describe('connector relief inference', () => {
     expect(reliefs.get('stairs')?.bridges).toHaveLength(1)
     expect(reliefs.get('stairs')?.recessFaces).toHaveLength(3)
   })
+  it('keeps equal wall elevations equally shaded across bearings and split tails', () => {
+    const data = fixture()
+    data.unit_polygon.features[1] = polygon('landing', 'walkway', -4, -2, 6, 12)
+    data.unit_polygon.features[2] = polygon('wall', 'room', 10, -2, 4, 12)
+    data.unit_polygon.features.push(polygon('escalator', 'escalator', 2, 2.5, 8, 2))
+    data.connections!.push({
+      ...data.connections![0],
+      from: 'escalator',
+      to: 'lower-escalator',
+    })
+    for (const bearing of [30, 120, 210, 300]) {
+      const projection = stationProjection(data, false, { bearing, tilt: 45 })
+      for (const relief of connectorReliefs(data, projection).values()) {
+        relief.visibleFaces.forEach((face, index) => {
+          const points = [...face.matchAll(/[ML]([-\d.e]+),([-\d.e]+)/g)].map(match => [
+            Number(match[1]),
+            Number(match[2]),
+          ])
+          const { upper, lower } = relief.faceLighting[index]
+          const dx = lower[0] - upper[0],
+            dy = lower[1] - upper[1]
+          const depth = (point: number[]): number =>
+            ((point[0] - upper[0]) * dx + (point[1] - upper[1]) * dy) /
+            (dx * dx + dy * dy)
+          // Every fragment uses the full 1.8 m range, even a tiny uncovered tail.
+          for (const point of points.slice(0, 2)) {
+            expect(depth(point)).toBeCloseTo(0, 6)
+            expect(
+              depth([point[0], point[1] + 1.8 * Math.sin(Math.PI / 4)]),
+            ).toBeCloseTo(1, 6)
+          }
+        })
+      }
+    }
+  })
   it('uses reviewed operating direction rather than connection height for travel arrows', () => {
     const link = {
       from: 'a',

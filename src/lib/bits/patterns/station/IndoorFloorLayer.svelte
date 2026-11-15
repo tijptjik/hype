@@ -127,6 +127,8 @@ const facilityMarkers = $derived.by(() => {
 {#snippet reliefSurface(unit: IndoorFeature, facesOnly = false)}
   {@const relief = reliefs.get(value(unit.properties, 'unit_id'))!}
   {@const openingId = `${reliefMask}-opening-${value(unit.properties, 'unit_id')}`}
+  {@const lightEnd = relief.surfaceLighting.upper}
+  {@const darkEnd = relief.surfaceLighting.lower}
   <g
     data-connector-relief={facesOnly ? undefined : value(unit.properties, 'unit_id')}
     data-connector-walls={facesOnly ? value(unit.properties, 'unit_id') : undefined}
@@ -139,17 +141,40 @@ const facilityMarkers = $derived.by(() => {
         <linearGradient
           id={`${openingId}-depth`}
           gradientUnits="userSpaceOnUse"
-          x1={relief.entrance[0]}
-          y1={relief.entrance[1]}
-          x2={relief.farEnd[0]}
-          y2={relief.farEnd[1]}
+          x1={lightEnd[0]}
+          y1={lightEnd[1]}
+          x2={darkEnd[0]}
+          y2={darkEnd[1]}
         >
-          <stop offset="0" stop-color="var(--station-connector-fill)" />
+          <stop
+            offset="0"
+            stop-color="color-mix(in srgb, var(--station-paper) 14%, var(--station-connector-fill))"
+          />
           <stop
             offset="1"
-            stop-color="color-mix(in srgb, var(--station-connector) 38%, var(--station-connector-fill))"
+            stop-color="color-mix(in srgb, var(--station-connector) 28%, var(--station-connector-fill))"
           />
         </linearGradient>
+        <!-- Wall shading follows elevation continuously across end walls and split side panels. -->
+        {#each relief.faceLighting as lighting, index}
+          <linearGradient
+            id={`${openingId}-face-${index}`}
+            gradientUnits="userSpaceOnUse"
+            x1={lighting.upper[0]}
+            y1={lighting.upper[1]}
+            x2={lighting.lower[0]}
+            y2={lighting.lower[1]}
+          >
+            <stop
+              offset="0"
+              stop-color={`color-mix(in srgb, var(--station-connector) 24%, var(--station-connector-fill))`}
+            />
+            <stop
+              offset="1"
+              stop-color={`color-mix(in srgb, var(--station-connector) ${relief.descending ? 55 : 40}%, var(--station-connector-fill))`}
+            />
+          </linearGradient>
+        {/each}
         <clipPath id={openingId} clipPathUnits="userSpaceOnUse">
           <path d={relief.opening} />
         </clipPath>
@@ -159,10 +184,10 @@ const facilityMarkers = $derived.by(() => {
     <g clip-path={relief.descending ? `url(#${openingId})` : undefined}>
       <!-- Only exposed edge faces are filled; nearby inclines leave the shared side open. -->
       {#if facesOnly}
-        {#each relief.visibleFaces as face}
+        {#each relief.visibleFaces as face, index}
           <path
             d={face}
-            fill="color-mix(in srgb, var(--station-connector) 22%, var(--station-connector-fill))"
+            fill={`url(#${openingId}-face-${index})`}
             stroke="var(--station-connector)"
             stroke-width={relief.descending ? 0 : 0.8}
             vector-effect="non-scaling-stroke"
@@ -185,11 +210,11 @@ const facilityMarkers = $derived.by(() => {
         {#each relief.bridges as bridge}
           <path
             d={bridge}
-            fill="color-mix(in srgb, var(--station-connector) 14%, var(--station-connector-fill))"
+            fill={`url(#${openingId}-depth)`}
             data-connector-shared-surface
           />
         {/each}
-        <!-- A warm depth gradient follows each flight, avoiding the old gray buildup. -->
+        <!-- Both travel directions shade toward the lower end, with opaque warm colours. -->
         <path
           d={relief.surface}
           fill={`url(#${openingId}-depth)`}

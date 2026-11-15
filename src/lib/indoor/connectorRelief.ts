@@ -14,6 +14,8 @@ export type ConnectorRelief = {
   depthEdges: string[]
   recessFaces: string[]
   visibleFaces: string[]
+  faceLighting: { upper: Point; lower: Point }[]
+  surfaceLighting: { upper: Point; lower: Point }
   paintDepth: number
   entrance: Point
   farEnd: Point
@@ -183,6 +185,7 @@ export function prepareConnectorReliefs(
       })
       // Build only exposed recess edges; a nearby incline leaves the shared side open.
       const visibleFaces: string[] = []
+      const faceLighting: ConnectorRelief['faceLighting'] = []
       const projectedOutline = outline.map(point => projection.project(point, levelId))
       const winding = projectedOutline.slice(1).reduce((sum, point, index) => {
         const previous = projectedOutline[index]
@@ -243,6 +246,15 @@ export function prepareConnectorReliefs(
           // A raised solid exposes only perimeter faces pointing toward the camera.
           if (direction < 0 || (topB[0] - topA[0]) * winding < -1e-8) {
             visibleFaces.push(face)
+            // Use the full elevation span and an axis perpendicular to the ground edge.
+            // Split faces therefore sample the original wall field instead of restarting it.
+            const fullHeight = projection.project(from, levelId, direction * rise)
+            faceLighting.push(
+              elevationLighting(
+                [topA, topB, fullHeight],
+                direction < 0 ? [0, 0, 1] : [1, 1, 0],
+              ),
+            )
           }
           return [face]
         })
@@ -255,6 +267,13 @@ export function prepareConnectorReliefs(
         depthEdges,
         recessFaces,
         visibleFaces,
+        faceLighting,
+        surfaceLighting: elevationLighting(
+          outline.slice(0, -1).map(project),
+          outline
+            .slice(0, -1)
+            .map(point => (direction < 0 ? progress(point) : 1 - progress(point))),
+        ),
         paintDepth: projection.project(
           frame.world((frame.minU + frame.maxU) / 2, (frame.minV + frame.maxV) / 2),
           levelId,
@@ -429,4 +448,35 @@ function sharedSide(a: IndoorFeature, b: IndoorFeature): Position[] | null {
     }
   }
   return null
+}
+
+/** Maps normalized elevation onto a projected plane without restarting at polygon cuts.
+ * @param points Projected vertices on the plane.
+ * @param depths Normalized darkness at each vertex: zero at the high level, one at the low level.
+ * @returns SVG gradient endpoints whose equal-colour lines follow equal elevation.
+ */
+function elevationLighting(
+  points: Point[],
+  depths: number[],
+): { upper: Point; lower: Point } {
+  const origin = points[0]
+  for (let i = 1; i < points.length - 1; i++) {
+    const a = [points[i][0] - origin[0], points[i][1] - origin[1]]
+    const b = [points[i + 1][0] - origin[0], points[i + 1][1] - origin[1]]
+    const determinant = a[0] * b[1] - a[1] * b[0]
+    if (Math.abs(determinant) < 1e-10) continue
+    const da = depths[i] - depths[0],
+      db = depths[i + 1] - depths[0]
+    const gx = (da * b[1] - db * a[1]) / determinant
+    const gy = (a[0] * db - b[0] * da) / determinant
+    const norm = gx * gx + gy * gy
+    if (norm < 1e-12) continue
+    const upper: Point = [
+      origin[0] - (depths[0] * gx) / norm,
+      origin[1] - (depths[0] * gy) / norm,
+    ]
+    return { upper, lower: [upper[0] + gx / norm, upper[1] + gy / norm] }
+  }
+  // Edge-on faces have no visible area; keep their paint coordinates finite.
+  return { upper: origin, lower: [origin[0], origin[1] + 1] }
 }
