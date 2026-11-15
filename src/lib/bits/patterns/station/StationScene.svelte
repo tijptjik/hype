@@ -724,12 +724,13 @@ function chooseFloor(id: string): void {
     <div
       role="status"
       data-camera-travel
-      class="pointer-events-none absolute bottom-[180px] left-1/2 z-30 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-3 rounded-full bg-[var(--station-paper)] px-5 py-3 text-sm text-[var(--station-ink)] shadow-lg"
-      transition:fade={{ duration: prefersReducedMotion.current ? 0 : 160 }}
+      class="pointer-events-none absolute bottom-[180px] left-1/2 z-30 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-3 text-sm text-[color-mix(in_srgb,var(--station-ink)_65%,var(--station-canvas))]"
+      in:fade={{ duration: prefersReducedMotion.current ? 0 : 280 }}
+      out:fade={{ duration: prefersReducedMotion.current ? 0 : 600 }}
     >
       <svg
         viewBox="0 0 40 40"
-        class="size-9 shrink-0"
+        class="size-8 shrink-0"
         aria-hidden="true"
         style:transform={`rotate(${travel.angle}deg)`}
       >
@@ -743,7 +744,14 @@ function chooseFloor(id: string): void {
           stroke-linejoin="round"
         />
       </svg>
-      <span>Moving {travel.distance} {travel.direction}</span>
+      <span class="flex flex-col gap-0.5">
+        <span class="text-[10px] font-medium tracking-[0.16em] uppercase opacity-75"
+          >Moving</span
+        >
+        <span class="font-medium tracking-wide"
+          >{travel.distance} {travel.direction}</span
+        >
+      </span>
     </div>
   {/if}
 </div>
