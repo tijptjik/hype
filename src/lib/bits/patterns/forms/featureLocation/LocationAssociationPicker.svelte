@@ -32,7 +32,6 @@ import ArrowLeftIcon from 'virtual:icons/lucide/arrow-left'
 import ArrowRightIcon from 'virtual:icons/lucide/arrow-right'
 import LanguagesIcon from 'virtual:icons/lucide/languages'
 import ChevronIcon from 'virtual:icons/lucide/chevron-down'
-import SearchIcon from 'virtual:icons/lucide/search'
 import ReselectIcon from 'virtual:icons/lucide/replace'
 import StreetIcon from 'virtual:icons/lucide/road'
 import BuildingIcon from 'virtual:icons/lucide/building-2'
@@ -1929,35 +1928,32 @@ onDestroy(() => {
             inert={Boolean(matched)}
             data-association-discovery
           >
-            {#if createNew && kind === 'service_point'}
-              <p class="mx-auto w-full max-w-lg text-sm font-medium">
-                {m.location_service_name()}
-              </p>
-            {/if}
             <label
               class="relative mx-auto block w-full max-w-lg"
               data-association-search
             >
-              <SearchIcon
-                class="text-muted-foreground pointer-events-none absolute top-3.5 left-3 size-4"
-              />
-              <span class="sr-only"
-                >{m.association_search_kind({ kind: locationKindLabel(kind) })}</span
-              >
+              <span class="mb-2 block text-sm font-medium">
+                {createNew && kind === 'service_point'
+                  ? m.location_service_name()
+                  : m.association_name_label({ kind: locationKindLabel(kind) })}
+              </span>
               <input
                 aria-label={`${locationKindLabel(kind)} · ${m.field_name()}`}
+                aria-description={createNew && kind === 'service_point'
+                  ? m.location_service_name_help()
+                  : m.association_name_help()}
                 aria-busy={lookups[kind] === 'checking'}
                 value={names[kind][tag] ?? ''}
                 placeholder={createNew && kind === 'service_point'
                   ? m.location_service_name_placeholder()
-                  : m.association_search_kind({ kind: locationKindLabel(kind) })}
+                  : m.association_name_placeholder()}
                 maxlength="1000"
-                class="border-border focus-visible:outline-primary min-h-11 w-full rounded-md border bg-transparent py-2 pr-16 pl-10 text-base focus-visible:outline-2"
+                class="border-border focus-visible:outline-primary min-h-11 w-full rounded-md border bg-transparent py-2 pr-16 pl-3 text-base focus-visible:outline-2"
                 oninput={event => editName(event.currentTarget.value)}
               >
               {#if lookups[kind] === 'checking'}
                 <span
-                  class="pointer-events-none absolute inset-y-0 right-10 flex items-center"
+                  class="pointer-events-none absolute right-10 bottom-3.5 flex items-center"
                   role="status"
                   aria-label={m.association_checking()}
                   ><LoaderIcon
@@ -1969,13 +1965,18 @@ onDestroy(() => {
                 <button
                   type="button"
                   aria-label={m.association_reset_search()}
-                  class="text-muted-foreground hover:text-primary absolute inset-y-0 right-2 flex items-center px-1"
+                  class="text-muted-foreground hover:text-primary absolute right-2 bottom-3 flex items-center px-1"
                   onclick={resetSearch}
                 >
                   <ResetIcon class="size-4" />
                 </button>
               {/if}
             </label>
+            {#if !(createNew && kind === 'service_point')}
+              <p class="text-muted-foreground mx-auto w-full max-w-lg text-sm">
+                {m.association_name_help()}
+              </p>
+            {/if}
             {#if createNew && kind === 'service_point'}
               <p class="text-muted-foreground mx-auto w-full max-w-lg text-sm">
                 {m.location_service_name_help()}
@@ -2375,6 +2376,11 @@ onDestroy(() => {
                   {getAddressDisplay(ghost.address, getLocaleKey())}
                 </p>
               </div>
+              {#if !Object.values(ghost.names).some(name => name.trim())}
+                <p class="text-muted-foreground col-span-full text-sm">
+                  {m.association_name_required()}
+                </p>
+              {/if}
               <button
                 type="button"
                 disabled={!Object.values(ghost.names).some(name => name.trim()) ||
