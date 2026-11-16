@@ -3,6 +3,16 @@ export const IMAGE_PRESENTATION_MODES = ['cover', 'contain', 'cast-edges'] as co
 export type ImagePresentation = (typeof IMAGE_PRESENTATION_MODES)[number]
 /** Initial presentation for newly uploaded images. */
 export const DEFAULT_UPLOAD_IMAGE_PRESENTATION: ImagePresentation = 'cast-edges'
+
+/**
+ * Selects the initial presentation for an upload's owning resource.
+ * @param ctxType - Resource receiving the uploaded image.
+ * @returns Full image with blur for Features, or cast edges for other resources.
+ */
+export function getUploadImagePresentation(ctxType: string): ImagePresentation {
+  return ctxType === 'feature' ? 'contain' : DEFAULT_UPLOAD_IMAGE_PRESENTATION
+}
+
 export type ImageBackdropMode = 'blur' | 'edges'
 
 /**

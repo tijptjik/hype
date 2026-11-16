@@ -20,7 +20,7 @@ import {
   uploadPreparedImageObject,
 } from '#lib/client/services/image.js'
 import { createPreviewableUploadFile } from '#lib/images/upload.js'
-import { DEFAULT_UPLOAD_IMAGE_PRESENTATION } from '#lib/images/presentation.js'
+import { getUploadImagePresentation } from '#lib/images/presentation.js'
 import {
   deleteImage as deleteImageRemote,
   getImagesForContext,
@@ -919,7 +919,7 @@ export class ImageCtx {
             id: tempId,
             isArchived: false,
             localIsArchived: null,
-            presentationMode: DEFAULT_UPLOAD_IMAGE_PRESENTATION,
+            presentationMode: getUploadImagePresentation(ctxType),
             createdAt: new Date().toISOString(),
             contributorId: null,
             cdn: 'preview',

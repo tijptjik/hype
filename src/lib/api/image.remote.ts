@@ -142,6 +142,7 @@ import {
 // IMAGE PRESENTATION
 import {
   DEFAULT_UPLOAD_IMAGE_PRESENTATION,
+  getUploadImagePresentation,
   IMAGE_PRESENTATION_MODES,
 } from '#lib/images/presentation.js'
 // TYPES
@@ -2123,7 +2124,7 @@ export const finalizeImageUpload = guardedCommand(
               metadata: {
                 ...baseMetadataDocument,
                 version,
-                presentationMode: DEFAULT_UPLOAD_IMAGE_PRESENTATION,
+                presentationMode: getUploadImagePresentation(payload.ctxType),
               },
             })
           : await saveFeatureImageUploadDraft(db, {
@@ -2168,7 +2169,7 @@ export const finalizeImageUpload = guardedCommand(
                 version,
                 presentationMode: previous
                   ? (previous.presentationMode ?? 'contain')
-                  : DEFAULT_UPLOAD_IMAGE_PRESENTATION,
+                  : getUploadImagePresentation(payload.ctxType),
               }),
             })
       if (draft.status === 'legacy') throw error(409, 'Feature enrollment changed')
