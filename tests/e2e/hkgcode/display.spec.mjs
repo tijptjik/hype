@@ -38,10 +38,7 @@ for (const width of [1440, 390]) {
     await expect(
       page.getByRole('menuitemradio', { name: /^HKGeocode/ }),
     ).toHaveAttribute('aria-checked', 'true')
-    await expect(page.getByRole('menuitem', { name: /^What3Words/ })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    )
+    await expect(page.getByText('What3Words', { exact: true })).toHaveCount(0)
     await page.screenshot({
       // biome-ignore lint/suspicious/noUndeclaredEnvVars: managed runner artifact destination.
       path: join(process.env.DEV_RUNNER_ARTIFACTS, `hkgcode-menu-${width}.png`),

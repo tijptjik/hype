@@ -3902,10 +3902,9 @@ source coordinates. The editor and write boundary derive it from Feature geometr
 changing display mode never changes Location identity or source address evidence. The
 preference participates in the existing Feature address metadata/revision path.
 
-What3Words is a separately tracked provider integration:
-[#242](https://github.com/tijptjik/hype/issues/242). Its option remains unavailable
-until credentials, language-aware coordinate caching, stale-response handling and
-provider failure behaviour are implemented.
+What3Words integration is cancelled because it depends on a paid proprietary service
+([#242](https://github.com/tijptjik/hype/issues/242)). It is not offered in the display
+selector or its help. Supported modes are Automatic, Address, Plus Code and HKGeocode.
 
 ### New Feature setup
 

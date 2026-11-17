@@ -2,7 +2,6 @@
 // BITS COMPONENTS
 import { DropdownMenu, Tooltip } from 'bits-ui'
 // ICONS
-import What3WordsIcon from 'virtual:icons/lucide/whole-word'
 import CheckIcon from 'virtual:icons/lucide/check'
 import AutomaticIcon from 'virtual:icons/lucide/sparkles'
 import AddressIcon from 'virtual:icons/lucide/map-pin-house'
@@ -130,17 +129,6 @@ const current = $derived(options.find(option => option.value === value) ?? optio
                       </DropdownMenu.RadioItem>
                     {/each}
                   </DropdownMenu.RadioGroup>
-                  <DropdownMenu.Item
-                    disabled
-                    textValue="What3Words"
-                    class="text-muted-foreground flex items-center gap-3 rounded-lg px-3 py-2.5 opacity-40"
-                  >
-                    <What3WordsIcon class="size-5 shrink-0" aria-hidden="true" />
-                    <span
-                      ><span class="block text-sm font-medium">What3Words</span
-                      ><span class="block text-xs">Not yet available</span></span
-                    >
-                  </DropdownMenu.Item>
                 </DropdownMenu.Content>
               </DropdownMenu.Portal>
             </DropdownMenu.Root>
@@ -169,13 +157,6 @@ const current = $derived(options.find(option => option.value === value) ?? optio
             </div>
           </div>
         {/each}
-        <div class="text-muted-foreground flex items-start gap-3">
-          <What3WordsIcon class="mt-0.5 size-5 shrink-0" aria-hidden="true" />
-          <div>
-            <p class="font-medium">What3Words</p>
-            <p class="text-xs">Not yet available</p>
-          </div>
-        </div>
         {#if !readOnly}
           <p class="text-muted-foreground text-xs">Click to change the display mode.</p>
         {/if}
