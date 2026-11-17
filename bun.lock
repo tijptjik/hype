@@ -33,6 +33,7 @@
         "@milkdown/crepe": "^7.23.0",
         "@milkdown/kit": "^7.23.0",
         "@saanseoi/address": "file:vendor/saanseoi-address-0.2.3.tgz",
+        "@saanseoi/hkgcode": "0.1.0",
         "@sillvva/utils": "^0.9.0",
         "@standard-schema/spec": "^1.1.0",
         "@tanstack/svelte-virtual": "^3.13.52",
@@ -1058,6 +1059,8 @@
     "@rollup/pluginutils": ["@rollup/pluginutils@5.5.1", "", { "dependencies": { "@types/estree": "^1.0.0", "estree-walker": "^2.0.2", "picomatch": "^4.0.2" }, "peerDependencies": { "rollup": "^1.20.0||^2.0.0||^3.0.0||^4.0.0" }, "optionalPeers": ["rollup"] }, "sha512-P9ZvnfouRu4MSC+ilERaw6FmZs8zqKhpHxEs4aGDGWQAMzQGXnhvCSvoNwokfNvdt7t3Y5Y4p6gStQgezeIqug=="],
 
     "@saanseoi/address": ["@saanseoi/address@vendor/saanseoi-address-0.2.3.tgz", { "peerDependencies": { "zod": "^4.0.0" } }, "sha512-TbXbFsuS1uhFDUkronH9f1rzzU3OJv9LSAzI8FZcyhqPhRmunsNYL2OV2K107zL2MHLjWS/22HNjmZUqFoI9WQ=="],
+
+    "@saanseoi/hkgcode": ["@saanseoi/hkgcode@0.1.0", "", { "peerDependencies": { "proj4": "^2.22.0" }, "optionalPeers": ["proj4"] }, "sha512-pIYWO3qE/LB0ejrwPhCT0FUSdoUJlwJ462cayALxJQWnOSulAWjQLI0IRQcSO+urwjPJGEViFaVDsXyWkR10lg=="],
 
     "@shinyoshiaki/jspack": ["@shinyoshiaki/jspack@0.0.6", "", {}, "sha512-SdsNhLjQh4onBlyPrn4ia1Pdx5bXT88G/LIEpOYAjx2u4xeY/m/HB5yHqlkJB1uQR3Zw4R3hBWLj46STRAN0rg=="],
 

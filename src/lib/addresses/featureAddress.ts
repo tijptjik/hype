@@ -1,4 +1,5 @@
 import { featurePlusCode } from './plusCode.js'
+import { featureHkgcode } from './hkgcode.js'
 import { simplifiedChinese, traditionalChinese } from './chinese.js'
 import { formatStreetNumber, streetNumberIssue } from './streetNumber.js'
 import {
@@ -78,7 +79,9 @@ const fields = z.partialRecord(
 )
 const featureAddressBase = z.strictObject({
   version: z.literal(1),
-  locationDisplayMode: z.enum(['automatic', 'address', 'plus_code']).optional(),
+  locationDisplayMode: z
+    .enum(['automatic', 'address', 'plus_code', 'hkgcode'])
+    .optional(),
   // Legacy input only; new projections discard this redundant geometry copy.
   markerCoordinates: z
     .tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)])
@@ -358,7 +361,7 @@ export function getAddressPresentationLocale(
  * @param divisions Geography resolved from the Feature marker.
  * @param locationKind Associated entity kind.
  * @param markerCoordinates Actual Feature geometry, supplied separately from address evidence.
- * @returns Address or full Plus Code with available locality context.
+ * @returns Address, full Plus Code or HKGeocode with available locality context.
  */
 export function getAddressDisplay(
   address: FeatureAddress,
@@ -371,9 +374,12 @@ export function getAddressDisplay(
   const structured = getStructuredAddressDisplay(address, locale, [], locationKind)
   if (mode === 'address' || (mode === 'automatic' && structured.trim()))
     return getStructuredAddressDisplay(address, locale, divisions, locationKind)
-  const code = featurePlusCode(markerCoordinates)
+  const code =
+    mode === 'hkgcode'
+      ? featureHkgcode(markerCoordinates)
+      : featurePlusCode(markerCoordinates)
   if (!code)
-    return mode === 'plus_code'
+    return mode === 'plus_code' || mode === 'hkgcode'
       ? ''
       : getStructuredAddressDisplay(address, locale, divisions, locationKind)
   const locality = divisions

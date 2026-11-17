@@ -151,6 +151,7 @@ let input = $state<HTMLTextAreaElement>()
           <LocationDisplayChoice
             readOnly={!isEditing}
             {compact}
+            {coordinates}
             value={address.locationDisplayMode}
             onChange={locationDisplayMode =>
               onChange({ ...address, locationDisplayMode })}
@@ -276,6 +277,13 @@ let input = $state<HTMLTextAreaElement>()
       </div>
     </div>
   </div>
+
+  {#if showDisplayChoice && address.locationDisplayMode === 'hkgcode' && !value}
+    <p class="text-muted-foreground text-xs" role="status">
+      HKGeocode is unavailable at this marker. Place it within Hong Kong GeoCode
+      coverage or choose another display mode.
+    </p>
+  {/if}
 
   {#if isEditing && showLocale && !value.trim()}
     {@const sources = (Object.keys(ADDRESS_LOCALES) as LocaleKey[]).filter(

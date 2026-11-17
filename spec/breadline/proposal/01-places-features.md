@@ -3879,10 +3879,23 @@ deployed acceptance remain open on #241.
 ### Feature location display preference
 
 The Feature-owned address envelope stores `locationDisplayMode`: `automatic`, `address`,
-or `plus_code`. Automatic prefers a usable address label and falls back to a full Plus
-Code when only marker geography is available. Explicit address mode keeps address
-presentation; explicit Plus Code mode uses the Feature marker regardless of its
-associated Location's address. Available marker-locality context follows the code.
+`plus_code`, or `hkgcode`. Automatic prefers a usable address label and falls back to a
+full Plus Code when only marker geography is available. Explicit address mode keeps
+address presentation; explicit Plus Code mode uses the Feature marker regardless of its
+associated Location's address. Explicit HKGeocode mode uses the same Feature marker to
+identify a 5 × 5 metre Hong Kong GeoCode cell. Available marker-locality context follows
+the code.
+
+HKGeocode is computed offline by `@saanseoi/hkgcode` in the sibling SaanSeoi repository.
+Its grid core has no runtime dependencies; the optional WGS84 adapter reuses Proj4. The
+editor disables selection for missing or out-of-coverage markers. If a selected marker
+moves outside coverage, the code becomes empty with an editor explanation; it is not
+silently replaced by a different addressing scheme. Source addresses remain unchanged.
+Geographic conversion applies the published ITRF96-to-HK1980 forward transformation and
+matches the official API across the package's recorded 12,540 comparison outcomes. A
+five metre cell does not imply five metre input accuracy. The official grid
+specification, API examples, source attribution and precision limits are documented in
+the package.
 
 `markerCoordinates` is a Feature display projection, separate from the matched address's
 source coordinates. The editor and write boundary derive it from Feature geometry;

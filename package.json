@@ -240,6 +240,7 @@
     "@milkdown/crepe": "^7.23.0",
     "@milkdown/kit": "^7.23.0",
     "@saanseoi/address": "file:vendor/saanseoi-address-0.2.3.tgz",
+    "@saanseoi/hkgcode": "0.1.0",
     "@sillvva/utils": "^0.9.0",
     "@standard-schema/spec": "^1.1.0",
     "@tanstack/svelte-virtual": "^3.13.52",

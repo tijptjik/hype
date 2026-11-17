@@ -7,16 +7,21 @@ import CheckIcon from 'virtual:icons/lucide/check'
 import AutomaticIcon from 'virtual:icons/lucide/sparkles'
 import AddressIcon from 'virtual:icons/lucide/map-pin-house'
 import PlusCodeIcon from 'virtual:icons/lucide/grid-2x2'
+import HkgcodeIcon from 'virtual:icons/lucide/grid-3x3'
+// ADDRESSES
+import { featureHkgcode } from '#lib/addresses/hkgcode.js'
 // TYPES
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
 let {
   value = 'automatic',
   compact = false,
   readOnly = false,
+  coordinates,
   onChange,
 }: {
   compact?: boolean
   readOnly?: boolean
+  coordinates?: readonly number[] | null
   value?: FeatureAddress['locationDisplayMode']
   onChange: (value: NonNullable<FeatureAddress['locationDisplayMode']>) => void
 } = $props()
@@ -39,7 +44,14 @@ const options = [
     icon: PlusCodeIcon,
     description: 'Display a Plus Code from the feature marker',
   },
+  {
+    value: 'hkgcode',
+    label: 'HKGeocode',
+    icon: HkgcodeIcon,
+    description: 'Display a Hong Kong GeoCode from the feature marker (5 × 5 m cell)',
+  },
 ] as const
+const hkgcodeAvailable = $derived(Boolean(featureHkgcode(coordinates)))
 let trigger = $state<HTMLButtonElement | null>(null)
 let open = $state(false)
 let helpOpen = $state(false)
@@ -90,7 +102,8 @@ const current = $derived(options.find(option => option.value === value) ?? optio
                     value={value ?? 'automatic'}
                     onValueChange={next => {
                       const option = options.find(option => option.value === next)
-                      if (option) onChange(option.value)
+                      if (option && (option.value !== 'hkgcode' || hkgcodeAvailable))
+                        onChange(option.value)
                     }}
                     aria-label="Display location using"
                   >
@@ -98,14 +111,17 @@ const current = $derived(options.find(option => option.value === value) ?? optio
                       <DropdownMenu.RadioItem
                         value={option.value}
                         textValue={option.label}
-                        class="data-highlighted:bg-primary/10 grid cursor-pointer grid-cols-[20px_minmax(0,1fr)_16px] items-center gap-3 rounded-lg px-3 py-2.5 outline-none"
+                        disabled={option.value === 'hkgcode' && !hkgcodeAvailable}
+                        class="data-highlighted:bg-primary/10 grid cursor-pointer grid-cols-[20px_minmax(0,1fr)_16px] items-center gap-3 rounded-lg px-3 py-2.5 outline-none data-disabled:cursor-default data-disabled:opacity-40"
                       >
                         <option.icon class="size-5" aria-hidden="true" />
                         <span class="min-w-0">
                           <span class="block text-sm font-medium">{option.label}</span>
                           <span
                             class="text-muted-foreground block text-xs whitespace-normal"
-                            >{option.description}</span
+                            >{option.value === 'hkgcode' && !hkgcodeAvailable
+                              ? 'Place the feature marker within Hong Kong GeoCode coverage'
+                              : option.description}</span
                           >
                         </span>
                         {#if current.value === option.value}
