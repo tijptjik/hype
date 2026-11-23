@@ -26,6 +26,7 @@ import {
 import { m } from '#lib/i18n.js'
 // DOMAIN
 import {
+  type TemplateValues,
   parseDisplayTemplate,
   renderDisplayTemplate,
   templateCasesTag,
@@ -41,6 +42,7 @@ import {
 import { typeInputAppearance } from '../featureIntent/featureTypeEditor.styles'
 // BITS
 import { TextInput } from '#lib/bits/custom/form/index.js'
+import { Checkbox } from '#lib/bits/custom/index.js'
 import { Button } from '#lib/bits/core/index.js'
 
 let {
@@ -56,7 +58,11 @@ let {
   expressionActions,
   exampleScope,
   loadExamples,
+  allowSequence = false,
+  previewValues,
 }: {
+  allowSequence?: boolean
+  previewValues?: TemplateValues
   value: string
   onChange: (source: string) => void
   properties: TemplateProperty[]
@@ -110,13 +116,15 @@ const preview = $derived.by(() => {
       Object.fromEntries(
         parsed.dependencies.map(path => [
           path,
-          templatePreviewValue(
-            properties.find(property => property.path === path) ?? {
-              path,
-              label: path.split('.').at(-1) ?? path,
-            },
-            locale,
-          ),
+          previewValues && Object.hasOwn(previewValues, path)
+            ? previewValues[path]
+            : templatePreviewValue(
+                properties.find(property => property.path === path) ?? {
+                  path,
+                  label: path.split('.').at(-1) ?? path,
+                },
+                locale,
+              ),
         ]),
       ),
     )
@@ -210,14 +218,15 @@ const activeComponent = $derived(
 const fields = $derived(
   activeComponent ? componentFields(activeComponent.expression) : [],
 )
-const componentKinds = [
+const componentKinds = $derived([
   'property',
   'pair',
   'join',
   'optional',
   'cases',
   'fallback',
-] as const
+  ...(allowSequence ? ['sequence' as const] : []),
+] as const)
 const componentLabels = {
   property: 'Property',
   pair: 'Pair',
@@ -225,6 +234,7 @@ const componentLabels = {
   optional: 'Optional text',
   cases: 'Cases',
   fallback: 'Fallback',
+  sequence: 'Sequence',
 }
 
 const activeHelp = $derived.by(() => {
@@ -235,8 +245,7 @@ const activeHelp = $derived.by(() => {
     return 'This block contains fixed text that will appear in every generated name. Edit that text below.'
   const kind = expression.kind === 'call' ? expression.name : expression.kind
   return {
-    sequence:
-      'Enter zeros to set the minimum number of digits in the session sequence.',
+    sequence: 'Choose the number of digits and whether to pad the sequence with zeros.',
     property:
       'Choose one property below. Its value will appear here in the name. If the record has no value for that property, this component adds no text.',
     pair: 'Choose a first property and a second property, then type the separator to place between them (for example, a space or “ - ”). Both values must be present; if either is missing, the whole pair is left out.',
@@ -371,15 +380,17 @@ async function insert(kind: (typeof componentKinds)[number]): Promise<void> {
     properties[1]?.path ??
     property
   const text =
-    kind === 'pair' || kind === 'join'
-      ? templatePairTag(property, second).replace('pair(', `${kind}(`)
-      : kind === 'cases'
-        ? templateCasesTag(property, '', '', '')
-        : kind === 'optional'
-          ? `{{ optional(${property}, "", "") }}`
-          : kind === 'fallback'
-            ? `{{ ${property} ?? ${second} }}`
-            : templatePropertyTag(property)
+    kind === 'sequence'
+      ? '{{ sequence(3, true) }}'
+      : kind === 'pair' || kind === 'join'
+        ? templatePairTag(property, second).replace('pair(', `${kind}(`)
+        : kind === 'cases'
+          ? templateCasesTag(property, '', '', '')
+          : kind === 'optional'
+            ? `{{ optional(${property}, "", "") }}`
+            : kind === 'fallback'
+              ? `{{ ${property} ?? ${second} }}`
+              : templatePropertyTag(property)
   const start = Math.min(selectionStart ?? value.length, value.length)
   const end = Math.min(selectionEnd ?? start, value.length)
   onChange(value.slice(0, start) + text + value.slice(end))
@@ -479,6 +490,17 @@ function updateField(field: TemplateComponentField, next: string): void {
             together.
           </p>
           <ul class="mt-4 space-y-3 text-sm">
+            {#if allowSequence}
+              <li>
+                <strong>Sequence</strong>
+                <p class="text-muted-foreground">
+                  Use the entry number within this session. Number of digits sets the
+                  minimum width when Zero-padded is enabled, so 7 becomes 007 with three
+                  digits. With padding disabled it stays 7. Larger numbers always appear
+                  in full.
+                </p>
+              </li>
+            {/if}
             <li>
               <strong>Property</strong>
               <p class="text-muted-foreground">
@@ -574,7 +596,7 @@ function updateField(field: TemplateComponentField, next: string): void {
               bind:this={expressionElement}
               aria-labelledby={`${uid}-expression-label`}
               title="Drag blocks to reorder, or select a block and press Alt + Left or Right."
-              class="flex min-h-24 min-w-0 flex-wrap content-start items-center gap-y-2 rounded-md p-3 pr-12"
+              class="flex min-h-24 min-w-0 flex-wrap content-start items-center gap-2 rounded-md p-3 pr-12"
             >
               {#each segments as segment, index}
                 {#if segment.token}
@@ -612,11 +634,15 @@ function updateField(field: TemplateComponentField, next: string): void {
                       onkeydown={event => moveWithKeyboard(event, segment.start)}
                       disabled={disabled || !isEditing}
                       aria-pressed={activeStart === segment.start}
-                      aria-label={`Select ${segment.text}`}
+                      aria-label={`Select ${parsed.components.find(component => component.start === segment.start)?.expression.kind === 'sequence' ? 'Sequence' : segment.text}`}
                       onclick={() => selectBlock(segment.start, segment.end)}
                       class="focus-visible:outline-primary min-w-0 rounded-md px-2 py-1.5 text-left font-mono text-sm break-words focus-visible:outline-2"
                     >
-                      {segment.text}
+                      {parsed.components.find(
+                        component => component.start === segment.start,
+                      )?.expression.kind === 'sequence'
+                        ? 'Sequence'
+                        : segment.text}
                     </button>
                     {#if isEditing}
                       <button
@@ -635,16 +661,20 @@ function updateField(field: TemplateComponentField, next: string): void {
                     aria-label={`Text ${index + 1}`}
                     value={segment.text}
                     {disabled}
-                    style={`width: ${Math.max(2, segment.text.length + 1)}ch; max-width: 100%`}
-                    class="focus-visible:outline-primary min-w-4 rounded bg-transparent py-1.5 font-mono text-sm focus-visible:outline-2"
+                    style={`width: calc(${Math.max(1, segment.text.length)}ch + 1rem); max-width: 100%`}
+                    class={`focus-visible:outline-primary min-w-0 rounded border px-2 py-1.5 font-mono text-sm focus-visible:outline-2 ${segment.text.length ? 'border-border/40 bg-transparent' : 'bg-foreground/5 border-transparent'}`}
+                    title={segment.text.length ? 'Literal text' : 'Insert text'}
                     oninput={event =>
                       editText(segment.start, segment.end, event.currentTarget.value)}
                     onclick={event => selectText(event, segment.start)}
                     onkeyup={event => selectText(event, segment.start)}
                     onselect={event => selectText(event, segment.start)}
                   >
-                {:else}
-                  <span class="whitespace-pre-wrap">{segment.text}</span>
+                {:else if segment.text.length}
+                  <span
+                    class="border-border/40 rounded border bg-transparent px-2 py-1.5 font-mono text-sm whitespace-pre-wrap"
+                    >{segment.text}</span
+                  >
                 {/if}
               {/each}
             </fieldset>
@@ -703,6 +733,29 @@ function updateField(field: TemplateComponentField, next: string): void {
                   {/each}
                 </div>
               </fieldset>
+            {:else if field.kind === 'boolean'}
+              <Checkbox
+                id={`${uid}-component-${index}`}
+                rightText={field.label}
+                checked={field.value === 'true'}
+                {disabled}
+                onCheckedChange={next => updateField(field, String(next))}
+              />
+            {:else if field.kind === 'number'}
+              <label class="grid gap-2 text-sm" for={`${uid}-component-${index}`}>
+                {field.label}
+                <input
+                  id={`${uid}-component-${index}`}
+                  type="number"
+                  min="1"
+                  max="20"
+                  step="1"
+                  value={field.value}
+                  {disabled}
+                  class="border-border/50 w-full rounded-md border bg-transparent px-3 py-2"
+                  oninput={event => updateField(field, event.currentTarget.value)}
+                >
+              </label>
             {:else}
               <TextInput
                 id={`${uid}-component-${index}`}
@@ -786,10 +839,12 @@ function updateField(field: TemplateComponentField, next: string): void {
             {/each}
           {/if}
         {:else}
-          <p class="text-muted-foreground mt-1 text-xs">
-            Illustrative values. Open this template from a feature naming setting to
-            preview real saved features.
-          </p>
+          {#if !previewValues}
+            <p class="text-muted-foreground mt-1 text-xs">
+              Illustrative values. Open this template from a feature naming setting to
+              preview real saved features.
+            </p>
+          {/if}
           <output class="mt-2 block min-h-6 break-words whitespace-pre-wrap"
             >{preview || '—'}</output
           >

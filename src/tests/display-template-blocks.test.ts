@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // TESTING
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/svelte/pure'
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 // COMPONENTS
 import Fixture from './fixtures/components/DisplayTemplateFixture.svelte'
 
@@ -9,9 +9,10 @@ vi.mock('#lib/api/featureIntents.remote.js', () => ({
   getFeatureNamingExamples: vi.fn().mockResolvedValue([]),
 }))
 
+// The editor and Testing Library both await timers during interactions.
+beforeEach(() => vi.useRealTimers())
 afterEach(cleanup)
 it('retains component options while editing text and removes only the selected block', async () => {
-  vi.useRealTimers()
   const view = render(Fixture)
   const original = '{{ pair(brand.name, branch, " - ") ?? source.name }}'
   expect(view.getByRole('group', { name: 'Options' })).toBeTruthy()
