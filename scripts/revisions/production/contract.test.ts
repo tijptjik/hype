@@ -155,6 +155,29 @@ test('reinstalls fences on a table rebuilt by a migration in the same atomic bat
   }
 })
 
+test('resumes after lifecycle tables replace the original schema and detects a lost fence', async () => {
+  const { d, plan } = fixture()
+  plan.groups.push({
+    label: 'lifecycle-schema',
+    tables: ['currentContent'],
+    statements: [
+      { sql: 'CREATE TABLE currentContent AS SELECT * FROM content', params: [] },
+      { sql: 'DROP TABLE content', params: [] },
+    ],
+  })
+  try {
+    await pause(d.binding, plan)
+    await applyGroups(d.binding, plan)
+    await pause(d.binding, plan)
+    expect(await journal(d.binding)).toMatchObject({ nextGroup: 2, schemaBoundary: 0 })
+    expect(() => d.sqlite.exec('DELETE FROM currentContent')).toThrow('MAINTENANCE')
+    d.sqlite.exec('DROP TRIGGER revision_deploy_currentContent_DELETE')
+    await expect(pause(d.binding, plan)).rejects.toThrow()
+  } finally {
+    d.close()
+  }
+})
+
 test.each([false, true])(
   'full-schema rehearsal enrolls, verifies and activates without imports (lifecycle=%s)',
   async lifecycle => {

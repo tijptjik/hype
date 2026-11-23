@@ -371,7 +371,11 @@ export async function main(args: string[]): Promise<void> {
     console.info('D1 writers fenced. Applying journaled migrations and baselines…')
     // Migration SQL can generate IDs. Capture the actual migrated source before preparing enrollment IDs/references.
     const migrated = await remote('migrate')
-    if (plan.groups.some(group => group.tables) && migrated.phase === 'paused') {
+    if (
+      migrated.phase === 'paused' &&
+      migrated.schemaBoundary > 0 &&
+      migrated.nextGroup === migrated.schemaBoundary
+    ) {
       const parentHash = release,
         parentCursor = migrated.nextGroup
       selected = 'migrated-' + Date.now()

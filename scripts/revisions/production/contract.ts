@@ -160,6 +160,29 @@ export async function pause(db: D1Database, plan: Plan): Promise<void> {
       params: [],
     },
   ])
+  // A resumed plan may already have replaced legacy tables. Check the actual
+  // fenced schema before doing any DDL, including on an already-active retry.
+  const state = await journal(db)
+  if (state?.planHash === digest(plan)) {
+    const live = await db
+      .prepare("SELECT name FROM sqlite_schema WHERE type='table' ORDER BY name")
+      .all<{ name: string }>()
+    const tables = live.results
+      .map(row => row.name)
+      .filter(
+        name => !/^(sqlite_|_cf_|featureSearchFts|_revisionDeployment)/.test(name),
+      )
+    await atomic(db, [
+      guard(
+        `EXISTS(SELECT 1 FROM ${CONTROL} WHERE singleton=1 AND planHash=? AND writable=0)`,
+        [state.planHash],
+      ),
+      fenceCoverage(tables),
+    ])
+    return
+  }
+  if (state && state.phase !== 'active')
+    throw new Error('Another rollout owns maintenance')
   const declarations = fences(Object.keys(plan.initial))
   for (let offset = 0; offset < declarations.length; offset += 300)
     await atomic(db, declarations.slice(offset, offset + 300))
