@@ -1,6 +1,5 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "hype"
-main = ".svelte-kit/cloudflare/_worker.js"
 send_metrics = false
 account_id = "a6eeace4b6d9f8e07ab307964e74d801"
 compatibility_date = "2025-04-02"

@@ -455,9 +455,13 @@ export default defineConfig(async ({ command }) => ({
   // Enable build caching for CI environments
   cacheDir: `${getDevOutput(process.argv, command).outDir}/vite`,
   server: {
-    // Local binding storage is runtime data, not an input to HMR or translations.
+    // Keep local binding storage and independent workspace apps out of web HMR and translation scans.
     watch: {
-      ignored: ['**/.wrangler/**', ...getDevOutput(process.argv, command).ignored],
+      ignored: [
+        '**/.wrangler/**',
+        '**/apps/recorder/**',
+        ...getDevOutput(process.argv, command).ignored,
+      ],
     },
     port: 5175,
     strictPort: true,
@@ -467,6 +471,7 @@ export default defineConfig(async ({ command }) => ({
       'localhost',
       '127.0.0.1',
       'hype.localhost',
+      'fi.tailb49776.ts.net',
       '0.0.0.0',
       '192.168.1.100',
       '192.168.1.100.traefik.me',
