@@ -19,6 +19,21 @@ workflow.
 These counts describe the planning read. Re-read them at preparation and under the write
 fence. Use the final frozen inventory to judge the release.
 
+### Local preparation on 24 November
+
+The private `20261124-initial-inspection` run retained the production database on the
+deployment workstation. The SQLite restore passed integrity and foreign-key checks. The
+planner applied 154 numbered migrations to its private copy. It deferred `0207` until
+accepted Feature revision heads exist. A separate Location rehearsal verified 1,018
+splits, with original Feature rows and effective values preserved, one history entry per
+split, and a clean replay. All 330 existing links were retained.
+
+Of 2,112 referenced images, 2,105 passed the original and metadata checks. Seven
+originals matched the retained file hashes but lacked their exact versioned metadata.
+The local rehearsal stopped before revision enrollment. Production remains on its
+pre-cutover schema. The run directory contains the backup verification, affected-image
+readback and aggregate initiation receipt.
+
 ## 1. Freeze the candidate and control deployment
 
 1. Reconcile GitHub main into an isolated candidate. Inspect the two recent
