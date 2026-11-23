@@ -1,0 +1,33 @@
+{
+  "identifier": "recorder-fi",
+  "description": "Recorder account requests and browser-based device approval",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://fi.tailb49776.ts.net:9443/api/auth/device/code"
+        },
+        {
+          "url": "https://fi.tailb49776.ts.net:9443/api/auth/device/token"
+        },
+        {
+          "url": "https://fi.tailb49776.ts.net:9443/api/auth/sign-out"
+        },
+        {
+          "url": "https://fi.tailb49776.ts.net:9443/_app/remote/*"
+        }
+      ]
+    },
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://fi.tailb49776.ts.net:9443/recorder/connect*"
+        }
+      ]
+    }
+  ]
+}

@@ -387,6 +387,7 @@ export function getHubFromDomain(
   if (
     domain === 'localhost' ||
     domain === 'hype.localhost' ||
+    (import.meta.env.DEV && host === 'fi.tailb49776.ts.net:9443') ||
     domain === '127.0.0.1' ||
     domain === '192.168.1.100' ||
     domain === '192.168.1.100.traefik.me' ||

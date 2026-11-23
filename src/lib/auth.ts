@@ -3,8 +3,15 @@ import { betterAuth } from 'better-auth'
 import { generateId } from '@better-auth/core/utils/id'
 import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api'
 import { drizzleAdapter } from '@better-auth/drizzle-adapter'
+import { setSessionCookie } from 'better-auth/cookies'
 import { passkey } from '@better-auth/passkey'
-import { customSession, anonymous, username, magicLink } from 'better-auth/plugins'
+import {
+  customSession,
+  anonymous,
+  username,
+  magicLink,
+  deviceAuthorization,
+} from 'better-auth/plugins'
 // DRIZZLE
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
@@ -84,6 +91,9 @@ export function getBaseUrlFromRequestHeaders(headers: Headers): string {
   if ((proto !== 'http' && proto !== 'https') || /[\s/@\\?#,]/.test(host)) {
     throw new Error('Invalid authentication origin headers')
   }
+  // Fi's development listener accepts HTTPS through Tailscale Serve.
+  if (import.meta.env.DEV && host === 'fi.tailb49776.ts.net:9443')
+    return 'https://' + host
   const origin = new URL(`${proto}://${host}`)
   return origin.origin
 }
@@ -170,7 +180,10 @@ function createAuthInstance(
     ...authConfig,
     // BASE URL (dynamic per domain)
     baseURL,
-    ...(localPersona
+    ...(localPersona ||
+    (import.meta.env.DEV &&
+      env.ENVIRONMENT === 'local' &&
+      baseURL === 'https://fi.tailb49776.ts.net:9443')
       ? { trustedOrigins: [...authConfig.trustedOrigins, baseURL] }
       : {}),
     // OAuth callbacks can lose their short-lived state cookie after a browser
@@ -236,6 +249,16 @@ function createAuthInstance(
         if (ctx.path === '/sign-out') return
         const current = await getSessionFromCtx(ctx, { disableRefresh: true })
         if (current) await requireAvailableAuthUser(db, current.user.id)
+      }),
+      after: createAuthMiddleware(async ctx => {
+        // Give the approved device its own normal HYPE session in Tauri's native cookie jar.
+        if (
+          ctx.path === '/device/token' &&
+          ctx.headers?.get('x-hype-recorder') === '1' &&
+          ctx.context.newSession
+        ) {
+          await setSessionCookie(ctx, ctx.context.newSession)
+        }
       }),
     },
     // DATABASE HOOKS
@@ -404,6 +427,11 @@ function createAuthInstance(
     },
     // PLUGINS
     plugins: [
+      deviceAuthorization({
+        validateClient: clientId => clientId === 'hk.hype.recorder',
+        verificationUri: '/recorder/connect',
+        expiresIn: '10m',
+      }),
       ...(localPersona ? [devPersonaPlugin(localPersona)] : []),
       emailLink,
       passwordSetup(),

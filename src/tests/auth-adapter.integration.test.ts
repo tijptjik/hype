@@ -94,6 +94,55 @@ function createAuth(): ReturnType<typeof getAuthForRequest> {
 }
 
 describe('Better Auth production Drizzle adapter', () => {
+  it('connects Recorder to the browser account with a separately revocable session', async () => {
+    sqlite.exec(migration)
+    sqlite.exec(readFileSync('migrations/0260_recorder_device_code.sql', 'utf8'))
+    const auth = createAuth()
+    const credentials = {
+      email: 'recorder@example.com',
+      password: 'valid-recorder-password',
+    }
+    const { user } = await auth.api.signUpEmail({
+      body: { ...credentials, name: 'Contributor' },
+    })
+    sqlite.prepare('UPDATE user SET emailVerified = 1 WHERE id = ?').run(user.id)
+    const browser = await auth.api.signInEmail({ body: credentials, asResponse: true })
+    const sessionHeaders = (response: Response) =>
+      new Headers({
+        cookie: response.headers
+          .getSetCookie()
+          .map(value => value.split(';')[0])
+          .join('; '),
+      })
+    const headers = sessionHeaders(browser)
+    const client_id = 'hk.hype.recorder'
+    const grant = await auth.api.deviceCode({ body: { client_id } })
+    const query = { user_code: grant.user_code }
+    expect((await auth.api.deviceVerify({ headers, query })).client_id).toBe(client_id)
+    await auth.api.deviceApprove({ headers, body: { userCode: grant.user_code } })
+    const request = {
+      headers: new Headers({ 'x-hype-recorder': '1' }),
+      body: {
+        client_id,
+        device_code: grant.device_code,
+        grant_type: 'urn:ietf:params:oauth:grant-type:device_code' as const,
+      },
+      asResponse: true as const,
+    }
+    const redeemed = await auth.api.deviceToken(request)
+    expect(redeemed.status).toBe(200)
+    const device = await auth.api.getSession({ headers: sessionHeaders(redeemed) })
+    const web = await auth.api.getSession({ headers })
+    expect(device?.user.id).toBe(user.id)
+    expect(device?.session.id).not.toBe(web?.session.id)
+    expect((await auth.api.deviceToken(request)).ok).toBe(false)
+    await auth.api.signOut({ headers: sessionHeaders(redeemed) })
+    expect(sqlite.prepare('SELECT userId FROM session').all()).toEqual([
+      { userId: user.id },
+    ])
+    expect((await auth.api.getSession({ headers }))?.user.id).toBe(user.id)
+  })
+
   it('registers consecutive accounts without a client-supplied username', async () => {
     sqlite.exec(migration)
     const auth = createAuth()

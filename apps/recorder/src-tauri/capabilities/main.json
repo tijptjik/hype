@@ -1,0 +1,21 @@
+{
+  "identifier": "recorder",
+  "description": "Recorder account requests and browser-based device approval",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://hype.hk/api/auth/device/code" },
+        { "url": "https://hype.hk/api/auth/device/token" },
+        { "url": "https://hype.hk/api/auth/sign-out" },
+        { "url": "https://hype.hk/_app/remote/*" }
+      ]
+    },
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [{ "url": "https://hype.hk/recorder/connect*" }]
+    }
+  ]
+}

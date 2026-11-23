@@ -1,5 +1,6 @@
 // Re-export all table definitions
 export * from './user'
+export * from './recorderDevice'
 export * from './hub'
 export * from './organisation'
 export * from './organisationUser'
