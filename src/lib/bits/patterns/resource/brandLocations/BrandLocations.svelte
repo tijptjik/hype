@@ -1,7 +1,12 @@
 <script lang="ts">
 // SVELTE
 import { onDestroy, untrack } from 'svelte'
-import { goto } from '$app/navigation'
+import { goto, replaceState, afterNavigate } from '$app/navigation'
+import { page } from '$app/state'
+import {
+  readBrandLocationUrl,
+  writeBrandLocationUrl,
+} from '#lib/locations/brandLocationUrl.js'
 // API
 import {
   getBrandLocations,
@@ -9,12 +14,13 @@ import {
   addBrandLocationCandidate,
 } from '#lib/api/brandLocations.remote.js'
 import { getLocations } from '#lib/api/locationDirectory.remote.js'
+import { readFreshRemoteQuery } from '#lib/remote/index.js'
 // COMPONENTS
 import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
+import EmptyIcon from 'virtual:icons/lucide/map-pin-off'
 import { SimpleTooltip } from '#lib/bits/core/tooltip/index.js'
-import MatchIcon from 'virtual:icons/lucide/badge-check'
-import NameIcon from 'virtual:icons/lucide/search-check'
-import NoNameIcon from 'virtual:icons/lucide/search-x'
+import SaanSeoiMarkIcon from '#lib/bits/patterns/cards/resourceCard/components/SaanSeoiMarkIcon.svelte'
+import { BRAND_LOCATION_STATES } from '#lib/locations/brandLocationMap.js'
 import HypeMarkIcon from '#lib/bits/patterns/cards/resourceCard/components/HypeMarkIcon.svelte'
 import LinkedIcon from 'virtual:icons/lucide/link'
 import UnlinkedIcon from 'virtual:icons/lucide/unlink'
@@ -23,11 +29,20 @@ import type { Component } from 'svelte'
 import { Button } from '#lib/bits/core/index.js'
 import { TextInput } from '#lib/bits/custom/form/index.js'
 import SearchSelect from '#lib/bits/core/searchSelect/SearchSelect.svelte'
-import TriStateToggle from '#lib/bits/patterns/resource/resourceControlBar/components/ResourceControlBarTriStateToggle.svelte'
-import LocationIdentityReviewSection from '#lib/bits/patterns/forms/featureLocation/LocationIdentityReviewSection.svelte'
+import BrandLocationFilterBar from './BrandLocationFilterBar.svelte'
+import BrandLocationMap from './BrandLocationMap.svelte'
+import MapIcon from 'virtual:icons/lucide/map'
+import ListIcon from 'virtual:icons/lucide/list'
+import {
+  hasMapCoordinates,
+  type BrandLocationMapPoint,
+} from '#lib/locations/brandLocationMap.js'
 import ResourceIcon from '#lib/bits/custom/resourceIcon/ResourceIcon.svelte'
+import { FirstClassResource } from '#lib/enums.js'
+import { ResourceIndexUi } from '#lib/context/resourceIndexUi.svelte.js'
 import Row from '#lib/bits/custom/rows/Row.svelte'
 import LocationIcon from 'virtual:icons/lucide/map-pinned'
+import LocationIdentityReviewSection from '#lib/bits/patterns/forms/featureLocation/LocationIdentityReviewSection.svelte'
 // CONTEXT
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
@@ -35,7 +50,7 @@ import { getAdminCtx } from '#lib/context/admin.svelte.js'
 import { getLocaleKey } from '#lib/i18n.js'
 import { canonicalContentTag } from '#lib/i18n/contentRecords.js'
 import { placeTaxonomy, type PlaceTaxonomyNode } from '#lib/locations/placeTaxonomy.js'
-import { placeCategoryLabel } from '#lib/locations/placeSearchFilters.js'
+
 import type { IdentityCatalogueRecord } from '#lib/locations/identityCatalogue.js'
 import type { LocationResource } from '#lib/locations/resource.js'
 
@@ -45,24 +60,209 @@ let {
 }: { brand: IdentityCatalogueRecord; organisationId?: string } = $props()
 const header = getHeaderCtrl(),
   admin = getAdminCtx()
-let q = $state(untrack(() => brand.discovery?.terms[0] ?? brand.i18n.en.name))
-let category = $state(untrack(() => brand.discovery?.category ?? ''))
-let hype = $state<boolean | null>(false),
-  upstream = $state<boolean | null>(null),
-  linked = $state<boolean | null>(null)
+const listUi = new ResourceIndexUi()
+// Sidebar navigation changes the shallow URL, while page.url retains the loaded route.
+const currentUrl = $derived(page.shallow?.url ?? page.url)
+const initialView = untrack(() =>
+  readBrandLocationUrl(currentUrl.searchParams, {
+    q: brand.discovery?.terms[0] ?? brand.i18n.en.name,
+    category: brand.discovery?.category ?? '',
+  }),
+)
+listUi.state.isControlBarVisible.location = initialView.filters
+let q = $state(initialView.q)
+let category = $state(initialView.category)
+let hype = $state<boolean | null>(initialView.hype),
+  upstream = $state<boolean | null>(initialView.upstream),
+  linked = $state<boolean | null>(initialView.linked)
 let busy = $state(false),
   failure = $state(''),
   searched = $state(false)
-let localRows = $state<LocationResource[]>([])
+let localTotal = $state<number | null>(null)
+let cachedLocalRows = $state<LocationResource[]>([])
+let localLoaded = $state(false)
+let sourceLoaded = $state(false)
 type Candidate = Awaited<ReturnType<typeof discoverBrandLocations>>['rows'][number]
-let sourceRows = $state<Candidate[]>([])
+let cachedSourceRows = $state<Candidate[]>([])
+const localRows = $derived(
+  cachedLocalRows.filter(
+    row =>
+      hype !== false &&
+      (upstream === null || Boolean(row.ssId) === upstream) &&
+      (linked === null || Boolean(row.hasLinkedFeatures) === linked),
+  ),
+)
+const sourceRows = $derived(
+  cachedSourceRows.filter(
+    row =>
+      upstream !== false &&
+      (hype === null || Boolean(row.locationId) === hype) &&
+      (linked === null || row.linked === linked),
+  ),
+)
+type CachedSearch = {
+  local: LocationResource[]
+  source: Candidate[]
+  localLoaded: boolean
+  sourceLoaded: boolean
+  localCursor: string | null
+  sourceCursor: string | null
+  total: number | null
+}
+const searchCache = new Map<string, CachedSearch>()
+let activeSearchKey = ''
 let localCursor = $state<string | null>(null),
   sourceCursor = $state<string | null>(null)
 let targetSearch = $state(''),
   targetId = $state(''),
   selectedCandidate = $state<Candidate | null>(null)
 let review = $state<{ locationId: string; reviewId: string } | null>(null)
+let mapView = $state(initialView.map)
+// Shallow URL updates keep cached results and the mounted map intact.
+$effect(() => {
+  const state = {
+    q,
+    category,
+    hype,
+    upstream,
+    linked,
+    filters: listUi.state.isControlBarVisible.location,
+    map: mapView,
+  }
+  untrack(() => {
+    if (currentUrl.searchParams.get('facet') !== 'locations') return
+    const next = writeBrandLocationUrl(currentUrl, state)
+    if (next.href !== currentUrl.href) replaceState(next, page.state)
+  })
+})
+// Restore controls when navigating to another saved discovery URL in this component.
+afterNavigate(() => {
+  if (currentUrl.searchParams.get('facet') !== 'locations') return
+  const state = readBrandLocationUrl(currentUrl.searchParams, {
+    q: brand.discovery?.terms[0] ?? brand.i18n.en.name,
+    category: brand.discovery?.category ?? '',
+  })
+  q = state.q
+  category = state.category
+  hype = state.hype
+  upstream = state.upstream
+  linked = state.linked
+  mapView = state.map
+  listUi.state.isControlBarVisible.location = state.filters
+})
+let selectedMapId = $state<string | null>(null)
+const mapPoints = $derived.by(() => {
+  const points: BrandLocationMapPoint[] = []
+  for (const row of localRows) {
+    const coordinates = row.facts?.location.geometry.coordinates
+    if (hasMapCoordinates(coordinates))
+      points.push({
+        id: `hype:${row.id}`,
+        name:
+          row.facts?.names[canonicalContentTag(getLocaleKey())] ??
+          row.facts?.names.en ??
+          row.id,
+        coordinates,
+        hype: true,
+        upstream: Boolean(row.ssId),
+        linked: Boolean(row.hasLinkedFeatures),
+      })
+  }
+  for (const row of sourceRows) {
+    if (localRows.some(local => local.id === row.locationId)) continue
+    if (hasMapCoordinates(row.coordinates))
+      points.push({
+        id: `source:${row.ssId}`,
+        name: row.name,
+        coordinates: row.coordinates,
+        hype: Boolean(row.locationId),
+        upstream: true,
+        linked: row.linked,
+      })
+  }
+  return points
+})
+const missingMapCoordinates = $derived(
+  localRows.length +
+    sourceRows.filter(row => !localRows.some(local => local.id === row.locationId))
+      .length -
+    mapPoints.length,
+)
+// Map mode consumes all matching pages without refitting the user-controlled camera.
+$effect(() => {
+  if (mapView && searched && !busy && !failure) {
+    if (hype !== false && localCursor) void search('local')
+    else if (upstream !== false && sourceCursor) void search('source')
+  }
+})
+$effect(() => {
+  const showingMap = mapView
+  const text = showingMap ? 'Show list' : 'Show map'
+  // Late catalogue metadata resets header actions; retain ownership of this embedded view.
+  if (
+    header.state.meta.viewActions.some(
+      action => action.id === 'brand-location-map' && action.text === text,
+    )
+  )
+    return
+  header.setViewActions([
+    {
+      id: 'brand-location-map',
+      text,
+      icon: showingMap ? ListIcon : MapIcon,
+      color: 'neutral',
+      style: 'ghost',
+      class: 'px-4',
+      alwaysHideLabel: true,
+      onClick: () => {
+        mapView = !mapView
+      },
+    },
+  ])
+})
+// Cached map results are revealed in small list batches, avoiding hundreds of mounted action rows.
+let listLimit = $state(60)
+const hasCachedListRows = $derived(
+  localRows.length +
+    sourceRows.filter(row => !localRows.some(local => local.id === row.locationId))
+      .length >
+    listLimit,
+)
+$effect(() => {
+  void mapView
+  void q
+  void category
+  void hype
+  void upstream
+  void linked
+  listLimit = 60
+})
 let generation = 0
+let continuation = $state<HTMLDivElement>()
+// Reobserve after each page so short or filtered-empty pages keep loading while visible.
+$effect(() => {
+  if (
+    !continuation ||
+    busy ||
+    failure ||
+    (!hasCachedListRows &&
+      !(hype !== false && localCursor) &&
+      !(upstream !== false && sourceCursor))
+  )
+    return
+  const observer = new IntersectionObserver(
+    entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        observer.disconnect()
+        if (hasCachedListRows) listLimit += 60
+        else void search(hype !== false && localCursor ? 'local' : 'source')
+      }
+    },
+    { rootMargin: '300px' },
+  )
+  observer.observe(continuation)
+  return () => observer.disconnect()
+})
 /** Flatten the existing taxonomy for the standard category picker. @param nodes Taxonomy subtree. @returns Selectable identifiers. */
 function categories(nodes: PlaceTaxonomyNode[]): string[] {
   return nodes.flatMap(node => [node.name, ...categories(node.children ?? [])])
@@ -77,31 +277,99 @@ $effect(() => {
   header.setSearch({
     query: q,
     indexView: true,
+    resourceType: FirstClassResource.location,
+    listUi,
     placeholder: 'Search locations',
     onFilter: value => {
       q = value.slice(0, 200)
     },
   })
 })
-// Changes invalidate earlier responses; source searches remain an explicit action.
+// Status toggles filter retained evidence synchronously; only a different search scope resets it.
 $effect(() => {
-  q
-  category
-  hype
-  upstream
-  linked
+  const key = JSON.stringify([brand.id, organisationId, q, category, getLocaleKey()])
   generation++
-  searched = false
-  sourceRows = []
-  localRows = []
-  localCursor = null
-  sourceCursor = null
+  activeSearchKey = key
+  const saved = searchCache.get(key)
+  cachedLocalRows = saved?.local ?? []
+  cachedSourceRows = saved?.source ?? []
+  localLoaded = saved?.localLoaded ?? false
+  sourceLoaded = saved?.sourceLoaded ?? false
+  localCursor = saved?.localCursor ?? null
+  sourceCursor = saved?.sourceCursor ?? null
+  localTotal = saved?.total ?? null
+  searched = Boolean(saved)
   failure = ''
-  busy = false
+  if (saved) {
+    busy = false
+    return
+  }
+  busy = true
+  const timer = setTimeout(() => {
+    busy = false
+    void search()
+  }, 300)
+  return () => clearTimeout(timer)
+})
+// A new toggle can need an unread stream, but never refetches already loaded pages.
+$effect(() => {
+  if (
+    !busy &&
+    !failure &&
+    ((hype !== false && !localLoaded) ||
+      (upstream !== false && (q.trim() || category.trim()) && !sourceLoaded))
+  )
+    void search()
+})
+$effect(() => {
+  header.setControlBar(
+    BrandLocationFilterBar,
+    {
+      hype,
+      upstream,
+      linked,
+      category,
+      categories: categoryOptions,
+      count:
+        searched &&
+        !failure &&
+        (hype === false || (localLoaded && !localCursor)) &&
+        (upstream === false ||
+          !(q.trim() || category.trim()) ||
+          (sourceLoaded && !sourceCursor))
+          ? localRows.length +
+            sourceRows.filter(
+              row => !localRows.some(local => local.id === row.locationId),
+            ).length
+          : null,
+      busy,
+      onHype: value => {
+        hype = value
+      },
+      onUpstream: value => {
+        upstream = value
+      },
+      onLinked: value => {
+        linked = value
+      },
+      onCategory: value => {
+        category = value
+      },
+      onReset: () => {
+        hype = null
+        upstream = null
+        linked = null
+        category = ''
+      },
+    },
+    { isVisible: listUi.state.isControlBarVisible.location },
+  )
 })
 onDestroy(() => {
   generation++
   header.setSearch(null)
+  header.clearControlBar()
+  header.setViewActions([])
 })
 /** Navigate without losing the organisation access context. @param id Location identity. @returns Detail URL. */
 function href(id: string): string {
@@ -109,61 +377,85 @@ function href(id: string): string {
 }
 /** Execute independent local/source pages and preserve explicit continuations. @param more Optional page stream. @returns Completion after all requested reads. */
 async function search(more?: 'local' | 'source'): Promise<void> {
+  const fetchLocal =
+    hype !== false && more !== 'source' && (more === 'local' || !localLoaded)
+  const fetchSource =
+    upstream !== false &&
+    Boolean(q.trim() || category.trim()) &&
+    more !== 'local' &&
+    (more === 'source' || !sourceLoaded)
+  if (busy || (!fetchLocal && !fetchSource)) return
   const token = ++generation
+  const cacheKey = activeSearchKey
   busy = true
   failure = ''
   try {
     const [localResult, sourceResult] = await Promise.allSettled([
-      hype !== false && more !== 'source'
-        ? getBrandLocations({
-            brandId: brand.id,
-            organisationId,
-            upstream: upstream ?? undefined,
-            linkedFeatures: linked ?? undefined,
-            after: more === 'local' ? (localCursor ?? undefined) : undefined,
-          })
+      fetchLocal
+        ? readFreshRemoteQuery(
+            getBrandLocations({
+              brandId: brand.id,
+              organisationId,
+              q,
+              taxonomyCategory: category || undefined,
+              after: more === 'local' ? (localCursor ?? undefined) : undefined,
+            }),
+            true,
+          )
         : null,
-      upstream !== false && more !== 'local'
-        ? discoverBrandLocations({
-            brandId: brand.id,
-            organisationId,
-            q,
-            locale:
-              getLocaleKey() === 'zhHant'
-                ? 'zh-hant'
-                : getLocaleKey() === 'zhHans'
-                  ? 'zh-hans'
-                  : 'en',
-            filters: category ? { taxonomyCategory: category } : undefined,
-            hype: hype ?? undefined,
-            linkedFeatures: linked ?? undefined,
-            cursor: more === 'source' ? (sourceCursor ?? undefined) : undefined,
-          })
+      fetchSource
+        ? readFreshRemoteQuery(
+            discoverBrandLocations({
+              brandId: brand.id,
+              organisationId,
+              q,
+              locale:
+                getLocaleKey() === 'zhHant'
+                  ? 'zh-hant'
+                  : getLocaleKey() === 'zhHans'
+                    ? 'zh-hans'
+                    : 'en',
+              filters: category ? { taxonomyCategory: category } : undefined,
+              cursor: more === 'source' ? (sourceCursor ?? undefined) : undefined,
+            }),
+            true,
+          )
         : null,
     ])
     if (token !== generation) return
     const local = localResult.status === 'fulfilled' ? localResult.value : null
     const source = sourceResult.status === 'fulfilled' ? sourceResult.value : null
-    if (localResult.status === 'rejected' || sourceResult.status === 'rejected')
+    if (localResult.status === 'rejected' || sourceResult.status === 'rejected') {
       failure = `${localResult.status === 'rejected' ? 'Hype' : 'SaanSeoi'} search failed. Retry the search.`
+    }
     if (local) {
-      localRows = more ? [...localRows, ...local.data] : local.data
+      if (local.totalCount !== null) localTotal = local.totalCount
+      cachedLocalRows = more ? [...cachedLocalRows, ...local.data] : local.data
+      localLoaded = true
       localCursor = local.nextCursor
-    } else if (!more) {
-      localRows = []
-      localCursor = null
     }
     if (source) {
-      sourceRows = [
+      cachedSourceRows = [
         ...new Map(
-          [...(more ? sourceRows : []), ...source.rows].map(row => [row.ssId, row]),
+          [...(more ? cachedSourceRows : []), ...source.rows].map(row => [
+            row.ssId,
+            row,
+          ]),
         ).values(),
       ]
       sourceCursor = source.nextCursor
-    } else if (!more) {
-      sourceRows = []
-      sourceCursor = null
+      sourceLoaded = true
     }
+    searchCache.set(cacheKey, {
+      local: cachedLocalRows,
+      source: cachedSourceRows,
+      localLoaded,
+      sourceLoaded,
+      localCursor,
+      sourceCursor,
+      total: localTotal,
+    })
+    if (searchCache.size > 12) searchCache.delete(searchCache.keys().next().value!)
     searched = true
   } catch {
     if (token === generation) failure = 'Unable to load locations. Retry the search.'
@@ -192,25 +484,45 @@ async function add(candidate: Candidate, locationId?: string): Promise<void> {
     busy = false
   }
 }
+let selectedBarWidth = $state(0)
+const compactMapBar = $derived(mapView && selectedBarWidth < 640)
+let mapMounted = $state(false)
+$effect(() => {
+  if (mapView) mapMounted = true
+})
 </script>
 
 {#snippet statusIcon(
   Icon: Component<{ class?: string }>,
   label: string,
   positive = false,
+  palette = { yes: '#237b70', no: '#a65363' },
 )}
   <SimpleTooltip>
     {#snippet trigger()}
       <button
         type="button"
-        class="inline-flex"
+        class="relative inline-flex"
+        style:color={positive ? palette.yes : palette.no}
         aria-label={label}
         onclick={event => event.stopPropagation()}
         onkeydown={event => event.stopPropagation()}
       >
-        <Icon
-          class={positive ? 'text-success size-5' : 'text-muted-foreground size-5'}
-        />
+        <Icon class="size-5" />
+        {#if !positive}
+          <svg
+            class="pointer-events-none absolute inset-0 size-5"
+            viewBox="0 0 20 20"
+            aria-hidden="true"
+          >
+            <path
+              d="M3 17L17 3"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
+          </svg>
+        {/if}
       </button>
     {/snippet}
     {#snippet children()}
@@ -219,82 +531,35 @@ async function add(candidate: Candidate, locationId?: string): Promise<void> {
   </SimpleTooltip>
 {/snippet}
 
-<div class="mx-auto flex w-full max-w-6xl flex-col gap-6 p-6" data-brand-locations>
-  <div
-    class="border-border flex flex-wrap items-center gap-x-10 gap-y-5 rounded-lg border px-6 py-4"
-  >
-    <TriStateToggle
-      label="Hype"
-      falseLabel="Not added"
-      trueLabel="Added"
-      currentValue={hype}
-      onCheckedChange={value => (hype = value)}
-    />
-    <TriStateToggle
-      label="Upstream"
-      falseLabel="Community only"
-      trueLabel="Backed"
-      currentValue={upstream}
-      onCheckedChange={value => (upstream = value)}
-    />
-    <TriStateToggle
-      label="Linked Features"
-      falseLabel="Unlinked"
-      trueLabel="Linked"
-      currentValue={linked}
-      onCheckedChange={value => (linked = value)}
-    />
-  </div>
-  <div class="grid items-end gap-4 md:grid-cols-[1fr_1fr_auto]">
-    <SearchSelect
-      label="Search term"
-      plain
-      items={[
-        ...new Set([
-          ...(brand.discovery?.terms ?? []),
-          ...Object.values(brand.i18n).map(value => value.name),
-        ]),
-      ].map(value => ({ value, label: value }))}
-      onSelect={value => {
-        if (value) q = value
-      }}
-    />
-    <SearchSelect
-      label="Upstream category"
-      plain
-      value={category}
-      items={categoryOptions.map(value => ({
-        value,
-        label: placeCategoryLabel(value),
-      }))}
-      onSelect={value => (category = value ?? '')}
-    />
-    <Button
-      text={upstream === false ? 'Search Hype' : 'Search SaanSeoi'}
-      disabled={busy || !q.trim()}
-      onClick={() => search()}
-    />
-  </div>
-  {#if category}
-    <Button
-      text={`Clear category: ${placeCategoryLabel(category)}`}
-      style="ghost"
-      size="sm"
-      onClick={() => (category = '')}
-    />
-  {/if}
-  <p class="text-muted-foreground text-sm">
-    Branches found, not a complete branch census. Name matches need confirmation before
-    assigning a brand.
-  </p>
-  {#if failure}
+<div
+  class={mapView
+    ? '@container relative h-full min-h-0 w-full overflow-hidden'
+    : 'flex w-full flex-col gap-1.5 px-4 py-3'}
+  data-brand-locations
+>
+  {#if failure && !mapView}
     <p role="alert">{failure}</p>
   {/if}
-  {#if busy && (localRows.length || sourceRows.length)}
+  {#if mapMounted}
+    <div class={mapView ? 'absolute inset-0' : 'hidden'}>
+      <BrandLocationMap
+        active={mapView}
+        points={mapPoints}
+        missing={missingMapCoordinates}
+        {busy}
+        {failure}
+        onretry={() =>
+          search(localCursor ? 'local' : sourceCursor ? 'source' : undefined)}
+        selected={selectedMapId}
+        onselect={id => (selectedMapId = id)}
+      />
+    </div>
+  {/if}
+  {#if !mapView && busy && (localRows.length || sourceRows.length)}
     <span role="status" aria-label="Loading locations" class="sr-only"
       >Updating locations</span
     >
-  {:else if busy}
+  {:else if busy && !mapView}
     <div role="status" aria-label="Loading locations" class="grid gap-1.5">
       <span class="sr-only">Loading locations</span>
       {#each Array(localRows.length || sourceRows.length ? 2 : 6) as _, index}
@@ -315,9 +580,7 @@ async function add(candidate: Candidate, locationId?: string): Promise<void> {
                 <Skeleton class="h-3 w-80 max-w-full" />
               </div>
             </div>
-            <div
-              class="flex max-w-[min(36rem,55cqw)] flex-wrap items-center justify-end gap-x-8 gap-y-2 py-1"
-            >
+            <div class="grid grid-cols-[10rem_20rem] items-center gap-x-8 gap-y-2 py-1">
               <div class="flex items-center gap-4">
                 {#each [0, 1, 2] as icon (icon)}
                   <Skeleton class="size-5 rounded-full" />
@@ -335,215 +598,270 @@ async function add(candidate: Candidate, locationId?: string): Promise<void> {
       {/each}
     </div>
   {/if}
-  {#if searched}
-    {#each localRows as row, index (row.id)}
-      <Row
-        {index}
-        variant="resource"
-        entityId={row.id}
-        title={row.facts?.names?.[canonicalContentTag(getLocaleKey())] ??
-          row.facts?.names?.en ??
-          row.id}
-        description=""
-        class="grid-cols-[minmax(0,1fr)_auto] pr-4"
-        onclick={() => goto(href(row.id))}
-        onkeydown={event => {
-          if (event.key === 'Enter') void goto(href(row.id))
-        }}
-      >
-        {#snippet imageFallback()}
-          <ResourceIcon src={brand.logo} class="m-2 size-12" />
-        {/snippet}
-        <div class="flex items-center gap-8">
-          <div class="flex items-center gap-4">
-            {@render statusIcon(MatchIcon, 'Confirmed brand match', true)}
-            {@render statusIcon(HypeMarkIcon, 'Available in Hype', true)}
-            {@render statusIcon(
-              row.hasLinkedFeatures ? LinkedIcon : UnlinkedIcon,
-              row.hasLinkedFeatures ? 'Has linked features' : 'No linked features',
-              Boolean(row.hasLinkedFeatures),
-            )}
-          </div>
-          <Button
-            text="Show Location"
-            iconComponent={LocationIcon}
-            style="outline"
-            size="sm"
-            href={href(row.id)}
-          />
-        </div>
-      </Row>
-    {/each}
-    {#each sourceRows.filter(
-      row => !localRows.some(local => local.id === row.locationId),
-    ) as row, index (row.ssId)}
-      <Row
-        index={localRows.length + index}
-        entityId={row.ssId}
-        variant="resource"
-        class="grid-cols-[minmax(0,1fr)_auto] pr-4"
-        interactive={Boolean(row.locationId)}
-        isFocusable={Boolean(row.locationId)}
-        onclick={() => {
-          if (row.locationId) void goto(href(row.locationId))
-        }}
-        onkeydown={event => {
-          if (
-            event.key === 'Enter' &&
-            row.locationId &&
-            event.target === event.currentTarget
-          )
-            void goto(href(row.locationId))
-        }}
-      >
-        <div class="grid min-w-0 grid-cols-[4rem_minmax(0,1fr)] items-center gap-4">
-          <div class="bg-base-200 flex size-16 items-center justify-center rounded-md">
-            {#if row.match === 'brand'}
-              <ResourceIcon src={brand.logo} class="size-12" />
-            {:else}
-              <LocationIcon class="size-8" />
-            {/if}
-          </div>
-          <div class="min-w-0 py-2">
-            <div class="text-base font-semibold break-words whitespace-normal">
-              {row.name}
-            </div>
-            <div class="text-muted-foreground text-sm break-words whitespace-normal">
-              {row.ssId}
-            </div>
-          </div>
-        </div>
-        <div
-          class="flex max-w-[min(36rem,55cqw)] flex-wrap items-center justify-end gap-x-8 gap-y-2 py-1"
+  <div
+    bind:clientWidth={selectedBarWidth}
+    data-map-selection={mapView || undefined}
+    class={mapView
+      ? 'absolute inset-x-3 bottom-32 z-10 max-h-[35%] overflow-auto @min-[700px]:right-52 @min-[700px]:bottom-3'
+      : 'contents'}
+  >
+    {#if searched}
+      {#each localRows.filter((row, index) =>
+        mapView ? selectedMapId === `hype:${row.id}` : index < listLimit,
+      ) as row, index (row.id)}
+        <Row
+          {index}
+          variant="resource"
+          entityId={row.id}
+          title={mapView
+            ? ''
+            : (row.facts?.names?.[canonicalContentTag(getLocaleKey())] ??
+              row.facts?.names?.en ??
+              row.id)}
+          description=""
+          class="grid-cols-[minmax(0,1fr)_auto] pr-4"
+          onclick={() => goto(href(row.id))}
+          onkeydown={event => {
+            if (event.key === 'Enter') void goto(href(row.id))
+          }}
         >
-          <div class="text-muted-foreground flex items-center gap-4">
-            {@render statusIcon(
-              row.match === 'brand'
-                ? MatchIcon
-                : row.name.toLocaleLowerCase().includes(q.trim().toLocaleLowerCase())
-                  ? NameIcon
-                  : NoNameIcon,
-              row.match === 'brand'
-                ? 'Confirmed brand match'
-                : row.name.toLocaleLowerCase().includes(q.trim().toLocaleLowerCase())
-                  ? 'Name matches search'
-                  : 'Name does not match search text',
-              row.match === 'brand',
-            )}
-            <SimpleTooltip>
-              {#snippet trigger()}
-                <button
-                  type="button"
-                  class="relative inline-flex size-5"
-                  onclick={event => event.stopPropagation()}
-                  onkeydown={event => event.stopPropagation()}
-                  aria-label={row.locationId ? 'Available in Hype' : 'Not yet in Hype'}
-                >
-                  <HypeMarkIcon class="text-muted-foreground size-5" />
-                  {#if !row.locationId}
-                    <svg
-                      class="text-muted-foreground/70 pointer-events-none absolute inset-0 size-5"
-                      viewBox="0 0 16 16"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M2 14L14 2"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                      />
-                    </svg>
-                  {/if}
-                </button>
-              {/snippet}
-              {#snippet children()}
-                {row.locationId ? 'Available in Hype' : 'Not yet in Hype'}
-              {/snippet}
-            </SimpleTooltip>
-            {@render statusIcon(
-              row.linked ? LinkedIcon : UnlinkedIcon,
-              row.linked ? 'Has linked features' : 'No linked features',
-              row.linked,
-            )}
-          </div>
-          {#if row.locationId}
-            <a
-              href={href(row.locationId)}
-              aria-label="Open Location"
-              title="Open Location"
-              ><LocationIcon class="size-5" /></a
+          {#snippet imageFallback()}
+            <ResourceIcon src={brand.logo} class="m-2 size-12" />
+          {/snippet}
+          {#if mapView}
+            <div
+              class="flex min-w-0 items-center gap-3"
+              title={row.facts?.names?.[canonicalContentTag(getLocaleKey())] ??
+                row.facts?.names?.en ??
+                row.id}
             >
-          {:else if admin.view.isSuperAdmin()}
-            <div class="flex flex-wrap justify-end gap-2">
-              <SimpleTooltip>
-                {#snippet trigger()}
-                  <Button
-                    text="Link Location"
-                    iconComponent={LinkedIcon}
-                    size="sm"
-                    style="outline"
-                    disabled={busy}
-                    onClick={() => {
-                      selectedCandidate = row
-                      targetSearch = row.name
-                      targetId = ''
-                      review = null
-                    }}
-                  />
-                {/snippet}
-                {#snippet children()}
-                  Choose an existing Hype location and review linking it to this
-                  SaanSeoi record.
-                {/snippet}
-              </SimpleTooltip>
-              <SimpleTooltip>
-                {#snippet trigger()}
-                  <Button
-                    text="Add Location"
-                    iconComponent={AddIcon}
-                    size="sm"
-                    style="outline"
-                    color="primary"
-                    disabled={busy}
-                    onClick={() => add(row)}
-                  />
-                {/snippet}
-                {#snippet children()}
-                  Create a Hype location from this SaanSeoi record.
-                {/snippet}
-              </SimpleTooltip>
+              <ResourceIcon src={brand.logo} class="m-2 size-12 shrink-0" />
+              {#if !compactMapBar}
+                <span class="min-w-0 font-semibold break-words whitespace-normal"
+                  >{row.facts?.names?.[canonicalContentTag(getLocaleKey())] ??
+                    row.facts?.names?.en ??
+                    row.id}</span
+                >
+              {/if}
             </div>
           {/if}
+          <div
+            class={mapView
+              ? 'flex shrink-0 items-center justify-end gap-2'
+              : 'grid grid-cols-[10rem_20rem] items-center gap-8'}
+          >
+            {#if !mapView}
+              <div class="flex items-center gap-4">
+                {@render statusIcon(
+                  HypeMarkIcon,
+                  'Available in Hype',
+                  true,
+                  BRAND_LOCATION_STATES[0],
+                )}
+                {@render statusIcon(
+                  SaanSeoiMarkIcon,
+                  row.ssId ? 'Available in SaanSeoi' : 'No SaanSeoi record',
+                  Boolean(row.ssId),
+                  BRAND_LOCATION_STATES[1],
+                )}
+                {@render statusIcon(
+                  row.hasLinkedFeatures ? LinkedIcon : UnlinkedIcon,
+                  row.hasLinkedFeatures ? 'Has linked features' : 'No linked features',
+                  Boolean(row.hasLinkedFeatures),
+                  BRAND_LOCATION_STATES[2],
+                )}
+              </div>
+            {/if}
+            <Button
+              class="justify-self-end"
+              text="Show Location"
+              iconComponent={LocationIcon}
+              style="outline"
+              size="sm"
+              href={href(row.id)}
+            />
+          </div>
+        </Row>
+      {/each}
+      {#each sourceRows
+        .filter(
+          row =>
+            !localRows.some(local => local.id === row.locationId) &&
+            (!mapView || selectedMapId === `source:${row.ssId}`),
+        )
+        .slice(
+          0,
+          mapView ? undefined : Math.max(0, listLimit - localRows.length),
+        ) as row, index (row.ssId)}
+        <Row
+          index={localRows.length + index}
+          entityId={row.ssId}
+          variant="resource"
+          class="grid-cols-[minmax(0,1fr)_auto] pr-4"
+          interactive={Boolean(row.locationId)}
+          isFocusable={Boolean(row.locationId)}
+          onclick={() => {
+            if (row.locationId) void goto(href(row.locationId))
+          }}
+          onkeydown={event => {
+            if (
+              event.key === 'Enter' &&
+              row.locationId &&
+              event.target === event.currentTarget
+            )
+              void goto(href(row.locationId))
+          }}
+        >
+          <div
+            title={mapView ? row.name : undefined}
+            class={mapView
+              ? 'flex min-w-0 items-center gap-3'
+              : 'grid min-w-0 grid-cols-[4rem_minmax(0,1fr)] items-center gap-4'}
+          >
+            <div
+              class="bg-base-200 flex size-16 shrink-0 items-center justify-center rounded-md"
+            >
+              {#if row.match === 'brand'}
+                <ResourceIcon src={brand.logo} class="size-12" />
+              {:else}
+                <LocationIcon class="size-8" />
+              {/if}
+            </div>
+            {#if !compactMapBar}
+              <div class="min-w-0 py-2">
+                <div class="text-base font-semibold break-words whitespace-normal">
+                  {row.name}
+                </div>
+                <div
+                  class="text-muted-foreground text-sm break-words whitespace-normal"
+                >
+                  {row.address || row.ssId}
+                </div>
+              </div>
+            {/if}
+          </div>
+          <div
+            class={mapView
+              ? 'flex shrink-0 items-center justify-end gap-2 py-1'
+              : 'grid grid-cols-[10rem_20rem] items-center gap-x-8 gap-y-2 py-1'}
+          >
+            {#if !mapView}
+              <div class="text-muted-foreground flex items-center gap-4">
+                {@render statusIcon(
+                  HypeMarkIcon,
+                  row.locationId ? 'Available in Hype' : 'Not yet in Hype',
+                  Boolean(row.locationId),
+                  BRAND_LOCATION_STATES[0],
+                )}
+                {@render statusIcon(
+                  SaanSeoiMarkIcon,
+                  'Available in SaanSeoi',
+                  true,
+                  BRAND_LOCATION_STATES[1],
+                )}
+                {@render statusIcon(
+                  row.linked ? LinkedIcon : UnlinkedIcon,
+                  row.linked ? 'Has linked features' : 'No linked features',
+                  row.linked,
+                  BRAND_LOCATION_STATES[2],
+                )}
+              </div>
+            {/if}
+            {#if row.locationId}
+              <Button
+                class="justify-self-end"
+                text="Show Location"
+                iconComponent={LocationIcon}
+                style="outline"
+                size="sm"
+                href={href(row.locationId)}
+              />
+            {:else if admin.view.isSuperAdmin()}
+              <div
+                class={mapView && selectedBarWidth < 420
+                  ? 'flex flex-col items-end gap-2'
+                  : 'flex flex-wrap justify-end gap-2'}
+              >
+                <SimpleTooltip>
+                  {#snippet trigger()}
+                    <Button
+                      text="Link Location"
+                      iconComponent={LinkedIcon}
+                      size="sm"
+                      style="outline"
+                      disabled={busy}
+                      onClick={() => {
+                        selectedCandidate = row
+                        targetSearch = row.name
+                        targetId = ''
+                        review = null
+                      }}
+                    />
+                  {/snippet}
+                  {#snippet children()}
+                    Choose an existing Hype location and review linking it to this
+                    SaanSeoi record.
+                  {/snippet}
+                </SimpleTooltip>
+                <SimpleTooltip>
+                  {#snippet trigger()}
+                    <Button
+                      text="Add Location"
+                      iconComponent={AddIcon}
+                      size="sm"
+                      style="outline"
+                      color="primary"
+                      disabled={busy}
+                      onClick={() => add(row)}
+                    />
+                  {/snippet}
+                  {#snippet children()}
+                    Create a Hype location from this SaanSeoi record.
+                  {/snippet}
+                </SimpleTooltip>
+              </div>
+            {/if}
+          </div>
+        </Row>
+      {/each}
+      {#if !mapView &&
+        (hasCachedListRows ||
+          (hype !== false && localCursor) ||
+          (upstream !== false && sourceCursor))}
+        <div
+          bind:this={continuation}
+          class="h-8 shrink-0"
+          data-location-continuation
+        ></div>
+        {#if failure}
+          <Button
+            text="Retry loading locations"
+            onClick={() => search(localCursor ? 'local' : 'source')}
+          />
+        {/if}
+      {/if}
+      {#if !mapView &&
+        !busy &&
+        !failure &&
+        !(hype !== false && localCursor) &&
+        !(upstream !== false && sourceCursor) &&
+        !localRows.length &&
+        !sourceRows.length}
+        <div
+          class="text-muted-foreground flex min-h-[calc(100dvh-12rem)] flex-1 items-center justify-center"
+          role="status"
+          aria-label="No matching locations"
+        >
+          <div class="bg-base-200/50 rounded-full p-8">
+            <EmptyIcon class="size-16 opacity-60" />
+          </div>
         </div>
-      </Row>
-    {/each}
-    {#if localCursor}
-      <Button
-        text="More Hype locations"
-        style="outline"
-        disabled={busy}
-        onClick={() => search('local')}
-      />
+      {/if}
     {/if}
-    {#if sourceCursor}
-      <Button
-        text="More from SaanSeoi"
-        style="outline"
-        disabled={busy}
-        onClick={() => search('source')}
-      />
-    {/if}
-    {#if !localRows.length && !sourceRows.length}
-      <p>
-        No matching locations on this page.{sourceCursor
-          ? ' Continue to the next source page.'
-          : ''}
-      </p>
-    {/if}
-  {/if}
+  </div>
   {#if selectedCandidate}
     <section
-      class="border-border grid gap-4 rounded-lg border p-5"
+      class={`border-border grid gap-4 rounded-lg border p-5 ${mapView ? 'bg-panel absolute inset-x-3 top-3 z-20 max-h-[80%] overflow-auto' : ''}`}
       aria-label="Link existing Location"
     >
       <h3>Link {selectedCandidate.name}</h3>

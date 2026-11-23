@@ -84,6 +84,8 @@ export type ResourceControlBarFilterResetProps = {
 
 export type ResourceControlBarTriStateToggleProps = {
   alwaysShowLabels?: boolean
+  falseColor?: string
+  trueColor?: string
   label: string
   tooltip?: string
   currentValue: boolean | null

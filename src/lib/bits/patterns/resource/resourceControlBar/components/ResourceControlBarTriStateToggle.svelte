@@ -9,6 +9,8 @@ import type { ResourceControlBarTriStateToggleProps } from './resourceControlBar
 let {
   label,
   alwaysShowLabels = false,
+  falseColor,
+  trueColor,
   tooltip,
   currentValue = null,
   falseLabel = '',
@@ -42,7 +44,7 @@ function handleTrueClick(event: MouseEvent): void {
 
 <div
   class={`bits-resource-filter-bar__tri-toggle ${className}`.trim()}
-  style={offsetStyle}
+  style={`${offsetStyle}${falseColor ? `--color-error: ${falseColor};` : ''}${trueColor ? `--color-success: ${trueColor};` : ''}`}
 >
   <div class="bits-theme bits-resource-filter-bar__tri-toggle-control">
     <button
@@ -50,6 +52,12 @@ function handleTrueClick(event: MouseEvent): void {
       class={`bits-resource-filter-bar__tri-toggle-side-label bits-resource-filter-bar__tri-toggle-side-label--left ${alwaysShowLabels ? 'text-base-content/70! flex items-center gap-1.5' : ''}`}
       onclick={handleFalseClick}
     >
+      {#if falseColor}
+        <span
+          class="size-2.5 rounded-full border border-slate-400"
+          style:background={falseColor}
+        ></span>
+      {/if}
       {falseLabel}
     </button>
     <div class="relative flex items-center">
@@ -79,6 +87,12 @@ function handleTrueClick(event: MouseEvent): void {
       class={`bits-resource-filter-bar__tri-toggle-side-label bits-resource-filter-bar__tri-toggle-side-label--right ${alwaysShowLabels ? 'text-base-content/70! flex items-center gap-1.5' : ''}`}
       onclick={handleTrueClick}
     >
+      {#if trueColor}
+        <span
+          class="size-2.5 rounded-full border border-slate-400"
+          style:background={trueColor}
+        ></span>
+      {/if}
       {trueLabel}
     </button>
   </div>
