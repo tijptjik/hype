@@ -737,6 +737,150 @@ it('finds sibling brands across intermediate groups while group pages stay withi
   expect(await ids('middle', true)).toEqual(['arome', 'cousin', 'deep', 'direct'])
 })
 
+it('claims kebab-case group codes, disambiguates names, and preserves explicit codes', async () => {
+  const f = fixture()
+  const saveGroup = (
+    id: string,
+    content = seedIdentityCatalogue({ en: 'Blossom Group' }),
+  ) =>
+    saveIdentityCatalogue(f.db, {
+      id,
+      kind: 'group',
+      expectedVersion: 0,
+      content,
+      actorId: 'editor',
+      guard: sql`1`,
+    })
+  expect((await saveGroup('blossom-one'))?.code).toBe('blossom-group')
+  expect((await saveGroup('blossom-two'))?.code).toBe('blossom-group-2')
+  expect(
+    (
+      await saveGroup('explicit', {
+        ...seedIdentityCatalogue({ en: 'Blossom Group' }),
+        code: 'custom-code',
+      })
+    )?.code,
+  ).toBe('custom-code')
+  expect(
+    (await saveGroup('non-latin', seedIdentityCatalogue({ 'zh-Hant': '花開集團' })))
+      ?.code,
+  ).toBe('group-non-latin')
+  expect((await readIdentityCatalogueByCode(f.db, 'group', 'blossom-group'))?.id).toBe(
+    'blossom-one',
+  )
+})
+
+it('claims distinct codes for an inline parent and new child with the same name', async () => {
+  const f = fixture()
+  const content = seedIdentityCatalogue({ en: 'Blossom' })
+  const child = await saveIdentityCatalogue(f.db, {
+    id: 'child',
+    kind: 'group',
+    expectedVersion: 0,
+    content: { ...content, groupId: 'parent' },
+    newGroup: { id: 'parent', i18n: content.i18n },
+    actorId: 'editor',
+    guard: sql`1`,
+  })
+  expect(child?.code).toBe('blossom')
+  expect((await readIdentityCatalogue(f.db, 'parent'))?.code).toBe('blossom-2')
+})
+
+it('hides archived identities from discovery while preserving direct and historical reads', async () => {
+  const f = fixture()
+  for (const kind of ['brand', 'group'] as const) {
+    const content = {
+      ...seedIdentityCatalogue({ en: `Archive ${kind}` }),
+      code: `archive-${kind}`,
+    }
+    await saveIdentityCatalogue(f.db, {
+      id: kind,
+      kind,
+      expectedVersion: 0,
+      content,
+      actorId: 'editor',
+      guard: sql`1`,
+    })
+    await saveIdentityCatalogue(f.db, {
+      id: kind,
+      kind,
+      expectedVersion: 1,
+      content: { ...content, isArchived: true },
+      actorId: 'admin',
+      guard: sql`1`,
+    })
+    expect(await searchIdentityCatalogue(f.db, kind, '')).toEqual([])
+    expect(await searchIdentityCatalogue(f.db, kind, '', undefined, true)).toHaveLength(
+      1,
+    )
+    expect(await searchIdentityCatalogue(f.db, kind, '', undefined, null)).toHaveLength(
+      1,
+    )
+    expect(
+      (await readIdentityCatalogueByCode(f.db, kind, content.code))?.isArchived,
+    ).toBe(true)
+    expect((await readIdentityCatalogue(f.db, kind, 1))?.isArchived).not.toBe(true)
+    await saveIdentityCatalogue(f.db, {
+      id: kind,
+      kind,
+      expectedVersion: 2,
+      content: { ...content, isArchived: false },
+      actorId: 'admin',
+      guard: sql`1`,
+    })
+    expect(await searchIdentityCatalogue(f.db, kind, '')).toHaveLength(1)
+  }
+})
+
+it('excludes deleted groups from family traversal without bridging their descendants', async () => {
+  const f = fixture()
+  for (const [id, kind, groupId] of [
+    ['root', 'group', null],
+    ['child', 'group', 'root'],
+    ['brand', 'brand', 'child'],
+    ['independent', 'brand', null],
+  ] as const) {
+    await saveIdentityCatalogue(f.db, {
+      id,
+      kind,
+      expectedVersion: 0,
+      content: { ...seedIdentityCatalogue({ en: id }), code: id, groupId },
+      actorId: 'admin',
+      guard: sql`1`,
+    })
+  }
+  expect(
+    (await searchIdentityCatalogue(f.db, 'brand', '', undefined, false, true)).map(
+      row => row.id,
+    ),
+  ).toEqual(['independent'])
+  expect(
+    (await searchIdentityCatalogue(f.db, 'brand', '', undefined, false, false)).map(
+      row => row.id,
+    ),
+  ).toEqual(['brand'])
+  expect(
+    await searchIdentityCatalogue(f.db, 'brand', '', undefined, false, null),
+  ).toHaveLength(2)
+  expect(await listGroupBrands(f.db, 'root')).toHaveLength(1)
+  await saveIdentityCatalogue(f.db, {
+    id: 'child',
+    kind: 'group',
+    expectedVersion: 1,
+    content: {
+      ...seedIdentityCatalogue({ en: 'child' }),
+      code: 'child',
+      groupId: 'root',
+      isArchived: true,
+    },
+    actorId: 'admin',
+    guard: sql`1`,
+  })
+  expect(await listGroupBrands(f.db, 'root')).toEqual([])
+  expect(await listGroupBrands(f.db, 'child', true)).toEqual([])
+  expect(await listSubgroups(f.db, 'root')).toEqual([])
+})
+
 it.each(['brand', 'group'] as const)(
   'pages every %s with tied names without truncation or duplicates',
   async kind => {

@@ -34,14 +34,17 @@ import RetryIcon from 'virtual:icons/lucide/rotate-cw'
 import ImageIcon from 'virtual:icons/lucide/image'
 import PhotoIcon from 'virtual:icons/proicons/photo'
 import Dropzone from '#lib/bits/patterns/images/components/Dropzone.svelte'
-import Download from 'virtual:icons/lucide/download'
+import DeleteIcon from 'virtual:icons/proicons/delete'
+import RestoreIcon from 'virtual:icons/lucide/archive-restore'
 import FilterIcon from 'virtual:icons/proicons/filter'
 import FilterOffIcon from 'virtual:icons/lucide/funnel-x'
+import SyncIcon from 'virtual:icons/lucide/refresh-cw'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // API
 import {
+  archiveIdentityCatalogue,
   getGroupBrands,
   getSubgroups,
   importIdentityCatalogue,
@@ -72,7 +75,7 @@ import {
 import { contentLocaleOptions } from '#lib/bits/patterns/forms/contentLocaleDefaults/contentLocaleOptions.js'
 import { placeTaxonomy, type PlaceTaxonomyNode } from '#lib/locations/placeTaxonomy.js'
 import { placeCategoryLabel } from '#lib/locations/placeSearchFilters.js'
-import { getLocaleKey } from '#lib/i18n.js'
+import { getLocaleKey, m } from '#lib/i18n.js'
 import CatalogueArtworkEditor from '#lib/bits/patterns/forms/identityCatalogue/CatalogueArtworkEditor.svelte'
 import { getThemeModel } from '#lib/themes/theme.svelte.js'
 import { THEMES } from '#lib/themes/themes.js'
@@ -140,7 +143,8 @@ async function loadMore(): Promise<void> {
       kind,
       search,
       after: nextCursor,
-      isArchived: false,
+      isArchived: admin.view.isSuperAdmin() ? isArchived : false,
+      independent: kind === 'brand' ? independent : null,
       quality: qualityFilters,
       origin: catalogueOrigin || undefined,
     })
@@ -172,6 +176,8 @@ $effect(() => {
   observer.observe(sentinel)
   return () => observer.disconnect()
 })
+let isArchived = $state<boolean | null>(false)
+let independent = $state<boolean | null>(null)
 let filtersVisible = $state(false)
 const catalogueOrigin = $derived(page.url.searchParams.get('catalogue-origin') ?? '')
 let catalogueOrigins = $state<string[]>([])
@@ -250,7 +256,7 @@ $effect(() => {
     .then(([rows, linked]) => {
       if (!cancelled)
         groups =
-          linked && !rows.some(group => group.id === linked.id)
+          linked && !linked.isArchived && !rows.some(group => group.id === linked.id)
             ? [...rows, linked]
             : rows
     })
@@ -276,11 +282,11 @@ $effect(() => {
       const seen = new Set([directId])
       let current = await getIdentityCatalogue({ id: directId })
       const parents: IdentityCatalogueRecord[] = []
-      while (current?.groupId && !seen.has(current.groupId)) {
+      while (current?.groupId && !current.isArchived && !seen.has(current.groupId)) {
         seen.add(current.groupId)
         current = await getIdentityCatalogue({ id: current.groupId })
         if (cancelled) return
-        if (current?.kind !== 'group') break
+        if (current?.kind !== 'group' || current.isArchived) break
         parents.push(current)
       }
       if (!cancelled) parentGroups = parents
@@ -467,6 +473,33 @@ $effect(() => {
   // Catalogue views own their filters; never retain a feature index control bar.
   if (!isFeatures) header.clearControlBar()
   const hasFeatures = selected?.kind === 'brand'
+  const archiveMenu =
+    selected && admin.view.isSuperAdmin()
+      ? [
+          {
+            label: selected.isArchived ? m.catalogue_restore() : m.forms__delete(),
+            icon: selected.isArchived ? RestoreIcon : DeleteIcon,
+            disabled: busy || isEditing,
+            class: 'bits-pattern-header__title-menu-item--danger',
+            iconClass: selected.isArchived
+              ? undefined
+              : 'bits-pattern-header__title-menu-item-icon',
+            onSelect: () => void toggleArchive(),
+          },
+        ]
+      : []
+  const indexMenu = admin.view.isSuperAdmin()
+    ? [
+        {
+          label: 'Sync Curated Locations to Brand Catalog',
+          icon: SyncIcon,
+          class:
+            'bg-transparent! hover:bg-foreground/5! data-[highlighted]:bg-foreground/5!',
+          disabled: busy || loading,
+          onSelect: () => void importBrands(),
+        },
+      ]
+    : []
   const controls = {
     content: isFeatures || isLocations ? null : localeControl,
     locationsAction: hasFeatures
@@ -498,7 +531,7 @@ $effect(() => {
     dirty,
     isSubmitting: busy,
     disableSave: !valid || !canEdit,
-    canEdit: Boolean(content) && canEdit,
+    canEdit: Boolean(content) && canEdit && !selected?.isArchived,
     canPublish: false,
     showPublishAction: false,
     showDeleteAction: false,
@@ -510,7 +543,7 @@ $effect(() => {
       if (!isFeatures && !isLocations) header.setSearch(null)
       header.setHeaderForEntity(title, Tags, new Map(), {
         showFacets: hasFeatures,
-        ...(isLocations ? { showLayoutToggle: false } : {}),
+        ...(isLocations ? { showLayoutToggle: false, showViewActions: true } : {}),
       })
       if (hasFeatures)
         header.setFacets(
@@ -528,7 +561,7 @@ $effect(() => {
             },
           },
         )
-
+      header.setTitleMenuItems(archiveMenu)
       header.setCrumbs([
         {
           name: 'Catalog',
@@ -552,7 +585,7 @@ $effect(() => {
         showViewActions: true,
         showControlBarToggle: false,
       })
-
+      header.setTitleMenuItems(indexMenu)
       header.setViewActions([
         {
           text: showFilters ? 'Hide filters' : 'Show filters',
@@ -610,6 +643,7 @@ $effect(() => {
     })
 })
 onDestroy(() => {
+  header.setTitleMenuItems([])
   header.setSearch(null)
   header.setFormActions({ content: null, featuresAction: null, locationsAction: null })
 })
@@ -631,7 +665,8 @@ $effect(() => {
   const request = listIdentityCatalogue({
     kind: type,
     search: query,
-    isArchived: false,
+    isArchived: admin.view.isSuperAdmin() ? isArchived : false,
+    independent: type === 'brand' ? independent : null,
     quality: qualityFilters,
     origin: catalogueOrigin || undefined,
   })
@@ -714,6 +749,7 @@ function edit(record: IdentityCatalogueRecord | null): void {
   content = record
     ? structuredClone(
         $state.snapshot({
+          isArchived: record.isArchived,
           i18n: record.i18n,
           logo: record.logo,
           artwork: record.artwork,
@@ -750,6 +786,38 @@ function reset(): void {
       `/admin/catalogue?kind=${kind}${organisationId ? `&organisation=${organisationId}` : ''}`,
     )
 }
+/** Archive or restore the inspected catalogue record through the SuperAdmin command.
+ * @returns Completion after refreshing the detail and active catalogue list.
+ */
+async function toggleArchive(): Promise<void> {
+  if (!selected || busy || isEditing || !admin.view.isSuperAdmin()) return
+  busy = true
+  try {
+    const record = await archiveIdentityCatalogue({
+      id: selected.id,
+      expectedVersion: selected.version,
+      isArchived: !selected.isArchived,
+    })
+    await getIdentityCatalogue({ id: record.id }).refresh()
+    if (record.code)
+      await getIdentityCatalogue({ kind: record.kind, code: record.code }).refresh()
+    await findIdentityCatalogue({
+      kind: record.kind,
+      search,
+      isArchived,
+      independent: record.kind === 'brand' ? independent : null,
+    }).refresh()
+    edit(record)
+    header.setEditing(false)
+    refresh++
+    toast.success(record.isArchived ? m.catalogue_archived() : m.catalogue_restored())
+  } catch {
+    toast.error(m.catalogue_archive_failed())
+  } finally {
+    busy = false
+  }
+}
+
 /** Save an inspected catalogue revision. @returns Completion with visible success/error. */
 async function save(): Promise<void> {
   if (!content || busy || !valid || !dirty || !canEdit) return
@@ -777,10 +845,13 @@ async function save(): Promise<void> {
     await findIdentityCatalogue({
       kind,
       search,
+      isArchived,
+      independent: kind === 'brand' ? independent : null,
     }).refresh()
     selected = record
     wikidataId = record.wikidataId
     content = structuredClone({
+      isArchived: record.isArchived,
       i18n: record.i18n,
       logo: record.logo,
       artwork: record.artwork,
@@ -798,7 +869,9 @@ async function save(): Promise<void> {
     if (page.url.searchParams.has('new') || (record.code ?? undefined) !== routeCode)
       await goto(catalogueHref(record), { replaceState: true })
     saved = true
-    toast.success(record.kind === 'brand' ? 'Brand saved' : 'Group saved')
+    toast.success(
+      record.kind === 'brand' ? m.catalogue_brand_saved() : m.catalogue_group_saved(),
+    )
     refresh++
   } catch (cause) {
     failed = true
@@ -940,6 +1013,8 @@ async function importBrands(): Promise<void> {
     await findIdentityCatalogue({
       kind,
       search,
+      isArchived,
+      independent: kind === 'brand' ? independent : null,
     }).refresh()
     refresh++
   } catch {
@@ -1014,6 +1089,8 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
         onQuality={setQualityFilter}
         onOrigin={setCatalogueOrigin}
         onReset={() => {
+          isArchived = false
+          independent = null
           resetQualityFilters()
         }}
       />
@@ -1034,18 +1111,6 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
             ? 'No matching entries'
             : `No ${kind === 'brand' ? 'brands' : 'groups'} yet`}
         </p>
-      {/if}
-      {#if kind === 'brand' && admin.view.isSuperAdmin()}
-        <div class="flex justify-end pt-4">
-          <Button
-            text="Link imported brands"
-            iconComponent={Download}
-            style="ghost"
-            size="sm"
-            disabled={busy}
-            onClick={importBrands}
-          />
-        </div>
       {/if}
     </div>
   {:else if locationsActive && selected}
@@ -1541,42 +1606,6 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
                 {organisationId}
                 editable={isEditing && canEdit && !busy}
               />
-              {#if content && kind === 'brand'}
-                <section class="border-border mx-auto mb-6 max-w-4xl rounded-xl border">
-                  <SectionHeader title="Location discovery" icon={LocationsIcon} />
-                  <div class="grid gap-5 p-6 md:grid-cols-2">
-                    <TextInput
-                      label="Suggested search terms (one per line)"
-                      value={(content.discovery?.terms ?? []).join('\n')}
-                      disabled={!isEditing || busy}
-                      onValueChange={value => {
-                        if (content)
-                          content.discovery = {
-                            ...content.discovery,
-                            terms: value.split('\n'),
-                          }
-                      }}
-                    />
-                    <SearchSelect
-                      label="Discovery category"
-                      plain
-                      value={content.discovery?.category ?? ''}
-                      disabled={!isEditing || busy}
-                      items={categoryOptions.map(value => ({
-                        value,
-                        label: placeCategoryLabel(value),
-                      }))}
-                      onSelect={value => {
-                        if (content)
-                          content.discovery = {
-                            terms: content.discovery?.terms ?? [],
-                            ...(value ? { category: value } : {}),
-                          }
-                      }}
-                    />
-                  </div>
-                </section>
-              {/if}
               {#if selected?.kind === 'group'}
                 <section aria-label="Subgroups">
                   <SectionHeader title="Subgroups" icon={Building} />

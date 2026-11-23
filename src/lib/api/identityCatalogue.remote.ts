@@ -48,14 +48,24 @@ export const findIdentityCatalogue = guardedQuery(
     kind: z.enum(['brand', 'group']),
     search: z.string().max(200),
     excludeDescendantsOf: z.string().min(1).max(200).optional(),
+    isArchived: z.boolean().nullable().optional(),
+    independent: z.boolean().nullable().optional(),
   }),
   async (input, ctx) => {
     if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
+    if (
+      input.isArchived !== undefined &&
+      input.isArchived !== false &&
+      !ctx.user.superAdmin
+    )
+      error(403, 'INSUFFICIENT_ROLE')
     return searchIdentityCatalogue(
       ctx.db,
       input.kind,
       input.search,
       input.excludeDescendantsOf,
+      input.isArchived,
+      input.independent,
     )
   },
 )
@@ -167,6 +177,9 @@ export const publishIdentityCatalogue = guardedCommand(
   }),
   async (input, ctx) => {
     await authorize(ctx, input.organisationId)
+    const previous = await readIdentityCatalogue(ctx.db, input.id)
+    if (previous?.isArchived || input.content.isArchived)
+      error(403, 'CATALOGUE_ARCHIVE_ACTION_REQUIRED')
     if (input.wikidataId) {
       if (input.kind !== 'brand')
         error(400, 'Wikidata linking is available for brands.')
@@ -183,6 +196,37 @@ export const publishIdentityCatalogue = guardedCommand(
           'This Wikidata identity or brand already has a different link. Review the existing catalogue brand.',
         )
       throw cause
+    })
+    if (!record) error(409, 'CATALOGUE_VERSION_CHANGED')
+    return record
+  },
+)
+
+/** Archive or restore a catalogue identity without deleting its history or Location links.
+ * @param input Identity, inspected version, and desired archive state.
+ * @returns The new immutable catalogue revision.
+ * @remarks Only SuperAdmin may change archive state; normal authoring cannot bypass this command.
+ */
+export const archiveIdentityCatalogue = guardedCommand(
+  z.strictObject({
+    id: z.string().min(1).max(200),
+    expectedVersion: z.number().int().positive(),
+    isArchived: z.boolean(),
+  }),
+  async (input, ctx) => {
+    if (ctx.user.isAnonymous || !ctx.user.superAdmin) error(403, 'SUPERADMIN_REQUIRED')
+    const previous = await readIdentityCatalogue(ctx.db, input.id)
+    if (!previous) error(404, 'CATALOGUE_NOT_FOUND')
+    if (previous.version !== input.expectedVersion)
+      error(409, 'CATALOGUE_VERSION_CHANGED')
+    const { id, kind, version, wikidataId, ...content } = previous
+    const record = await saveIdentityCatalogue(ctx.db, {
+      id,
+      kind,
+      expectedVersion: version,
+      content: { ...content, isArchived: input.isArchived },
+      actorId: ctx.user.id,
+      guard: sql`1`,
     })
     if (!record) error(409, 'CATALOGUE_VERSION_CHANGED')
     return record

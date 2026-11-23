@@ -121,7 +121,7 @@ export async function listGroupBrands(
     sql`WITH RECURSIVE activeGroups AS (
       SELECT c.id,c.groupId FROM identityCatalogue c
       JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version
-      WHERE c.kind='group'
+      WHERE c.kind='group' AND coalesce(json_extract(r.content,'$.isArchived'),0)=0
     ), ancestors(id) AS (
       SELECT id FROM activeGroups WHERE id=${groupId}
       UNION
@@ -135,7 +135,7 @@ export async function listGroupBrands(
     )
     SELECT c.id,c.version,r.content FROM identityCatalogue c
     JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version
-    WHERE c.kind='brand' AND c.groupId IN (SELECT id FROM family)
+    WHERE c.kind='brand' AND coalesce(json_extract(r.content,'$.isArchived'),0)=0 AND c.groupId IN (SELECT id FROM family)
     ORDER BY json_extract(r.content,'$.i18n.en.name'),c.id`,
   )
   return rows.map(row => ({
@@ -157,7 +157,7 @@ export async function listSubgroups(
   const rows = await db.all<{ id: string; version: number; content: string }>(
     sql`SELECT c.id,c.version,r.content FROM identityCatalogue c
     JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version
-    WHERE c.kind='group' AND c.groupId=${groupId}
+    WHERE c.kind='group' AND coalesce(json_extract(r.content,'$.isArchived'),0)=0 AND c.groupId=${groupId}
     ORDER BY json_extract(r.content,'$.i18n.en.name'),c.id`,
   )
   return rows.map(row => ({
@@ -166,6 +166,40 @@ export async function listSubgroups(
     version: row.version,
     ...IdentityCatalogueContentSchema.parse(JSON.parse(row.content)),
   }))
+}
+
+/** Suggest an available group code; the revision guard reserves it atomically.
+ * @param db Database. @param id Group identity. @param content Localized group names.
+ * @param reserved Code being claimed by another group in this same save.
+ * @returns A kebab-case code with a numeric suffix when the name is already claimed.
+ */
+async function availableGroupCode(
+  db: Database,
+  id: string,
+  content: IdentityCatalogueContent,
+  reserved?: string,
+): Promise<string> {
+  const name =
+    content.i18n.en?.name ||
+    Object.values(content.i18n).find(row => row.name.trim())?.name ||
+    ''
+  const slug = name
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  const base = (slug || `group-${id.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`)
+    .slice(0, 90)
+    .replace(/-+$/g, '')
+  const rows = await db.all<{ code: string }>(
+    sql`SELECT json_extract(r.content,'$.code') code FROM identityCatalogue c JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version WHERE c.kind='group' AND c.id<>${id} AND (json_extract(r.content,'$.code')=${base} OR json_extract(r.content,'$.code') LIKE ${`${base}-%`})`,
+  )
+  const used = new Set(rows.map(row => row.code))
+  if (reserved) used.add(reserved)
+  let code = base
+  for (let suffix = 2; used.has(code); suffix++) code = `${base}-${suffix}`
+  return code
 }
 
 /** Publish a version under an authorized guard; accepted Location references remain pinned.
@@ -187,6 +221,8 @@ export async function saveIdentityCatalogue(
   },
 ): Promise<IdentityCatalogueRecord | null> {
   const content = IdentityCatalogueContentSchema.parse(input.content)
+  if (input.kind === 'group' && !content.code)
+    content.code = await availableGroupCode(db, input.id, content)
   if (
     input.wikidataId &&
     (input.kind !== 'brand' || !/^Q[1-9]\d{0,15}$/.test(input.wikidataId))
@@ -201,6 +237,13 @@ export async function saveIdentityCatalogue(
   const newGroup = input.newGroup
     ? IdentityCatalogueContentSchema.parse({ i18n: input.newGroup.i18n, logo: null })
     : null
+  if (newGroup && input.newGroup)
+    newGroup.code = await availableGroupCode(
+      db,
+      input.newGroup.id,
+      newGroup,
+      input.kind === 'group' ? content.code : undefined,
+    )
   if (
     input.newGroup &&
     (content.groupId !== input.newGroup.id || input.id === input.newGroup.id)
@@ -209,6 +252,11 @@ export async function saveIdentityCatalogue(
   if (content.groupId && !newGroup) {
     const group = await readIdentityCatalogue(db, content.groupId)
     if (group?.kind !== 'group') throw new Error('CATALOGUE_GROUP_REQUIRED')
+    if (
+      group.isArchived &&
+      (await readIdentityCatalogue(db, input.id))?.groupId !== content.groupId
+    )
+      throw new Error('CATALOGUE_GROUP_REQUIRED')
   }
   // Reject cycles before writing; database triggers repeat this check atomically at publication.
   if (content.groupId) {
@@ -232,7 +280,7 @@ export async function saveIdentityCatalogue(
     : guard
   // Creating an inline group and linking its member is one guarded commit; failed saves leave no orphan.
   const groupGuard = input.newGroup
-    ? sql`(${codeGuard}) AND NOT EXISTS(SELECT 1 FROM identityCatalogue WHERE id=${input.newGroup.id})`
+    ? sql`(${codeGuard}) AND NOT EXISTS(SELECT 1 FROM identityCatalogue WHERE id=${input.newGroup.id}) AND NOT EXISTS(SELECT 1 FROM identityCatalogue c JOIN identityCatalogueRevisionContent r ON r.catalogueId=c.id AND r.version=c.version WHERE c.kind='group' AND json_extract(r.content,'$.code')=${newGroup!.code})`
     : codeGuard
   // Reserve the reviewed upstream identity in the same batch as the catalogue revision.
   const sourceGuard = input.wikidataId
