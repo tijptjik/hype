@@ -103,8 +103,12 @@ The package also contains the freeze tools.
 `package.py capture BASELINE SNAPSHOT OUTPUT` uses an aligned, pre-curation database
 with the current schema and the frozen dev backup. `media.py SNAPSHOT OUTPUT` reads the
 matching local R2 object indices and exact blobs, validates object sizes and checksums,
-and writes the media manifest. Regenerating the private release requires reviewing and
-pinning its new manifest hashes.
+and writes the media manifest.
+`production_baseline.py POST_LIFECYCLE_COPY NEW_REFERENCE` captures the production donor
+ancestry from a reviewed, independently enrolled copy. The replay checks production's
+existing source revisions, Feature revisions, change sets, crosswalks and binding
+history against the input copy. Regenerating the private release requires reviewing and
+pinning its new hashes.
 
 [Production cutover](../../../docs/operations/Preview-to-Production-Cutover.md) ·
 [Places and Features](../../../spec/breadline/proposal/01-places-features.md)

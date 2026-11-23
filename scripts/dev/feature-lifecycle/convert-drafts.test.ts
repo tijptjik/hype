@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
-import { mkdtempSync, readdirSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { featureRevisionContentFixture } from '../../../src/tests/fixtures/featureRevisionContent'
@@ -262,6 +262,13 @@ test('the managed planner detects current lifecycle storage and verifies its cle
       for (const column of columns)
         d.sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} TEXT`)
     const plan = await prepareRelease(path, join(root, 'release'), 'local:test')
+    expect(readFileSync(join(root, 'release', 'plan.json'), 'utf8')).toBe(
+      JSON.stringify(plan) + '\n',
+    )
+    const receipt = JSON.parse(
+      readFileSync(join(root, 'release', 'receipt.json'), 'utf8'),
+    )
+    expect(receipt.planHash).toBe(digest(plan))
     expect(plan.featureLifecycle).toBe('current')
     expect(plan.groups).toHaveLength(3)
     expect(plan.groups[1].label).toBe(retireRecorder)

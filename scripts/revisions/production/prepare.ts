@@ -1,7 +1,17 @@
 // SQLITE
 import { Database as SQLite } from 'bun:sqlite'
 // NODE
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  closeSync,
+  existsSync,
+  linkSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs'
+import { createHash, randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 // DATABASE
@@ -39,6 +49,49 @@ import {
 import type { Group, Plan, Statement } from './contract'
 
 type Domain = ReturnType<typeof openSqliteDomain>
+
+/**
+ * Write and hash the existing compact plan format in one pass, retaining at most one serialized group.
+ * @param directory Private preparation directory. @param plan Complete verified plan.
+ * @returns Release digest, excluding the trailing newline as in the remote contract.
+ */
+function persistPlan(directory: string, plan: Plan): string {
+  const pending = join(directory, '.plan-' + randomUUID())
+  const fd = openSync(pending, 'wx', 0o600)
+  const hash = createHash('sha256')
+  const append = (chunk: string) => {
+    writeFileSync(fd, chunk)
+    hash.update(chunk)
+  }
+  try {
+    try {
+      append('{')
+      let separator = ''
+      for (const [key, value] of Object.entries(plan)) {
+        if (value === undefined) continue
+        append(separator + JSON.stringify(key) + ':')
+        if (key === 'groups') {
+          append('[')
+          for (const [index, group] of plan.groups.entries()) {
+            if (index) append(',')
+            append(JSON.stringify(group))
+          }
+          append(']')
+        } else append(JSON.stringify(value))
+        separator = ','
+      }
+      append('}')
+      writeFileSync(fd, '\n')
+    } finally {
+      closeSync(fd)
+    }
+    // An interrupted write cannot expose a partial plan or replace an existing plan.
+    linkSync(pending, join(directory, 'plan.json'))
+    return hash.digest('hex')
+  } finally {
+    unlinkSync(pending)
+  }
+}
 
 /** Apply missing numbered migrations on the private rehearsal copy and capture D1 groups.
  * @param database Private SQLite snapshot. @param directory Private run artifacts.
@@ -447,15 +500,12 @@ export async function prepareRelease(
         }[]
       ).map(r => r.name),
     }
-    writeFileSync(join(directory, 'plan.json'), JSON.stringify(plan) + '\n', {
-      mode: 0o600,
-      flag: 'wx',
-    })
+    const planHash = persistPlan(directory, plan)
     writeFileSync(
       join(directory, 'receipt.json'),
       JSON.stringify(
         {
-          planHash: digest(plan),
+          planHash,
           target,
           features: enrollment.features,
           images: enrollment.images,
@@ -574,15 +624,12 @@ function prepareCurrentLifecycleRelease(
         }[]
       ).map(row => row.name),
     }
-    writeFileSync(join(directory, 'plan.json'), JSON.stringify(plan) + '\n', {
-      mode: 0o600,
-      flag: 'wx',
-    })
+    const planHash = persistPlan(directory, plan)
     writeFileSync(
       join(directory, 'receipt.json'),
       JSON.stringify(
         {
-          planHash: digest(plan),
+          planHash,
           target,
           convertedLegacyDrafts: groups.length,
           remoteWrites: false,
