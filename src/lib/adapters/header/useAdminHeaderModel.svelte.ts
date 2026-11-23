@@ -830,8 +830,8 @@ export function useAdminHeaderModel(
         (visibility.showFormActions ?? defaultVisibility.showFormActions)),
     showAvatar: visibility.showAvatar ?? defaultVisibility.showAvatar,
     showLayoutToggle:
-      isEmbeddedIndex ||
-      (visibility.showLayoutToggle ?? defaultVisibility.showLayoutToggle),
+      visibility.showLayoutToggle ??
+      (isEmbeddedIndex || defaultVisibility.showLayoutToggle),
     showControlBarToggle:
       isEmbeddedIndex ||
       (visibility.showControlBarToggle ?? defaultVisibility.showControlBarToggle),
@@ -1182,7 +1182,7 @@ export function useAdminHeaderModel(
       trailingContent: historyScopeContent,
       extraActions: isHistoryView
         ? historyToolbarActions
-        : isIndexFacet
+        : isIndexFacet && !headerCtrl.state.search?.indexView
           ? []
           : controlsAction
             ? customViewActions

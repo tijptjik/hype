@@ -71,7 +71,7 @@
         "svelte-fa": "^4.0.4",
         "svelte-file-dropzone": "^2.0.9",
         "svelte-gestures": "^5.2.2",
-        "svelte-maplibre-gl": "2.2.1",
+        "svelte-maplibre-gl": "https://pkg.pr.new/MIERUNE/svelte-maplibre-gl@8bc321dbf19877b1df24efca125779d04b83ee73",
         "svelte-portal": "^2.2.1",
         "svelte-range-slider-pips": "^4.1.1",
         "svelte-sonner": "^1.2.3",
@@ -2495,7 +2495,7 @@
 
     "svelte-gestures": ["svelte-gestures@5.2.2", "", {}, "sha512-Y+chXPaSx8OsPoFppUwPk8PJzgrZ7xoDJKXeiEc7JBqyKKzXer9hlf8F9O34eFuAWB4/WQEvccACvyBplESL7A=="],
 
-    "svelte-maplibre-gl": ["svelte-maplibre-gl@2.2.1", "", { "peerDependencies": { "maplibre-gl": "^5.19.0 || ^6.0.0", "svelte": ">=5.0.0" } }, "sha512-HCJBs5WhKtQ4aba4AhU9sE/XE0X7NgVNRQG27qUEdsXeUGdE6ZPQoaQSyKE8WzbGR8+GGfyGFajz1+1le51TCQ=="],
+    "svelte-maplibre-gl": ["svelte-maplibre-gl@https://pkg.pr.new/MIERUNE/svelte-maplibre-gl@8bc321dbf19877b1df24efca125779d04b83ee73", { "peerDependencies": { "maplibre-gl": "^5.19.0 || ^6.0.0", "svelte": ">=5.0.0" } }, "sha512-XclMIC94vPD0ocCG5c0y32zl74uRixnQZoUzA6LrImmDxJjL+HcXfVl3spkPE5FGTGmKFG1kMhuTLZ2sFA2T4Q=="],
 
     "svelte-portal": ["svelte-portal@2.2.1", "", {}, "sha512-uF7is5sM4aq5iN7QF/67XLnTUvQCf2iiG/B1BHTqLwYVY1dsVmTeXZ/LeEyU6dLjApOQdbEG9lkqHzxiQtOLEQ=="],
 
