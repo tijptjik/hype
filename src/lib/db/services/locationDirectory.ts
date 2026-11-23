@@ -42,6 +42,8 @@ import type { LocationResource } from '#lib/locations/resource.js'
 export async function listLocationResources(
   db: Database,
   input: {
+    /** Trusted bounded identity cohort, passed with one JSON binding. */
+    ids?: string[]
     publication?: 'all' | 'published' | 'draft'
     parentOfParts?: boolean
     sortBy?: LocationSortKey
@@ -102,6 +104,9 @@ export async function listLocationResources(
   const categoryValues = JSON.stringify(categoryNode ? categoryKeys(categoryNode) : [])
   const canonicalDraft = sql`${locationTable.state}='unresolved' AND ${locationTable.ssId} IS NULL AND ${locationTable.ownerOrganisationId} IS NULL`
   const match = and(
+    input.ids
+      ? sql`${locationTable.id} IN (SELECT value FROM json_each(${JSON.stringify(input.ids)}))`
+      : undefined,
     input.excludeCanonicalDrafts ? sql`NOT (${canonicalDraft})` : undefined,
     input.publication === 'draft'
       ? canonicalDraft

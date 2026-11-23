@@ -1,7 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { onDestroy, untrack } from 'svelte'
-import { replaceState } from '$app/navigation'
+import { goto, replaceState } from '$app/navigation'
 import { page } from '$app/state'
 // CONTEXT
 import { usePanelResources } from '#lib/context/panel-resources.svelte.js'
@@ -20,6 +20,7 @@ import { Button } from '#lib/bits/core/index.js'
 import { getLocaleKey, m } from '#lib/i18n.js'
 // ICONS
 import MapPin from 'virtual:icons/proicons/location'
+import SaanSeoiMarkIcon from '#lib/bits/patterns/cards/resourceCard/components/SaanSeoiMarkIcon.svelte'
 // DOMAIN
 import { locationSortKey, type LocationSortKey } from '#lib/locations/sorting.js'
 import {
@@ -279,6 +280,19 @@ $effect(() => {
     showNew: false,
     showLayoutToggle: false,
   })
+  header.setTitleMenuItems(
+    admin.view.isSuperAdmin()
+      ? [
+          {
+            label: 'Match locations',
+            icon: SaanSeoiMarkIcon,
+            onSelect: () => {
+              void goto('/admin/locations/match')
+            },
+          },
+        ]
+      : [],
+  )
   header.setSearch({
     query,
     placeholder: m.location_directory_search(),
@@ -377,6 +391,7 @@ $effect(() => {
   header.clearFooter()
 })
 onDestroy(() => {
+  header.setTitleMenuItems([])
   version++
   header.setSearch(null)
 })

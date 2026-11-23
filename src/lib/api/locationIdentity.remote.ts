@@ -78,6 +78,7 @@ async function requireIdentityManager(
   if (!scope) error(404, 'LOCATION_NOT_FOUND')
   if (scope.ownerOrganisationId === null) {
     if (
+      ctx.user.superAdmin !== true &&
       !canManageSharedLocationIdentity({
         isAnonymous: ctx.user.isAnonymous,
         userRoles: ctx.userRoles,
