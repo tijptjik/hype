@@ -57,7 +57,11 @@ const adminCtx = getAdminCtx()
 let activeSection = $state<string | null>(null)
 let filterCarouselIndex = $state(0)
 
-const FILTER_CAROUSEL_VISIBLE_COUNT = 6
+let controlBarWidth = $state(0)
+// Reserve space for the filter anchor, carousel arrows, sort and result controls.
+const filterPageSize = $derived(
+  Math.max(1, Math.min(6, Math.floor((controlBarWidth - 380) / 260))),
+)
 
 const FILTER_SECTION_BUTTON_CLASSES = cx(
   'relative h-10 min-w-0 rounded-md px-2.5 text-sm text-base-content/70',
@@ -116,19 +120,13 @@ function resetFilters(): void {
 }
 
 function pageFilterCarousel(direction: 'prev' | 'next', totalItems: number): void {
-  const maxIndex = Math.max(0, totalItems - FILTER_CAROUSEL_VISIBLE_COUNT)
+  const maxIndex = Math.max(0, totalItems - filterPageSize)
   if (direction === 'prev') {
-    filterCarouselIndex = Math.max(
-      0,
-      filterCarouselIndex - FILTER_CAROUSEL_VISIBLE_COUNT,
-    )
+    filterCarouselIndex = Math.max(0, filterCarouselIndex - filterPageSize)
     return
   }
 
-  filterCarouselIndex = Math.min(
-    maxIndex,
-    filterCarouselIndex + FILTER_CAROUSEL_VISIBLE_COUNT,
-  )
+  filterCarouselIndex = Math.min(maxIndex, filterCarouselIndex + filterPageSize)
 }
 
 // ---
@@ -141,6 +139,7 @@ function pageFilterCarousel(direction: 'prev' | 'next', totalItems: number): voi
 
 $effect(() => {
   activeSection
+  filterPageSize
   filterCarouselIndex = 0
 })
 
@@ -148,191 +147,192 @@ $effect(() => {
 </script>
 
 {#if isControlBarVisible}
-  <ResourceControlBarPrimitive.Root
-    filterLabel={singleSectionConfig
-      ? m.filters__filter_by()
-      : effectiveSectionConfig
-        ? effectiveSectionConfig.title
-        : m.filters__filter_by()}
-    filterIcon={singleSectionConfig
-      ? FunnelIcon
-      : effectiveSectionConfig
-        ? effectiveSectionConfig.icon
-        : FunnelIcon}
-    hasActiveSection={Boolean(effectiveSectionConfig)}
-    disableMenuToggle={Boolean(singleSectionConfig)}
-    showBulkEdit={Boolean(bulkEdit)}
-    showSort={Boolean(sortables)}
-    {onCreate}
-    {count}
-    {countLoading}
-    resetDisabled={totalFilterCount === 0}
-    onReset={resetFilters}
-  >
-    {#snippet bulkContent(args: {
-      isBulkOpen: boolean
-      handleBulkOpenChange: (isOpen: boolean) => Promise<void>
-    })}
-      {#if bulkEdit}
-        <ResourceBulkEditControl
-          config={bulkEdit}
-          isOpen={args.isBulkOpen}
-          onOpenChange={args.handleBulkOpenChange}
-        />
-      {/if}
-    {/snippet}
+  <div class="w-full" bind:clientWidth={controlBarWidth}>
+    <ResourceControlBarPrimitive.Root
+      filterLabel={singleSectionConfig
+        ? m.filters__filter_by()
+        : effectiveSectionConfig
+          ? effectiveSectionConfig.title
+          : m.filters__filter_by()}
+      filterIcon={singleSectionConfig
+        ? FunnelIcon
+        : effectiveSectionConfig
+          ? effectiveSectionConfig.icon
+          : FunnelIcon}
+      hasActiveSection={Boolean(effectiveSectionConfig)}
+      disableMenuToggle={Boolean(singleSectionConfig)}
+      showBulkEdit={Boolean(bulkEdit)}
+      showSort={Boolean(sortables)}
+      {onCreate}
+      {count}
+      {countLoading}
+      resetDisabled={totalFilterCount === 0}
+      onReset={resetFilters}
+    >
+      {#snippet bulkContent(args: {
+        isBulkOpen: boolean
+        handleBulkOpenChange: (isOpen: boolean) => Promise<void>
+      })}
+        {#if bulkEdit}
+          <ResourceBulkEditControl
+            config={bulkEdit}
+            isOpen={args.isBulkOpen}
+            onOpenChange={args.handleBulkOpenChange}
+          />
+        {/if}
+      {/snippet}
 
-    {#snippet sortContent(args: {
-      isSortOpen: boolean
-      handleSortOpenChange: (isOpen: boolean) => Promise<void>
-    })}
-      {#if sortables}
-        <ResourceSortControl
-          resource={filters.resource as NavigableResource}
-          {sortables}
-          isOpen={args.isSortOpen}
-          onOpenChange={args.handleSortOpenChange}
-        />
-      {/if}
-    {/snippet}
+      {#snippet sortContent(args: {
+        isSortOpen: boolean
+        handleSortOpenChange: (isOpen: boolean) => Promise<void>
+      })}
+        {#if sortables}
+          <ResourceSortControl
+            resource={filters.resource as NavigableResource}
+            {sortables}
+            isOpen={args.isSortOpen}
+            onOpenChange={args.handleSortOpenChange}
+          />
+        {/if}
+      {/snippet}
 
-    {#snippet filterMenuContent({ notifyLayoutChange, closeMenu })}
-      {#if !singleSectionConfig}
-        {#each filters.sections as section, idx (section.key)}
-          {#if activeSection !== section.key}
-            {@const SectionIcon = section.icon}
-            {@const sectionCount = getFilterSectionCount(
+      {#snippet filterMenuContent({ notifyLayoutChange, closeMenu })}
+        {#if !singleSectionConfig}
+          {#each filters.sections as section, idx (section.key)}
+            {#if activeSection !== section.key}
+              {@const SectionIcon = section.icon}
+              {@const sectionCount = getFilterSectionCount(
+                adminCtx,
+                filters,
+                section,
+                isSuperAdmin,
+              )}
+              <Button
+                text={section.title}
+                iconComponent={SectionIcon}
+                style="transparent"
+                size="sm"
+                transition={fade}
+                transitionOpts={{ duration: 220, delay: 50 * idx }}
+                iconClasses="h-5 w-5"
+                class={FILTER_SECTION_BUTTON_CLASSES}
+                attrs={{
+                  'data-has-indicator': sectionCount > 0 ? 'true' : 'false',
+                }}
+                onClick={() => {
+                  selectSection(section.key)
+                  closeMenu()
+                  notifyLayoutChange()
+                }}
+              />
+            {/if}
+          {/each}
+        {/if}
+      {/snippet}
+
+      {#snippet filterActiveContent()}
+        {#if effectiveSectionConfig}
+          {#key effectiveSectionConfig.key}
+            {@const activeItems = getFilterRenderItems(
               adminCtx,
               filters,
-              section,
+              effectiveSectionConfig,
               isSuperAdmin,
             )}
-            <Button
-              text={section.title}
-              iconComponent={SectionIcon}
-              style="transparent"
-              size="sm"
-              transition={fade}
-              transitionOpts={{ duration: 220, delay: 50 * idx }}
-              iconClasses="h-5 w-5"
-              class={FILTER_SECTION_BUTTON_CLASSES}
-              attrs={{
-                'data-has-indicator': sectionCount > 0 ? 'true' : 'false',
-              }}
-              onClick={() => {
-                selectSection(section.key)
-                closeMenu()
-                notifyLayoutChange()
-              }}
-            />
-          {/if}
-        {/each}
-      {/if}
-    {/snippet}
+            {@const isCarouselActive = activeItems.length > filterPageSize}
+            {@const visibleItems = isCarouselActive
+              ? activeItems.slice(
+                  filterCarouselIndex,
+                  filterCarouselIndex + filterPageSize,
+                )
+              : activeItems}
+            {@const activeSectionHasTranslations =
+              !('type' in effectiveSectionConfig) &&
+              effectiveSectionConfig.filters.some(
+                filter => filter.type === 'translation',
+              )}
 
-    {#snippet filterActiveContent()}
-      {#if effectiveSectionConfig}
-        {#key effectiveSectionConfig.key}
-          {@const activeItems = getFilterRenderItems(
-            adminCtx,
-            filters,
-            effectiveSectionConfig,
-            isSuperAdmin,
-          )}
-          {@const isCarouselActive = activeItems.length > FILTER_CAROUSEL_VISIBLE_COUNT}
-          {@const visibleItems = isCarouselActive
-            ? activeItems.slice(
-                filterCarouselIndex,
-                filterCarouselIndex + FILTER_CAROUSEL_VISIBLE_COUNT,
-              )
-            : activeItems}
-          {@const activeSectionHasTranslations =
-            !('type' in effectiveSectionConfig) &&
-            effectiveSectionConfig.filters.some(
-              filter => filter.type === 'translation',
-            )}
+            <div class="flex h-16 flex-row items-center justify-center gap-4">
+              {#if activeSectionHasTranslations}
+                <ResourceControlBarPrimitive.LocaleToggleGroup
+                  items={getResourceLocaleToggleItems(adminCtx, filters.resource)}
+                />
+              {/if}
 
-          <div class="flex h-16 flex-row items-center justify-center gap-4">
-            {#if activeSectionHasTranslations}
-              <ResourceControlBarPrimitive.LocaleToggleGroup
-                items={getResourceLocaleToggleItems(adminCtx, filters.resource)}
-              />
-            {/if}
+              {#if isCarouselActive}
+                <Button
+                  iconComponent={ChevronLeftIcon}
+                  hideLabel={true}
+                  text="Previous"
+                  size="sm"
+                  style="ghost"
+                  color="light"
+                  class="bits-resource-filter-bar__carousel-nav"
+                  disabled={filterCarouselIndex === 0}
+                  onClick={() => pageFilterCarousel('prev', activeItems.length)}
+                />
+              {/if}
 
-            {#if isCarouselActive}
-              <Button
-                iconComponent={ChevronLeftIcon}
-                hideLabel={true}
-                text="Previous"
-                size="sm"
-                style="ghost"
-                color="light"
-                class="bits-resource-filter-bar__carousel-nav"
-                disabled={filterCarouselIndex === 0}
-                onClick={() => pageFilterCarousel('prev', activeItems.length)}
-              />
-            {/if}
+              <div
+                class="flex min-w-0 flex-row items-center justify-center gap-4 overflow-hidden"
+              >
+                {#each visibleItems as item, idx (item.id)}
+                  {#if item.type === 'select' && item.options && item.onSelectChange}
+                    <ResourceControlBarPrimitive.FilterSelect
+                      label={item.label}
+                      tooltip={item.tooltip}
+                      value={item.selectValue}
+                      placeholder={item.placeholder}
+                      allowDeselect={item.allowDeselect ?? true}
+                      items={item.options}
+                      idx={filterCarouselIndex + idx}
+                      transformOffset={item.transformOffset ?? 12}
+                      onValueChange={item.onSelectChange}
+                    />
+                  {:else}
+                    <ResourceControlBarPrimitive.FilterToggle
+                      label={item.label}
+                      tooltip={item.tooltip}
+                      currentValue={item.currentValue}
+                      idx={filterCarouselIndex + idx}
+                      transformOffset={item.transformOffset ?? 12}
+                      falseLabel={item.falseLabel ??
+                        getFeatureTaskLabel(
+                          item,
+                          false,
+                          !isPropertySection && item.type === 'translation',
+                        )}
+                      trueLabel={item.trueLabel ??
+                        getFeatureTaskLabel(
+                          item,
+                          true,
+                          !isPropertySection && item.type === 'translation',
+                        )}
+                      onToggleFalse={item.onToggleFalse}
+                      onToggleTrue={item.onToggleTrue}
+                      onToggleChange={item.onToggleChange}
+                    />
+                  {/if}
+                {/each}
+              </div>
 
-            <div
-              class="flex min-w-0 flex-row items-center justify-center gap-4 overflow-hidden"
-            >
-              {#each visibleItems as item, idx (item.id)}
-                {#if item.type === 'select' && item.options && item.onSelectChange}
-                  <ResourceControlBarPrimitive.FilterSelect
-                    label={item.label}
-                    tooltip={item.tooltip}
-                    value={item.selectValue}
-                    placeholder={item.placeholder}
-                    allowDeselect={item.allowDeselect ?? true}
-                    items={item.options}
-                    idx={filterCarouselIndex + idx}
-                    transformOffset={item.transformOffset ?? 12}
-                    onValueChange={item.onSelectChange}
-                  />
-                {:else}
-                  <ResourceControlBarPrimitive.FilterToggle
-                    label={item.label}
-                    tooltip={item.tooltip}
-                    currentValue={item.currentValue}
-                    idx={filterCarouselIndex + idx}
-                    transformOffset={item.transformOffset ?? 12}
-                    falseLabel={item.falseLabel ??
-                      getFeatureTaskLabel(
-                        item,
-                        false,
-                        !isPropertySection && item.type === 'translation',
-                      )}
-                    trueLabel={item.trueLabel ??
-                      getFeatureTaskLabel(
-                        item,
-                        true,
-                        !isPropertySection && item.type === 'translation',
-                      )}
-                    onToggleFalse={item.onToggleFalse}
-                    onToggleTrue={item.onToggleTrue}
-                    onToggleChange={item.onToggleChange}
-                  />
-                {/if}
-              {/each}
+              {#if isCarouselActive}
+                <Button
+                  iconComponent={ChevronRightIcon}
+                  hideLabel={true}
+                  text="Next"
+                  size="sm"
+                  style="ghost"
+                  color="light"
+                  class="bits-resource-filter-bar__carousel-nav"
+                  disabled={filterCarouselIndex + filterPageSize >= activeItems.length}
+                  onClick={() => pageFilterCarousel('next', activeItems.length)}
+                />
+              {/if}
             </div>
-
-            {#if isCarouselActive}
-              <Button
-                iconComponent={ChevronRightIcon}
-                hideLabel={true}
-                text="Next"
-                size="sm"
-                style="ghost"
-                color="light"
-                class="bits-resource-filter-bar__carousel-nav"
-                disabled={filterCarouselIndex + FILTER_CAROUSEL_VISIBLE_COUNT >=
-                  activeItems.length}
-                onClick={() => pageFilterCarousel('next', activeItems.length)}
-              />
-            {/if}
-          </div>
-        {/key}
-      {/if}
-    {/snippet}
-  </ResourceControlBarPrimitive.Root>
+          {/key}
+        {/if}
+      {/snippet}
+    </ResourceControlBarPrimitive.Root>
+  </div>
 {/if}
