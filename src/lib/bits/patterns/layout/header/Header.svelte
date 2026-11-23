@@ -193,11 +193,13 @@ const rootClass = $derived(
             </div>
           {/if}
           <div
-            class="grid shrink-0 items-center {shareAction
-              ? 'w-[408px]'
-              : showFilter || (reserveFormActionWidth && showButtonText)
-                ? 'w-[min(408px,calc(100vw-48px))] min-w-0'
-                : ''}"
+            class="grid shrink-0 items-center {viewActions.content?.component
+              ? ''
+              : shareAction
+                ? 'w-[408px]'
+                : showFilter || (reserveFormActionWidth && showButtonText)
+                  ? 'w-[min(408px,calc(100vw-48px))] min-w-0'
+                  : ''}"
           >
             {#if showFormActions || (reserveFormActionWidth && showButtonText)}
               <div
