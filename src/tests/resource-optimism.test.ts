@@ -42,6 +42,31 @@ const row = (id: string) => ({
 })
 
 describe('native collection optimistic projections', () => {
+  it('can refresh a form without sending duplicate optimistic overrides', async () => {
+    const refresh = {} as never
+    const settle = vi.fn()
+    const config = createResourceFormConfig({
+      formEl: undefined,
+      key: 'project',
+      schema: {} as never,
+      data: {},
+      submitUpdates: async () => [refresh],
+      adminCtx: {
+        view: { resources: { beginMutation: () => ({ updates: [{}, {}], settle }) } },
+      } as never,
+      headerCtrl: {} as never,
+      resourceType: 'project' as never,
+      getEntity: () => null,
+      refreshResource: async () => {},
+    })
+    const updates = await config.onsubmitupdates({ data: {} })
+    expect([...updates!]).toEqual([refresh])
+    const optimistic =
+      updates as import('#lib/context/featureQuery.types.js').OptimisticQueryUpdates
+    optimistic.settle?.(true)
+    expect(settle).toHaveBeenCalledWith(true)
+  })
+
   it('overrides a shared project query once even when independent lists retain distinct proxies', async () => {
     const cache = new CacheCtx(resourceProviders)
     const first = cache.createList('project')

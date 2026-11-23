@@ -2854,7 +2854,7 @@ async function handleFeatureStateToggle(
       id: current.id,
       state: nextState,
       meta: { isAdminRequest: true },
-    }).updates(...mutation.updates, detail)
+    }).updates(detail)
     mutation.settle(true)
     if (!isCurrentAction()) return
     // The requested native update includes publication image policy; avoid a second read.

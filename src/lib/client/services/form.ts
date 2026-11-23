@@ -766,7 +766,9 @@ export function createResourceFormConfig<Input>({
         resourceType,
         ctx.data as import('#lib/context/featureQuery.types.js').ResourceOptimisticInput,
       )
-      return Object.assign([...updates, ...mutation.updates], {
+      // Cache projections may contain multiple handles for one native query. Refresh
+      // explicit queries after the write while retained records settle normally.
+      return Object.assign([...updates], {
         settle: mutation.settle,
       })
     },

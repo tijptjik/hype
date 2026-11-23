@@ -1317,7 +1317,6 @@ export class ImageCtx {
         data,
         meta: { isAdminRequest: true },
       }).updates(
-        ...mutation.updates,
         getImagesForContext({
           ctxType: ctx.ctxType,
           ctxId: ctx.ctxId,

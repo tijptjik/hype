@@ -2376,8 +2376,7 @@ async function handleProjectStateToggle({
       ...(field === 'isPublished' ? { publishChildren } : {}),
       meta: { isAdminRequest: true },
     }).updates(
-      // The cache owns optimistic overrides; these handles only request refreshes.
-      ...mutation.updates,
+      // Refresh the explicit queries without duplicating cached query overrides.
       getProject({
         ref: mutationRef,
         refKey: 'code',

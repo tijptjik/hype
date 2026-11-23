@@ -1118,8 +1118,7 @@ async function handleLayerStateToggle({
       ...(field === 'isPublished' ? { publishChildren } : {}),
       meta: { isAdminRequest: true },
     }).updates(
-      // The cache owns optimistic overrides; these handles only request refreshes.
-      ...mutation.updates,
+      // Refresh the explicit queries without duplicating cached query overrides.
       getLayer({
         ref: mutationRef,
         refKey: 'id',
