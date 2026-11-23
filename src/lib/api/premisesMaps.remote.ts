@@ -1,5 +1,5 @@
 // SVELTE
-import { error } from '@sveltejs/kit'
+import { error, isHttpError } from '@sveltejs/kit'
 // VALIDATION
 import { z } from 'zod'
 // DRIZZLE
@@ -90,14 +90,23 @@ export const savePremisesMapDraft = guardedCommand(
   }),
   async (input, ctx) => {
     authorize(ctx)
-    return saveMapConnectionCurations(
-      ctx.db,
-      premisesMapBucket(ctx.event.locals.platform),
-      {
-        ...input,
-        actorId: ctx.user.id,
-      },
-    )
+    try {
+      return await saveMapConnectionCurations(
+        ctx.db,
+        premisesMapBucket(ctx.event.locals.platform),
+        { ...input, actorId: ctx.user.id },
+      )
+    } catch (cause) {
+      if (isHttpError(cause)) throw cause
+      if (cause instanceof Error && cause.message === 'MAP_CONFLICT')
+        error(409, 'MAP_CONFLICT')
+      console.error('Map connection save failed', {
+        mapId: input.id,
+        expectedVersion: input.expectedVersion,
+        cause,
+      })
+      throw cause
+    }
   },
 )
 /** Publish only the exact reviewed draft. @param input Draft hash and both version fences. @returns New publication number. */

@@ -1,4 +1,6 @@
 <script lang="ts">
+// DOMAIN
+import { loadNetworkAnnotations } from '#lib/indoor/networkAnnotations.js'
 // SVELTE
 import { onDestroy, untrack } from 'svelte'
 import { page } from '$app/state'
@@ -109,13 +111,33 @@ async function load(): Promise<void> {
   connectionFloors = ''
   const query = getPremisesMapDraft({ id: selected })
   await query.refresh()
-  loaded = await query
+  const next = await query
+  if (next.bundle) await loadNetworkAnnotations(next.bundle.data)
+  loaded = next
   connections = structuredClone(loaded.bundle?.data.connections ?? [])
   inspectedVersion = null
   publication = null
   correctionLevel = ''
   correctionValue = ''
   correctionReason = ''
+}
+/** Explain remote error envelopes without losing the user's unsaved draft.
+ * @param cause Remote failure. @returns Actionable public message.
+ */
+function mapEditorError(cause: unknown): string {
+  const failure = cause as {
+    message?: string
+    body?: { message?: string }
+    status?: number
+  } | null
+  const detail = failure?.body?.message ?? failure?.message
+  if (detail === 'MAP_CONFLICT' || failure?.status === 409)
+    return 'This map draft changed since you opened it. Your edits are still here; open another tab to review the latest draft before retrying.'
+  if (detail === 'INSUFFICIENT_ROLE' || failure?.status === 403)
+    return 'Saving shared maps requires a super-admin account. Your edits are still here.'
+  return detail && detail !== 'Internal Error'
+    ? detail
+    : 'The server could not save this map. Your edits are still here. Please retry.'
 }
 /** Handle an editor operation and retain actionable server errors. @param action Authorized remote operation. @returns Completion. */
 async function run(action: () => Promise<void>): Promise<void> {
@@ -124,7 +146,7 @@ async function run(action: () => Promise<void>): Promise<void> {
   try {
     await action()
   } catch (error) {
-    message = error instanceof Error ? error.message : 'Map update failed'
+    message = mapEditorError(error)
   } finally {
     busy = false
   }
@@ -302,7 +324,9 @@ $effect(() => {
                             ) as MapConnection}
                             <p>
                               {pair.category}
-                              · {pair.fromLevel} → {pair.toLevel} ·
+                              ·
+                              {pair.fromExterior ? 'Outside / street' : pair.fromLevel}
+                              → {pair.toExterior ? 'Outside / street' : pair.toLevel} ·
                               {pair.enabled ? 'Enabled' : 'Disabled'}
                             </p>
                             <p class="text-sm">
@@ -476,11 +500,31 @@ $effect(() => {
               onClick={() =>
                 run(async () => {
                   if (!loaded?.bundle) return
-                  await savePremisesMapDraft({
+                  const input = {
                     id: selected,
                     expectedVersion: loaded.map.draftVersion,
                     connections: $state.snapshot(connections),
-                  })
+                  }
+                  try {
+                    await savePremisesMapDraft(input)
+                  } catch (cause) {
+                    const failure = cause as { status?: number }
+                    if (failure?.status !== 409) throw cause
+                    const latestQuery = getPremisesMapDraft({ id: selected })
+                    await latestQuery.refresh()
+                    const latest = await latestQuery
+                    // Retry only when nobody changed the connection baseline; the service preserves current labels.
+                    if (
+                      !latest.bundle ||
+                      JSON.stringify(latest.bundle.data.connections ?? []) !==
+                        JSON.stringify(loaded.bundle.data.connections ?? [])
+                    )
+                      throw cause
+                    await savePremisesMapDraft({
+                      ...input,
+                      expectedVersion: latest.map.draftVersion,
+                    })
+                  }
                   await load()
                   message = 'Draft saved. The published map is unchanged.'
                 })}

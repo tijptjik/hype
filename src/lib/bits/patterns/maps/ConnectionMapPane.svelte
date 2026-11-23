@@ -22,6 +22,8 @@ let {
   disabled,
   state: facilityState,
   onChoose,
+  exteriorPoint,
+  onExteriorChoose,
   onPan,
   onZoom,
 }: {
@@ -34,6 +36,8 @@ let {
   side: string
   disabled: boolean
   state: (unit: IndoorFeature) => string
+  exteriorPoint?: [number, number]
+  onExteriorChoose?: (point: [number, number]) => void
   onChoose: (unit: IndoorFeature, entrance?: EntranceSide) => void
   onPan: (x: number, y: number) => void
   onZoom: (factor: number, point?: [number, number]) => void
@@ -124,6 +128,12 @@ function colour(status: string): string {
     aria-label={`${side} floor plan`}
     role="application"
     tabindex="0"
+    onclick={event => {
+      if (!disabled && !suppressClick && onExteriorChoose) {
+        const xy = point(svg, event.clientX, event.clientY)
+        onExteriorChoose(projection.unproject(xy, floor))
+      }
+    }}
     onpointerdown={event => {
       if (event.button !== 0) return
       suppressClick = false
@@ -165,6 +175,15 @@ function colour(status: string): string {
     }}
     onkeydown={event => {
       if (event.target !== event.currentTarget) return
+      if (
+        onExteriorChoose &&
+        !disabled &&
+        (event.key === 'Enter' || event.key === ' ')
+      ) {
+        event.preventDefault()
+        const [x, y, size] = viewBox.split(' ').map(Number)
+        onExteriorChoose(projection.unproject([x + size / 2, y + size / 2], floor))
+      }
       const step = Number(viewBox.split(' ')[2]) / 10
       if (
         ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '+', '=', '-'].includes(
@@ -211,7 +230,8 @@ function colour(status: string): string {
     {/each}
     {#each units as unit}
       {@const category = value(unit.properties, 'unit_category')}
-      {#if ['stairs', 'steps', 'escalator', 'elevator', 'ramp'].includes(category)}
+      {#if !onExteriorChoose &&
+        ['stairs', 'steps', 'escalator', 'elevator', 'ramp'].includes(category)}
         {@const status = facilityState(unit)}
         {@const anchor = projection.project(connectionAnchor(unit), floor)}
         <!-- biome-ignore lint/a11y/useSemanticElements: SVG facilities need keyboard-operable geometry rather than HTML buttons. -->
@@ -257,6 +277,19 @@ function colour(status: string): string {
         </g>
       {/if}
     {/each}
+    {#if exteriorPoint}
+      {@const target = projection.project(exteriorPoint, floor)}
+      <circle
+        cx={target[0]}
+        cy={target[1]}
+        r={iconSize / 3}
+        fill="#0891b2"
+        stroke="white"
+        stroke-width="2"
+        vector-effect="non-scaling-stroke"
+        data-exterior-point
+      />
+    {/if}
     {#if selectedUnit}
       {#each entranceEdges(selectedUnit) as edge}
         {@const start = projection.project(edge.start, floor)}

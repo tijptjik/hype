@@ -39,6 +39,8 @@ export function isCirculation(category: string): boolean {
   )
 }
 export type Connection = {
+  fromExterior?: import('./releases').ExteriorEndpoint
+  toExterior?: import('./releases').ExteriorEndpoint
   from: string
   to: string
   fromLevel: string

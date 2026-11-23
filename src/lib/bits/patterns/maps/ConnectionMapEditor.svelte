@@ -8,11 +8,17 @@ import { SelectField } from '#lib/bits/custom/form/index.js'
 import ConnectionMapPane from './ConnectionMapPane.svelte'
 import ConnectionFacilityIcon from './ConnectionFacilityIcon.svelte'
 // DOMAIN
+import {
+  networkPairDirection,
+  networkConnections,
+  unmatchedNetworkConnectors,
+} from '#lib/indoor/networkAnnotations.js'
 import { stationProjection } from '#lib/indoor/scene.js'
 import {
   connectionAnchor,
   suggestConnectionFloor,
   createEditorConnection,
+  createExteriorConnection,
   nextConnectionDirection,
   setConnectionDirection,
   type EditorDirection,
@@ -20,7 +26,11 @@ import {
 import { value } from '#lib/indoor/model.js'
 // TYPES
 import type { IndoorData, IndoorFeature } from '#lib/indoor/model.js'
-import type { EntranceSide, MapConnection } from '#lib/indoor/releases.js'
+import type {
+  ExteriorEndpoint,
+  EntranceSide,
+  MapConnection,
+} from '#lib/indoor/releases.js'
 
 let {
   data,
@@ -37,6 +47,8 @@ let leftFloor = $state('')
 let rightFloor = $state('')
 let leftId = $state('')
 let rightId = $state('')
+let pendingExterior = $state<ExteriorEndpoint | null>(null)
+const outside = $derived(rightFloor === '@exterior')
 let pendingDirection = $state<EditorDirection>('both')
 let pendingLeftEntrance = $state<EntranceSide | null>(null)
 let pendingRightEntrance = $state<EntranceSide | null>(null)
@@ -53,6 +65,10 @@ const facilities = $derived(
     ),
   ),
 )
+const unmatched = $derived(unmatchedNetworkConnectors(data))
+const unmatchedIndex = $derived(
+  unmatched.findIndex(unit => value(unit.properties, 'unit_id') === leftId),
+)
 const left = $derived(
   facilities.find(unit => value(unit.properties, 'unit_id') === leftId),
 )
@@ -68,19 +84,29 @@ const pairIndex = $derived(
   ),
 )
 const pair = $derived(pairIndex >= 0 ? connections[pairIndex] : undefined)
-const compatible = $derived(
-  !!left &&
-    !!right &&
-    leftFloor !== rightFloor &&
-    left.properties.unit_category === right.properties.unit_category,
+
+const sourceConnections = $derived(networkConnections({ ...data, connections }))
+const sourcePair = $derived(
+  sourceConnections.find(
+    c =>
+      (c.from === leftId && c.to === rightId) ||
+      (c.to === leftId && c.from === rightId),
+  ),
 )
-const related = $derived(connections.filter(c => c.from === leftId || c.to === leftId))
+const visibleConnections = $derived([...connections, ...sourceConnections])
+const related = $derived(
+  visibleConnections.filter(c => c.from === leftId || c.to === leftId),
+)
 const floorItems = $derived(
   levels.map(level => ({
     value: value(level.properties, 'level_id'),
     label: value(level.properties, 'level_name_en'),
   })),
 )
+const sourceDirection = $derived(
+  left && right && !outside ? networkPairDirection(data, left, right) : undefined,
+)
+const exterior = $derived(pair?.fromExterior ?? pair?.toExterior ?? pendingExterior)
 const direction = $derived<EditorDirection>(
   pair
     ? pair.direction === null
@@ -111,10 +137,24 @@ const rightEntrance = $derived(
     : pendingRightEntrance,
 )
 
+const compatible = $derived(
+  !!left &&
+    (outside
+      ? !!leftEntrance &&
+        (!!pendingExterior || !!pair?.fromExterior || !!pair?.toExterior)
+      : !!right &&
+        leftFloor !== rightFloor &&
+        left.properties.unit_category === right.properties.unit_category),
+)
+
 // Report the visible floor context for the browser title without coupling camera state to it.
 $effect(() => {
   const names = [leftFloor, rightFloor]
-    .map(id => floorItems.find(item => item.value === id)?.label)
+    .map(id =>
+      id === '@exterior'
+        ? 'Outside / street'
+        : floorItems.find(item => item.value === id)?.label,
+    )
     .filter(Boolean)
   onFloorsChange?.(names.join(' ↔ '))
 })
@@ -153,6 +193,23 @@ function fit(): void {
     size,
   }
 }
+/** Focus a queued source mismatch while preserving both panes' shared XY camera.
+ * @param index Position in the unmatched queue. @returns Nothing; no connection is created.
+ */
+function reviewUnmatched(index: number): void {
+  const unit = unmatched[index]
+  if (!unit || disabled) return
+  leftFloor = value(unit.properties, 'level_id')
+  fit()
+  choose('left', unit)
+  const box = projection.box([unit])
+  const size = Math.max(Math.max(box[2], box[3], 1) * 3, fittedSize / 6)
+  camera = {
+    x: box[0] + box[2] / 2 - size / 2,
+    y: box[1] + box[3] / 2 - size / 2,
+    size,
+  }
+}
 /** Suggest a destination without selecting or connecting its polygons. @param source Optional source facility. @returns Nothing. */
 function suggest(source?: IndoorFeature): void {
   const point = source
@@ -161,11 +218,18 @@ function suggest(source?: IndoorFeature): void {
         [camera.x + camera.size / 2, camera.y + camera.size / 2],
         leftFloor,
       )
-  rightFloor = suggestConnectionFloor(data, leftFloor, point, source, connections)
+  rightFloor = suggestConnectionFloor(
+    data,
+    leftFloor,
+    point,
+    source,
+    visibleConnections,
+  )
   suggestion = rightFloor
     ? 'Suggested floor · choose another if needed.'
     : 'No overlapping floor found at this position. Choose the right floor manually.'
   rightId = ''
+  pendingExterior = null
 }
 /** Select a facility and optionally its nearest entrance without creating a pair.
  * @param side Pane. @param unit Facility. @param entrance Clicked outer edge, if supplied.
@@ -190,9 +254,12 @@ function choose(
     if (entrance) pendingLeftEntrance = entrance
   } else {
     if (changed) {
+      pendingLeftEntrance = leftEntrance
       rightId = id
       pendingRightEntrance = null
-      pendingDirection = 'both'
+      pendingDirection = left
+        ? (networkPairDirection(data, left, unit) ?? 'both')
+        : 'both'
     }
     if (entrance) pendingRightEntrance = entrance
   }
@@ -226,7 +293,7 @@ function status(unit: IndoorFeature): string {
   const id = value(unit.properties, 'unit_id')
   if (id === leftId || id === rightId) return 'Selected'
   if (available(unit)) return 'Available'
-  return connections.some(c => c.enabled && (c.from === id || c.to === id))
+  return visibleConnections.some(c => c.enabled && (c.from === id || c.to === id))
     ? 'Linked'
     : 'Unlinked'
 }
@@ -247,7 +314,19 @@ function zoom(factor: number, point?: [number, number]): void {
 }
 /** Add the explicitly selected pair or update its travel direction. @returns Nothing. */
 function connect(): void {
-  if (!left || !right || !compatible || disabled) return
+  if (!left || !compatible || disabled) return
+  if (outside && exterior) {
+    const next = createExteriorConnection(left, exterior, leftEntrance, direction)
+    connections = pair
+      ? connections.map((c, index) =>
+          index === pairIndex ? { ...next, enabled: c.enabled } : c,
+        )
+      : [...connections, next]
+    rightId = next.from === leftId ? next.to : next.from
+    notice = 'Exterior connection added. Save the draft when you are ready.'
+    return
+  }
+  if (!right) return
   if (!['unknown', 'both', 'forward', 'reverse'].includes(direction)) return
   const next = createEditorConnection(left, right, direction)
   if (pair) {
@@ -270,7 +349,19 @@ function inspect(connection: MapConnection): void {
   rightFloor = connection.from === leftId ? connection.toLevel : connection.fromLevel
   pendingLeftEntrance = null
   pendingRightEntrance = null
-  suggestion = 'Showing the recorded connection.'
+  pendingExterior = connection.fromExterior ?? connection.toExterior ?? null
+  pendingDirection =
+    connection.direction === null
+      ? 'unknown'
+      : connection.direction === 'both'
+        ? 'both'
+        : connection.from === leftId
+          ? 'forward'
+          : 'reverse'
+  suggestion =
+    connection.evidence === 'source-network'
+      ? 'Showing the source-network connection.'
+      : 'Showing the recorded connection.'
 }
 // A fresh map starts fitted; choosing another floor retains the same camera in both panes.
 $effect(() => {
@@ -286,6 +377,45 @@ $effect(() => {
 </script>
 
 <section class="grid gap-3" aria-label="Floor connections">
+  <section
+    class="border-border bg-muted/30 flex flex-wrap items-center gap-3 rounded-lg border px-3 py-2"
+    aria-label="Unmatched connectors"
+  >
+    <div class="min-w-0 flex-1 text-sm" aria-live="polite">
+      <span class="font-medium"
+        >{unmatchedIndex >= 0
+          ? `${unmatchedIndex + 1} of ${unmatched.length} unmatched`
+          : `${unmatched.length} unmatched`}</span
+      >
+      {#if unmatchedIndex >= 0 && left}
+        <span class="text-muted-foreground ml-2 break-words"
+          >{floorItems.find(item => item.value === leftFloor)?.label}
+          ·
+          {value(left.properties, 'unit_name_en') ||
+            value(left.properties, 'unit_category')}
+          · {leftId}</span
+        >
+      {:else}
+        <span class="text-muted-foreground ml-2">No source-network match</span>
+      {/if}
+    </div>
+    <Button
+      text="Previous unmatched"
+      style="ghost"
+      size="sm"
+      disabled={disabled || unmatchedIndex <= 0}
+      onClick={() => reviewUnmatched(unmatchedIndex - 1)}
+    />
+    <Button
+      text="Next unmatched"
+      style="ghost"
+      size="sm"
+      disabled={disabled ||
+        unmatched.length === 0 ||
+        unmatchedIndex === unmatched.length - 1}
+      onClick={() => reviewUnmatched(unmatchedIndex + 1)}
+    />
+  </section>
   <div class="flex flex-wrap items-center justify-between gap-3">
     <p class="text-muted-foreground text-sm">
       Click near a facility edge to select its entrance. Scroll to zoom; drag to move
@@ -322,7 +452,10 @@ $effect(() => {
           value={side === 'left' ? leftFloor : rightFloor}
           items={side === 'left'
             ? floorItems
-            : floorItems.filter(item => item.value !== leftFloor)}
+            : [
+                ...floorItems.filter(item => item.value !== leftFloor),
+                { value: '@exterior', label: 'Outside / street' },
+              ]}
           {disabled}
           onValueChange={next => {
             if (side === 'left') {
@@ -334,8 +467,10 @@ $effect(() => {
               fit()
               suggest()
             } else {
+              pendingLeftEntrance = leftEntrance
               rightFloor = next
               rightId = ''
+              pendingExterior = null
               pendingRightEntrance = null
               pendingDirection = 'both'
               suggestion = 'Floor selected manually.'
@@ -348,7 +483,26 @@ $effect(() => {
           {viewBox}
           {side}
           {disabled}
-          floor={side === 'left' ? leftFloor : rightFloor}
+          floor={side === 'left' || outside ? leftFloor : rightFloor}
+          exteriorPoint={side === 'right' && outside ? exterior?.point : undefined}
+          onExteriorChoose={side === 'right' && outside
+            ? point => {
+                if (!left || disabled) return
+                pendingExterior = { label: 'Outside / street', point }
+                rightId = `exterior:${leftId}`
+                if (pair)
+                  connections = connections.map((c, index) =>
+                    index === pairIndex
+                      ? {
+                          ...c,
+                          ...(c.from === leftId
+                            ? { toExterior: pendingExterior ?? undefined }
+                            : { fromExterior: pendingExterior ?? undefined }),
+                        }
+                      : c,
+                  )
+              }
+            : undefined}
           selected={side === 'left' ? leftId : rightId}
           entrance={side === 'left' ? leftEntrance : rightEntrance}
           state={status}
@@ -362,9 +516,13 @@ $effect(() => {
             ? left
               ? label(left)
               : 'Select the first facility.'
-            : right
-              ? label(right)
-              : 'Select the matching facility.'}
+            : outside
+              ? exterior
+                ? 'Outside / street · point selected'
+                : 'Click the plan to mark the exterior endpoint.'
+              : right
+                ? label(right)
+                : 'Select the matching facility.'}
         </p>
       </div>
     {/each}
@@ -409,12 +567,44 @@ $effect(() => {
       </Button>
     </div>
   </div>
-  <p class="text-muted-foreground text-xs">{suggestion}</p>
+  <p class="text-muted-foreground text-xs">
+    {outside
+      ? 'Select the facility entrance on the left and mark where it meets the exterior on the right.'
+      : suggestion}
+  </p>
   <div class="flex flex-wrap items-center gap-2">
+    {#if sourceDirection}
+      <span class="text-muted-foreground text-xs"
+        >3D network:
+        {sourceDirection === 'both'
+          ? 'both ways'
+          : sourceDirection === 'forward'
+            ? 'left to right'
+            : 'right to left'}</span
+      >
+      {#if pair && sourceDirection !== direction}
+        <Button
+          text="Use source direction"
+          style="ghost"
+          size="sm"
+          {disabled}
+          onClick={() => {
+            if (sourceDirection)
+              connections = connections.map((c, index) =>
+                index === pairIndex
+                  ? setConnectionDirection(c, leftId, sourceDirection)
+                  : c,
+              )
+          }}
+        />
+      {/if}
+    {/if}
     {#if compatible}
       {#if !pair}
         <Button
-          text="Connect selected facilities"
+          text={sourcePair
+            ? 'Save source connection as correction'
+            : 'Connect selected facilities'}
           style="soft"
           color="primary"
           size="sm"
@@ -451,8 +641,12 @@ $effect(() => {
               (connection.from === leftId ? connection.toLevel : connection.fromLevel),
           )}
           <Button
-            text={(destination?.label ?? 'Other floor') +
-              (connection.enabled ? '' : ' · Disabled')}
+            text={(destination?.label ??
+              (connection.fromExterior || connection.toExterior
+                ? 'Outside / street'
+                : 'Other floor')) +
+              (connection.enabled ? '' : ' · Disabled') +
+              (connection.evidence === 'source-network' ? ' · 3D network' : '')}
             style="outline"
             size="sm"
             onClick={() => inspect(connection)}

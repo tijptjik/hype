@@ -559,6 +559,41 @@ const facilityMarkers = $derived.by(() => {
       {/each}
     </g>
   {/if}
+  <!-- Exterior endpoints are authored portals, not inferred street-network attachments. -->
+  {#each connections.filter(
+    c =>
+      c.enabled !== false &&
+      ((c.fromLevel === id && c.toExterior) || (c.toLevel === id && c.fromExterior)),
+  ) as connection}
+    {@const exterior = connection.fromExterior ?? connection.toExterior}
+    {#if exterior}
+      {@const endpoint = projection.project(exterior.point, id)}
+      <g
+        data-exterior-portal={connection.fromExterior ? connection.from : connection.to}
+        pointer-events="none"
+      >
+        <circle
+          cx={endpoint[0]}
+          cy={endpoint[1]}
+          r={4 * textScale}
+          fill="var(--station-ink)"
+          stroke="var(--station-paper)"
+        />
+        <text
+          x={endpoint[0]}
+          y={endpoint[1] - 9 * textScale}
+          text-anchor="middle"
+          font-size={12 * textScale}
+          fill="var(--station-ink)"
+          stroke="var(--station-paper)"
+          stroke-width={3 * textScale}
+          paint-order="stroke"
+        >
+          {exterior.label}
+        </text>
+      </g>
+    {/if}
+  {/each}
   <!-- A ground-level lift-only lobby can have a principal entrance without a sloping network edge. -->
   {#if Number(level.properties.level_ordinal) === 0 &&
     units.some(
