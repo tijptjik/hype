@@ -437,7 +437,7 @@ def groups_for(pending, table_ops, manifest, db):
     return groups
 
 
-def compare(directory, manifest, db):
+def compare(directory, manifest, db, conflict_path=None):
     """Reject unknown target versions. Preserve independent, unselected target records."""
     initialize_scope(db)
     if not db.execute(
@@ -473,7 +473,15 @@ def compare(directory, manifest, db):
         ):
             # 0247 seeds only heads; earlier authenticated catalogue revisions may be missing.
             if current is not None or not table.startswith("identityCatalogue"):
-                conflicts.append((table, identity))
+                conflicts.append(
+                    dict(
+                        table=table,
+                        key=identity,
+                        before=before,
+                        target=current,
+                        desired=after,
+                    )
+                )
                 continue
         op = (
             "delete"
@@ -493,8 +501,12 @@ def compare(directory, manifest, db):
         )
         table_ops.setdefault(table, (cols, keys, set()))[2].add(op)
     if conflicts:
+        if conflict_path:
+            with gzip.open(conflict_path, "wt", encoding="utf8") as out:
+                json.dump(conflicts, out, ensure_ascii=False)
+        counts = collections.Counter(c["table"] for c in conflicts)
         raise ValueError(
-            f"{len(conflicts)} divergent target keys; first 12: {conflicts[:12]}"
+            f"{len(conflicts)} divergent target keys by table: {dict(counts)}"
         )
     # Snapshot IDs are opaque. Relationship and revision validators observe insertion
     # order, including multiple changes recorded in the same millisecond.
@@ -533,7 +545,9 @@ def prepare(args):
     target.close()
     trial.row_factory = sqlite3.Row
     trial.execute("PRAGMA foreign_keys=ON")
-    pending, ops = compare(args.package, manifest, trial)
+    pending, ops = compare(
+        args.package, manifest, trial, args.output / "conflicts.json.gz"
+    )
     print("Target-specific row operations", len(pending), flush=True)
     groups = groups_for(pending, ops, manifest, trial) if pending else []
     for group in groups:
