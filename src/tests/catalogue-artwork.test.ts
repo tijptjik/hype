@@ -207,6 +207,18 @@ describe('full logos and brand marks', () => {
     })
     expect(resolveCatalogueFullLogo({ artwork: { 'logo-full': mark } })).toBeNull()
   })
+  it('does not use full or unclassified artwork from a mark slot', () => {
+    for (const composition of ['full-logo', undefined] as const) {
+      for (const slot of ['logo-mark', 'logo-mark-dark', 'logo-mark-milk']) {
+        const owner = {
+          artwork: { 'logo-full': full, [slot]: { ...mark, composition } },
+        }
+        expect(resolveCatalogueMarker(owner, 'milk', 'dark')?.src).toBe(full.src)
+        expect(resolveCatalogueDisplayLogo(owner, 'milk', 'dark')).toBe(full.src)
+        expect(catalogueGeneralLogo(owner)).toBe(full.src)
+      }
+    }
+  })
   it('selects themed complete logos without reusing a mark', () => {
     const owner = {
       artwork: {

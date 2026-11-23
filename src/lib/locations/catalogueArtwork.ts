@@ -115,7 +115,8 @@ export function resolveCatalogueMarker(
   }
   for (const slot of [`logo-mark-${theme}`, `logo-mark-${mode}`, 'logo-mark']) {
     const asset = owner.artwork?.[slot]
-    if (asset?.status === 'approved') return { ...asset, slot, whiteRing: true }
+    if (asset?.status === 'approved' && asset.composition === 'brand-mark')
+      return { ...asset, slot, whiteRing: true }
   }
   const general = owner.artwork?.logo
   if (general?.status === 'approved')
@@ -140,7 +141,8 @@ export function catalogueGeneralLogo(
   return asset && (review || asset.status === 'approved')
     ? asset.src
     : (owner.logo ??
-        (owner.artwork?.['logo-mark']?.status === 'approved'
+        (owner.artwork?.['logo-mark']?.status === 'approved' &&
+        owner.artwork['logo-mark'].composition === 'brand-mark'
           ? owner.artwork['logo-mark'].src
           : resolveCatalogueFullLogo(owner)?.src) ??
         null)
@@ -159,7 +161,12 @@ export function resolveCatalogueDisplayLogo(
 ): string | null {
   for (const slot of [`logo-mark-${theme}`, `logo-${theme}`, `marker-${theme}`]) {
     const asset = owner.artwork?.[slot]
-    if (asset?.status === 'approved') return asset.src
+    if (
+      asset?.status === 'approved' &&
+      (!(slot === 'logo-mark' || slot.startsWith('logo-mark-')) ||
+        asset.composition === 'brand-mark')
+    )
+      return asset.src
   }
   if (themeFallback) return themeFallback
   for (const slot of [
@@ -171,7 +178,12 @@ export function resolveCatalogueDisplayLogo(
     'logo',
   ]) {
     const asset = owner.artwork?.[slot]
-    if (asset?.status === 'approved') return asset.src
+    if (
+      asset?.status === 'approved' &&
+      (!(slot === 'logo-mark' || slot.startsWith('logo-mark-')) ||
+        asset.composition === 'brand-mark')
+    )
+      return asset.src
   }
   return owner.logo ?? resolveCatalogueFullLogo(owner, theme, mode)?.src ?? null
 }
