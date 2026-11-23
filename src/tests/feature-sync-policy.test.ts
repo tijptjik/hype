@@ -17,6 +17,12 @@ it('projects effective policy through persisted ancestry without crossing projec
       CREATE TABLE project(id TEXT,organisationId TEXT,locationPolicy TEXT);
       CREATE TABLE layer(id TEXT,projectId TEXT,relocationPolicy TEXT);
       CREATE TABLE feature(id TEXT,projectId TEXT,layerId TEXT);
+      CREATE TABLE projectI18n(projectId TEXT,locale TEXT,name TEXT,nameGen INTEGER,isAutomaticOnly INTEGER);
+      CREATE TABLE organisationI18n(organisationId TEXT,locale TEXT,name TEXT,nameGen INTEGER,isAutomaticOnly INTEGER);
+      CREATE TABLE layerI18n(layerId TEXT,locale TEXT,name TEXT,nameGen INTEGER,isAutomaticOnly INTEGER);
+      INSERT INTO projectI18n VALUES ('p','en','Bookstores',0,0);
+      INSERT INTO organisationI18n VALUES ('o','en','Cultural Foundation',0,0);
+      INSERT INTO layerI18n VALUES ('l','en','Closed bookstores',0,0);
       INSERT INTO organisation VALUES ('o','{}');
       INSERT INTO project VALUES ('p','o',NULL);
       INSERT INTO layer VALUES ('l','p','fixed');
@@ -36,6 +42,12 @@ it('projects effective policy through persisted ancestry without crossing projec
       source: 'default',
       policy: DEFAULT_PROJECT_LOCATION_POLICY,
       layerRelocation: 'fixed',
+      definition: null,
+      layerDefinition: {
+        kind: 'layer',
+        id: 'l',
+        i18n: { en: { name: 'Closed bookstores' } },
+      },
     })
     const inherited = {
       ...DEFAULT_PROJECT_LOCATION_POLICY,
@@ -56,6 +68,11 @@ it('projects effective policy through persisted ancestry without crossing projec
     expect(organisation).toMatchObject({
       source: 'organisation',
       sourceId: 'o',
+      definition: {
+        kind: 'organisation',
+        id: 'o',
+        i18n: { en: { name: 'Cultural Foundation' } },
+      },
       policy: inherited,
     })
     if (!organisation) throw new Error('Missing inherited policy')
@@ -68,6 +85,7 @@ it('projects effective policy through persisted ancestry without crossing projec
     expect(await getFeatureSyncPolicy(db, 'f', 'p')).toMatchObject({
       source: 'project',
       sourceId: 'p',
+      definition: { kind: 'project', id: 'p', i18n: { en: { name: 'Bookstores' } } },
       policy: DEFAULT_PROJECT_LOCATION_POLICY,
     })
     sqlite.exec("UPDATE layer SET projectId='other'")
