@@ -44,6 +44,9 @@ async function fixture() {
   )
   f.sqlite.exec(readFileSync('migrations/0246_field_research_archive.sql', 'utf8'))
   f.sqlite.exec(
+    readFileSync('migrations/0261_field_research_configuration.sql', 'utf8'),
+  )
+  f.sqlite.exec(
     `INSERT INTO user(id) VALUES ('researcher'); CREATE TABLE featureIntentPolicy(scopeType TEXT,scopeId TEXT,definition TEXT,namingRules TEXT,version INTEGER);`,
   )
   await f.db.insert(fieldResearchSession).values({

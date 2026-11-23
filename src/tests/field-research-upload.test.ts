@@ -34,6 +34,9 @@ function fixture() {
   )
   f.sqlite.exec(readFileSync('migrations/0246_field_research_archive.sql', 'utf8'))
   f.sqlite.exec(
+    readFileSync('migrations/0261_field_research_configuration.sql', 'utf8'),
+  )
+  f.sqlite.exec(
     "INSERT INTO fieldResearchSession(id,name,organisationId,projectId,createdBy,createdAt,updatedAt) VALUES('session','Private outing','org','project','admin','now','now')",
   )
   let object: {

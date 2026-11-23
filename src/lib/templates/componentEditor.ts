@@ -13,6 +13,7 @@ export type TemplateComponentField = {
  */
 export function expressionSource(node: TemplateExpression): string {
   if (node.kind === 'literal') return JSON.stringify(node.value)
+  if (node.kind === 'sequence') return '0'.repeat(node.width)
   if (node.kind === 'property') return node.path
   if (node.kind === 'fallback')
     return `${expressionSource(node.left)} ?? ${expressionSource(node.right)}`
@@ -28,6 +29,15 @@ export function componentFields(
   path: number[] = [],
   label = 'Property',
 ): TemplateComponentField[] {
+  if (node.kind === 'sequence')
+    return [
+      {
+        path,
+        kind: 'literal',
+        label: 'Sequence width (zeros)',
+        value: '0'.repeat(node.width),
+      },
+    ]
   if (node.kind === 'property' || node.kind === 'literal')
     return [
       {
@@ -65,6 +75,8 @@ export function updateComponentField(
   if (!path.length) {
     if (node.kind === 'property') return { ...node, path: value }
     if (node.kind === 'literal') return { ...node, value }
+    if (node.kind === 'sequence' && /^0{1,20}$/.test(value))
+      return { ...node, width: value.length }
     return node
   }
   const [index, ...rest] = path

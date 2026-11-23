@@ -1,5 +1,18 @@
 // DRIZZLE
-import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { sql } from 'drizzle-orm'
+import {
+  integer,
+  primaryKey,
+  real,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core'
+// TYPES
+import type {
+  ResearchConfiguration,
+  ResearchLayerOverrides,
+} from '#lib/fieldResearch/configuration.js'
 
 /** Private sessions retain their original capture extent after grouping and conversion. */
 export const fieldResearchSession = sqliteTable('fieldResearchSession', {
@@ -8,6 +21,10 @@ export const fieldResearchSession = sqliteTable('fieldResearchSession', {
   organisationId: text('organisationId').notNull(),
   projectId: text('projectId').notNull(),
   layerId: text('layerId'),
+  code: text('code'),
+  configuration: text('configuration', { mode: 'json' }).$type<
+    Omit<ResearchConfiguration, 'code'>
+  >(),
   createdBy: text('createdBy').notNull(),
   createdAt: text('createdAt').notNull(),
   updatedAt: text('updatedAt').notNull(),
@@ -22,6 +39,35 @@ export const fieldResearchSession = sqliteTable('fieldResearchSession', {
   east: real('east'),
   north: real('north'),
 })
+
+/** Configured project layers inherit their session defaults unless explicitly overridden. */
+export const fieldResearchSessionLayer = sqliteTable(
+  'fieldResearchSessionLayer',
+  {
+    sessionId: text('sessionId').notNull(),
+    layerId: text('layerId').notNull(),
+    isDefault: integer('isDefault', { mode: 'boolean' }).notNull().default(false),
+    overrides: text('overrides', { mode: 'json' })
+      .$type<ResearchLayerOverrides>()
+      .notNull(),
+  },
+  table => [
+    primaryKey({ columns: [table.sessionId, table.layerId] }),
+    uniqueIndex('fieldResearchSessionLayer_default')
+      .on(table.sessionId)
+      .where(sql`${table.isDefault} = 1`),
+  ],
+)
+
+/** Locations explicitly vetted for use within a field session. */
+export const fieldResearchSessionLocation = sqliteTable(
+  'fieldResearchSessionLocation',
+  {
+    sessionId: text('sessionId').notNull(),
+    locationId: text('locationId').notNull(),
+  },
+  table => [primaryKey({ columns: [table.sessionId, table.locationId] })],
+)
 
 /** Working groups exist only inside field research; converted groups retain their Feature receipt. */
 export const fieldResearchStack = sqliteTable('fieldResearchStack', {

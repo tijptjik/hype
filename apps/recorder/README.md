@@ -3,7 +3,7 @@
 Recorder is the Android field-recording client in HYPE’s Bun workspace. This first
 version connects a contributor’s HYPE account. Development is focused on this Android
 client; the separate web capture demo at `/recorder/:session` is paused and documented
-in [Field Recorder demo](../../docs/apps/field-recorder.md). The browser-based device
+on the `feature/field-work` branch. The browser-based device
 sign-in flow remains part of Android Recorder.
 
 ## Android development

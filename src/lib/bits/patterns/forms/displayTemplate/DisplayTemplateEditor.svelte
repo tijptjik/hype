@@ -235,6 +235,8 @@ const activeHelp = $derived.by(() => {
     return 'This block contains fixed text that will appear in every generated name. Edit that text below.'
   const kind = expression.kind === 'call' ? expression.name : expression.kind
   return {
+    sequence:
+      'Enter zeros to set the minimum number of digits in the session sequence.',
     property:
       'Choose one property below. Its value will appear here in the name. If the record has no value for that property, this component adds no text.',
     pair: 'Choose a first property and a second property, then type the separator to place between them (for example, a space or “ - ”). Both values must be present; if either is missing, the whole pair is left out.',

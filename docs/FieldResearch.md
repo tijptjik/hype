@@ -1,10 +1,13 @@
 # Field research
 
-Field research is an internal project-management workflow at `/admin/fieldresearch`. It
-reuses the batch upload dropzone. Its working stacks are not part of the general Feature
-editor.
+Field research provides shared session, capture and provenance infrastructure. The Field
+Entries page and its batch upload interface are maintained on the `feature/field-work`
+branch; `/admin/fieldresearch` redirects to Field Sessions on preview.
 
 ## Sessions and capture
+
+Field Sessions is available at `/admin/field-recorder`. The capture and working stack
+interface described below belongs to the Field Entries branch.
 
 Each `fieldResearchSession` has an internal editable name, a stable ID, creator,
 organisation and project, creation/update/completion timestamps, status and an
@@ -96,3 +99,34 @@ Apply `0242_field_research.sql`, `0243_feature_origin_backfill.sql` and
 `0244_field_research_stack_details.sql` in order before serving the new code. Local
 verification uses synthetic images and sessions named `[Test]`; production rollout
 remains a separate operation.
+
+## Field session configuration for Hypercorder
+
+`/admin/field-recorder` manages project-owned field sessions. Session defaults include the
+Feature type, visitability, tangibility, draft and review values, plus whether each of
+those fields is visible while recording. A session may enable multiple project layers;
+one is required to be the default. Each layer can inherit or override the field values
+and visibility independently. Property choices come from the resolved Project catalogue;
+visibility, recordability and default values can be overridden per layer. Tangibility is
+shown positively in the editor and stored as the existing `isIntangible` inverse.
+
+The vetted Location list is stored independently of Feature and Location identity.
+Premises, buildings and building parts can be selected. Bulk choices follow only current,
+effective, accessible membership assertions, including Organisation-scoped overrides;
+they do not infer containment from proximity or matching names. Establishment and other
+operational Location selectors are placeholders for a later workflow. The legacy web demo is preserved on `feature/field-work`; its fixed survey fields are not
+session configuration for Hypercorder.
+
+Apply `0261_field_research_configuration.sql` and `0262_field_research_locations.sql`
+before using these settings. They have not been applied to a remote database by this
+change. Automatic title-number allocation and application of these settings in the
+Android capture flow remain separate integration work.
+
+## Retired web recorder data
+
+The numbered migrations retain the original web recorder table creation history.
+`0264_remove_web_field_recorder.sql` drops the web recorder tables and their rows.
+It does not delete audio objects from storage. The local `feature/field-work` branch
+contains `0265_restore_web_field_recorder.sql`, which recreates empty tables if the
+web recorder is revisited. The removal migration has not yet been applied as part of
+this change.

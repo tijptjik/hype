@@ -18,10 +18,7 @@ import { authorizeTaskListForContext } from '#lib/api/services/authz/task.js'
 import { canBrowseUsers } from '#lib/api/services/authz/userDirectory.js'
 // NAVIGATION
 import { navigateOnAdmin } from '#lib/navigation/index.js'
-import {
-  fieldEntriesEnabled,
-  messagingNavigationEnabled,
-} from '#lib/navigation/releases.js'
+import { messagingNavigationEnabled } from '#lib/navigation/releases.js'
 // ENUMS
 import { FirstClassResource } from '#lib/enums.js'
 // ICONS
@@ -256,14 +253,6 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
         (role.type === 'hub' && role.role === 'admin'),
     )
   ) {
-    if (fieldEntriesEnabled) {
-      items.push({
-        href: `${ADMIN_PATH}/fieldresearch`,
-        label: 'Field Entries',
-        compactLabel: 'Field\nEntries',
-        icon: FieldResearchIcon,
-      })
-    }
     items.push({
       href: `${ADMIN_PATH}/field-recorder`,
       label: 'Field Sessions',

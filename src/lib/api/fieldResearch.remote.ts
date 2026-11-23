@@ -9,6 +9,7 @@ import { guardedCommand, guardedQuery } from './server/guarded.js'
 // SCHEMA
 import {
   fieldResearchSession as sessions,
+  fieldResearchSessionLayer as sessionLayers,
   fieldResearchImage as images,
   fieldResearchStack as stacks,
 } from '#lib/db/schema/fieldResearch.js'
@@ -21,6 +22,12 @@ import { mergeResearchStacks } from '#lib/db/services/fieldResearch.js'
 import { image as imageTable } from '#lib/db/schema/image.js'
 import { ImageContextResource } from '#lib/enums.js'
 import { ResearchCoordinatesSchema } from '#lib/fieldResearch/model.js'
+import {
+  researchConfigurationSchema,
+  researchLayerOverridesSchema,
+} from '#lib/fieldResearch/configuration.js'
+import { listResolvedProjectProperties } from '#lib/db/services/property.js'
+import { requireFeatureType } from '#lib/features/intents.js'
 // SERVICES
 import { setResearchSessionsArchived } from '#lib/db/services/fieldResearchArchive.js'
 import {
@@ -288,8 +295,23 @@ export const createResearchSession = guardedCommand(
       .onConflictDoNothing()
     const created = await executeRevisionBatch(
       ctx.db,
-      sql`EXISTS(SELECT 1 FROM project p JOIN organisation o ON o.id=p.organisationId WHERE p.id=${input.projectId} AND p.organisationId=${scope.organisationId} AND p.isArchived=0 AND o.isArchived=0)`,
-      [insert],
+      sql`EXISTS(SELECT 1 FROM project p JOIN organisation o ON o.id=p.organisationId WHERE p.id=${input.projectId} AND p.organisationId=${scope.organisationId} AND p.isArchived=0 AND o.isArchived=0) AND NOT EXISTS(SELECT 1 FROM fieldResearchSession WHERE id=${input.id} AND (projectId!=${input.projectId} OR createdBy!=${ctx.user.id}))`,
+      [
+        insert,
+        ...(input.layerId
+          ? [
+              ctx.db
+                .insert(sessionLayers)
+                .values({
+                  sessionId: input.id,
+                  layerId: input.layerId,
+                  isDefault: true,
+                  overrides: { defaults: {}, fieldVisibility: {}, properties: {} },
+                })
+                .onConflictDoNothing(),
+            ]
+          : []),
+      ],
     )
     if (!created)
       error(409, 'The project changed. Refresh before creating this session.')
@@ -297,6 +319,142 @@ export const createResearchSession = guardedCommand(
     if (session.projectId !== input.projectId || session.createdBy !== ctx.user.id)
       error(409, 'Session identity already in use')
     return session
+  },
+)
+
+/** Read configuration and all configured project layers for an authorized session.
+ * @param input Session identity and optional revision cache key. @returns Session settings, project properties and layer choices.
+ */
+export const getResearchConfiguration = guardedQuery(
+  z.object({ sessionId: id, revision: z.number().int().nonnegative().optional() }),
+  async (input, ctx) => {
+    requireResearch(ctx)
+    await requireResearchSessionAccess(ctx, input.sessionId)
+    const session = await readResearchSession(ctx.db, input.sessionId)
+    const stored = await ctx.db
+      .select({ code: sessions.code, configuration: sessions.configuration })
+      .from(sessions)
+      .where(eq(sessions.id, input.sessionId))
+      .get()
+    const configuredLayers = await ctx.db
+      .select()
+      .from(sessionLayers)
+      .where(eq(sessionLayers.sessionId, input.sessionId))
+    const [properties, policy] = await Promise.all([
+      listResolvedProjectProperties(ctx.db, session.projectId),
+      readFeatureIntentPolicy(ctx.db, { type: 'project', id: session.projectId }),
+    ])
+    return {
+      settings:
+        stored?.code && stored.configuration
+          ? { ...stored.configuration, code: stored.code }
+          : null,
+      configuredLayers,
+      properties,
+      types: policy.types,
+    }
+  },
+)
+
+/** Save session configuration and layer overrides as one revision-fenced change.
+ * @param input Current revision, settings and configured layers. @returns Nothing.
+ * @remarks The selected layers and properties must remain within the owning project.
+ */
+export const saveResearchConfiguration = guardedCommand(
+  sessionRevision.extend({
+    settings: researchConfigurationSchema,
+    layers: z
+      .array(
+        z.object({
+          layerId: id,
+          isDefault: z.boolean(),
+          overrides: researchLayerOverridesSchema,
+        }),
+      )
+      .max(100),
+  }),
+  async (input, ctx) => {
+    requireResearch(ctx)
+    await requireResearchSessionAccess(ctx, input.sessionId)
+    const session = await readResearchSession(ctx.db, input.sessionId)
+    if (
+      new Set(input.layers.map(layer => layer.layerId)).size !== input.layers.length ||
+      input.layers.filter(layer => layer.isDefault).length > 1
+    )
+      error(400, 'Choose distinct layers and at most one default layer.')
+    const properties = await listResolvedProjectProperties(ctx.db, session.projectId)
+    const propertyIds = new Set(properties.map(property => property.id))
+    for (const settings of [
+      input.settings.properties,
+      ...input.layers.map(layer => layer.overrides.properties),
+    ]) {
+      if (Object.keys(settings).some(propertyId => !propertyIds.has(propertyId)))
+        error(400, 'Choose properties available in this project.')
+      for (const [propertyId, setting] of Object.entries(settings)) {
+        const value = setting.defaultValue
+        if (value === undefined || value === null) continue
+        const property = properties.find(item => item.id === propertyId)!
+        if (property.values?.length) {
+          const allowed = new Set(property.values.map(option => option.id))
+          const values = Array.isArray(value) ? value : [value]
+          if (
+            (property.cardinality === 'one' && Array.isArray(value)) ||
+            (property.cardinality === 'many' && !Array.isArray(value)) ||
+            values.some(item => typeof item !== 'string' || !allowed.has(item))
+          )
+            error(400, 'Choose valid project property options.')
+        } else if (
+          Array.isArray(value) ||
+          (property.dataType === 'boolean' && typeof value !== 'boolean') ||
+          (property.dataType === 'number' && typeof value !== 'number') ||
+          (!['boolean', 'number'].includes(property.dataType ?? 'text') &&
+            typeof value !== 'string')
+        )
+          error(400, 'Choose a default value matching the property type.')
+      }
+    }
+    const projectPolicy = await readFeatureIntentPolicy(ctx.db, {
+      type: 'project',
+      id: session.projectId,
+    })
+    requireFeatureType(projectPolicy.types, input.settings.defaults.featureType)
+    for (const layer of input.layers) {
+      const valid = await ctx.db.get(
+        sql`SELECT id FROM layer WHERE id=${layer.layerId} AND projectId=${session.projectId} AND organisationId=${session.organisationId} AND isArchived=0 AND historicalSourceLayerId IS NULL`,
+      )
+      if (!valid) error(400, 'Choose active layers in this project.')
+      const policy = await readFeatureIntentPolicy(ctx.db, {
+        type: 'layer',
+        id: layer.layerId,
+      })
+      requireFeatureType(
+        policy.types,
+        layer.overrides.defaults.featureType ?? input.settings.defaults.featureType,
+      )
+    }
+    const { code, ...configuration } = input.settings
+    const defaultLayer = input.layers.find(layer => layer.isDefault)?.layerId ?? null
+    const committed = await executeRevisionBatch(
+      ctx.db,
+      sql`EXISTS(SELECT 1 FROM fieldResearchSession WHERE id=${session.id} AND revision=${input.revision} AND status!='completed' AND isArchived=0) AND NOT EXISTS(SELECT 1 FROM json_each(${JSON.stringify(input.layers.map(layer => layer.layerId))}) chosen LEFT JOIN layer l ON l.id=chosen.value AND l.projectId=${session.projectId} AND l.organisationId=${session.organisationId} AND l.isArchived=0 AND l.historicalSourceLayerId IS NULL WHERE l.id IS NULL)`,
+      [
+        ctx.db.delete(sessionLayers).where(eq(sessionLayers.sessionId, session.id)),
+        ...input.layers.map(layer =>
+          ctx.db.insert(sessionLayers).values({ sessionId: session.id, ...layer }),
+        ),
+        ctx.db
+          .update(sessions)
+          .set({
+            code,
+            configuration,
+            layerId: defaultLayer,
+            revision: sql`${sessions.revision}+1`,
+            updatedAt: new Date().toISOString(),
+          })
+          .where(eq(sessions.id, session.id)),
+      ],
+    )
+    if (!committed) error(409, 'The session or its layers changed. Refresh and retry.')
   },
 )
 
@@ -472,6 +630,18 @@ export const configureResearchLayer = guardedCommand(
       ctx.db,
       sql`EXISTS(SELECT 1 FROM fieldResearchSession s JOIN layer l ON l.projectId=s.projectId AND l.organisationId=s.organisationId WHERE s.id=${input.sessionId} AND s.revision=${input.revision} AND s.layerId IS NULL AND s.status!='completed' AND l.id=${input.layerId} AND l.isArchived=0 AND l.historicalSourceLayerId IS NULL)`,
       [
+        ctx.db
+          .insert(sessionLayers)
+          .values({
+            sessionId: input.sessionId,
+            layerId: input.layerId,
+            isDefault: true,
+            overrides: { defaults: {}, fieldVisibility: {}, properties: {} },
+          })
+          .onConflictDoUpdate({
+            target: [sessionLayers.sessionId, sessionLayers.layerId],
+            set: { isDefault: true },
+          }),
         ctx.db
           .update(sessions)
           .set({ layerId: input.layerId, revision: sql`${sessions.revision}+1` })

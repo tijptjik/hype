@@ -48,7 +48,7 @@ export const resolveAdminTitle = (
   const [, area, section] = pathname.split('/')
   if (area !== 'admin') return title
   const labels: Record<string, string> = {
-    fieldresearch: 'Field research',
+    'field-recorder': 'Field Sessions',
     import: 'Import',
     catalogue: 'Catalogue',
     features: 'Features',

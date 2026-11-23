@@ -61,7 +61,8 @@ export function describeTemplateProperty(property: TemplateProperty): {
 export function templatePreviewValue(
   property: TemplateProperty,
   locale = 'en',
-): string | boolean {
+): string | boolean | number {
+  if (property.path === 'session.sequence') return 1
   const example = property.examples?.[locale]
   if (example) return example
   const { name, type } = describeTemplateProperty(property)

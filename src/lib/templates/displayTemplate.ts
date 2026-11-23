@@ -8,6 +8,7 @@ export type TemplateValues = Readonly<Record<string, TemplateScalar>>
 export type TemplateExpression =
   | { kind: 'literal'; value: string }
   | { kind: 'property'; path: string }
+  | { kind: 'sequence'; width: number }
   | { kind: 'fallback'; left: TemplateExpression; right: TemplateExpression }
   | {
       kind: 'call'
@@ -61,6 +62,13 @@ export function parseDisplayTemplate(source: string): DisplayTemplate {
         escaped = char === '\\' && !escaped
       }
       return fail('Unclosed quoted text')
+    }
+    const zeros = /^0+(?![A-Za-z0-9_.-])/.exec(source.slice(position))
+    if (zeros) {
+      if (zeros[0].length > 20) fail('Sequence width exceeds 20 digits')
+      position += zeros[0].length
+      dependencies.add('session.sequence')
+      return { kind: 'sequence', width: zeros[0].length }
     }
     const match = /^[A-Za-z_][A-Za-z0-9_.-]*/.exec(source.slice(position))
     if (!match) return fail('Expected a property, quoted text or function')
@@ -135,6 +143,18 @@ export function renderDisplayTemplate(source: string, values: TemplateValues): s
     switch (node.kind) {
       case 'literal':
         return node.value
+      case 'sequence': {
+        const ordinal = Object.hasOwn(values, 'session.sequence')
+          ? values['session.sequence']
+          : undefined
+        if (
+          typeof ordinal !== 'number' ||
+          !Number.isSafeInteger(ordinal) ||
+          ordinal < 1
+        )
+          return undefined
+        return String(ordinal).padStart(node.width, '0')
+      }
       case 'property':
         return Object.hasOwn(values, node.path) ? values[node.path] : undefined
       case 'fallback': {
