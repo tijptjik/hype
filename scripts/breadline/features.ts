@@ -14,6 +14,7 @@ import donorImportPolicy from './donor-import-policy.json'
 import donorBrandIdentities from './donor-brand-identities.json'
 import { validateBreadlineFeatureRows } from './lib/feature-validation'
 import { reviewedDonorMtr } from './lib/donor-mtr-decisions'
+import { toProductionFeatureAddress } from './lib/production-address'
 // VALIDATION
 import { normalizeHongKongPhoneNumber } from '../../src/lib/utils/phone-property'
 import {
@@ -53,11 +54,13 @@ function insert(table: string, row: Record<string, unknown>): string {
 /**
  * Generates a repeatable Locations + Features import against an explicit destination snapshot.
  * @param args - --source mirror --target snapshot --output SQL path.
- * @returns Nothing; writes a private plan and count/diagnostic receipt.
+ * @returns Individually executable SQL statements; also writes a private plan and receipt.
  * @remarks Source changes to accepted mappings fail closed. No remote writes.
  */
-export function planBreadlineFeatures(args: string[]): void {
-  buildBreadlineFeaturePlan(args)
+export function planBreadlineFeatures(args: string[]): string[] {
+  return buildBreadlineFeaturePlan(args).statements.filter(
+    statement => !statement.startsWith('--'),
+  )
 }
 
 /** Builds a legacy plan or an in-transaction attributed import.
@@ -79,6 +82,9 @@ function buildBreadlineFeaturePlan(
   const sourcePath = option('--source')
   const targetPath = option('--target')
   const output = option('--output')
+  const legacyPlace = args.includes('--legacy-place')
+  if (legacyPlace && revision)
+    throw new Error('Legacy Place imports cannot use Feature revisions')
   if (
     !output.endsWith('.sql') ||
     [sourcePath, targetPath].some(path => resolve(path) === resolve(output))
@@ -98,6 +104,11 @@ function buildBreadlineFeaturePlan(
       )
       .get() as { projectId: string; organisationId: string } | null
     if (!scope) throw new Error('Breadline scope missing')
+    if (
+      legacyPlace &&
+      target.query("SELECT 1 FROM sqlite_master WHERE name='location'").get()
+    )
+      throw new Error('Legacy Place adapter is only for the pre-Location schema')
     // This legacy SQL planner must not bypass attributed Feature creation or revise enrolled identities.
     if (
       !revision &&
@@ -304,7 +315,11 @@ function buildBreadlineFeaturePlan(
             continue
           }
           const association = target
-            .query('SELECT locationId FROM featureLocation WHERE featureId=?')
+            .query(
+              legacyPlace
+                ? 'SELECT placeId FROM featurePlace WHERE featureId=?'
+                : 'SELECT locationId FROM featureLocation WHERE featureId=?',
+            )
             .get(id)
           if (!association)
             throw new Error(
@@ -448,6 +463,12 @@ function buildBreadlineFeaturePlan(
           ...emptyFeatureAddress(addresses).source,
           authored: addressParse.content,
         }
+        // The production Place reader predates the Location address envelope.
+        const featureAddress = {
+          ...emptyFeatureAddress(addresses),
+          source: localAddress,
+          coordinates,
+        }
         const local = LocalLocationInputSchema.parse({
           state: 'unresolved',
           facts: {
@@ -462,7 +483,11 @@ function buildBreadlineFeaturePlan(
           sourceId,
         )
         const revisionId = deriveLocationBaselineId(locationId)
-        if (target.query('SELECT id FROM location WHERE id=?').get(locationId))
+        if (
+          target
+            .query(`SELECT id FROM ${legacyPlace ? 'place' : 'location'} WHERE id=?`)
+            .get(locationId)
+        )
           throw new Error(
             `Unmapped Location identity collision for ${table}:${sourceId}; review the destination mapping`,
           )
@@ -482,11 +507,9 @@ function buildBreadlineFeaturePlan(
             geometry,
             spatialIndex: createFeatureSpatialIndex(geometry),
             addressMeta: {
-              address: {
-                ...emptyFeatureAddress(addresses),
-                source: localAddress,
-                coordinates,
-              },
+              address: legacyPlace
+                ? toProductionFeatureAddress(featureAddress)
+                : featureAddress,
               breadlineSource: { table, id: sourceId },
               ...(correction ? { coordinateCorrection: correction.evidence } : {}),
             },
@@ -544,50 +567,79 @@ function buildBreadlineFeaturePlan(
           coordinateCorrection: correction ?? null,
           invalidPhone: table === 'donors' && Boolean(row.phone) && !phone,
         }
-        statements.push(
-          insert('location', {
-            id: locationId,
-            ...locationTaxonomy(table === 'donors' ? 'establishment' : 'unknown'),
-            state: 'unresolved',
-            ownerOrganisationId: scope.organisationId,
-          }),
-        )
-        statements.push(
-          insert('locationRevisionContent', {
-            id: revisionId,
-            locationId,
-            version: 1,
-            origin: 'local',
-            contentHash: createHash('sha256')
-              .update(JSON.stringify({ payload, facts: local.facts }))
-              .digest('hex'),
-            rawSource: payload,
-            facts: createLocationFactsSnapshot(
-              local.facts,
-              table === 'donors' ? 'establishment' : 'unknown',
-            ),
-          }),
-        )
-        if (brands[0])
+        if (legacyPlace) {
+          // Preserve the deployed Place contract so later schema migrations consume real data.
           statements.push(
-            breadlineBrandCatalogueSql({
-              brand: brands[0],
+            insert('place', {
+              id: locationId,
+              state: 'unresolved',
+              ownerProjectId: scope.projectId,
+            }),
+            insert('placeRevision', {
+              id: revisionId,
+              placeId: locationId,
+              sequence: 1,
+              origin: 'local',
+              contentHash: createHash('sha256')
+                .update(JSON.stringify({ payload, facts: local.facts }))
+                .digest('hex'),
+              payload,
+              facts: local.facts,
+            }),
+            insert('featurePlace', {
+              featureId: id,
+              placeId: locationId,
+              factsRevisionId: revisionId,
+              locationRevisionId: revisionId,
+              overrides: {},
+            }),
+          )
+        } else {
+          statements.push(
+            insert('location', {
+              id: locationId,
+              ...locationTaxonomy(table === 'donors' ? 'establishment' : 'unknown'),
+              state: 'unresolved',
+              ownerOrganisationId: scope.organisationId,
+            }),
+          )
+          statements.push(
+            insert('locationRevisionContent', {
+              id: revisionId,
               locationId,
-              sourceRevisionId: revisionId,
+              version: 1,
+              origin: 'local',
+              contentHash: createHash('sha256')
+                .update(JSON.stringify({ payload, facts: local.facts }))
+                .digest('hex'),
+              rawSource: payload,
+              facts: createLocationFactsSnapshot(
+                local.facts,
+                table === 'donors' ? 'establishment' : 'unknown',
+              ),
+            }),
+          )
+          if (brands[0])
+            statements.push(
+              breadlineBrandCatalogueSql({
+                brand: brands[0],
+                locationId,
+                sourceRevisionId: revisionId,
+                actorId: authors[0].id,
+              }),
+            )
+          statements.push(
+            insert('featureLocation', {
+              featureId: id,
+              locationId,
+              factsRevisionId: revisionId,
+              locationRevisionId: revisionId,
+              acceptedOverrides: {},
+              version: `breadline-import:${table}:${sourceId}:${hash}`,
               actorId: authors[0].id,
             }),
           )
-        statements.push(
-          insert('featureLocation', {
-            featureId: id,
-            locationId,
-            factsRevisionId: revisionId,
-            locationRevisionId: revisionId,
-            acceptedOverrides: {},
-            version: `breadline-import:${table}:${sourceId}:${hash}`,
-            actorId: authors[0].id,
-          }),
-        )
+        }
         statements.push(
           insert('breadlineImportFeature', {
             sourceTable: table,
