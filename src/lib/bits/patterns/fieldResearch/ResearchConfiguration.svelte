@@ -17,6 +17,7 @@ import TextIcon from 'virtual:icons/proicons/text'
 // COMPONENTS
 import { SectionHeader, TextInput } from '#lib/bits/custom/form/index.js'
 import { Button, Select } from '#lib/bits/core/index.js'
+import FormProjectLayersSection from '#lib/bits/patterns/forms/formProjectLayersSection/FormProjectLayersSection.svelte'
 import DisplayTemplateEditor from '#lib/bits/patterns/forms/displayTemplate/DisplayTemplateEditor.svelte'
 import * as PropertyCard from '#lib/bits/patterns/cards/layerPropertyCard/components/index.js'
 import { Card, Switch } from '#lib/bits/custom/index.js'
@@ -268,6 +269,7 @@ onDestroy(() => {
   {:else if !settings || !data}
     <div
       class="bg-base-200 mt-4 h-40 animate-pulse rounded-lg"
+      role="status"
       aria-busy="true"
       aria-label="Loading session configuration"
     ></div>
@@ -277,69 +279,42 @@ onDestroy(() => {
         <p role="alert" class="text-error">{failure}</p>
       {/if}
       {#if section !== 'fields'}
-        <section>
-          <SectionHeader title="Session details" icon={LayersIcon} />
-          <div class="grid items-start gap-6 px-6 py-5 md:grid-cols-2">
-            <TextInput
-              id={inputId + '-code'}
-              label="Session code"
-              variant="resource"
-              bind:value={settings.code}
-              isEditing={editing}
-              trimOnBlur={false}
-              {disabled}
-              inputAttrs={{ maxlength: 100 }}
-            />
-            <fieldset
-              {disabled}
-              class="min-w-0 space-y-2 text-sm md:border-l md:border-border/50 md:pl-6"
-            >
-              <legend class="text-xs font-medium text-muted-foreground">
-                Available layers
-              </legend>
-              {#each layers as layer (layer.id)}
-                <div
-                  class="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 py-2"
-                >
-                  <label
-                    ><input
-                      type="checkbox"
-                      checked={configured.some(item => item.layerId === layer.id)}
-                      onchange={e => toggleLayer(layer.id, e.currentTarget.checked)}
-                    > {layer.name}</label
-                  >
-                  {#if configured.some(item => item.layerId === layer.id)}
-                    <label
-                      ><input
-                        type="radio"
-                        name="research-default-layer"
-                        checked={configured.some(
-                          item => item.layerId === layer.id && item.isDefault,
-                        )}
-                        onchange={() => {
-                          for (const item of configured)
-                            item.isDefault = item.layerId === layer.id
-                        }}
-                      >
-                      Default</label
-                    >
-                  {/if}
-                </div>
-              {/each}
-              <label
-                ><input
-                  type="radio"
-                  name="research-default-layer"
-                  checked={!configured.some(item => item.isDefault)}
-                  onchange={() => {
-                    for (const item of configured) item.isDefault = false
-                  }}
-                >
-                No default layer</label
-              >
-            </fieldset>
-          </div>
-        </section>
+        <div class="grid grid-cols-1 gap-8 xl:grid-cols-2">
+          <section class="min-w-0">
+            <SectionHeader title="Session details" icon={LayersIcon} />
+            <div class="grid items-start gap-6 px-6 py-5">
+              <TextInput
+                id={inputId + '-code'}
+                label="Session code"
+                variant="resource"
+                bind:value={settings.code}
+                isEditing={editing}
+                trimOnBlur={false}
+                {disabled}
+                inputAttrs={{ maxlength: 100 }}
+              />
+            </div>
+          </section>
+          <FormProjectLayersSection
+            title="Layers"
+            items={layers.map(layer => ({
+              id: layer.id,
+              layerName: layer.name,
+              projectNameShort: '',
+              isIncluded: configured.some(item => item.layerId === layer.id),
+              isDefaultVisible: configured.some(
+                item => item.layerId === layer.id && item.isDefault,
+              ),
+            }))}
+            isEditing={!disabled}
+            defaultControl="selection"
+            onToggleIncluded={toggleLayer}
+            onToggleDefault={(id, checked) => {
+              for (const item of configured)
+                item.isDefault = checked && item.layerId === id
+            }}
+          />
+        </div>
       {/if}
       {#if section !== 'fields'}
         <section>
@@ -349,13 +324,17 @@ onDestroy(() => {
               {@const label = key === 'featureType' ? 'Feature type' : labels[key]}
               <ResourceCard.Root
                 reserveDragSpace={true}
-                class="border-border bg-foreground/4 min-h-14 rounded-lg border bg-none shadow-none before:hidden"
+                class="border-border bg-foreground/4 min-h-14 flex-wrap gap-y-2 rounded-lg border bg-none shadow-none before:hidden"
               >
                 <Card.Body title={label} />
-                <div class="ml-auto w-44 shrink-0">
+                <div
+                  class="ml-auto grid w-72 max-w-full min-w-0 grid-cols-[3rem_minmax(0,1fr)] items-center gap-x-3 px-4 py-2"
+                >
+                  <span class="text-muted-foreground text-xs">Default</span>
                   {#if key === 'featureType'}
                     <Select
                       variant="ghost"
+                      class="h-auto! min-h-12 w-full! max-w-full min-w-0 [&_.bits-form__select-display]:px-0! [&_.bits-form__select-label]:overflow-visible! [&_.bits-form__select-label]:break-words [&_.bits-form__select-label]:text-clip! [&_.bits-form__select-label]:whitespace-normal!"
                       isEditing={editing}
                       triggerAttrs={{ 'aria-label': label + ' default value' }}
                       {disabled}
@@ -399,6 +378,7 @@ onDestroy(() => {
                     {@const override = selected?.overrides.defaults[key]}
                     <Select
                       variant="ghost"
+                      class="h-auto! min-h-12 w-full! max-w-full min-w-0 [&_.bits-form__select-display]:px-0! [&_.bits-form__select-label]:overflow-visible! [&_.bits-form__select-label]:break-words [&_.bits-form__select-label]:text-clip! [&_.bits-form__select-label]:whitespace-normal!"
                       isEditing={editing}
                       triggerAttrs={{ 'aria-label': label + ' default value' }}
                       {disabled}
@@ -432,7 +412,7 @@ onDestroy(() => {
                 <Card.Actions
                   padding="md"
                   bg="none"
-                  class="bits-form__parent-resource-actions-rail border-border/60 w-auto! min-w-0! border-l"
+                  class="bits-form__parent-resource-actions-rail border-border/60 w-auto! min-w-0! border-l pr-6!"
                 >
                   <label
                     for={inputId + '-visible-' + key}
@@ -544,10 +524,11 @@ onDestroy(() => {
                     >
                   {/if}
                   {#if !selected || own?.defaultValue !== undefined}
-                    <label
+                    <label for={`${inputId}-property-default-${property.id}`}
                       >Default value
                       {#if property.values?.length && property.cardinality === 'many'}
                         <select
+                          id={`${inputId}-property-default-${property.id}`}
                           class={control}
                           multiple
                           {disabled}
@@ -571,6 +552,7 @@ onDestroy(() => {
                         </select>
                       {:else if property.values?.length}
                         <select
+                          id={`${inputId}-property-default-${property.id}`}
                           class={control}
                           {disabled}
                           value={String(own?.defaultValue ?? '')}
@@ -589,6 +571,7 @@ onDestroy(() => {
                         </select>
                       {:else if property.dataType === 'boolean'}
                         <select
+                          id={`${inputId}-property-default-${property.id}`}
                           class={control}
                           {disabled}
                           value={own?.defaultValue == null
@@ -608,6 +591,7 @@ onDestroy(() => {
                         </select>
                       {:else}
                         <input
+                          id={`${inputId}-property-default-${property.id}`}
                           class={control}
                           type={property.dataType === 'number'
                             ? 'number'
@@ -634,7 +618,7 @@ onDestroy(() => {
             {/each}
           </PropertyCard.Wrapper>
           {#if !data.properties.length}
-            <p class="px-6 py-5 text-sm text-muted-foreground">
+            <p class="text-muted-foreground px-6 py-5 text-sm">
               This project has no properties to configure.
             </p>
           {/if}
@@ -662,10 +646,6 @@ onDestroy(() => {
               >
             {/if}
             {#if !selected || selected.overrides.titleTemplate !== undefined}
-              <p class="text-muted-foreground text-sm">
-                Use a zero component such as <code>{'{{000}}'}</code> for a three-digit
-                sequence. Numbers may grow beyond the chosen width.
-              </p>
               <DisplayTemplateEditor
                 value={selected?.overrides.titleTemplate ?? settings.titleTemplate}
                 onChange={value => {
@@ -673,6 +653,9 @@ onDestroy(() => {
                   else if (settings) settings.titleTemplate = value
                 }}
                 properties={templateProperties}
+                allowSequence={true}
+                previewValues={{ 'session.code': settings.code, 'session.sequence': 1 }}
+                isEditing={editing}
                 showLLMButton={false}
                 {disabled}
               />
@@ -681,7 +664,7 @@ onDestroy(() => {
         </section>
       {/if}
       {#if !header}
-        <div class="flex justify-end border-t border-border px-6 py-4">
+        <div class="border-border flex justify-end border-t px-6 py-4">
           <Button
             text="Save session configuration"
             color="primary"
