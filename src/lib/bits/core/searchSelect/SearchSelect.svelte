@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { tick } from 'svelte'
+import { tick, type Component } from 'svelte'
 import { fade } from 'svelte/transition'
 import { prefersReducedMotion } from 'svelte/motion'
 // BITS UI
@@ -16,8 +16,11 @@ let {
   value = '',
   disabled = false,
   resetOnSelect = false,
+  clearOnOpen = false,
   plain = false,
   selectedDisplay = false,
+  selectedToken = false,
+  icon: Icon = Search,
   onCreate,
   createLabel = 'Create',
   onSelect,
@@ -36,8 +39,11 @@ let {
   value?: string
   disabled?: boolean
   resetOnSelect?: boolean
+  clearOnOpen?: boolean
   plain?: boolean
   selectedDisplay?: boolean
+  selectedToken?: boolean
+  icon?: Component
   onCreate?: (name: string) => void
   createLabel?: string
   onSelect: (value: string) => void
@@ -56,6 +62,20 @@ $effect(() => {
 $effect(() => {
   if (!open && !resetOnSelect)
     inputText = items.find(item => item.value === value)?.label ?? ''
+})
+// Clear the editable label for both input-click and keyboard/trigger opening.
+$effect(() => {
+  if (open && clearOnOpen && !query) inputText = ''
+})
+$effect(() => {
+  if (open && selectedToken) {
+    // Reopening a selected token starts a fresh search, independent of its old query.
+    if (value) {
+      query = ''
+      inputText = ''
+    }
+    void tick().then(() => input?.focus({ preventScroll: true }))
+  }
 })
 // Bound rendered options while searching the complete taxonomy before slicing.
 const matches = $derived(
@@ -139,12 +159,30 @@ const canCreate = $derived(Boolean(onCreate && query.trim() && matches.length ==
       }}
     >
       <div class="relative min-w-0">
+        {#if selectedToken && value && !open}
+          <button
+            type="button"
+            class="bits-form__select-trigger absolute inset-0 w-full pl-9! text-left"
+            aria-label={`${label}: ${selectedItem?.label ?? value}`}
+            {disabled}
+            onclick={() => {
+              open = true
+            }}
+          >
+            <span class="bg-muted rounded px-2 py-0.5 text-sm"
+              >{selectedItem?.label ?? value}</span
+            >
+          </button>
+        {/if}
         <Combobox.Input
           bind:ref={input}
           clearOnDeselect={resetOnSelect}
           aria-label={label}
           placeholder={label}
-          class={`bits-form__select-trigger w-full pl-9! ${plain ? 'bg-transparent!' : ''}`}
+          class={`bits-form__select-trigger w-full pl-9! ${plain ? 'bg-transparent!' : ''} ${selectedToken && value && !open ? 'invisible' : ''}`}
+          onclick={() => {
+            if (!disabled) open = true
+          }}
           oninput={event => {
             query = event.currentTarget.value
             open = true
@@ -154,12 +192,12 @@ const canCreate = $derived(Boolean(onCreate && query.trim() && matches.length ==
         <Combobox.Trigger
           aria-label={`Open ${label}`}
           class="text-muted-foreground absolute inset-y-0 left-0 px-3"
-          ><Search class="size-4" /></Combobox.Trigger
+          ><Icon class="size-4" /></Combobox.Trigger
         >
       </div>
       <Combobox.Portal>
         <Combobox.Content
-          class="bits-form__select-content z-[100] w-[var(--bits-combobox-anchor-width)]"
+          class={`bits-form__select-content z-[100] ${selectedToken ? 'w-80 max-w-[calc(100vw-2rem)] min-w-80' : 'w-[var(--bits-combobox-anchor-width)]'}`}
           sideOffset={4}
         >
           <Combobox.Viewport class="bits-form__select-viewport max-h-64">
@@ -167,9 +205,11 @@ const canCreate = $derived(Boolean(onCreate && query.trim() && matches.length ==
               <Combobox.Item
                 value={item.value}
                 label={item.label}
-                class="bits-form__select-item flex items-center justify-between gap-3"
+                class="bits-form__select-item flex h-auto! min-h-10 items-center justify-between gap-3 py-2"
               >
-                <span class="flex min-w-0 items-center gap-3">
+                <span
+                  class="flex min-w-0 items-center gap-3 break-words whitespace-normal"
+                >
                   {#if selectedDisplay}
                     <ResourceIcon
                       src={item.image}
