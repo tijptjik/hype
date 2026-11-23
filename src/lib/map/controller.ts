@@ -28,6 +28,8 @@ export type MapController = {
     bearing: number
     pitch: number
   } | null
+  /** Observe rotation and tilt; returns a listener cleanup for the owning surface. */
+  onOrientationChange?: (callback: () => void) => () => void
   flyTo: (options: CameraOptions & { duration?: number }) => void
   easeTo: (options: CameraOptions & { duration?: number }) => void
   jumpTo: (options: CameraOptions) => void
@@ -94,6 +96,16 @@ export const createMapController = (
         zoom: map.getZoom(),
         bearing: map.getBearing(),
         pitch: map.getPitch(),
+      }
+    },
+    onOrientationChange: callback => {
+      const map = getMap()
+      if (!map) return () => {}
+      map.on('rotate', callback)
+      map.on('pitch', callback)
+      return () => {
+        map.off('rotate', callback)
+        map.off('pitch', callback)
       }
     },
     flyTo: options => run(map => map.flyTo(options)),
