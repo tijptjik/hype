@@ -1,3 +1,4 @@
+import { displayPropertyValueIds } from '#lib/properties/selection.js'
 // SVELTE
 import { onMount } from 'svelte'
 // EMBED
@@ -120,7 +121,9 @@ export function useEmbedModel(url: URL) {
             row.properties.some(
               item =>
                 item.propertyId === propertyId &&
-                categories.includes(`${item.propertyId}:${item.propertyValueId}`),
+                displayPropertyValueIds(item).some(id =>
+                  categories.includes(`${item.propertyId}:${id}`),
+                ),
             ),
           )),
     ),
