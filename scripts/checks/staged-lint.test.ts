@@ -160,4 +160,26 @@ describe('staged lint snapshot', () => {
     expect(() => checkStaged(root)).toThrow()
     expect(readFileSync(join(root, 'notes.md'), 'utf8')).toBe('#  Title\n\n- item\n')
   })
+
+  test('formats staged Markdown while preserving partially staged working content', () => {
+    const root = fixture()
+    write(root, 'notes.md', '#  Title\n\n- item\n')
+    git(root, ['add', 'notes.md'])
+    write(root, 'notes.md', '#  Title\n\n- unstaged\n')
+    checkStaged(root, true)
+    expect(readFileSync(join(root, 'notes.md'), 'utf8')).toBe(
+      '#  Title\n\n- unstaged\n',
+    )
+    const staged = Bun.spawnSync(['git', 'show', ':notes.md'], { cwd: root })
+    expect(staged.stdout.toString()).toBe('# Title\n\n- item\n')
+    expect(() => checkStaged(root)).not.toThrow()
+  })
+
+  test('updates a clean working copy when formatting staged Markdown', () => {
+    const root = fixture()
+    write(root, 'llms.txt', '#  Title\n')
+    git(root, ['add', 'llms.txt'])
+    checkStaged(root, true)
+    expect(readFileSync(join(root, 'llms.txt'), 'utf8')).toBe('# Title\n')
+  })
 })

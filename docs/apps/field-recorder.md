@@ -1,5 +1,19 @@
 # Field Recorder demo
 
+> **Development status:** The web-based Field Recorder demo is paused for now. Current
+> recorder development is focused on the Android client in `apps/recorder`. The web demo
+> and its staging data are retained for reference; they are not the Android app's
+> capture implementation. The Android device sign-in and account endpoints remain in
+> use.
+
+The web demo's entry points are `src/routes/admin/field-recorder/` and
+`src/routes/recorder/[session]/`; its UI lives in
+`src/lib/bits/patterns/fieldRecorder/`, with staging APIs in
+`src/lib/api/fieldRecorder.remote.ts` and `src/lib/api/fieldRecorderMaps.remote.ts`. Its
+staging schemas and migrations are `src/lib/db/schema/fieldRecorder*.ts` and
+`migrations/0253_field_recorder.sql` / `0254_field_recorder_maps.sql`. The shared Field
+Research model and Android device authentication are separate from this web demo.
+
 Admin setup: `/admin/field-recorder`. Dedicated mobile and desktop capture:
 `/recorder/:session`. Both use Hype authentication. Each server read, save, image
 request and voice request checks the existing Field Research project-management policy.

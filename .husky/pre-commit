@@ -1,2 +1,2 @@
-# Validate the staged snapshot without modifying unstaged work.
-bun run scripts/checks/staged-lint.ts
+# Format staged Markdown and validate the snapshot without staging unstaged work.
+bun run scripts/checks/staged-lint.ts --fix-markdown

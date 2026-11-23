@@ -6,6 +6,7 @@ import {
   readFileSync,
   rmSync,
   symlinkSync,
+  writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -33,12 +34,13 @@ function run(args: string[], cwd: string, env: NodeJS.ProcessEnv): string {
 }
 
 /**
- * Validate an immutable copy of the staged tree without rewriting either index or files.
+ * Validate a snapshot of the staged tree, optionally formatting staged Markdown.
  * @param cwd Directory within the repository to validate.
+ * @param fixMarkdown Whether to apply staged Markdown formatting after validation.
  * @returns Nothing when all staged content passes the configured checks.
  * @remarks Configuration, tool-version and lockfile changes trigger a full-tree check.
  */
-export function checkStaged(cwd = process.cwd()): void {
+export function checkStaged(cwd = process.cwd(), fixMarkdown = false): void {
   const repository = run(
     ['git', 'rev-parse', '--show-toplevel'],
     cwd,
@@ -116,6 +118,13 @@ export function checkStaged(cwd = process.cwd()): void {
       throw new Error('The staged tree must retain its Biome configuration.')
     }
     const biome = join(toolsRoot, 'node_modules/.bin/biome')
+    const markdown = files.filter(
+      file => file.endsWith('.md') || /(^|\/)llms\.txt$/.test(file),
+    )
+    const originals = new Map(
+      markdown.map(file => [file, readFileSync(join(snapshot, file))]),
+    )
+    if (fixMarkdown) formatMarkdown(markdown, snapshot, true, toolEnv)
     const batches = fullTree
       ? [['.']]
       : Array.from({ length: Math.ceil(files.length / 100) }, (_, i) =>
@@ -147,6 +156,37 @@ export function checkStaged(cwd = process.cwd()): void {
       false,
       toolEnv,
     )
+    if (fixMarkdown) {
+      const formatted = markdown.filter(
+        file => !originals.get(file)?.equals(readFileSync(join(snapshot, file))),
+      )
+      if (formatted.length) {
+        // Generate a patch from the frozen index, then apply it atomically to the real index.
+        const before = run(['git', 'write-tree'], repository, gitEnv).trim()
+        run(
+          ['git', `--work-tree=${snapshot}`, 'add', '--', ...formatted],
+          repository,
+          gitEnv,
+        )
+        const after = run(['git', 'write-tree'], repository, gitEnv).trim()
+        const patch = run(
+          ['git', 'diff', '--binary', before, after, '--'],
+          repository,
+          gitEnv,
+        )
+        const patchFile = join(temporary, 'markdown.patch')
+        writeFileSync(patchFile, patch)
+        run(['git', 'apply', '--cached', '--', patchFile], repository, process.env)
+        // Update a working file only when it still exactly matches the original staged bytes.
+        for (const file of formatted) {
+          const path = join(repository, file)
+          if (existsSync(path) && originals.get(file)?.equals(readFileSync(path))) {
+            writeFileSync(path, readFileSync(join(snapshot, file)))
+          }
+        }
+        console.log(`Formatted ${formatted.length} staged Markdown file(s).`)
+      }
+    }
   } finally {
     rmSync(temporary, { recursive: true, force: true })
   }
@@ -154,8 +194,8 @@ export function checkStaged(cwd = process.cwd()): void {
 
 if (import.meta.main) {
   try {
-    checkStaged()
-    console.log('Staged lint checks passed; no files were rewritten.')
+    checkStaged(process.cwd(), process.argv.includes('--fix-markdown'))
+    console.log('Staged lint checks passed.')
   } catch (error) {
     console.error(error instanceof Error ? error.message : error)
     console.error(

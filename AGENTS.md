@@ -152,8 +152,9 @@ Watch commands retain the slot until stopped; avoid them for one-shot checks.
   rename ordinary Markdown documents just because they contain these fragments.
 - `format:markdown` and `format:markdown:check` also handle `llms.txt` as Markdown; the
   same adapter runs in repository lint and pre-commit checks.
-- Pre-commit validates a temporary snapshot of the Git index, including partially staged
-  files. It never formats, stages, or changes working-tree files.
+- Pre-commit formats staged Markdown in a temporary index snapshot before validation. It
+  preserves unstaged changes, and updates a working file only when it matches the
+  original staged content. Other staged files are checked without modification.
 - Biome policy/version, package manifest, lockfile, and ignore changes trigger a full
   staged-tree check. Include the required baseline migration in the same reviewed
   change; keep mechanical formatting separate from behavioral changes.
