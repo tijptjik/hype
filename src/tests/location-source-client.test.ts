@@ -283,3 +283,28 @@ it('rejects empty status-only searches and malformed category collections', asyn
     searchSaanSeoiPlaces(c, { q: '', filters: { taxonomyPrimary: 'bakery' } }),
   ).rejects.toThrow('search failed (503)')
 })
+
+it('retains category collection coordinates and translated addresses for map previews', async () => {
+  const geometry = { type: 'Point', coordinates: [114.18, 22.28] }
+  const i18n = { en: { name: 'Bakery', freeformAddress: '8 Test Street' } }
+  const c = client({
+    data: [
+      { id: 'shop', attributes: { resourceReleaseId: 'release', geometry, i18n } },
+    ],
+    meta: {
+      apiReleaseSet: 'release',
+      apiCatalogRevision: 'catalog',
+      catalogPublishedAt: '2026-10-18T00:00:00Z',
+      page: { offset: 0, limit: 5, total: 1 },
+    },
+  })
+  const result = await searchSaanSeoiPlaces(c, {
+    q: '',
+    filters: { taxonomyPrimary: 'bakery' },
+    limit: 5,
+  })
+  expect(result[0].preview).toEqual({
+    place: { id: 'shop', resourceReleaseId: 'release', geometry, i18n },
+    i18n,
+  })
+})

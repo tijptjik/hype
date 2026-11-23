@@ -96,15 +96,22 @@ const categoryCollectionSchema = z.object({
     .array(
       z.object({
         id: z.string().min(1),
-        attributes: z.object({
-          resourceReleaseId: z.string().min(1),
-          i18n: z
-            .record(
-              z.string(),
-              z.object({ name: z.string().nullish(), brandName: z.string().nullish() }),
-            )
-            .optional(),
-        }),
+        attributes: z
+          .object({
+            resourceReleaseId: z.string().min(1),
+            i18n: z
+              .record(
+                z.string(),
+                z
+                  .object({
+                    name: z.string().nullish(),
+                    brandName: z.string().nullish(),
+                  })
+                  .passthrough(),
+              )
+              .optional(),
+          })
+          .passthrough(),
       }),
     )
     .max(20),
@@ -218,6 +225,15 @@ async function browseSaanSeoiPlacesPage(
         locale,
         nameText: row.attributes.i18n?.[locale]?.name ?? null,
         brandText: row.attributes.i18n?.[locale]?.brandName ?? null,
+        // Preserve full collection facts for the same identity-checked preview used by text search.
+        ...(row.attributes.geometry
+          ? {
+              preview: {
+                place: { ...row.attributes, id: row.id },
+                i18n: row.attributes.i18n ?? {},
+              },
+            }
+          : {}),
       })),
     )
     if (more) offset = next
