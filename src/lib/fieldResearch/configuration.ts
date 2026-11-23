@@ -58,7 +58,7 @@ const titleTemplateSchema = z
       if (!parsed.dependencies.includes('session.sequence'))
         context.addIssue({
           code: 'custom',
-          message: 'Include a sequence such as {{000}}.',
+          message: 'Add a Sequence component to the title template.',
         })
     } catch (error) {
       context.addIssue({
