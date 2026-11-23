@@ -33,19 +33,37 @@ bytes and lacked their versioned metadata. The operator approved a marked recove
 baseline for each. The rehearsal matched all seven recovered rows to their approved
 image IDs, original hashes and metadata versions. All 16 focused media tests passed.
 
-Feature enrollment reached 1,668 of 1,670 on the same copy. Two published Independent
-Bookstores Features each have an open, submitted creation task and one submitted photo
-already in the gallery. One Feature is archived and the other is active. Neither task
-has a recorded review decision. Enrollment stopped before lifecycle conversion. The
-normalized source projections matched, SQLite integrity passed and the foreign-key check
-found zero violations. The private run directory retains the task IDs, visibility flags
-and recovery receipts under `approved-first/`.
+The next fresh copy enrolled all 1,670 Features. The operator approved retaining the two
+published Independent Bookstores records and their submitted creation tasks. The
+converted tasks point to submitted proposals with the original contributor and the exact
+gallery image revision. One bookstore remains archived and one remains active. The staff
+review service opened both. Four local transactions exercised acceptance and rejection
+for each bookstore, preserved the visibility and archive flags, and rolled back. The
+private receipt is in `approved-bookstores-verified/bookstore-verification.json`.
 
-All 42 Features selected by `0207` were classified as intangible and excluded from the
-1,018 Location splits. The ten local Revealing Arrow objects matched the package hashes
-and sizes. The matching and branding package's three input files and 769 local media
-objects also matched their manifests. Production object verification and a complete
-rehearsal from the original export through the deployment entry point remain pending.
+The draft conversion retained all 66 unfinished creation tasks as drafts. Their
+before-images retain 58 admin and eight app creation origins. Replay produced zero
+further draft conversions. Migration `0207` then recorded 42 former-bookstore revisions.
+All 42 had been excluded from the 1,018 Location splits. The local database passed
+SQLite integrity and foreign-key checks.
+
+Two additional packages require reconciliation on the production-derived database:
+
+- The first matching and branding comparison stopped on 3,639 differing keys across
+  eight tables. These include the 330 Breadline bindings and their independently
+  generated revision history. Verify the package against production's own ancestry and
+  replay the resulting plan before applying it.
+- The ten local Revealing Arrow media objects matched the package hashes and sizes. The
+  recording uses two historical option IDs missing from the production Ghost Signs
+  catalogue. The seven existing records that used the old condition now carry
+  Stratigraphy = Revealed. The old Material = Tiles has no matching example among the
+  production records. Retain the authored history and resolve the current classification
+  against the production catalogue before importing the recording.
+
+The matching and branding package's three original input files and 769 local media
+objects matched their manifests. Recheck the pinned package at release freeze. The
+revision rehearsal starts from the locally split database. A complete deployment
+rehearsal must start at the original export and include every selected package.
 
 ## 1. Freeze the candidate and control deployment
 

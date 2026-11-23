@@ -12,7 +12,7 @@ import sqlite3
 from pathlib import Path
 
 from scope import FILTERS, initialize_scope, layout, read_db, records
-from production_baseline import ProductionAncestry, REFERENCE
+from production_baseline import ProductionAncestry, REFERENCE, verify_retained_source
 
 ACTOR = "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM"
 STAGE = "_matchingBrandingReleaseRows"
@@ -595,6 +595,9 @@ def prepare(args):
         "foreignKeys": 0,
         "cohorts": {k: len(v) for k, v in manifest["expected"].items()},
     }
+    preserved = verify_retained_source(trial, args.target)
+    if preserved is not None:
+        report["originalProductionRowsPreserved"] = preserved
     (args.output / "verification.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report))
 

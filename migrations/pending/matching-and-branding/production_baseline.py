@@ -304,6 +304,40 @@ class ProductionAncestry:
         return before, after
 
 
+def verify_retained_source(db, target):
+    """Compare original target rows byte for byte after the curation transaction."""
+    db.execute(
+        "ATTACH DATABASE ? AS original", (target.resolve().as_uri() + "?mode=ro",)
+    )
+    subjects = "(SELECT featureId FROM original.breadlineImportFeature)"
+    original_history = (
+        "FROM original.featureLocationHistory WHERE featureId IN " + subjects
+    )
+    if not db.execute(
+        "SELECT 1 "
+        + original_history
+        + " AND action='baseline' AND version='initial' LIMIT 1"
+    ).fetchone():
+        return None
+    feature_revisions = "FROM original.featureRevision WHERE featureId IN " + subjects
+    filters = {
+        "breadlineImportFeature": "1",
+        "featureLocationHistory": "featureId IN " + subjects,
+        "featureRevision": "featureId IN " + subjects,
+        "revisionChangeSet": "id IN (SELECT changeSetId " + feature_revisions + ")",
+        "locationRevision": "id IN (SELECT factsRevisionId " + original_history + ")",
+    }
+    counts = {}
+    for table, predicate in filters.items():
+        original = f'SELECT * FROM original."{table}" WHERE {predicate}'
+        if db.execute(
+            f'SELECT 1 FROM ({original} EXCEPT SELECT * FROM main."{table}") LIMIT 1'
+        ).fetchone():
+            raise ValueError("Release altered existing production ancestry in " + table)
+        counts[table] = db.execute(f"SELECT count(*) FROM ({original})").fetchone()[0]
+    return counts
+
+
 if __name__ == "__main__":
     os.umask(0o077)
     parser = argparse.ArgumentParser(description=__doc__)
