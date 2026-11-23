@@ -7015,6 +7015,68 @@ describe('Feature-owned names on a linked Place', () => {
         ?.state,
     ).toBe('unresolved')
   })
+  it('adopts a shared local shop without assigning an upstream identity and rejects stale revisions', async () => {
+    const { acceptReconciliationLocation } = await import(
+      '#lib/db/services/locationReconciliationAcceptance.js'
+    )
+    const { db, sqlite } = await namedFeature()
+    sqlite.exec(readFileSync('migrations/0209_shared_location_corrections.sql', 'utf8'))
+    sqlite.exec(
+      "INSERT INTO featureProperty(featureId,propertyId,value) VALUES ('f','phone','[\"+85227743090\"]')",
+    )
+    const shop = await persistSaanSeoiPlace(db, {
+      ssId: 'local-shop-fixture',
+      apiVersion: 'api-places-v0.1',
+      releaseId: 'release',
+      snapshotId: 'snapshot',
+      issues: [],
+      rawSource: {},
+      facts: {
+        ...facts,
+        names: { en: 'Local station shop' },
+        phoneNumber: [],
+      },
+    })
+    sqlite
+      .prepare("UPDATE location SET state='unresolved',ssId=NULL WHERE id=?")
+      .run(shop.locationId)
+    const input = {
+      featureId: 'f',
+      projectId: 'p',
+      locationId: shop.locationId,
+      revisionId: shop.revisionId,
+      expectedSourceHash: sqlite
+        .prepare('SELECT contentHash FROM locationRevisionContent WHERE id=?')
+        .get(shop.revisionId)?.contentHash as string,
+      expectedFeatureModifiedAt: 'original',
+      expectedRevision: null,
+      actorId: 'reviewer',
+      scopeGuard: sql`1`,
+      authorizePhoneCuration: async () => {
+        throw new Error('Unexpected phone curation')
+      },
+    }
+    expect(
+      await acceptReconciliationLocation(db, { ...input, revisionId: 'stale' }),
+    ).toBeNull()
+    expect(
+      await acceptReconciliationLocation(db, { ...input, expectedSourceHash: 'stale' }),
+    ).toBeNull()
+    expect(
+      await acceptReconciliationLocation(db, { ...input, scopeGuard: sql`0` }),
+    ).toBeNull()
+    expect(await acceptReconciliationLocation(db, input)).not.toBeNull()
+    expect(
+      sqlite.prepare('SELECT ssId,state FROM location WHERE id=?').get(shop.locationId),
+    ).toEqual({ ssId: null, state: 'unresolved' })
+    expect((await getAcceptedFeatureLocation(db, 'f', 'p'))?.effective.names.en).toBe(
+      'Local station shop',
+    )
+    expect(
+      (await getAcceptedFeatureLocation(db, 'f', 'p'))?.effective.phoneNumber,
+    ).toEqual(['+85227743090'])
+    expect(await acceptReconciliationLocation(db, input)).toBeNull()
+  })
   it.each([
     [false, false],
     [true, false],

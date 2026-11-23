@@ -16,6 +16,7 @@ import {
 } from './services/locationOwnership'
 import { canManageSharedLocationIdentity } from './services/authz/location'
 // SERVICES
+import { listLocationResources } from '#lib/db/services/locationDirectory.js'
 import {
   pendingLocationReconciliation,
   readLocationReconciliationProgress,
@@ -53,7 +54,50 @@ async function scope(ctx: GuardedBaseContext, ref: string): Promise<ProjectScope
   return project
 }
 
-/** Read one unresolved Feature and authoritative progress. @param input Project, optional cursor or selected Feature. @returns Queue item, searchable fields and counts. @remarks Archived Features are excluded; skipped items remain unresolved and can be revisited. */
+/** Search shared Hype Locations within an authorized reconciliation project.
+ * @param input Project, literal query or selected identity, and pagination cursor.
+ * @returns Existing Location identities with their current facts and revision pins.
+ * @remarks Includes shared unpublished drafts; private Organisation Locations stay excluded.
+ */
+export const searchReconciliationLocations = guardedQuery(
+  z.strictObject({
+    project: z.string().min(1).max(200),
+    q: z.string().trim().max(200).optional(),
+    id: z.string().min(1).max(200).optional(),
+    after: z.string().max(16000).optional(),
+  }),
+  async (input, ctx) => {
+    await scope(ctx, input.project)
+    const page = await listLocationResources(ctx.db, {
+      q: input.q,
+      searchAddress: true,
+      id: input.id,
+      after: input.after,
+      includeCount: false,
+      publication: 'all',
+      excludeCanonicalDrafts: false,
+    })
+    return {
+      rows: page.data.flatMap(row =>
+        row.facts && row.revisionId && row.sourceAvailability === 'current'
+          ? [
+              {
+                id: row.id,
+                ssId: row.ssId,
+                kind: row.kind,
+                revisionId: row.revisionId,
+                draftVersion: row.draftVersion ?? null,
+                facts: row.facts,
+              },
+            ]
+          : [],
+      ),
+      nextCursor: page.nextCursor,
+    }
+  },
+)
+
+/** Read one unresolved Feature and authoritative progress. @param input Project, optional cursor or selected Feature. @returns Queue item, searchable fields and counts. @remarks Archived and saved skipped Features are excluded; resets return skipped items to review. */
 export const getLocationReconciliation = guardedQuery(
   z.strictObject({
     project: z.string().min(1).max(200),
@@ -411,6 +455,7 @@ export const acceptReconciliationMatch = guardedCommand(
     featureId: z.string().min(1),
     locationId: z.string().min(1),
     revisionId: z.string().min(1),
+    expectedSourceHash: z.string().min(1).optional(),
     expectedFeatureModifiedAt: z.string().min(1),
     expectedRevision: z.string().nullable(),
   }),

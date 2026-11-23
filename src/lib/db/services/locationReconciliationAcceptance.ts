@@ -17,12 +17,14 @@ import { prepareStaffLocationPropagation } from './locationStaffPropagation'
 import { executeRevisionBatch } from './revisionBatch'
 // TYPES
 import type { Database } from '#lib/types.js'
+import type { FeatureLocationOverrides } from '#lib/locations/model.js'
 
-/** Adopt a reviewed upstream Location and retain only a missing phone as shared curation.
+/** Adopt a reviewed shared Hype Location and retain only a missing phone as shared curation.
  * @param db Request database. @param input Authorized Feature and exact source/association pins.
  * @returns Saved association and optional curation revision, or null for stale evidence.
  * @remarks Publisher snapshots stay immutable. Phone curation, propagation, Feature history and
- * association are one transaction; custom Feature names remain Feature-owned.
+ * association are one transaction; custom Feature names remain Feature-owned. Local drafts
+ * keep an otherwise missing phone as a Feature override without editing the shared draft.
  */
 export async function acceptReconciliationLocation(
   db: Database,
@@ -31,6 +33,7 @@ export async function acceptReconciliationLocation(
     projectId: string
     locationId: string
     revisionId: string
+    expectedSourceHash?: string
     expectedFeatureModifiedAt: string
     expectedRevision: string | null
     actorId: string
@@ -54,10 +57,10 @@ export async function acceptReconciliationLocation(
     baseline.baseline.modifiedAt !== input.expectedFeatureModifiedAt
   )
     return null
-  const source = await db.get<{ facts: string }>(sql`
-    SELECT r.facts FROM locationRevisionContent r JOIN location l ON l.id=r.locationId
-    WHERE r.id=${input.revisionId} AND l.id=${input.locationId} AND l.state='linked'
-      AND l.ssId IS NOT NULL AND l.ownerOrganisationId IS NULL AND l.sourceAvailability='current'
+  const source = await db.get<{ facts: string; state: string }>(sql`
+    SELECT r.facts,l.state FROM locationRevisionContent r JOIN location l ON l.id=r.locationId
+    WHERE r.id=${input.revisionId} AND l.id=${input.locationId} AND ((l.state='linked' AND l.ssId IS NOT NULL) OR (l.state='unresolved' AND l.ssId IS NULL)) AND l.ownerOrganisationId IS NULL AND l.sourceAvailability='current'
+      AND (l.state='linked' OR r.contentHash=${input.expectedSourceHash ?? null})
       AND r.id=(SELECT id FROM locationRevisionContent WHERE locationId=l.id ORDER BY version DESC LIMIT 1)
   `)
   if (!source) return null
@@ -74,9 +77,9 @@ export async function acceptReconciliationLocation(
       AND modifiedAt=${input.expectedFeatureModifiedAt} AND isArchived=0 AND isDraft=0)
     AND (SELECT version FROM featureLocation WHERE featureId=${input.featureId}) IS ${input.expectedRevision}
     AND NOT EXISTS(SELECT 1 FROM featureLocation WHERE featureId=${input.featureId} AND locationId=${input.locationId})
-    AND EXISTS(SELECT 1 FROM location WHERE id=${input.locationId} AND state='linked'
-      AND ssId IS NOT NULL AND ownerOrganisationId IS NULL AND sourceAvailability='current')
+    AND EXISTS(SELECT 1 FROM location WHERE id=${input.locationId} AND ((state='linked' AND ssId IS NOT NULL) OR (state='unresolved' AND ssId IS NULL)) AND ownerOrganisationId IS NULL AND sourceAvailability='current')
     AND (SELECT id FROM locationRevisionContent WHERE locationId=${input.locationId} ORDER BY version DESC LIMIT 1)=${input.revisionId}
+    AND EXISTS(SELECT 1 FROM location l JOIN locationRevisionContent r ON r.locationId=l.id WHERE l.id=${input.locationId} AND r.id=${input.revisionId} AND (l.state='linked' OR r.contentHash=${input.expectedSourceHash ?? null}))
     AND (SELECT id FROM locationSharedHead WHERE locationId=${input.locationId}) IS ${head?.id ?? null}`
   const current = await db.get<{ valid: number }>(
     sql`SELECT CASE WHEN ${fence} THEN 1 ELSE 0 END valid`,
@@ -87,8 +90,21 @@ export async function acceptReconciliationLocation(
   let propagation: Awaited<ReturnType<typeof prepareStaffLocationPropagation>> | null =
     null
   const phoneChoice = head ? JSON.parse(head.corrections).phoneNumber : undefined
+  // Linking a draft does not grant permission to edit its shared working copy.
+  const overrides: FeatureLocationOverrides =
+    source.state === 'unresolved' &&
+    !shared.facts.phoneNumber?.length &&
+    baseline.baseline.effective.phoneNumber?.length
+      ? {
+          phoneNumber: {
+            mode: 'override',
+            value: baseline.baseline.effective.phoneNumber,
+          },
+        }
+      : {}
   // Existing community edits, including explicit clears, take precedence over imported fallback evidence.
   if (
+    source.state === 'linked' &&
     !upstream.phoneNumber?.length &&
     !shared.facts.phoneNumber?.length &&
     (!phoneChoice ||
@@ -137,7 +153,7 @@ export async function acceptReconciliationLocation(
     actorId: input.actorId,
     factsRevisionId: input.revisionId,
     locationRevisionId: input.revisionId,
-    overrides: {},
+    overrides,
     factsOrganisationRevision: null,
     locationOrganisationRevision: null,
     acceptancePolicy: {
@@ -155,7 +171,7 @@ export async function acceptReconciliationLocation(
     projectId: input.projectId,
     revision: write.version,
     facts,
-    overrides: {},
+    overrides,
   })
   const capture = await prepareFeatureLocationAssociationCapture(db, {
     association: write.input,

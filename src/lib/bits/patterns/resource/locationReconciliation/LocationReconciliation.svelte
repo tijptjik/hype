@@ -12,6 +12,7 @@ import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // API
 import {
   getLocationReconciliation,
+  searchReconciliationLocations,
   markReconciliationUnavailable,
   getUnavailableReconciliation,
   getMatchedReconciliation,
@@ -62,7 +63,13 @@ import type { LocationFacts } from '#lib/locations/model.js'
 
 let { project }: { project: string } = $props()
 type Queue = Awaited<ReturnType<typeof getLocationReconciliation>>
-type Candidate = Awaited<ReturnType<typeof searchDraftLocations>>['rows'][number]
+type Candidate =
+  | (Awaited<ReturnType<typeof searchDraftLocations>>['rows'][number] & {
+      source: 'saanseoi'
+    })
+  | (Awaited<ReturnType<typeof searchReconciliationLocations>>['rows'][number] & {
+      source: 'hype'
+    })
 const header = getHeaderCtrl()
 const admin = getAdminCtx()
 let queue = $state<Queue | null>(null)
@@ -250,10 +257,14 @@ const points = $derived.by((): BrandLocationMapPoint[] => [
             id: row.id,
             name: label(row.facts),
             coordinates: row.facts.location.geometry.coordinates,
-            hype: false,
-            upstream: true,
-            linked: linkedSourceIds.includes(row.id),
-            shape: linkedSourceIds.includes(row.id)
+            hype: row.source === 'hype',
+            upstream: row.source === 'saanseoi' || Boolean(row.ssId),
+            linked: linkedSourceIds.includes(
+              row.source === 'hype' ? (row.ssId ?? '') : row.id,
+            ),
+            shape: linkedSourceIds.includes(
+              row.source === 'hype' ? (row.ssId ?? '') : row.id,
+            )
               ? ('square' as const)
               : ('circle' as const),
           },
@@ -318,7 +329,7 @@ async function search(): Promise<void> {
   const limit = radius
   const term = query.trim().slice(0, 200)
   try {
-    const rows = await searchCache.get(
+    const upstreamTask = searchCache.get(
       roleScope,
       term,
       async cursor =>
@@ -335,20 +346,70 @@ async function search(): Promise<void> {
         if (alive && token === generation) downloaded = count
       },
     )
-    const linkedSources = await readFreshRemoteQuery(
-      getReconciliationLinkedSources({ project }),
-      true,
+    // Load local records independently so upstream outages do not hide existing shops.
+    const localTask = (async () => {
+      const rows: Extract<Candidate, { source: 'hype' }>[] = []
+      const seen = new Set<string>()
+      let after: string | undefined
+      do {
+        const page = await readFreshRemoteQuery(
+          searchReconciliationLocations({ project, q: term, after }),
+          true,
+        )
+        rows.push(...page.rows.map(row => ({ ...row, source: 'hype' as const })))
+        after = page.nextCursor ?? undefined
+        if (after && seen.has(after)) throw new Error('Repeated local cursor')
+        if (after) seen.add(after)
+      } while (after)
+      if (alive && token === generation && !linking) {
+        candidates = rows
+          .filter(row => reconciliationDistance(origin, row.facts) <= limit)
+          .sort(
+            (a, b) =>
+              reconciliationDistance(origin, a.facts) -
+              reconciliationDistance(origin, b.facts),
+          )
+        if (!candidates.some(row => row.id === selectedId) && candidates[0])
+          void select(candidates[0].id)
+      }
+      return rows
+    })()
+    const [localResult, upstreamResult, linkedResult] = await Promise.allSettled([
+      localTask,
+      upstreamTask,
+      readFreshRemoteQuery(getReconciliationLinkedSources({ project }), true),
+    ])
+    if (!alive || token !== generation || linking) return
+    linkedSourceIds =
+      linkedResult.status === 'fulfilled' ? linkedResult.value.map(row => row.ssId) : []
+    const localRows = localResult.status === 'fulfilled' ? localResult.value : []
+    const existingSources = new Set(
+      localRows.flatMap(row => (row.ssId ? [row.ssId] : [])),
     )
-    if (!alive || token !== generation) return
-    linkedSourceIds = linkedSources.map(row => row.ssId)
-    candidates = rows
+    const upstreamRows =
+      upstreamResult.status === 'fulfilled' ? upstreamResult.value : []
+    candidates = [
+      ...localRows,
+      ...upstreamRows
+        .filter(row => !existingSources.has(row.id))
+        .map(row => ({ ...row, source: 'saanseoi' as const })),
+    ]
       .filter(row => reconciliationDistance(origin, row.facts) <= limit)
       .sort(
         (a, b) =>
           reconciliationDistance(origin, a.facts) -
           reconciliationDistance(origin, b.facts),
       )
-    if (candidates[0]) void select(candidates[0].id)
+    searchFailure = [
+      localResult.status === 'rejected' ? 'Hype Locations could not be loaded.' : '',
+      upstreamResult.status === 'rejected'
+        ? 'SaanSeoi search is unavailable or incomplete; Hype results are still shown.'
+        : '',
+    ]
+      .filter(Boolean)
+      .join(' ')
+    if (!candidates.some(row => row.id === selectedId) && candidates[0])
+      void select(candidates[0].id)
   } catch {
     if (alive && token === generation)
       searchFailure =
@@ -361,7 +422,7 @@ async function search(): Promise<void> {
  * @param direction Previous or next option. @returns Nothing.
  */
 function stepOption(direction: -1 | 1): void {
-  if (linking || searching || selectedIndex < 0) return
+  if (linking || selectedIndex < 0) return
   const candidate = candidates[selectedIndex + direction]
   if (candidate) void select(candidate.id, true)
 }
@@ -379,16 +440,32 @@ async function select(id: string, centerMap = false): Promise<void> {
   detailFailure = ''
   preparing = true
   try {
-    const result = await readFreshRemoteQuery(
-      getFeatureLocationSearchDetails({
-        featureId: item.id,
-        ssId: id,
-        resourceReleaseId: candidate.resourceReleaseId,
-      }),
-      true,
-    )
-    if (!alive || token !== detailGeneration) return
-    canonical = result.facts
+    if (candidate.source === 'hype') {
+      const result = await readFreshRemoteQuery(
+        searchReconciliationLocations({ project, id: candidate.id }),
+        true,
+      )
+      const current = result.rows.find(row => row.id === candidate.id)
+      if (
+        !current ||
+        current.revisionId !== candidate.revisionId ||
+        current.draftVersion !== candidate.draftVersion
+      )
+        throw new Error('Location changed')
+      if (!alive || token !== detailGeneration) return
+      canonical = current.facts
+    } else {
+      const result = await readFreshRemoteQuery(
+        getFeatureLocationSearchDetails({
+          featureId: item.id,
+          ssId: id,
+          resourceReleaseId: candidate.resourceReleaseId,
+        }),
+        true,
+      )
+      if (!alive || token !== detailGeneration) return
+      canonical = result.facts
+    }
   } catch {
     if (alive && token === detailGeneration)
       detailFailure =
@@ -405,17 +482,23 @@ async function link(): Promise<void> {
   linking = true
   detailFailure = ''
   try {
-    const imported = await importFeatureLocationCandidate({
-      featureId: current.id,
-      ssId: candidate.id,
-      resourceReleaseId: candidate.resourceReleaseId,
-    })
+    const imported =
+      candidate.source === 'hype'
+        ? { locationId: candidate.id, revisionId: candidate.revisionId }
+        : await importFeatureLocationCandidate({
+            featureId: current.id,
+            ssId: candidate.id,
+            resourceReleaseId: candidate.resourceReleaseId,
+          })
     // Save source adoption and any missing-phone curation together before advancing.
     await acceptReconciliationMatch({
       project,
       featureId: current.id,
       locationId: imported.locationId,
       revisionId: imported.revisionId,
+      ...(candidate.source === 'hype' && candidate.draftVersion
+        ? { expectedSourceHash: candidate.draftVersion }
+        : {}),
       expectedFeatureModifiedAt: current.modifiedAt,
       expectedRevision: current.associationVersion ?? null,
     })
@@ -807,14 +890,18 @@ onDestroy(() => {
             No value for this field. Choose another search source or enter a name.
           </p>
         {:else if searching && !candidates.length}
-          <div class="p-2" role="status">
-            <p class="text-sm">
-              Downloading matches for {query}… {downloaded} downloaded
-            </p>
-            <progress
-              class="mt-2 h-2 w-full"
-              aria-label="Downloading upstream matches"
-            ></progress>
+          <div
+            class="space-y-3 p-2"
+            role="status"
+            aria-label={`Searching Locations; ${downloaded} upstream matches downloaded`}
+          >
+            {#each [0, 1, 2] as row (row)}
+              <div class="space-y-2" aria-hidden="true">
+                <div class="bg-muted h-4 w-3/4 animate-pulse rounded"></div>
+                <div class="bg-muted h-3 w-full animate-pulse rounded"></div>
+                <div class="bg-muted h-3 w-1/2 animate-pulse rounded"></div>
+              </div>
+            {/each}
           </div>
         {:else if !candidates.length && !searchFailure}
           <p class="p-2 text-sm">
@@ -830,8 +917,13 @@ onDestroy(() => {
             class="hover:bg-muted border-border aria-pressed:bg-primary/15 grid w-full grid-cols-[minmax(0,1fr)_auto] gap-2 border-b p-2 text-left text-sm"
           >
             <span class="min-w-0 break-words whitespace-normal"
-              >{label(candidate.facts)}</span
-            ><span class="text-muted-foreground tabular-nums"
+              >{label(candidate.facts)}
+              <span class="text-muted-foreground block text-xs"
+                >{candidate.source === 'hype'
+                  ? `Hype · ${candidate.kind.replaceAll('_', ' ')}`
+                  : 'SaanSeoi'}</span
+              >
+            </span><span class="text-muted-foreground tabular-nums"
               >{coordinates
                 ? Math.round(reconciliationDistance(coordinates, candidate.facts))
                 : ''}
@@ -858,7 +950,7 @@ onDestroy(() => {
           </h2>
           <p class="text-muted-foreground mt-2 text-sm">Current Feature</p>
           <p class="text-muted-foreground mt-3 text-sm">
-            Link adopts the upstream Location. Custom Feature names are kept.
+            Link adopts the selected Location. Custom Feature names are kept.
           </p>
           <dl
             class="mt-3 grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 text-sm [&_dd]:[overflow-wrap:anywhere] [&_dd]:whitespace-normal [&>div]:min-w-0"
@@ -905,7 +997,7 @@ onDestroy(() => {
             class={selected && facts && item && reviewExpanded
               ? 'border-border bg-panel pointer-events-auto flex h-full min-h-0 min-w-0 flex-col overflow-auto rounded-lg border p-4 shadow-lg'
               : 'border-border bg-panel/95 pointer-events-auto flex max-h-[38vh] min-w-0 flex-col overflow-auto rounded-lg border p-4 shadow-lg'}
-            aria-label="Selected upstream Location"
+            aria-label="Selected Location"
           >
             <div class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
               <div class="min-w-0">
@@ -1024,16 +1116,14 @@ onDestroy(() => {
                 size="sm"
                 text="Previous"
                 iconComponent={PreviousIcon}
-                disabled={linking || searching || selectedIndex <= 0}
+                disabled={linking || selectedIndex <= 0}
                 onClick={() => stepOption(-1)}
               />
               <Button
                 size="sm"
                 text="Next"
                 iconComponent={NextIcon}
-                disabled={linking ||
-                  searching ||
-                  selectedIndex >= candidates.length - 1}
+                disabled={linking || selectedIndex >= candidates.length - 1}
                 onClick={() => stepOption(1)}
               />
             </div>
