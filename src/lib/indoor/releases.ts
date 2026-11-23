@@ -31,6 +31,7 @@ export const connectionSchema = z.strictObject({
     'matching-lift-code',
     'reviewed-layout',
     'editor-verified',
+    'source-network',
   ]),
   evidenceUrl: z
     .string()
@@ -237,7 +238,10 @@ export function validateMapBundle(input: unknown): MapBundle {
       throw new Error(
         'Matching lift evidence requires matching source lift identifiers',
       )
-    if (c.evidence === 'reviewed-layout' && !c.evidenceUrl)
+    if (
+      (c.evidence === 'reviewed-layout' || c.evidence === 'source-network') &&
+      !c.evidenceUrl
+    )
       throw new Error('Reviewed connections require evidence')
     const key = [c.from, c.to].sort().join(':')
     if (seen.has(key)) throw new Error('Duplicate connection')

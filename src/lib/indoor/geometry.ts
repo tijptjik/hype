@@ -9,8 +9,11 @@ type FootprintFrame = {
   world: (u: number, v: number) => XY
   spans: (position: number, across?: boolean) => XY[]
 }
-/** Works in local metres so rooms retain their aspect ratio. @param feature Source polygon. @returns Its oriented frame or null for other geometries. */
-export function footprintFrame(feature: IndoorFeature): FootprintFrame | null {
+/** Works in local metres so rooms retain their aspect ratio. @param feature Source polygon. @param direction Optional source XY travel axis. @returns Its oriented frame or null for other geometries. */
+export function footprintFrame(
+  feature: IndoorFeature,
+  direction?: [number, number],
+): FootprintFrame | null {
   if (feature.geometry.type !== 'Polygon') return null
   const origin = centre(feature)
   const metresX = 111320 * Math.cos((origin[1] * Math.PI) / 180)
@@ -30,6 +33,12 @@ export function footprintFrame(feature: IndoorFeature): FootprintFrame | null {
       longest = length
       axis = [dx / length, dy / length]
     }
+  }
+  if (direction) {
+    const dx = direction[0] * metresX,
+      dy = direction[1] * 111320
+    const norm = Math.hypot(dx, dy)
+    if (norm > 0) axis = [dx / norm, dy / norm]
   }
   const uv = rings.map(r =>
     r.map(([x, y]): XY => [x * axis[0] + y * axis[1], -x * axis[1] + y * axis[0]]),

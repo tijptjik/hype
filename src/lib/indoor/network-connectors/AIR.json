@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "venueId": "317e8046-6466-4c8f-9d3b-228b2494c28c",
+  "sourceUrl": "https://tiles.saanseoi.hk/routing/hk/indoor/2026-11-16/stations/AIR.json",
+  "networkSha256": "fe9771675b2e3d6c20095e2da32eb1dcbd73e157e48e2a131a83ad70a45ad554",
+  "bundleSha256": "eddb5c4900aba58e6e2196065910507f267dfad9b88a4e654c509bbcaf5c7461",
+  "annotations": {},
+  "unresolved": ["a446a4ac-8d23-48fe-abd6-1f001b475d39"]
+}

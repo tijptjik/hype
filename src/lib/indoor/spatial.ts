@@ -1,3 +1,4 @@
+import { networkAnnotation, networkConnections } from './networkAnnotations'
 import {
   bounds,
   centre,
@@ -51,6 +52,7 @@ export type Connection = {
     | 'matching-lift-code'
     | 'reviewed-layout'
     | 'editor-verified'
+    | 'source-network'
 }
 /** Reads the explicit access section. @param feature Source unit. @returns Paid, unpaid or unknown. */
 export function accessArea(
@@ -61,7 +63,8 @@ export function accessArea(
 }
 /** Finds conservative display candidates. @param data Source snapshot. @returns Mutually best overlapping connectors. @remarks These are never a routing graph. */
 export function connectionCandidates(data: IndoorData): Connection[] {
-  if (data.connections) return data.connections.filter(c => c.enabled)
+  if (data.connections)
+    return [...data.connections.filter(c => c.enabled), ...networkConnections(data)]
   const units = data.unit_polygon.features.filter(f =>
     isConnector(value(f.properties, 'unit_category')),
   )
@@ -108,10 +111,18 @@ export function connectionCandidates(data: IndoorData): Connection[] {
       return undefined
     return first.b
   }
-  const result: Connection[] = []
+  const result: Connection[] = networkConnections(data)
   for (const a of units) {
     const b = best(a, 1)
     if (!b || best(b, -1) !== a) continue
+    if (
+      result.some(
+        c =>
+          (c.from === a.properties.unit_id && c.to === b.properties.unit_id) ||
+          (c.to === a.properties.unit_id && c.from === b.properties.unit_id),
+      )
+    )
+      continue
     result.push({
       from: value(a.properties, 'unit_id'),
       to: value(b.properties, 'unit_id'),
@@ -212,7 +223,16 @@ export function stairTreads(data: IndoorData): Collection {
     data.unit_polygon.features.flatMap(feature => {
       const category = value(feature.properties, 'unit_category')
       if (!['stairs', 'steps', 'escalator'].includes(category)) return []
-      const frame = footprintFrame(feature)
+      const annotation = networkAnnotation(data, feature)
+      const frame = footprintFrame(
+        feature,
+        annotation
+          ? [
+              annotation.destination[0] - annotation.entrance[0],
+              annotation.destination[1] - annotation.entrance[1],
+            ]
+          : undefined,
+      )
       if (!frame) return []
       const { minU, maxU, minV, maxV, world, spans } = frame
       const lines: IndoorFeature[] = []
@@ -257,7 +277,7 @@ export function connectorTravelDirection(
     c =>
       c.enabled !== false &&
       (c.from === id || c.to === id) &&
-      ['editor-verified', 'reviewed-layout'].includes(c.evidence) &&
+      ['editor-verified', 'reviewed-layout', 'source-network'].includes(c.evidence) &&
       c.direction,
   )
   const depart = links.some(c => c.direction === 'both' || c.from === id)

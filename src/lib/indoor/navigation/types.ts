@@ -32,6 +32,7 @@ export type NavigationConnection = {
     | 'matching-lift-code'
     | 'reviewed-layout'
     | 'editor-verified'
+    | 'source-network'
     | 'candidate'
   sourceIds: string[]
   enabled: boolean

@@ -237,6 +237,8 @@ export async function loadIndoorData(
     })(),
   ])
   const { bundle, hash } = bundleResult
+  const { loadNetworkAnnotations } = await import('./networkAnnotations')
+  await loadNetworkAnnotations(bundle.data)
   return {
     ...bundle.data,
     basePath: base,

@@ -1,0 +1,884 @@
+{
+  "KOT": {
+    "status": "matched",
+    "venueId": "93187202-7a40-4906-b7e4-1e56c37562db",
+    "mapId": "kowloon-tong-mtr",
+    "annotated": 83,
+    "unresolved": 21,
+    "exterior": 4,
+    "oneWay": 52
+  },
+  "KET": {
+    "status": "matched",
+    "venueId": "6f0e1339-7f9b-4024-abed-a462006568bc",
+    "mapId": "kennedy-town-mtr",
+    "annotated": 41,
+    "unresolved": 4,
+    "exterior": 7,
+    "oneWay": 18
+  },
+  "HOK": {
+    "status": "matched",
+    "venueId": "3c17605d-df03-4b09-90f5-bbca8cf1294d",
+    "mapId": "hong-kong-mtr",
+    "annotated": 81,
+    "unresolved": 19,
+    "exterior": 5,
+    "oneWay": 70
+  },
+  "ADM": {
+    "status": "matched",
+    "venueId": "b9b2f6ff-582d-40b0-b82d-027e950e6791",
+    "mapId": "admiralty-mtr",
+    "annotated": 88,
+    "unresolved": 40,
+    "exterior": 4,
+    "oneWay": 64
+  },
+  "AIR": {
+    "status": "matched",
+    "venueId": "317e8046-6466-4c8f-9d3b-228b2494c28c",
+    "mapId": "airport-mtr",
+    "annotated": 0,
+    "unresolved": 1,
+    "exterior": 0,
+    "oneWay": 0
+  },
+  "AUS": {
+    "status": "matched",
+    "venueId": "ef0fd18f-e9dd-480c-abc1-0eeaca4e9334",
+    "mapId": "austin-mtr",
+    "annotated": 49,
+    "unresolved": 11,
+    "exterior": 2,
+    "oneWay": 33
+  },
+  "AWE": {
+    "status": "matched",
+    "venueId": "e0bef49c-95a1-4258-bbb2-e736df36e413",
+    "mapId": "asiaworld-expo-mtr",
+    "annotated": 10,
+    "unresolved": 0,
+    "exterior": 0,
+    "oneWay": 6
+  },
+  "CAB": {
+    "status": "matched",
+    "venueId": "402d0a0a-e6df-4a19-952d-6fc371dedc2e",
+    "mapId": "causeway-bay-mtr",
+    "annotated": 59,
+    "unresolved": 20,
+    "exterior": 4,
+    "oneWay": 39
+  },
+  "CEN": {
+    "status": "matched",
+    "venueId": "036868f9-cb36-44ae-b1ee-7c18bb12dbed",
+    "mapId": "central-mtr",
+    "annotated": 93,
+    "unresolved": 32,
+    "exterior": 3,
+    "oneWay": 70
+  },
+  "CHH": {
+    "status": "matched",
+    "venueId": "c87c86f8-0c3d-443c-951d-8e662ada5924",
+    "mapId": "choi-hung-mtr",
+    "annotated": 28,
+    "unresolved": 14,
+    "exterior": 5,
+    "oneWay": 17
+  },
+  "CHW": {
+    "status": "matched",
+    "venueId": "e693ee01-7b5b-42fb-a329-d864b751f114",
+    "mapId": "chai-wan-mtr",
+    "annotated": 14,
+    "unresolved": 6,
+    "exterior": 1,
+    "oneWay": 12
+  },
+  "CIO": {
+    "status": "matched",
+    "venueId": "902ee513-c6d8-47d6-bee2-f404347b03f4",
+    "mapId": "city-one-mtr",
+    "annotated": 9,
+    "unresolved": 14,
+    "exterior": 0,
+    "oneWay": 4
+  },
+  "CKT": {
+    "status": "matched",
+    "venueId": "997998c4-4e4a-4d68-8e9b-c0f1f987d523",
+    "mapId": "che-kung-temple-mtr",
+    "annotated": 20,
+    "unresolved": 11,
+    "exterior": 4,
+    "oneWay": 8
+  },
+  "CSW": {
+    "status": "matched",
+    "venueId": "836c4e6e-6c55-4a06-8d11-0f053c6e060c",
+    "mapId": "cheung-sha-wan-mtr",
+    "annotated": 23,
+    "unresolved": 19,
+    "exterior": 11,
+    "oneWay": 15
+  },
+  "DIH": {
+    "status": "matched",
+    "venueId": "65b334e5-7ed3-413c-88d1-3c04e4dcf7aa",
+    "mapId": "diamond-hill-mtr",
+    "annotated": 54,
+    "unresolved": 33,
+    "exterior": 6,
+    "oneWay": 39
+  },
+  "DIS": {
+    "status": "matched",
+    "venueId": "754cddfd-8620-4b6e-9e1e-efd787d010bf",
+    "mapId": "disneyland-resort-mtr",
+    "annotated": 9,
+    "unresolved": 21,
+    "exterior": 0,
+    "oneWay": 4
+  },
+  "ETS": {
+    "status": "matched",
+    "venueId": "ab544cf5-d41c-499b-9c2a-56e7796e9742",
+    "mapId": "east-tsim-sha-tsui-mtr",
+    "annotated": 51,
+    "unresolved": 12,
+    "exterior": 5,
+    "oneWay": 28
+  },
+  "EXC": {
+    "status": "matched",
+    "venueId": "bb1466c3-88d5-4a48-981d-fc0d50b36ee4",
+    "mapId": "exhibition-centre-mtr",
+    "annotated": 56,
+    "unresolved": 17,
+    "exterior": 3,
+    "oneWay": 41
+  },
+  "FAN": {
+    "status": "matched",
+    "venueId": "a53f1496-d416-45e2-8ea4-14db1b6cff8b",
+    "mapId": "fanling-mtr",
+    "annotated": 33,
+    "unresolved": 9,
+    "exterior": 3,
+    "oneWay": 14
+  },
+  "FOH": {
+    "status": "matched",
+    "venueId": "d02d9f12-06a1-4268-89cc-36a64970215e",
+    "mapId": "fortress-hill-mtr",
+    "annotated": 20,
+    "unresolved": 7,
+    "exterior": 3,
+    "oneWay": 14
+  },
+  "FOT": {
+    "status": "matched",
+    "venueId": "9dae5db2-0149-4f34-9828-fe562af634cd",
+    "mapId": "fo-tan-mtr",
+    "annotated": 39,
+    "unresolved": 5,
+    "exterior": 1,
+    "oneWay": 24
+  },
+  "HAH": {
+    "status": "matched",
+    "venueId": "132e2ae5-06f4-4829-ab02-9e0e6d8051e2",
+    "mapId": "hang-hau-mtr",
+    "annotated": 20,
+    "unresolved": 10,
+    "exterior": 4,
+    "oneWay": 16
+  },
+  "HEO": {
+    "status": "matched",
+    "venueId": "141fd6ff-a270-423c-8702-7d887062be3d",
+    "mapId": "heng-on-mtr",
+    "annotated": 19,
+    "unresolved": 0,
+    "exterior": 1,
+    "oneWay": 8
+  },
+  "HFC": {
+    "status": "matched",
+    "venueId": "b5fa5f79-7c3d-4488-8dcd-c749d03f0e60",
+    "mapId": "heng-fa-chuen-mtr",
+    "annotated": 27,
+    "unresolved": 3,
+    "exterior": 0,
+    "oneWay": 7
+  },
+  "HIK": {
+    "status": "matched",
+    "venueId": "45d78f4b-7df5-4c4e-9f95-9d10f1e29b05",
+    "mapId": "hin-keng-mtr",
+    "annotated": 10,
+    "unresolved": 8,
+    "exterior": 3,
+    "oneWay": 4
+  },
+  "HKU": {
+    "status": "matched",
+    "venueId": "5cab92ff-37ac-40ac-97f4-6507b318ff3c",
+    "mapId": "hku-mtr",
+    "annotated": 47,
+    "unresolved": 9,
+    "exterior": 12,
+    "oneWay": 23
+  },
+  "HOM": {
+    "status": "matched",
+    "venueId": "3ca7be38-6c54-477d-9ae6-cf9d34886bf6",
+    "mapId": "ho-man-tin-mtr",
+    "annotated": 69,
+    "unresolved": 52,
+    "exterior": 9,
+    "oneWay": 40
+  },
+  "HUH": {
+    "status": "matched",
+    "venueId": "8769ac7e-21b4-4e9f-b776-7490f7689f32",
+    "mapId": "hung-hom-mtr",
+    "annotated": 51,
+    "unresolved": 21,
+    "exterior": 8,
+    "oneWay": 41
+  },
+  "JOR": {
+    "status": "matched",
+    "venueId": "e1c20a8c-bfe8-4159-957e-829c4cd1bde3",
+    "mapId": "jordan-mtr",
+    "annotated": 22,
+    "unresolved": 13,
+    "exterior": 6,
+    "oneWay": 15
+  },
+  "KAT": {
+    "status": "matched",
+    "venueId": "effdfac4-ae83-47ec-990f-89eb6c6aa253",
+    "mapId": "kai-tak-mtr",
+    "annotated": 41,
+    "unresolved": 2,
+    "exterior": 7,
+    "oneWay": 22
+  },
+  "KOB": {
+    "status": "matched",
+    "venueId": "57905483-c9d5-483c-9654-442434d20947",
+    "mapId": "kowloon-bay-mtr",
+    "annotated": 26,
+    "unresolved": 4,
+    "exterior": 0,
+    "oneWay": 19
+  },
+  "KOW": {
+    "status": "matched",
+    "venueId": "70953f5a-ae60-46e5-9b63-68ccef5a9329",
+    "mapId": "kowloon-mtr",
+    "annotated": 36,
+    "unresolved": 24,
+    "exterior": 6,
+    "oneWay": 26
+  },
+  "KSR": {
+    "status": "matched",
+    "venueId": "271f334b-c6f4-4249-b6cd-460dc9f605a9",
+    "mapId": "kam-sheung-road-mtr",
+    "annotated": 23,
+    "unresolved": 2,
+    "exterior": 3,
+    "oneWay": 8
+  },
+  "KWF": {
+    "status": "matched",
+    "venueId": "45701b21-f750-4213-9cd4-299e6c9820bc",
+    "mapId": "kwai-fong-mtr",
+    "annotated": 25,
+    "unresolved": 7,
+    "exterior": 5,
+    "oneWay": 18
+  },
+  "KWH": {
+    "status": "matched",
+    "venueId": "c660346a-064e-42d4-8501-7bb5cd7e893f",
+    "mapId": "kwai-hing-mtr",
+    "annotated": 17,
+    "unresolved": 2,
+    "exterior": 7,
+    "oneWay": 8
+  },
+  "KWT": {
+    "status": "matched",
+    "venueId": "f9f93951-67f2-4b98-b86c-a3fec6209fe5",
+    "mapId": "kwun-tong-mtr",
+    "annotated": 26,
+    "unresolved": 8,
+    "exterior": 6,
+    "oneWay": 9
+  },
+  "LAK": {
+    "status": "matched",
+    "venueId": "91cc7d2f-242a-40df-aff3-3eb94f6b0663",
+    "mapId": "lai-king-mtr",
+    "annotated": 40,
+    "unresolved": 22,
+    "exterior": 1,
+    "oneWay": 28
+  },
+  "LAT": {
+    "status": "matched",
+    "venueId": "92100263-7626-48d3-a676-529a97e87aa0",
+    "mapId": "lam-tin-mtr",
+    "annotated": 22,
+    "unresolved": 16,
+    "exterior": 4,
+    "oneWay": 16
+  },
+  "LCK": {
+    "status": "matched",
+    "venueId": "650c8e58-3503-4fb5-9706-ba4a955f498a",
+    "mapId": "lai-chi-kok-mtr",
+    "annotated": 28,
+    "unresolved": 18,
+    "exterior": 14,
+    "oneWay": 15
+  },
+  "LET": {
+    "status": "matched",
+    "venueId": "2b58c53b-8b8d-4d72-9b69-dfc67f4d82ce",
+    "mapId": "lei-tung-mtr",
+    "annotated": 11,
+    "unresolved": 4,
+    "exterior": 5,
+    "oneWay": 4
+  },
+  "LHP": {
+    "status": "matched",
+    "venueId": "7280940d-7246-4f8a-b3b5-30f6c285bc9a",
+    "mapId": "lohas-park-mtr",
+    "annotated": 16,
+    "unresolved": 0,
+    "exterior": 0,
+    "oneWay": 8
+  },
+  "LMC": {
+    "status": "matched",
+    "venueId": "88d9cab3-a32d-4a77-985d-4f12d49e9c9e",
+    "mapId": "lok-ma-chau-mtr",
+    "annotated": 40,
+    "unresolved": 0,
+    "exterior": 0,
+    "oneWay": 24
+  },
+  "LOF": {
+    "status": "matched",
+    "venueId": "58408ed0-b485-4cb6-886e-03fb63222e1f",
+    "mapId": "lok-fu-mtr",
+    "annotated": 5,
+    "unresolved": 7,
+    "exterior": 2,
+    "oneWay": 3
+  },
+  "LOP": {
+    "status": "matched",
+    "venueId": "e6627058-6093-44ce-b1f1-0412eae640ed",
+    "mapId": "long-ping-mtr",
+    "annotated": 34,
+    "unresolved": 0,
+    "exterior": 0,
+    "oneWay": 16
+  },
+  "LOW": {
+    "status": "matched",
+    "venueId": "87e485be-80e6-417f-be17-2bb89ca4d444",
+    "mapId": "lo-wu-mtr",
+    "annotated": 13,
+    "unresolved": 14,
+    "exterior": 0,
+    "oneWay": 6
+  },
+  "MEF": {
+    "status": "matched",
+    "venueId": "6c1ffd3a-3613-4bd8-a901-32636005f378",
+    "mapId": "mei-foo-mtr",
+    "annotated": 124,
+    "unresolved": 23,
+    "exterior": 8,
+    "oneWay": 70
+  },
+  "MKK": {
+    "status": "matched",
+    "venueId": "9a64c7d4-17fd-4ae9-954c-34ebbcaf2645",
+    "mapId": "mong-kok-east-mtr",
+    "annotated": 28,
+    "unresolved": 3,
+    "exterior": 0,
+    "oneWay": 16
+  },
+  "MOK": {
+    "status": "matched",
+    "venueId": "f0b802fd-28b0-40e3-abff-62090becf0d4",
+    "mapId": "mong-kok-mtr",
+    "annotated": 74,
+    "unresolved": 25,
+    "exterior": 4,
+    "oneWay": 36
+  },
+  "MOS": {
+    "status": "matched",
+    "venueId": "7a2f558e-447c-401d-9a3b-bd004e3e6fdc",
+    "mapId": "ma-on-shan-mtr",
+    "annotated": 8,
+    "unresolved": 0,
+    "exterior": 0,
+    "oneWay": 4
+  },
+  "NAC": {
+    "status": "matched",
+    "venueId": "ec16c323-c77f-4f76-a6ba-2a9a65fe7937",
+    "mapId": "nam-cheong-mtr",
+    "annotated": 105,
+    "unresolved": 33,
+    "exterior": 15,
+    "oneWay": 66
+  },
+  "NOP": {
+    "status": "matched",
+    "venueId": "95dc7e53-be42-4fe2-b345-31836a016345",
+    "mapId": "north-point-mtr",
+    "annotated": 40,
+    "unresolved": 20,
+    "exterior": 6,
+    "oneWay": 24
+  },
+  "NTK": {
+    "status": "matched",
+    "venueId": "b7f1d22f-aea5-44d4-9f01-5c3fef91d7ea",
+    "mapId": "ngau-tau-kok-mtr",
+    "annotated": 19,
+    "unresolved": 14,
+    "exterior": 3,
+    "oneWay": 6
+  },
+  "OCP": {
+    "status": "matched",
+    "venueId": "1dcb1c5f-c7a1-428c-bf81-9d9ffc36725c",
+    "mapId": "ocean-park-mtr",
+    "annotated": 18,
+    "unresolved": 5,
+    "exterior": 2,
+    "oneWay": 8
+  },
+  "OLY": {
+    "status": "matched",
+    "venueId": "6d02d36d-e711-456d-b797-f999d52912da",
+    "mapId": "olympic-mtr",
+    "annotated": 30,
+    "unresolved": 8,
+    "exterior": 2,
+    "oneWay": 12
+  },
+  "POA": {
+    "status": "matched",
+    "venueId": "7442ca0c-914a-4c29-af44-6622c59f01c9",
+    "mapId": "po-lam-mtr",
+    "annotated": 25,
+    "unresolved": 16,
+    "exterior": 7,
+    "oneWay": 12
+  },
+  "PRE": {
+    "status": "matched",
+    "venueId": "981f4b9f-691a-4e64-9037-604e861dc1c4",
+    "mapId": "prince-edward-mtr",
+    "annotated": 59,
+    "unresolved": 13,
+    "exterior": 5,
+    "oneWay": 26
+  },
+  "QUB": {
+    "status": "matched",
+    "venueId": "c9912e53-b334-40dc-beba-b5ac7530f2ba",
+    "mapId": "quarry-bay-mtr",
+    "annotated": 56,
+    "unresolved": 24,
+    "exterior": 17,
+    "oneWay": 41
+  },
+  "RAC": {
+    "status": "matched",
+    "venueId": "647556db-c20a-4401-8b51-5d073ac42c5c",
+    "mapId": "racecourse-mtr",
+    "annotated": 5,
+    "unresolved": 5,
+    "exterior": 0,
+    "oneWay": 0
+  },
+  "SHM": {
+    "status": "matched",
+    "venueId": "a91d6417-1616-4c0c-b85c-abc08479dfe7",
+    "mapId": "shek-mun-mtr",
+    "annotated": 12,
+    "unresolved": 6,
+    "exterior": 4,
+    "oneWay": 4
+  },
+  "SHS": {
+    "status": "matched",
+    "venueId": "74cb1742-b058-4bfc-a929-f962a4925fec",
+    "mapId": "sheung-shui-mtr",
+    "annotated": 44,
+    "unresolved": 10,
+    "exterior": 3,
+    "oneWay": 24
+  },
+  "SHT": {
+    "status": "matched",
+    "venueId": "1aaf245e-3643-49f4-b56f-4461026ee8d7",
+    "mapId": "sha-tin-mtr",
+    "annotated": 24,
+    "unresolved": 2,
+    "exterior": 0,
+    "oneWay": 16
+  },
+  "SHW": {
+    "status": "matched",
+    "venueId": "404efe33-0d74-4c3e-972e-5f46339c10e8",
+    "mapId": "sheung-wan-mtr",
+    "annotated": 58,
+    "unresolved": 40,
+    "exterior": 2,
+    "oneWay": 31
+  },
+  "SIH": {
+    "status": "matched",
+    "venueId": "eaa66bea-059b-4cdc-883f-a4ac85d67785",
+    "mapId": "siu-hong-mtr",
+    "annotated": 32,
+    "unresolved": 8,
+    "exterior": 2,
+    "oneWay": 14
+  },
+  "SKM": {
+    "status": "matched",
+    "venueId": "e41c97ec-85f5-4338-9ee0-87ca1d102d16",
+    "mapId": "shek-kip-mei-mtr",
+    "annotated": 20,
+    "unresolved": 14,
+    "exterior": 6,
+    "oneWay": 14
+  },
+  "SKW": {
+    "status": "matched",
+    "venueId": "b891c479-a877-4618-869a-a1c9804390e4",
+    "mapId": "shau-kei-wan-mtr",
+    "annotated": 35,
+    "unresolved": 16,
+    "exterior": 11,
+    "oneWay": 21
+  },
+  "SOH": {
+    "status": "matched",
+    "venueId": "60a9aeee-30ac-4efc-95de-dfb220c8808a",
+    "mapId": "south-horizons-mtr",
+    "annotated": 14,
+    "unresolved": 9,
+    "exterior": 2,
+    "oneWay": 9
+  },
+  "SSP": {
+    "status": "matched",
+    "venueId": "058fd3b2-9bcf-48dd-b641-8c2465739e0e",
+    "mapId": "sham-shui-po-mtr",
+    "annotated": 21,
+    "unresolved": 14,
+    "exterior": 10,
+    "oneWay": 14
+  },
+  "STW": {
+    "status": "matched",
+    "venueId": "ea43268e-8a83-44e7-849f-f90c6d19a369",
+    "mapId": "sha-tin-wai-mtr",
+    "annotated": 19,
+    "unresolved": 9,
+    "exterior": 11,
+    "oneWay": 4
+  },
+  "SUN": {
+    "status": "matched",
+    "venueId": "ebbf8c2d-07ba-4a88-a964-56135c58efd8",
+    "mapId": "sunny-bay-mtr",
+    "annotated": 16,
+    "unresolved": 4,
+    "exterior": 0,
+    "oneWay": 8
+  },
+  "SUW": {
+    "status": "matched",
+    "venueId": "d47477e8-81bb-4400-943a-e2541261bf4b",
+    "mapId": "sung-wong-toi-mtr",
+    "annotated": 35,
+    "unresolved": 6,
+    "exterior": 1,
+    "oneWay": 20
+  },
+  "SWH": {
+    "status": "matched",
+    "venueId": "a952cd87-e82a-4104-951e-5ad9b45fe525",
+    "mapId": "sai-wan-ho-mtr",
+    "annotated": 19,
+    "unresolved": 17,
+    "exterior": 2,
+    "oneWay": 13
+  },
+  "SYP": {
+    "status": "matched",
+    "venueId": "cda69869-c3be-42f3-8fb4-a7cbb2fe97f5",
+    "mapId": "sai-ying-pun-mtr",
+    "annotated": 47,
+    "unresolved": 15,
+    "exterior": 6,
+    "oneWay": 28
+  },
+  "TAK": {
+    "status": "matched",
+    "venueId": "48f67114-1d14-47c3-8254-1384edfeb8cb",
+    "mapId": "tai-koo-mtr",
+    "annotated": 20,
+    "unresolved": 33,
+    "exterior": 6,
+    "oneWay": 15
+  },
+  "TAP": {
+    "status": "matched",
+    "venueId": "b44cf139-5938-408b-af48-649dfd09694e",
+    "mapId": "tai-po-market-mtr",
+    "annotated": 34,
+    "unresolved": 9,
+    "exterior": 0,
+    "oneWay": 16
+  },
+  "TAW": {
+    "status": "matched",
+    "venueId": "e279ca60-ec56-4186-8839-09c0048f60c2",
+    "mapId": "tai-wai-mtr",
+    "annotated": 47,
+    "unresolved": 23,
+    "exterior": 2,
+    "oneWay": 39
+  },
+  "TIH": {
+    "status": "matched",
+    "venueId": "702fd880-192f-49a0-9daf-ad10c7eae5af",
+    "mapId": "tin-hau-mtr",
+    "annotated": 14,
+    "unresolved": 33,
+    "exterior": 6,
+    "oneWay": 10
+  },
+  "TIK": {
+    "status": "matched",
+    "venueId": "2212e1f9-9c77-429e-837d-67b918f34d03",
+    "mapId": "tiu-keng-leng-mtr",
+    "annotated": 27,
+    "unresolved": 8,
+    "exterior": 3,
+    "oneWay": 16
+  },
+  "TIS": {
+    "status": "matched",
+    "venueId": "b62f4857-8453-44a9-a650-3a8bcb08a405",
+    "mapId": "tin-shui-wai-mtr",
+    "annotated": 32,
+    "unresolved": 12,
+    "exterior": 4,
+    "oneWay": 17
+  },
+  "TKO": {
+    "status": "matched",
+    "venueId": "e0b46dd5-03c0-47b9-bca8-5a0e3e7d8a23",
+    "mapId": "tseung-kwan-o-mtr",
+    "annotated": 25,
+    "unresolved": 3,
+    "exterior": 3,
+    "oneWay": 14
+  },
+  "TKW": {
+    "status": "matched",
+    "venueId": "bbcde31e-3b2d-46e5-9eca-dbc2ce387162",
+    "mapId": "to-kwa-wan-mtr",
+    "annotated": 39,
+    "unresolved": 12,
+    "exterior": 5,
+    "oneWay": 18
+  },
+  "TSH": {
+    "status": "matched",
+    "venueId": "1308e337-699a-4231-810e-2d03f541b4ac",
+    "mapId": "tai-shui-hang-mtr",
+    "annotated": 18,
+    "unresolved": 1,
+    "exterior": 0,
+    "oneWay": 8
+  },
+  "TST": {
+    "status": "matched",
+    "venueId": "2478fc07-c370-4aab-b1e3-ccb129865bbf",
+    "mapId": "tsim-sha-tsui-mtr",
+    "annotated": 38,
+    "unresolved": 32,
+    "exterior": 11,
+    "oneWay": 23
+  },
+  "TSW": {
+    "status": "matched",
+    "venueId": "4f355998-ea7a-4867-aae7-f587ad4aff66",
+    "mapId": "tsuen-wan-mtr",
+    "annotated": 28,
+    "unresolved": 6,
+    "exterior": 2,
+    "oneWay": 20
+  },
+  "TSY": {
+    "status": "matched",
+    "venueId": "6e41ff22-45dc-4caf-94a0-146dcca99c4b",
+    "mapId": "tsing-yi-mtr",
+    "annotated": 30,
+    "unresolved": 3,
+    "exterior": 0,
+    "oneWay": 28
+  },
+  "TUC": {
+    "status": "matched",
+    "venueId": "c270ead6-7bea-4034-90f5-aca854937177",
+    "mapId": "tung-chung-mtr",
+    "annotated": 26,
+    "unresolved": 3,
+    "exterior": 6,
+    "oneWay": 18
+  },
+  "TUM": {
+    "status": "matched",
+    "venueId": "be57a185-148f-4c73-a5cc-bebdcab61954",
+    "mapId": "tuen-mun-mtr",
+    "annotated": 39,
+    "unresolved": 8,
+    "exterior": 1,
+    "oneWay": 20
+  },
+  "TWH": {
+    "status": "matched",
+    "venueId": "0197b9ac-84d4-4683-8167-88507df0e5c2",
+    "mapId": "tai-wo-hau-mtr",
+    "annotated": 16,
+    "unresolved": 2,
+    "exterior": 0,
+    "oneWay": 4
+  },
+  "TWO": {
+    "status": "matched",
+    "venueId": "7b7fd72b-7438-463d-91be-f0a02689e4d8",
+    "mapId": "tai-wo-mtr",
+    "annotated": 16,
+    "unresolved": 0,
+    "exterior": 0,
+    "oneWay": 12
+  },
+  "TWW": {
+    "status": "matched",
+    "venueId": "552c1b98-6fc4-4788-9ff8-e1d858f293a4",
+    "mapId": "tsuen-wan-west-mtr",
+    "annotated": 60,
+    "unresolved": 14,
+    "exterior": 4,
+    "oneWay": 34
+  },
+  "UNI": {
+    "status": "matched",
+    "venueId": "915de180-af75-4fac-a3a6-b8371cf18015",
+    "mapId": "university-mtr",
+    "annotated": 18,
+    "unresolved": 9,
+    "exterior": 1,
+    "oneWay": 8
+  },
+  "WAC": {
+    "status": "matched",
+    "venueId": "43da5fe6-74dd-452a-9515-a6a97b453c2c",
+    "mapId": "wan-chai-mtr",
+    "annotated": 32,
+    "unresolved": 39,
+    "exterior": 1,
+    "oneWay": 18
+  },
+  "WCH": {
+    "status": "matched",
+    "venueId": "2b6f740c-7f25-4893-8e13-c0e66714f3f4",
+    "mapId": "wong-chuk-hang-mtr",
+    "annotated": 13,
+    "unresolved": 3,
+    "exterior": 1,
+    "oneWay": 12
+  },
+  "WHA": {
+    "status": "matched",
+    "venueId": "26a47369-fde7-40a8-96d7-d6606cfe7411",
+    "mapId": "whampoa-mtr",
+    "annotated": 43,
+    "unresolved": 20,
+    "exterior": 9,
+    "oneWay": 22
+  },
+  "WKS": {
+    "status": "matched",
+    "venueId": "cfe255b3-1b4d-4221-b1b9-04aca11b1b13",
+    "mapId": "wu-kai-sha-mtr",
+    "annotated": 13,
+    "unresolved": 4,
+    "exterior": 1,
+    "oneWay": 4
+  },
+  "WTS": {
+    "status": "matched",
+    "venueId": "0556c2c1-dc84-4935-8c10-8dc36ae6c3c6",
+    "mapId": "wong-tai-sin-mtr",
+    "annotated": 47,
+    "unresolved": 18,
+    "exterior": 6,
+    "oneWay": 28
+  },
+  "YAT": {
+    "status": "matched",
+    "venueId": "7484e00c-834d-4c13-a14b-13c5fef29415",
+    "mapId": "yau-tong-mtr",
+    "annotated": 26,
+    "unresolved": 19,
+    "exterior": 1,
+    "oneWay": 16
+  },
+  "YMT": {
+    "status": "matched",
+    "venueId": "b6c4a9ba-4017-43c9-ba2e-2adaf6b22afe",
+    "mapId": "yau-ma-tei-mtr",
+    "annotated": 25,
+    "unresolved": 25,
+    "exterior": 5,
+    "oneWay": 19
+  },
+  "YUL": {
+    "status": "matched",
+    "venueId": "bfc60c05-4e91-4b0a-96d9-e596e807a2bb",
+    "mapId": "yuen-long-mtr",
+    "annotated": 33,
+    "unresolved": 5,
+    "exterior": 1,
+    "oneWay": 19
+  }
+}
