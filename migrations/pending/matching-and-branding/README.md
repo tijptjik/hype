@@ -11,7 +11,7 @@ directory with the operator's cutover backups.
 | Matching  | 138 accepted SaanSeoi identity histories, all 198 retained comparison records and their evidence, including unresolved comparisons. Includes the 104 accepted MTR identities and 23 Breadline resolutions.                                                                        |
 | MTR       | 1,758 shop source identities, 9,122 physical units, 98 stations, occupancy and membership history, operator and map associations, corrections and station release pointers.                                                                                                       |
 | Breadline | 330 import crosswalks checked by source table, source ID, Feature ID and source hash. Includes donor and drop-off Location bindings, the 113 reviewed MTR placements, relevant Feature revision chains, overrides, naming policies, templates and 933 localized template outputs. |
-| Media     | 555 catalogue logo objects across current and historical revisions and 120 immutable station-map release objects. Existing objects require byte-for-byte equality.                                                                                                                |
+| Media     | 555 catalogue logo objects across current and historical revisions and 214 immutable station-map objects, including 94 additional referenced source snapshots. Existing objects require byte-for-byte equality.                                                                   |
 
 The original backup retains dev attribution. For references with a foreign key to
 `user`, the reviewed mapping from the reserved local admin points to the verified
