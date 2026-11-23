@@ -1,0 +1,92 @@
+[
+  {
+    "imageId": "upload-c4f0600fd346540df07b7663d50dbac929f09a87e82aab9f16a62f0bdda1f6c1",
+    "storageKey": "h/features/rx81h67xsLkz/0ScxUFJ97UAnzwWi",
+    "sha256": "d6e61e86a131fd0b8d4a17541ac35f2c1e947628be9ab75b5251a3b6d025f008",
+    "byteSize": 2282486,
+    "mediaType": "image/jpeg",
+    "source": ".local/revealing-arrow/media/d6e61e86a131fd0b8d4a17541ac35f2c1e947628be9ab75b5251a3b6d025f008",
+    "bucket": "hype-assets-raw-prod"
+  },
+  {
+    "imageId": "upload-e21dd2bfb9581f13e555c2fe199551a6ae048c731233a0902f42b4f81b16203e",
+    "storageKey": "h/features/rx81h67xsLkz/IiBf-nRkY81l7JZ1",
+    "sha256": "97ae2492542bf6283c739c1de3b98b189e59932548c47f076c7534714e56d442",
+    "byteSize": 2276484,
+    "mediaType": "image/jpeg",
+    "source": ".local/revealing-arrow/media/97ae2492542bf6283c739c1de3b98b189e59932548c47f076c7534714e56d442",
+    "bucket": "hype-assets-raw-prod"
+  },
+  {
+    "imageId": "upload-c4f0600fd346540df07b7663d50dbac929f09a87e82aab9f16a62f0bdda1f6c1",
+    "storageKey": "h/features/rx81h67xsLkz/0ScxUFJ97UAnzwWi.v1794816848539.json",
+    "sha256": "046dffb611580058553f19e6798d4f406a69a735e09c18f00c56dc9eefee2fb1",
+    "byteSize": 655,
+    "mediaType": "application/json",
+    "source": ".local/revealing-arrow/media/046dffb611580058553f19e6798d4f406a69a735e09c18f00c56dc9eefee2fb1",
+    "bucket": "hype-assets-raw-prod"
+  },
+  {
+    "imageId": "upload-c4f0600fd346540df07b7663d50dbac929f09a87e82aab9f16a62f0bdda1f6c1",
+    "storageKey": "h/features/rx81h67xsLkz/0ScxUFJ97UAnzwWi.v1794817017151.json",
+    "sha256": "9145acff6921c1b5b4c0955a77d2969c593819510a81e6c4a2fe93fd74577ae2",
+    "byteSize": 650,
+    "mediaType": "application/json",
+    "source": ".local/revealing-arrow/media/9145acff6921c1b5b4c0955a77d2969c593819510a81e6c4a2fe93fd74577ae2",
+    "bucket": "hype-assets-raw-prod"
+  },
+  {
+    "imageId": "upload-c4f0600fd346540df07b7663d50dbac929f09a87e82aab9f16a62f0bdda1f6c1",
+    "storageKey": "h/features/rx81h67xsLkz/0ScxUFJ97UAnzwWi.v1794817027463.json",
+    "sha256": "84eeb435e3278fd9504ff0911731a886a58fd943c2a99181c8f3ba3720bf583d",
+    "byteSize": 652,
+    "mediaType": "application/json",
+    "source": ".local/revealing-arrow/media/84eeb435e3278fd9504ff0911731a886a58fd943c2a99181c8f3ba3720bf583d",
+    "bucket": "hype-assets-raw-prod"
+  },
+  {
+    "imageId": "upload-c4f0600fd346540df07b7663d50dbac929f09a87e82aab9f16a62f0bdda1f6c1",
+    "storageKey": "h/features/rx81h67xsLkz/0ScxUFJ97UAnzwWi.json",
+    "sha256": "84eeb435e3278fd9504ff0911731a886a58fd943c2a99181c8f3ba3720bf583d",
+    "byteSize": 652,
+    "mediaType": "application/json",
+    "source": ".local/revealing-arrow/media/84eeb435e3278fd9504ff0911731a886a58fd943c2a99181c8f3ba3720bf583d",
+    "bucket": "hype-assets-raw-prod"
+  },
+  {
+    "imageId": "upload-c4f0600fd346540df07b7663d50dbac929f09a87e82aab9f16a62f0bdda1f6c1",
+    "storageKey": "h/features/rx81h67xsLkz/0ScxUFJ97UAnzwWi.manifest.json",
+    "sha256": "d1f73a2546b9d6fe160e9eadeee49e781b403e294b6299264255a03aa23f19c8",
+    "byteSize": 25,
+    "mediaType": "application/json",
+    "source": ".local/revealing-arrow/media/d1f73a2546b9d6fe160e9eadeee49e781b403e294b6299264255a03aa23f19c8",
+    "bucket": "hype-assets-raw-prod"
+  },
+  {
+    "imageId": "upload-e21dd2bfb9581f13e555c2fe199551a6ae048c731233a0902f42b4f81b16203e",
+    "storageKey": "h/features/rx81h67xsLkz/IiBf-nRkY81l7JZ1.v1794816845988.json",
+    "sha256": "1b8c3b82b9752aa727bf500be224ee8d1b4d20b43b780e0731a0273b7791e529",
+    "byteSize": 655,
+    "mediaType": "application/json",
+    "source": ".local/revealing-arrow/media/1b8c3b82b9752aa727bf500be224ee8d1b4d20b43b780e0731a0273b7791e529",
+    "bucket": "hype-assets-raw-prod"
+  },
+  {
+    "imageId": "upload-e21dd2bfb9581f13e555c2fe199551a6ae048c731233a0902f42b4f81b16203e",
+    "storageKey": "h/features/rx81h67xsLkz/IiBf-nRkY81l7JZ1.json",
+    "sha256": "1b8c3b82b9752aa727bf500be224ee8d1b4d20b43b780e0731a0273b7791e529",
+    "byteSize": 655,
+    "mediaType": "application/json",
+    "source": ".local/revealing-arrow/media/1b8c3b82b9752aa727bf500be224ee8d1b4d20b43b780e0731a0273b7791e529",
+    "bucket": "hype-assets-raw-prod"
+  },
+  {
+    "imageId": "upload-e21dd2bfb9581f13e555c2fe199551a6ae048c731233a0902f42b4f81b16203e",
+    "storageKey": "h/features/rx81h67xsLkz/IiBf-nRkY81l7JZ1.manifest.json",
+    "sha256": "23ca3bb8893de14cc9fe0536427446579d411aa3423d19a90cb09348d3d2f366",
+    "byteSize": 25,
+    "mediaType": "application/json",
+    "source": ".local/revealing-arrow/media/23ca3bb8893de14cc9fe0536427446579d411aa3423d19a90cb09348d3d2f366",
+    "bucket": "hype-assets-raw-prod"
+  }
+]

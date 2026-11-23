@@ -218,3 +218,12 @@ For an already-converted lifecycle database, use the managed rollout: its
 `revision-idle-policy` group installs the shared guards and lifecycle extension
 atomically, then records migration 0203. Do not run the compatibility Feature SQL
 directly against a database whose accepted head lives on `feature.currentRevisionId`.
+
+### Pending Revealing Arrow recording
+
+The requested local Feature `rx81h67xsLkz` and Location `PWfsRUiasaYN` are retained in
+[the Revealing Arrow migration](../../migrations/pending/revealing-arrow/README.md).
+This data package must follow the current lifecycle conversion and verified production
+media transfer. It is not discovered by the numbered migration runner; include its
+atomic data group and expected fingerprints in the prepared cutover before activation.
+See that package for prerequisites, media hashes and the passing local rehearsal.

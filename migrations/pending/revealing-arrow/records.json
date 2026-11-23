@@ -1,0 +1,667 @@
+{
+  "feature": [
+    {
+      "id": "rx81h67xsLkz",
+      "organisationId": "4Jsk5LngvFZq",
+      "projectId": "YuSFnia9VOtG",
+      "layerId": "7akti7OImSFg",
+      "contributorId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+      "geometry": "{\"type\":\"Point\",\"coordinates\":[114.191544043399,22.270451022358557]}",
+      "addressMeta": "{\"address\":{\"version\":1,\"association\":{\"originKind\":\"address\",\"kind\":\"premises\",\"mode\":\"unlinked\",\"lookup\":\"no-match\",\"checkedAt\":\"2026-11-16T08:07:50.706Z\",\"names\":{\"en\":\"Shopping Centre\"}},\"source\":{\"status\":\"resolved\",\"address2dId\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"address3dId\":null,\"address3dUnitId\":null,\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"rawSource\":{\"data\":{\"type\":\"addresses\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"attributes\":{\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"divisionSnapshotId\":\"0ed521c4-d214-5c0a-8d11-8cb6f76d95bf\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"identifiers\":{\"hkgov-dpo\":{\"csuId\":\"3778714631T20050430\"}},\"sources\":[{\"publisher\":\"hkgov-dpo\",\"dataset\":\"ds-hk-hkgov-dpo-address\",\"recordId\":\"29c737f3-b338-5fcd-a7de-e2b2fe82f09a\"}],\"scope\":\"unknown\",\"divisionRelationships\":[{\"role\":\"country\",\"divisionId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\"},{\"role\":\"landform\",\"divisionId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\"},{\"role\":\"area\",\"divisionId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\"},{\"role\":\"district\",\"divisionId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\"},{\"role\":\"neighbourhood\",\"divisionId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\"}],\"countryId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\",\"islandId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\",\"areaId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\",\"districtId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\",\"neighbourhoodId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\",\"createdAt\":\"2026-10-17T08:08:59.992Z\",\"i18n\":{\"en\":{\"meta\":null,\"formattedAddress\":\"5 PERKINS ROAD, WAN CHAI DISTRICT, HK\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"PERKINS ROAD\"},\"zh-hant\":{\"meta\":null,\"formattedAddress\":\"5白建時道灣仔區香港\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"白建時道\"}}}},\"included\":[{\"type\":\"addresses\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"attributes\":{\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"divisionSnapshotId\":\"0ed521c4-d214-5c0a-8d11-8cb6f76d95bf\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"identifiers\":{\"hkgov-dpo\":{\"csuId\":\"3778714631T20050430\"}},\"sources\":[{\"publisher\":\"hkgov-dpo\",\"dataset\":\"ds-hk-hkgov-dpo-address\",\"recordId\":\"29c737f3-b338-5fcd-a7de-e2b2fe82f09a\"}],\"scope\":\"unknown\",\"divisionRelationships\":[{\"role\":\"country\",\"divisionId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\"},{\"role\":\"landform\",\"divisionId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\"},{\"role\":\"area\",\"divisionId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\"},{\"role\":\"district\",\"divisionId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\"},{\"role\":\"neighbourhood\",\"divisionId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\"}],\"countryId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\",\"islandId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\",\"areaId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\",\"districtId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\",\"neighbourhoodId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\",\"createdAt\":\"2026-10-17T08:08:59.992Z\",\"i18n\":{\"en\":{\"meta\":null,\"formattedAddress\":\"5 PERKINS ROAD, WAN CHAI DISTRICT, HK\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"PERKINS ROAD\"},\"zh-hant\":{\"meta\":null,\"formattedAddress\":\"5白建時道灣仔區香港\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"白建時道\"}}}}],\"meta\":{\"profile\":\"full\",\"direction\":\"forward\",\"release\":{\"apiReleaseSet\":\"data-hk-addresses-2026-09-23.0\",\"domain\":\"saanseoi\",\"cohort\":\"2026-09-23.0\",\"schemaVersion\":\"sv-address-v1\",\"rulesetVersion\":\"rs-address-merge-v1\",\"snapshots\":[{\"snapshotResourceType\":\"division\",\"snapshotId\":\"0ed521c4-d214-5c0a-8d11-8cb6f76d95bf\",\"role\":\"lookup\",\"variant\":\"overture\"},{\"snapshotResourceType\":\"address\",\"snapshotId\":\"17e3fec1-35b4-5e34-8856-d25604b6bc65\",\"role\":\"supplementary\",\"variant\":\"overture-places\"},{\"snapshotResourceType\":\"address\",\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"role\":\"primary\",\"variant\":\"hkgov-dpo\"}]},\"resolution\":\"resolved\",\"total\":1,\"truncated\":false,\"nextCursor\":null,\"offset\":0},\"match\":{\"status\":\"resolved\",\"match\":{\"type\":\"partial_text\",\"score\":0.9}}},\"fallbackDisplay\":{\"en\":\"5 Perkins Rd\",\"zh-hant\":\"白建時道5號\",\"zh-hans\":\"白建時道5號\"}},\"coordinates\":[114.19161,22.27052],\"matchStatus\":\"stale\",\"overrides\":{\"en\":{\"premisesName\":\"Shopping Centre\"}},\"query\":\"5 perkins road\"}}",
+      "isPublished": 1,
+      "publisherId": null,
+      "publishedAt": null,
+      "isPendingReview": 0,
+      "isArchived": 0,
+      "isIntangible": 0,
+      "isVisitable": 1,
+      "visitableAsOf": "2026-11-16",
+      "localIsPublished": 1,
+      "localIsArchived": null,
+      "isDraft": 0,
+      "spatialIndex": "{\"geometry\":\"{\\\"type\\\":\\\"Point\\\",\\\"coordinates\\\":[114.191544043399,22.270451022358557]}\",\"longitude\":114.191544043399,\"latitude\":22.270451022358557,\"cells\":{\"0\":\"8041fffffffffff\",\"1\":\"81413ffffffffff\",\"2\":\"824107fffffffff\",\"3\":\"83411cfffffffff\",\"4\":\"8441035ffffffff\",\"5\":\"8541034bfffffff\",\"6\":\"86410349fffffff\",\"7\":\"87410349effffff\",\"8\":\"88410349e5fffff\",\"9\":\"89410349e47ffff\",\"10\":\"8a410349e44ffff\",\"11\":\"8b410349e44efff\",\"12\":\"8c410349e44ebff\"}}",
+      "countryId": null,
+      "areaId": null,
+      "districtId": null,
+      "townId": null,
+      "ruralAreaId": null,
+      "macrohoodId": null,
+      "neighbourhoodId": null,
+      "villageId": null,
+      "microhoodId": null,
+      "hamletId": null,
+      "islandId": null,
+      "divisionResolution": null,
+      "mtrStation": null,
+      "mtrExit": null,
+      "mtrDistance": null,
+      "mtrResolution": "{\"status\":\"unreachable\",\"calculatedAt\":\"2026-11-16T08:11:47.542Z\",\"catalogVersion\":\"490f678d2c57a98a9bb9f6fe9a8e49516f5e4a278e7b7225b4f654bc6278d723\",\"graphVersion\":\"dff05fbd7b562e6bd672d2ed9e6b67f0ad0cf6107eeed5369d87e155bd443a4f\",\"candidatesChecked\":0,\"policyVersion\":\"walk-1000m-v1\",\"maxWalkingMetres\":1000}",
+      "formWriteToken": "a86ef047-e2ce-4978-8d68-bbff19471c3e",
+      "localLocationBrands": null,
+      "createdAt": "2026-11-16T08:09:01.863Z",
+      "modifiedAt": "2026-11-16T08:17:07.575Z",
+      "featureType": "object",
+      "kind": "object",
+      "associationRelation": "locatedAt",
+      "nameTemplate": null,
+      "targetContext": "premises",
+      "currentRevisionId": "ffc4084b-12bd-4a2f-9d0e-00c0fc73ea72",
+      "revisionVersion": 11,
+      "reconciliationSkippedAt": null,
+      "reconciliationSkippedBy": null
+    }
+  ],
+  "location": [
+    {
+      "id": "PWfsRUiasaYN",
+      "ssId": null,
+      "ownerOrganisationId": "4Jsk5LngvFZq",
+      "state": "unresolved",
+      "sourceAvailability": "current",
+      "redirectTargetId": null,
+      "redirect": null,
+      "createdAt": "2026-11-16T08:09:02.603Z",
+      "kind": "built",
+      "class": "premises",
+      "lastManualMatchAttemptAt": null
+    }
+  ],
+  "featureI18n": [
+    {
+      "featureId": "rx81h67xsLkz",
+      "locale": "en",
+      "title": "Revealing Arrow",
+      "titleGen": 0,
+      "description": "",
+      "descriptionGen": 0,
+      "displayAddress": "Shopping Centre, 5 Perkins Road",
+      "displayAddressGen": 0,
+      "addressProperties": "{}",
+      "baseName": "Revealing Arrow",
+      "nameOverride": null,
+      "isAutomaticOnly": 0,
+      "autoTranslated": null,
+      "translationProvenance": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "locale": "zh-hans",
+      "title": "揭示箭头",
+      "titleGen": 0,
+      "description": "",
+      "descriptionGen": 0,
+      "displayAddress": "白建时道5号",
+      "displayAddressGen": 1,
+      "addressProperties": "{}",
+      "baseName": "揭示箭头",
+      "nameOverride": null,
+      "isAutomaticOnly": 0,
+      "autoTranslated": "{\"title\":{\"receipt\":\"b6956417a0ab51b9fef85908f83877eb67eb4afeacaf0b7192b8bbf57d7a5f7f\",\"value\":\"揭示箭头\",\"sourceLocale\":\"en\",\"sourceHash\":\"6591bcb7861f86dfab6aeec90e2469fb368f7f47bda91728d9828e050bd9174e\",\"sourceText\":\"Revealing Arrow\",\"provider\":\"azure-translator\",\"model\":null,\"generatedAt\":\"2026-11-16T08:09:00.190Z\"}}",
+      "translationProvenance": "{\"title\":{\"receipt\":\"b6956417a0ab51b9fef85908f83877eb67eb4afeacaf0b7192b8bbf57d7a5f7f\",\"value\":\"揭示箭头\",\"sourceLocale\":\"en\",\"sourceHash\":\"6591bcb7861f86dfab6aeec90e2469fb368f7f47bda91728d9828e050bd9174e\",\"sourceText\":\"Revealing Arrow\",\"provider\":\"azure-translator\",\"model\":null,\"generatedAt\":\"2026-11-16T08:09:00.190Z\",\"humanVerified\":false,\"acceptedValue\":\"揭示箭头\",\"acceptedBy\":\"qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM\",\"acceptedAt\":\"2026-11-16T08:09:01.624Z\"}}"
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "locale": "zh-hant",
+      "title": "揭示箭頭",
+      "titleGen": 0,
+      "description": "",
+      "descriptionGen": 0,
+      "displayAddress": "白建時道5號",
+      "displayAddressGen": 1,
+      "addressProperties": "{}",
+      "baseName": "揭示箭頭",
+      "nameOverride": null,
+      "isAutomaticOnly": 0,
+      "autoTranslated": "{\"title\":{\"receipt\":\"379bf38b2e9ff26fe79e43b7f4f5ac45d6deb2a3ffba187b4d8ce280bb480893\",\"value\":\"揭示箭頭\",\"sourceLocale\":\"en\",\"sourceHash\":\"6591bcb7861f86dfab6aeec90e2469fb368f7f47bda91728d9828e050bd9174e\",\"sourceText\":\"Revealing Arrow\",\"provider\":\"azure-translator\",\"model\":null,\"generatedAt\":\"2026-11-16T08:08:59.694Z\"}}",
+      "translationProvenance": "{\"title\":{\"receipt\":\"379bf38b2e9ff26fe79e43b7f4f5ac45d6deb2a3ffba187b4d8ce280bb480893\",\"value\":\"揭示箭頭\",\"sourceLocale\":\"en\",\"sourceHash\":\"6591bcb7861f86dfab6aeec90e2469fb368f7f47bda91728d9828e050bd9174e\",\"sourceText\":\"Revealing Arrow\",\"provider\":\"azure-translator\",\"model\":null,\"generatedAt\":\"2026-11-16T08:08:59.694Z\",\"humanVerified\":false,\"acceptedValue\":\"揭示箭頭\",\"acceptedBy\":\"qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM\",\"acceptedAt\":\"2026-11-16T08:09:01.624Z\"}}"
+    }
+  ],
+  "featureProperty": [
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "bC7dF9gH2jK5",
+      "propertyValueId": null,
+      "value": "",
+      "valueJson": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "gPropGrade01",
+      "propertyValueId": null,
+      "value": "",
+      "valueJson": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "gPropPhNum01",
+      "propertyValueId": null,
+      "value": "[]",
+      "valueJson": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "hJ4kA9mN9283",
+      "propertyValueId": "tU5v28xY1zA4",
+      "value": "",
+      "valueJson": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "hJ4kL7mN9pQ2",
+      "propertyValueId": "vW0xY3zA6bC9",
+      "value": "",
+      "valueJson": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "kL9mN2pQ5rS4",
+      "propertyValueId": "wA3bC6dF9gH3",
+      "value": "",
+      "valueJson": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "tU5vW8xY1zA4",
+      "propertyValueId": null,
+      "value": "",
+      "valueJson": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "vX7yZ1wA3bC6",
+      "propertyValueId": "rbOSdVBy3Guc",
+      "value": "",
+      "valueJson": null
+    }
+  ],
+  "featurePropertyI18n": [
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "hJ4kA9mN9283",
+      "locale": "en",
+      "value": "",
+      "valueGen": 0,
+      "isAutomaticOnly": 0,
+      "autoTranslated": null,
+      "translationProvenance": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "hJ4kA9mN9283",
+      "locale": "zh-hans",
+      "value": "",
+      "valueGen": 0,
+      "isAutomaticOnly": 0,
+      "autoTranslated": null,
+      "translationProvenance": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "hJ4kA9mN9283",
+      "locale": "zh-hant",
+      "value": "",
+      "valueGen": 0,
+      "isAutomaticOnly": 0,
+      "autoTranslated": null,
+      "translationProvenance": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "hJ4kL7mN9pQ2",
+      "locale": "en",
+      "value": "",
+      "valueGen": 0,
+      "isAutomaticOnly": 0,
+      "autoTranslated": null,
+      "translationProvenance": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "hJ4kL7mN9pQ2",
+      "locale": "zh-hans",
+      "value": "",
+      "valueGen": 0,
+      "isAutomaticOnly": 0,
+      "autoTranslated": null,
+      "translationProvenance": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "hJ4kL7mN9pQ2",
+      "locale": "zh-hant",
+      "value": "",
+      "valueGen": 0,
+      "isAutomaticOnly": 0,
+      "autoTranslated": null,
+      "translationProvenance": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "kL9mN2pQ5rS4",
+      "locale": "en",
+      "value": "",
+      "valueGen": 0,
+      "isAutomaticOnly": 0,
+      "autoTranslated": null,
+      "translationProvenance": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "kL9mN2pQ5rS4",
+      "locale": "zh-hans",
+      "value": "",
+      "valueGen": 0,
+      "isAutomaticOnly": 0,
+      "autoTranslated": null,
+      "translationProvenance": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "kL9mN2pQ5rS4",
+      "locale": "zh-hant",
+      "value": "",
+      "valueGen": 0,
+      "isAutomaticOnly": 0,
+      "autoTranslated": null,
+      "translationProvenance": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "vX7yZ1wA3bC6",
+      "locale": "en",
+      "value": "",
+      "valueGen": 0,
+      "isAutomaticOnly": 0,
+      "autoTranslated": null,
+      "translationProvenance": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "vX7yZ1wA3bC6",
+      "locale": "zh-hans",
+      "value": "",
+      "valueGen": 0,
+      "isAutomaticOnly": 0,
+      "autoTranslated": null,
+      "translationProvenance": null
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "propertyId": "vX7yZ1wA3bC6",
+      "locale": "zh-hant",
+      "value": "",
+      "valueGen": 0,
+      "isAutomaticOnly": 0,
+      "autoTranslated": null,
+      "translationProvenance": null
+    }
+  ],
+  "featureImage": [
+    {
+      "featureId": "rx81h67xsLkz",
+      "imageId": "upload-c4f0600fd346540df07b7663d50dbac929f09a87e82aab9f16a62f0bdda1f6c1",
+      "intent": "canonical",
+      "isPublished": 1,
+      "publishedAt": "2026-11-16T08:14:09.699Z",
+      "publisherId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+      "localIsPublished": 1
+    },
+    {
+      "featureId": "rx81h67xsLkz",
+      "imageId": "upload-e21dd2bfb9581f13e555c2fe199551a6ae048c731233a0902f42b4f81b16203e",
+      "intent": "research",
+      "isPublished": 0,
+      "publishedAt": null,
+      "publisherId": null,
+      "localIsPublished": 0
+    }
+  ],
+  "featureLocation": [
+    {
+      "featureId": "rx81h67xsLkz",
+      "locationId": "PWfsRUiasaYN",
+      "factsRevisionId": "ErZzq4tx4PHh",
+      "locationRevisionId": "ErZzq4tx4PHh",
+      "acceptedOverrides": "{\"names\":{\"zh-Hant\":{\"mode\":\"override\",\"value\":\"購物中心\"},\"zh-Hans\":{\"mode\":\"override\",\"value\":\"购物中心\"}}}",
+      "version": "d0ca466c-bc17-40fd-aeac-75d14d28afcb",
+      "actorId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+      "factsOrganisationRevision": "SwAbZ_7VZUea",
+      "locationOrganisationRevision": "SwAbZ_7VZUea",
+      "occupancyRevisionId": null,
+      "addressRevisionId": null,
+      "membershipRevisionIds": "[]",
+      "placementOverrides": "{}",
+      "acceptedGeometry": "{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]}",
+      "acceptancePolicy": "{\"factsSharedRevision\":null,\"locationSharedRevision\":null,\"nameMode\":\"independent\",\"locationMode\":\"independent\",\"factsSharedFields\":[{\"field\":\"names\",\"revision\":\"679fe70f-937b-436e-a53d-ad272819170d\"}],\"lastSharedRevision\":\"679fe70f-937b-436e-a53d-ad272819170d\"}",
+      "acceptanceProposalId": null
+    }
+  ],
+  "featureLocationHistory": [
+    {
+      "id": 2155,
+      "featureId": "rx81h67xsLkz",
+      "version": "7785334f-a226-4cd9-97bb-8cc09a8ede68",
+      "previousRevision": null,
+      "action": "link",
+      "locationId": "PWfsRUiasaYN",
+      "factsRevisionId": "ErZzq4tx4PHh",
+      "locationRevisionId": "ErZzq4tx4PHh",
+      "acceptedOverrides": "{}",
+      "actorId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+      "factsOrganisationRevision": null,
+      "locationOrganisationRevision": null,
+      "occupancyRevisionId": null,
+      "addressRevisionId": null,
+      "membershipRevisionIds": "[]",
+      "placementOverrides": "{}",
+      "geometry": "{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]}",
+      "policySnapshot": null,
+      "adoptionProposalId": null,
+      "createdAt": "2026-11-16T08:09:02.962Z"
+    },
+    {
+      "id": 2156,
+      "featureId": "rx81h67xsLkz",
+      "version": "d0ca466c-bc17-40fd-aeac-75d14d28afcb",
+      "previousRevision": "7785334f-a226-4cd9-97bb-8cc09a8ede68",
+      "action": "update",
+      "locationId": "PWfsRUiasaYN",
+      "factsRevisionId": "ErZzq4tx4PHh",
+      "locationRevisionId": "ErZzq4tx4PHh",
+      "acceptedOverrides": "{\"names\":{\"zh-Hant\":{\"mode\":\"override\",\"value\":\"購物中心\"},\"zh-Hans\":{\"mode\":\"override\",\"value\":\"购物中心\"}}}",
+      "actorId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+      "factsOrganisationRevision": "SwAbZ_7VZUea",
+      "locationOrganisationRevision": "SwAbZ_7VZUea",
+      "occupancyRevisionId": null,
+      "addressRevisionId": null,
+      "membershipRevisionIds": "[]",
+      "placementOverrides": "{}",
+      "geometry": "{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]}",
+      "policySnapshot": "{\"factsSharedRevision\":null,\"locationSharedRevision\":null,\"nameMode\":\"independent\",\"locationMode\":\"independent\",\"factsSharedFields\":[{\"field\":\"names\",\"revision\":\"679fe70f-937b-436e-a53d-ad272819170d\"}],\"lastSharedRevision\":\"679fe70f-937b-436e-a53d-ad272819170d\"}",
+      "adoptionProposalId": null,
+      "createdAt": "2026-11-16T08:11:47.040Z"
+    }
+  ],
+  "featureLocationMembership": [
+    {
+      "featureId": "rx81h67xsLkz",
+      "containerLocationId": "PWfsRUiasaYN",
+      "role": "premises",
+      "bindingVersion": "d0ca466c-bc17-40fd-aeac-75d14d28afcb",
+      "occupancyRevisionId": null,
+      "membershipRevisionId": null
+    }
+  ],
+  "featureRevision": [
+    {
+      "id": "bd016510-a37e-4ffa-a430-a87166087094",
+      "featureId": "rx81h67xsLkz",
+      "previousRevisionId": null,
+      "mergedFromRevisionId": null,
+      "changeSetId": "b235f378-540e-4ac9-97b7-78f5f394626f",
+      "schemaVersion": 1,
+      "content": "{\"format\":\"feature-content/v1\",\"profile\":{\"featureType\":\"object\",\"kind\":\"object\",\"targetContext\":\"premises\",\"associationRelation\":\"locatedAt\",\"isIntangible\":false,\"visitability\":{\"isVisitable\":true,\"asOf\":\"2026-11-16\"}},\"placement\":{\"geometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"addressMeta\":{\"address\":{\"version\":1,\"association\":{\"originKind\":\"address\",\"kind\":\"premises\",\"mode\":\"unlinked\",\"lookup\":\"no-match\",\"checkedAt\":\"2026-11-16T08:07:50.706Z\",\"names\":{\"en\":\"Shopping Centre\"}},\"source\":{\"status\":\"resolved\",\"address2dId\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"address3dId\":null,\"address3dUnitId\":null,\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"rawSource\":{\"data\":{\"type\":\"addresses\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"attributes\":{\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"divisionSnapshotId\":\"0ed521c4-d214-5c0a-8d11-8cb6f76d95bf\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"identifiers\":{\"hkgov-dpo\":{\"csuId\":\"3778714631T20050430\"}},\"sources\":[{\"publisher\":\"hkgov-dpo\",\"dataset\":\"ds-hk-hkgov-dpo-address\",\"recordId\":\"29c737f3-b338-5fcd-a7de-e2b2fe82f09a\"}],\"scope\":\"unknown\",\"divisionRelationships\":[{\"role\":\"country\",\"divisionId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\"},{\"role\":\"landform\",\"divisionId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\"},{\"role\":\"area\",\"divisionId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\"},{\"role\":\"district\",\"divisionId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\"},{\"role\":\"neighbourhood\",\"divisionId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\"}],\"countryId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\",\"islandId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\",\"areaId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\",\"districtId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\",\"neighbourhoodId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\",\"createdAt\":\"2026-10-17T08:08:59.992Z\",\"i18n\":{\"en\":{\"meta\":null,\"formattedAddress\":\"5 PERKINS ROAD, WAN CHAI DISTRICT, HK\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"PERKINS ROAD\"},\"zh-hant\":{\"meta\":null,\"formattedAddress\":\"5白建時道灣仔區香港\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"白建時道\"}}}},\"included\":[{\"type\":\"addresses\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"attributes\":{\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"divisionSnapshotId\":\"0ed521c4-d214-5c0a-8d11-8cb6f76d95bf\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"identifiers\":{\"hkgov-dpo\":{\"csuId\":\"3778714631T20050430\"}},\"sources\":[{\"publisher\":\"hkgov-dpo\",\"dataset\":\"ds-hk-hkgov-dpo-address\",\"recordId\":\"29c737f3-b338-5fcd-a7de-e2b2fe82f09a\"}],\"scope\":\"unknown\",\"divisionRelationships\":[{\"role\":\"country\",\"divisionId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\"},{\"role\":\"landform\",\"divisionId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\"},{\"role\":\"area\",\"divisionId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\"},{\"role\":\"district\",\"divisionId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\"},{\"role\":\"neighbourhood\",\"divisionId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\"}],\"countryId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\",\"islandId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\",\"areaId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\",\"districtId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\",\"neighbourhoodId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\",\"createdAt\":\"2026-10-17T08:08:59.992Z\",\"i18n\":{\"en\":{\"meta\":null,\"formattedAddress\":\"5 PERKINS ROAD, WAN CHAI DISTRICT, HK\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"PERKINS ROAD\"},\"zh-hant\":{\"meta\":null,\"formattedAddress\":\"5白建時道灣仔區香港\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"白建時道\"}}}}],\"meta\":{\"profile\":\"full\",\"direction\":\"forward\",\"release\":{\"apiReleaseSet\":\"data-hk-addresses-2026-09-23.0\",\"domain\":\"saanseoi\",\"cohort\":\"2026-09-23.0\",\"schemaVersion\":\"sv-address-v1\",\"rulesetVersion\":\"rs-address-merge-v1\",\"snapshots\":[{\"snapshotResourceType\":\"division\",\"snapshotId\":\"0ed521c4-d214-5c0a-8d11-8cb6f76d95bf\",\"role\":\"lookup\",\"variant\":\"overture\"},{\"snapshotResourceType\":\"address\",\"snapshotId\":\"17e3fec1-35b4-5e34-8856-d25604b6bc65\",\"role\":\"supplementary\",\"variant\":\"overture-places\"},{\"snapshotResourceType\":\"address\",\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"role\":\"primary\",\"variant\":\"hkgov-dpo\"}]},\"resolution\":\"resolved\",\"total\":1,\"truncated\":false,\"nextCursor\":null,\"offset\":0},\"match\":{\"status\":\"resolved\",\"match\":{\"type\":\"partial_text\",\"score\":0.9}}},\"fallbackDisplay\":{\"en\":\"5 Perkins Rd\",\"zh-hant\":\"白建時道5號\",\"zh-hans\":\"白建時道5號\"}},\"coordinates\":[114.19161,22.27052],\"matchStatus\":\"resolved\",\"overrides\":{\"en\":{\"premisesName\":\"Shopping Centre\"}},\"query\":\"5 perkins road\"}},\"location\":null},\"detachedBrands\":null,\"translations\":{\"en\":{\"nameOverride\":null,\"title\":{\"value\":\"Revealing Arrow\",\"generated\":false},\"description\":{\"value\":\"\",\"generated\":false},\"address\":{\"value\":\"Shopping Centre, 5 Perkins Road\",\"generated\":false,\"properties\":{}}},\"zh-hans\":{\"translationProvenance\":{\"title\":{\"receipt\":\"b6956417a0ab51b9fef85908f83877eb67eb4afeacaf0b7192b8bbf57d7a5f7f\",\"value\":\"揭示箭头\",\"sourceLocale\":\"en\",\"sourceHash\":\"6591bcb7861f86dfab6aeec90e2469fb368f7f47bda91728d9828e050bd9174e\",\"sourceText\":\"Revealing Arrow\",\"provider\":\"azure-translator\",\"model\":null,\"generatedAt\":\"2026-11-16T08:09:00.190Z\",\"humanVerified\":false,\"acceptedValue\":\"揭示箭头\",\"acceptedBy\":\"qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM\",\"acceptedAt\":\"2026-11-16T08:09:01.624Z\"}},\"nameOverride\":null,\"title\":{\"value\":\"揭示箭头\",\"generated\":false},\"description\":{\"value\":\"\",\"generated\":false},\"address\":{\"value\":\"白建时道5号\",\"generated\":true,\"properties\":{}}},\"zh-hant\":{\"translationProvenance\":{\"title\":{\"receipt\":\"379bf38b2e9ff26fe79e43b7f4f5ac45d6deb2a3ffba187b4d8ce280bb480893\",\"value\":\"揭示箭頭\",\"sourceLocale\":\"en\",\"sourceHash\":\"6591bcb7861f86dfab6aeec90e2469fb368f7f47bda91728d9828e050bd9174e\",\"sourceText\":\"Revealing Arrow\",\"provider\":\"azure-translator\",\"model\":null,\"generatedAt\":\"2026-11-16T08:08:59.694Z\",\"humanVerified\":false,\"acceptedValue\":\"揭示箭頭\",\"acceptedBy\":\"qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM\",\"acceptedAt\":\"2026-11-16T08:09:01.624Z\"}},\"nameOverride\":null,\"title\":{\"value\":\"揭示箭頭\",\"generated\":false},\"description\":{\"value\":\"\",\"generated\":false},\"address\":{\"value\":\"白建時道5號\",\"generated\":true,\"properties\":{}}}},\"properties\":{\"hJ4kA9mN9283\":{\"selection\":{\"propertyValueId\":\"tU5v28xY1zA4\",\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"collection\",\"type\":\"classifier\",\"component\":\"SelectField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":true,\"labels\":{\"en\":{\"value\":\"Collection\",\"generated\":false},\"zh-hans\":{\"value\":\"合集\",\"generated\":false},\"zh-hant\":{\"value\":\"合集\",\"generated\":false}},\"selectedOption\":{\"id\":\"tU5v28xY1zA4\",\"value\":null,\"translations\":{\"en\":{\"value\":\"Official\",\"generated\":false},\"zh-hans\":{\"value\":\"官方合集\",\"generated\":true},\"zh-hant\":{\"value\":\"官方合集\",\"generated\":true}}}}},\"translations\":{\"en\":{\"value\":\"\",\"generated\":false},\"zh-hans\":{\"value\":\"\",\"generated\":false},\"zh-hant\":{\"value\":\"\",\"generated\":false}}},\"hJ4kL7mN9pQ2\":{\"selection\":{\"propertyValueId\":\"vW0xY3zA6bC9\",\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"condition\",\"type\":\"classifier\",\"component\":\"SelectField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":true,\"labels\":{\"en\":{\"value\":\"Condition\",\"generated\":false},\"zh-hans\":{\"value\":\"状态\",\"generated\":false},\"zh-hant\":{\"value\":\"狀態\",\"generated\":false}},\"selectedOption\":{\"id\":\"vW0xY3zA6bC9\",\"value\":null,\"translations\":{\"en\":{\"value\":\"Revealed From Under Something Else\",\"generated\":false},\"zh-hans\":{\"value\":\"从别的东西中显露\",\"generated\":false},\"zh-hant\":{\"value\":\"從別的東西中顯露\",\"generated\":false}}}}},\"translations\":{\"en\":{\"value\":\"\",\"generated\":false},\"zh-hans\":{\"value\":\"\",\"generated\":false},\"zh-hant\":{\"value\":\"\",\"generated\":false}}},\"gPropGrade01\":{\"selection\":{\"propertyValueId\":null,\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"grade\",\"type\":\"classifier\",\"component\":\"RangeField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":1,\"max\":5,\"audience\":\"public\",\"isTranslatable\":false,\"labels\":{\"en\":{\"value\":\"Grade\",\"generated\":false},\"zh-hans\":{\"value\":\"等级\",\"generated\":true},\"zh-hant\":{\"value\":\"等級\",\"generated\":true}},\"selectedOption\":null}},\"translations\":{}},\"vX7yZ1wA3bC6\":{\"selection\":{\"propertyValueId\":null,\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"material\",\"type\":\"classifier\",\"component\":\"SelectField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":true,\"labels\":{\"en\":{\"value\":\"Material\",\"generated\":false},\"zh-hans\":{\"value\":\"材料\",\"generated\":true},\"zh-hant\":{\"value\":\"材料\",\"generated\":true}},\"selectedOption\":null}},\"translations\":{\"en\":{\"value\":\"\",\"generated\":false},\"zh-hans\":{\"value\":\"\",\"generated\":false},\"zh-hant\":{\"value\":\"\",\"generated\":false}}},\"kL9mN2pQ5rS4\":{\"selection\":{\"propertyValueId\":null,\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"size\",\"type\":\"classifier\",\"component\":\"SelectField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":true,\"labels\":{\"en\":{\"value\":\"Size\",\"generated\":false},\"zh-hans\":{\"value\":\"大小\",\"generated\":true},\"zh-hant\":{\"value\":\"大小\",\"generated\":true}},\"selectedOption\":null}},\"translations\":{\"en\":{\"value\":\"\",\"generated\":false},\"zh-hans\":{\"value\":\"\",\"generated\":false},\"zh-hant\":{\"value\":\"\",\"generated\":false}}},\"bC7dF9gH2jK5\":{\"selection\":{\"propertyValueId\":null,\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"calligrapher\",\"type\":\"specifier\",\"component\":\"InputField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":false,\"labels\":{\"en\":{\"value\":\"Calligrapher\",\"generated\":false},\"zh-hans\":{\"value\":\"书法家\",\"generated\":true},\"zh-hant\":{\"value\":\"書法家\",\"generated\":true}},\"selectedOption\":null}},\"translations\":{}},\"tU5vW8xY1zA4\":{\"selection\":{\"propertyValueId\":null,\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"characters\",\"type\":\"specifier\",\"component\":\"InputField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":false,\"labels\":{\"en\":{\"value\":\"Characters\",\"generated\":false},\"zh-hans\":{\"value\":\"字样\",\"generated\":false},\"zh-hant\":{\"value\":\"字樣\",\"generated\":false}},\"selectedOption\":null}},\"translations\":{}}},\"gallery\":{\"entries\":{},\"order\":[]}}",
+      "recordState": "{\"isPublished\":false,\"isArchived\":false,\"localIsPublished\":null,\"organisationId\":\"4Jsk5LngvFZq\",\"projectId\":\"YuSFnia9VOtG\",\"layerId\":\"7akti7OImSFg\"}",
+      "sequence": 0,
+      "legacyEvidence": null,
+      "baselineAttribution": null
+    },
+    {
+      "id": "92b23429-a480-456f-a327-405027cb77d4",
+      "featureId": "rx81h67xsLkz",
+      "previousRevisionId": "bd016510-a37e-4ffa-a430-a87166087094",
+      "mergedFromRevisionId": null,
+      "changeSetId": "1999f21c-50ef-4fcf-8d2d-c403fbf20826",
+      "schemaVersion": 1,
+      "content": "{\"format\":\"feature-content/v1\",\"profile\":{\"featureType\":\"object\",\"kind\":\"object\",\"targetContext\":\"premises\",\"associationRelation\":\"locatedAt\",\"isIntangible\":false,\"visitability\":{\"isVisitable\":true,\"asOf\":\"2026-11-16\"}},\"placement\":{\"geometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"addressMeta\":{\"address\":{\"version\":1,\"association\":{\"originKind\":\"address\",\"kind\":\"premises\",\"mode\":\"unlinked\",\"lookup\":\"no-match\",\"checkedAt\":\"2026-11-16T08:07:50.706Z\",\"names\":{\"en\":\"Shopping Centre\"}},\"source\":{\"status\":\"resolved\",\"address2dId\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"address3dId\":null,\"address3dUnitId\":null,\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"rawSource\":{\"data\":{\"type\":\"addresses\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"attributes\":{\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"divisionSnapshotId\":\"0ed521c4-d214-5c0a-8d11-8cb6f76d95bf\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"identifiers\":{\"hkgov-dpo\":{\"csuId\":\"3778714631T20050430\"}},\"sources\":[{\"publisher\":\"hkgov-dpo\",\"dataset\":\"ds-hk-hkgov-dpo-address\",\"recordId\":\"29c737f3-b338-5fcd-a7de-e2b2fe82f09a\"}],\"scope\":\"unknown\",\"divisionRelationships\":[{\"role\":\"country\",\"divisionId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\"},{\"role\":\"landform\",\"divisionId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\"},{\"role\":\"area\",\"divisionId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\"},{\"role\":\"district\",\"divisionId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\"},{\"role\":\"neighbourhood\",\"divisionId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\"}],\"countryId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\",\"islandId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\",\"areaId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\",\"districtId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\",\"neighbourhoodId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\",\"createdAt\":\"2026-10-17T08:08:59.992Z\",\"i18n\":{\"en\":{\"meta\":null,\"formattedAddress\":\"5 PERKINS ROAD, WAN CHAI DISTRICT, HK\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"PERKINS ROAD\"},\"zh-hant\":{\"meta\":null,\"formattedAddress\":\"5白建時道灣仔區香港\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"白建時道\"}}}},\"included\":[{\"type\":\"addresses\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"attributes\":{\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"divisionSnapshotId\":\"0ed521c4-d214-5c0a-8d11-8cb6f76d95bf\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"identifiers\":{\"hkgov-dpo\":{\"csuId\":\"3778714631T20050430\"}},\"sources\":[{\"publisher\":\"hkgov-dpo\",\"dataset\":\"ds-hk-hkgov-dpo-address\",\"recordId\":\"29c737f3-b338-5fcd-a7de-e2b2fe82f09a\"}],\"scope\":\"unknown\",\"divisionRelationships\":[{\"role\":\"country\",\"divisionId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\"},{\"role\":\"landform\",\"divisionId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\"},{\"role\":\"area\",\"divisionId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\"},{\"role\":\"district\",\"divisionId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\"},{\"role\":\"neighbourhood\",\"divisionId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\"}],\"countryId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\",\"islandId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\",\"areaId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\",\"districtId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\",\"neighbourhoodId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\",\"createdAt\":\"2026-10-17T08:08:59.992Z\",\"i18n\":{\"en\":{\"meta\":null,\"formattedAddress\":\"5 PERKINS ROAD, WAN CHAI DISTRICT, HK\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"PERKINS ROAD\"},\"zh-hant\":{\"meta\":null,\"formattedAddress\":\"5白建時道灣仔區香港\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"白建時道\"}}}}],\"meta\":{\"profile\":\"full\",\"direction\":\"forward\",\"release\":{\"apiReleaseSet\":\"data-hk-addresses-2026-09-23.0\",\"domain\":\"saanseoi\",\"cohort\":\"2026-09-23.0\",\"schemaVersion\":\"sv-address-v1\",\"rulesetVersion\":\"rs-address-merge-v1\",\"snapshots\":[{\"snapshotResourceType\":\"division\",\"snapshotId\":\"0ed521c4-d214-5c0a-8d11-8cb6f76d95bf\",\"role\":\"lookup\",\"variant\":\"overture\"},{\"snapshotResourceType\":\"address\",\"snapshotId\":\"17e3fec1-35b4-5e34-8856-d25604b6bc65\",\"role\":\"supplementary\",\"variant\":\"overture-places\"},{\"snapshotResourceType\":\"address\",\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"role\":\"primary\",\"variant\":\"hkgov-dpo\"}]},\"resolution\":\"resolved\",\"total\":1,\"truncated\":false,\"nextCursor\":null,\"offset\":0},\"match\":{\"status\":\"resolved\",\"match\":{\"type\":\"partial_text\",\"score\":0.9}}},\"fallbackDisplay\":{\"en\":\"5 Perkins Rd\",\"zh-hant\":\"白建時道5號\",\"zh-hans\":\"白建時道5號\"}},\"coordinates\":[114.19161,22.27052],\"matchStatus\":\"resolved\",\"overrides\":{\"en\":{\"premisesName\":\"Shopping Centre\"}},\"query\":\"5 perkins road\"}},\"location\":{\"locationId\":\"PWfsRUiasaYN\",\"associationVersion\":\"7785334f-a226-4cd9-97bb-8cc09a8ede68\",\"factsRevisionId\":\"ErZzq4tx4PHh\",\"locationRevisionId\":\"ErZzq4tx4PHh\",\"acceptedOverrides\":{},\"factsOrganisationRevision\":null,\"locationOrganisationRevision\":null,\"occupancyRevisionId\":null,\"addressRevisionId\":null,\"membershipRevisionIds\":[],\"placementOverrides\":{},\"acceptedGeometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"acceptancePolicy\":{\"factsSharedRevision\":null,\"locationSharedRevision\":null,\"nameMode\":\"independent\",\"locationMode\":\"independent\"},\"acceptanceProposalId\":null,\"memberships\":[{\"containerLocationId\":\"PWfsRUiasaYN\",\"role\":\"premises\",\"bindingVersion\":\"7785334f-a226-4cd9-97bb-8cc09a8ede68\",\"occupancyRevisionId\":null,\"membershipRevisionId\":null}]}},\"detachedBrands\":null,\"translations\":{\"en\":{\"nameOverride\":null,\"title\":{\"value\":\"Revealing Arrow\",\"generated\":false},\"description\":{\"value\":\"\",\"generated\":false},\"address\":{\"value\":\"Shopping Centre, 5 Perkins Road\",\"generated\":false,\"properties\":{}}},\"zh-hans\":{\"translationProvenance\":{\"title\":{\"receipt\":\"b6956417a0ab51b9fef85908f83877eb67eb4afeacaf0b7192b8bbf57d7a5f7f\",\"value\":\"揭示箭头\",\"sourceLocale\":\"en\",\"sourceHash\":\"6591bcb7861f86dfab6aeec90e2469fb368f7f47bda91728d9828e050bd9174e\",\"sourceText\":\"Revealing Arrow\",\"provider\":\"azure-translator\",\"model\":null,\"generatedAt\":\"2026-11-16T08:09:00.190Z\",\"humanVerified\":false,\"acceptedValue\":\"揭示箭头\",\"acceptedBy\":\"qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM\",\"acceptedAt\":\"2026-11-16T08:09:01.624Z\"}},\"nameOverride\":null,\"title\":{\"value\":\"揭示箭头\",\"generated\":false},\"description\":{\"value\":\"\",\"generated\":false},\"address\":{\"value\":\"白建时道5号\",\"generated\":false,\"properties\":{}}},\"zh-hant\":{\"translationProvenance\":{\"title\":{\"receipt\":\"379bf38b2e9ff26fe79e43b7f4f5ac45d6deb2a3ffba187b4d8ce280bb480893\",\"value\":\"揭示箭頭\",\"sourceLocale\":\"en\",\"sourceHash\":\"6591bcb7861f86dfab6aeec90e2469fb368f7f47bda91728d9828e050bd9174e\",\"sourceText\":\"Revealing Arrow\",\"provider\":\"azure-translator\",\"model\":null,\"generatedAt\":\"2026-11-16T08:08:59.694Z\",\"humanVerified\":false,\"acceptedValue\":\"揭示箭頭\",\"acceptedBy\":\"qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM\",\"acceptedAt\":\"2026-11-16T08:09:01.624Z\"}},\"nameOverride\":null,\"title\":{\"value\":\"揭示箭頭\",\"generated\":false},\"description\":{\"value\":\"\",\"generated\":false},\"address\":{\"value\":\"白建時道5號\",\"generated\":false,\"properties\":{}}}},\"properties\":{\"bC7dF9gH2jK5\":{\"selection\":{\"propertyValueId\":null,\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"calligrapher\",\"type\":\"specifier\",\"component\":\"InputField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":false,\"labels\":{\"en\":{\"value\":\"Calligrapher\",\"generated\":false},\"zh-hans\":{\"value\":\"书法家\",\"generated\":true},\"zh-hant\":{\"value\":\"書法家\",\"generated\":true}},\"selectedOption\":null}},\"translations\":{}},\"gPropGrade01\":{\"selection\":{\"propertyValueId\":null,\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"grade\",\"type\":\"classifier\",\"component\":\"RangeField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":1,\"max\":5,\"audience\":\"public\",\"isTranslatable\":false,\"labels\":{\"en\":{\"value\":\"Grade\",\"generated\":false},\"zh-hans\":{\"value\":\"等级\",\"generated\":true},\"zh-hant\":{\"value\":\"等級\",\"generated\":true}},\"selectedOption\":null}},\"translations\":{}},\"hJ4kA9mN9283\":{\"selection\":{\"propertyValueId\":\"tU5v28xY1zA4\",\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"collection\",\"type\":\"classifier\",\"component\":\"SelectField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":true,\"labels\":{\"en\":{\"value\":\"Collection\",\"generated\":false},\"zh-hans\":{\"value\":\"合集\",\"generated\":false},\"zh-hant\":{\"value\":\"合集\",\"generated\":false}},\"selectedOption\":{\"id\":\"tU5v28xY1zA4\",\"value\":null,\"translations\":{\"en\":{\"value\":\"Official\",\"generated\":false},\"zh-hans\":{\"value\":\"官方合集\",\"generated\":true},\"zh-hant\":{\"value\":\"官方合集\",\"generated\":true}}}}},\"translations\":{\"en\":{\"value\":\"\",\"generated\":false},\"zh-hans\":{\"value\":\"\",\"generated\":false},\"zh-hant\":{\"value\":\"\",\"generated\":false}}},\"hJ4kL7mN9pQ2\":{\"selection\":{\"propertyValueId\":\"vW0xY3zA6bC9\",\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"condition\",\"type\":\"classifier\",\"component\":\"SelectField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":true,\"labels\":{\"en\":{\"value\":\"Condition\",\"generated\":false},\"zh-hans\":{\"value\":\"状态\",\"generated\":false},\"zh-hant\":{\"value\":\"狀態\",\"generated\":false}},\"selectedOption\":{\"id\":\"vW0xY3zA6bC9\",\"value\":null,\"translations\":{\"en\":{\"value\":\"Revealed From Under Something Else\",\"generated\":false},\"zh-hans\":{\"value\":\"从别的东西中显露\",\"generated\":false},\"zh-hant\":{\"value\":\"從別的東西中顯露\",\"generated\":false}}}}},\"translations\":{\"en\":{\"value\":\"\",\"generated\":false},\"zh-hans\":{\"value\":\"\",\"generated\":false},\"zh-hant\":{\"value\":\"\",\"generated\":false}}},\"kL9mN2pQ5rS4\":{\"selection\":{\"propertyValueId\":\"wA3bC6dF9gH3\",\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"size\",\"type\":\"classifier\",\"component\":\"SelectField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":true,\"labels\":{\"en\":{\"value\":\"Size\",\"generated\":false},\"zh-hans\":{\"value\":\"大小\",\"generated\":true},\"zh-hant\":{\"value\":\"大小\",\"generated\":true}},\"selectedOption\":{\"id\":\"wA3bC6dF9gH3\",\"value\":null,\"translations\":{\"en\":{\"value\":\"Medium\",\"generated\":false},\"zh-hans\":{\"value\":\"中\",\"generated\":true},\"zh-hant\":{\"value\":\"中\",\"generated\":true}}}}},\"translations\":{\"en\":{\"value\":\"\",\"generated\":false},\"zh-hans\":{\"value\":\"\",\"generated\":false},\"zh-hant\":{\"value\":\"\",\"generated\":false}}},\"tU5vW8xY1zA4\":{\"selection\":{\"propertyValueId\":null,\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"characters\",\"type\":\"specifier\",\"component\":\"InputField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":false,\"labels\":{\"en\":{\"value\":\"Characters\",\"generated\":false},\"zh-hans\":{\"value\":\"字样\",\"generated\":false},\"zh-hant\":{\"value\":\"字樣\",\"generated\":false}},\"selectedOption\":null}},\"translations\":{}},\"vX7yZ1wA3bC6\":{\"selection\":{\"propertyValueId\":\"rbOSdVBy3Guc\",\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"material\",\"type\":\"classifier\",\"component\":\"SelectField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":true,\"labels\":{\"en\":{\"value\":\"Material\",\"generated\":false},\"zh-hans\":{\"value\":\"材料\",\"generated\":true},\"zh-hant\":{\"value\":\"材料\",\"generated\":true}},\"selectedOption\":{\"id\":\"rbOSdVBy3Guc\",\"value\":null,\"translations\":{\"en\":{\"value\":\"Tiles\",\"generated\":false}}}}},\"translations\":{\"en\":{\"value\":\"\",\"generated\":false},\"zh-hans\":{\"value\":\"\",\"generated\":false},\"zh-hant\":{\"value\":\"\",\"generated\":false}}},\"gPropPhNum01\":{\"selection\":{\"propertyValueId\":null,\"value\":\"[]\",\"valueJson\":null,\"definition\":{\"key\":\"phoneNumber\",\"type\":\"specifier\",\"component\":\"PhoneField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":false,\"labels\":{\"en\":{\"value\":\"Phone Number\",\"generated\":false},\"zh-hans\":{\"value\":\"电话号码\",\"generated\":true},\"zh-hant\":{\"value\":\"電話號碼\",\"generated\":true}},\"selectedOption\":null}},\"translations\":{}}},\"gallery\":{\"entries\":{},\"order\":[]}}",
+      "recordState": "{\"isPublished\":false,\"isArchived\":false,\"localIsPublished\":null,\"organisationId\":\"4Jsk5LngvFZq\",\"projectId\":\"YuSFnia9VOtG\",\"layerId\":\"7akti7OImSFg\"}",
+      "sequence": 3,
+      "legacyEvidence": null,
+      "baselineAttribution": null
+    },
+    {
+      "id": "d2345c44-a222-4064-b151-8088a4228ed3",
+      "featureId": "rx81h67xsLkz",
+      "previousRevisionId": "92b23429-a480-456f-a327-405027cb77d4",
+      "mergedFromRevisionId": null,
+      "changeSetId": "0c553e60-6226-4de4-81b6-9eb4b1493e77",
+      "schemaVersion": 1,
+      "content": "{\"format\":\"feature-content/v1\",\"profile\":{\"featureType\":\"object\",\"kind\":\"object\",\"targetContext\":\"premises\",\"associationRelation\":\"locatedAt\",\"isIntangible\":false,\"visitability\":{\"isVisitable\":true,\"asOf\":\"2026-11-16\"}},\"placement\":{\"geometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"addressMeta\":{\"address\":{\"version\":1,\"association\":{\"originKind\":\"address\",\"kind\":\"premises\",\"mode\":\"unlinked\",\"lookup\":\"no-match\",\"checkedAt\":\"2026-11-16T08:07:50.706Z\",\"names\":{\"en\":\"Shopping Centre\"}},\"source\":{\"status\":\"resolved\",\"address2dId\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"address3dId\":null,\"address3dUnitId\":null,\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"rawSource\":{\"data\":{\"type\":\"addresses\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"attributes\":{\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"divisionSnapshotId\":\"0ed521c4-d214-5c0a-8d11-8cb6f76d95bf\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"identifiers\":{\"hkgov-dpo\":{\"csuId\":\"3778714631T20050430\"}},\"sources\":[{\"publisher\":\"hkgov-dpo\",\"dataset\":\"ds-hk-hkgov-dpo-address\",\"recordId\":\"29c737f3-b338-5fcd-a7de-e2b2fe82f09a\"}],\"scope\":\"unknown\",\"divisionRelationships\":[{\"role\":\"country\",\"divisionId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\"},{\"role\":\"landform\",\"divisionId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\"},{\"role\":\"area\",\"divisionId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\"},{\"role\":\"district\",\"divisionId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\"},{\"role\":\"neighbourhood\",\"divisionId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\"}],\"countryId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\",\"islandId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\",\"areaId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\",\"districtId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\",\"neighbourhoodId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\",\"createdAt\":\"2026-10-17T08:08:59.992Z\",\"i18n\":{\"en\":{\"meta\":null,\"formattedAddress\":\"5 PERKINS ROAD, WAN CHAI DISTRICT, HK\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"PERKINS ROAD\"},\"zh-hant\":{\"meta\":null,\"formattedAddress\":\"5白建時道灣仔區香港\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"白建時道\"}}}},\"included\":[{\"type\":\"addresses\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"attributes\":{\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"divisionSnapshotId\":\"0ed521c4-d214-5c0a-8d11-8cb6f76d95bf\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"identifiers\":{\"hkgov-dpo\":{\"csuId\":\"3778714631T20050430\"}},\"sources\":[{\"publisher\":\"hkgov-dpo\",\"dataset\":\"ds-hk-hkgov-dpo-address\",\"recordId\":\"29c737f3-b338-5fcd-a7de-e2b2fe82f09a\"}],\"scope\":\"unknown\",\"divisionRelationships\":[{\"role\":\"country\",\"divisionId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\"},{\"role\":\"landform\",\"divisionId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\"},{\"role\":\"area\",\"divisionId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\"},{\"role\":\"district\",\"divisionId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\"},{\"role\":\"neighbourhood\",\"divisionId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\"}],\"countryId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\",\"islandId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\",\"areaId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\",\"districtId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\",\"neighbourhoodId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\",\"createdAt\":\"2026-10-17T08:08:59.992Z\",\"i18n\":{\"en\":{\"meta\":null,\"formattedAddress\":\"5 PERKINS ROAD, WAN CHAI DISTRICT, HK\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"PERKINS ROAD\"},\"zh-hant\":{\"meta\":null,\"formattedAddress\":\"5白建時道灣仔區香港\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"白建時道\"}}}}],\"meta\":{\"profile\":\"full\",\"direction\":\"forward\",\"release\":{\"apiReleaseSet\":\"data-hk-addresses-2026-09-23.0\",\"domain\":\"saanseoi\",\"cohort\":\"2026-09-23.0\",\"schemaVersion\":\"sv-address-v1\",\"rulesetVersion\":\"rs-address-merge-v1\",\"snapshots\":[{\"snapshotResourceType\":\"division\",\"snapshotId\":\"0ed521c4-d214-5c0a-8d11-8cb6f76d95bf\",\"role\":\"lookup\",\"variant\":\"overture\"},{\"snapshotResourceType\":\"address\",\"snapshotId\":\"17e3fec1-35b4-5e34-8856-d25604b6bc65\",\"role\":\"supplementary\",\"variant\":\"overture-places\"},{\"snapshotResourceType\":\"address\",\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"role\":\"primary\",\"variant\":\"hkgov-dpo\"}]},\"resolution\":\"resolved\",\"total\":1,\"truncated\":false,\"nextCursor\":null,\"offset\":0},\"match\":{\"status\":\"resolved\",\"match\":{\"type\":\"partial_text\",\"score\":0.9}}},\"fallbackDisplay\":{\"en\":\"5 Perkins Rd\",\"zh-hant\":\"白建時道5號\",\"zh-hans\":\"白建時道5號\"}},\"coordinates\":[114.19161,22.27052],\"matchStatus\":\"resolved\",\"overrides\":{\"en\":{\"premisesName\":\"Shopping Centre\"}},\"query\":\"5 perkins road\"}},\"location\":{\"locationId\":\"PWfsRUiasaYN\",\"associationVersion\":\"7785334f-a226-4cd9-97bb-8cc09a8ede68\",\"factsRevisionId\":\"ErZzq4tx4PHh\",\"locationRevisionId\":\"ErZzq4tx4PHh\",\"acceptedOverrides\":{},\"factsOrganisationRevision\":null,\"locationOrganisationRevision\":null,\"occupancyRevisionId\":null,\"addressRevisionId\":null,\"membershipRevisionIds\":[],\"placementOverrides\":{},\"acceptedGeometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"acceptancePolicy\":{\"factsSharedRevision\":null,\"locationSharedRevision\":null,\"nameMode\":\"independent\",\"locationMode\":\"independent\"},\"acceptanceProposalId\":null,\"memberships\":[{\"containerLocationId\":\"PWfsRUiasaYN\",\"role\":\"premises\",\"bindingVersion\":\"7785334f-a226-4cd9-97bb-8cc09a8ede68\",\"occupancyRevisionId\":null,\"membershipRevisionId\":null}]}},\"detachedBrands\":null,\"translations\":{\"en\":{\"nameOverride\":null,\"title\":{\"value\":\"Revealing Arrow\",\"generated\":false},\"description\":{\"value\":\"\",\"generated\":false},\"address\":{\"value\":\"Shopping Centre, 5 Perkins Road\",\"generated\":false,\"properties\":{}}},\"zh-hans\":{\"translationProvenance\":{\"title\":{\"receipt\":\"b6956417a0ab51b9fef85908f83877eb67eb4afeacaf0b7192b8bbf57d7a5f7f\",\"value\":\"揭示箭头\",\"sourceLocale\":\"en\",\"sourceHash\":\"6591bcb7861f86dfab6aeec90e2469fb368f7f47bda91728d9828e050bd9174e\",\"sourceText\":\"Revealing Arrow\",\"provider\":\"azure-translator\",\"model\":null,\"generatedAt\":\"2026-11-16T08:09:00.190Z\",\"humanVerified\":false,\"acceptedValue\":\"揭示箭头\",\"acceptedBy\":\"qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM\",\"acceptedAt\":\"2026-11-16T08:09:01.624Z\"}},\"nameOverride\":null,\"title\":{\"value\":\"揭示箭头\",\"generated\":false},\"description\":{\"value\":\"\",\"generated\":false},\"address\":{\"value\":\"白建时道5号\",\"generated\":false,\"properties\":{}}},\"zh-hant\":{\"translationProvenance\":{\"title\":{\"receipt\":\"379bf38b2e9ff26fe79e43b7f4f5ac45d6deb2a3ffba187b4d8ce280bb480893\",\"value\":\"揭示箭頭\",\"sourceLocale\":\"en\",\"sourceHash\":\"6591bcb7861f86dfab6aeec90e2469fb368f7f47bda91728d9828e050bd9174e\",\"sourceText\":\"Revealing Arrow\",\"provider\":\"azure-translator\",\"model\":null,\"generatedAt\":\"2026-11-16T08:08:59.694Z\",\"humanVerified\":false,\"acceptedValue\":\"揭示箭頭\",\"acceptedBy\":\"qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM\",\"acceptedAt\":\"2026-11-16T08:09:01.624Z\"}},\"nameOverride\":null,\"title\":{\"value\":\"揭示箭頭\",\"generated\":false},\"description\":{\"value\":\"\",\"generated\":false},\"address\":{\"value\":\"白建時道5號\",\"generated\":false,\"properties\":{}}}},\"properties\":{\"bC7dF9gH2jK5\":{\"selection\":{\"propertyValueId\":null,\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"calligrapher\",\"type\":\"specifier\",\"component\":\"InputField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":false,\"labels\":{\"en\":{\"value\":\"Calligrapher\",\"generated\":false},\"zh-hans\":{\"value\":\"书法家\",\"generated\":true},\"zh-hant\":{\"value\":\"書法家\",\"generated\":true}},\"selectedOption\":null}},\"translations\":{}},\"gPropGrade01\":{\"selection\":{\"propertyValueId\":null,\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"grade\",\"type\":\"classifier\",\"component\":\"RangeField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":1,\"max\":5,\"audience\":\"public\",\"isTranslatable\":false,\"labels\":{\"en\":{\"value\":\"Grade\",\"generated\":false},\"zh-hans\":{\"value\":\"等级\",\"generated\":true},\"zh-hant\":{\"value\":\"等級\",\"generated\":true}},\"selectedOption\":null}},\"translations\":{}},\"hJ4kA9mN9283\":{\"selection\":{\"propertyValueId\":\"tU5v28xY1zA4\",\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"collection\",\"type\":\"classifier\",\"component\":\"SelectField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":true,\"labels\":{\"en\":{\"value\":\"Collection\",\"generated\":false},\"zh-hans\":{\"value\":\"合集\",\"generated\":false},\"zh-hant\":{\"value\":\"合集\",\"generated\":false}},\"selectedOption\":{\"id\":\"tU5v28xY1zA4\",\"value\":null,\"translations\":{\"en\":{\"value\":\"Official\",\"generated\":false},\"zh-hans\":{\"value\":\"官方合集\",\"generated\":true},\"zh-hant\":{\"value\":\"官方合集\",\"generated\":true}}}}},\"translations\":{\"en\":{\"value\":\"\",\"generated\":false},\"zh-hans\":{\"value\":\"\",\"generated\":false},\"zh-hant\":{\"value\":\"\",\"generated\":false}}},\"hJ4kL7mN9pQ2\":{\"selection\":{\"propertyValueId\":\"vW0xY3zA6bC9\",\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"condition\",\"type\":\"classifier\",\"component\":\"SelectField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":true,\"labels\":{\"en\":{\"value\":\"Condition\",\"generated\":false},\"zh-hans\":{\"value\":\"状态\",\"generated\":false},\"zh-hant\":{\"value\":\"狀態\",\"generated\":false}},\"selectedOption\":{\"id\":\"vW0xY3zA6bC9\",\"value\":null,\"translations\":{\"en\":{\"value\":\"Revealed From Under Something Else\",\"generated\":false},\"zh-hans\":{\"value\":\"从别的东西中显露\",\"generated\":false},\"zh-hant\":{\"value\":\"從別的東西中顯露\",\"generated\":false}}}}},\"translations\":{\"en\":{\"value\":\"\",\"generated\":false},\"zh-hans\":{\"value\":\"\",\"generated\":false},\"zh-hant\":{\"value\":\"\",\"generated\":false}}},\"kL9mN2pQ5rS4\":{\"selection\":{\"propertyValueId\":\"wA3bC6dF9gH3\",\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"size\",\"type\":\"classifier\",\"component\":\"SelectField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":true,\"labels\":{\"en\":{\"value\":\"Size\",\"generated\":false},\"zh-hans\":{\"value\":\"大小\",\"generated\":true},\"zh-hant\":{\"value\":\"大小\",\"generated\":true}},\"selectedOption\":{\"id\":\"wA3bC6dF9gH3\",\"value\":null,\"translations\":{\"en\":{\"value\":\"Medium\",\"generated\":false},\"zh-hans\":{\"value\":\"中\",\"generated\":true},\"zh-hant\":{\"value\":\"中\",\"generated\":true}}}}},\"translations\":{\"en\":{\"value\":\"\",\"generated\":false},\"zh-hans\":{\"value\":\"\",\"generated\":false},\"zh-hant\":{\"value\":\"\",\"generated\":false}}},\"tU5vW8xY1zA4\":{\"selection\":{\"propertyValueId\":null,\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"characters\",\"type\":\"specifier\",\"component\":\"InputField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":false,\"labels\":{\"en\":{\"value\":\"Characters\",\"generated\":false},\"zh-hans\":{\"value\":\"字样\",\"generated\":false},\"zh-hant\":{\"value\":\"字樣\",\"generated\":false}},\"selectedOption\":null}},\"translations\":{}},\"vX7yZ1wA3bC6\":{\"selection\":{\"propertyValueId\":\"rbOSdVBy3Guc\",\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"material\",\"type\":\"classifier\",\"component\":\"SelectField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":true,\"labels\":{\"en\":{\"value\":\"Material\",\"generated\":false},\"zh-hans\":{\"value\":\"材料\",\"generated\":true},\"zh-hant\":{\"value\":\"材料\",\"generated\":true}},\"selectedOption\":{\"id\":\"rbOSdVBy3Guc\",\"value\":null,\"translations\":{\"en\":{\"value\":\"Tiles\",\"generated\":false}}}}},\"translations\":{\"en\":{\"value\":\"\",\"generated\":false},\"zh-hans\":{\"value\":\"\",\"generated\":false},\"zh-hant\":{\"value\":\"\",\"generated\":false}}},\"gPropPhNum01\":{\"selection\":{\"propertyValueId\":null,\"value\":\"[]\",\"valueJson\":null,\"definition\":{\"key\":\"phoneNumber\",\"type\":\"specifier\",\"component\":\"PhoneField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":false,\"labels\":{\"en\":{\"value\":\"Phone Number\",\"generated\":false},\"zh-hans\":{\"value\":\"电话号码\",\"generated\":true},\"zh-hant\":{\"value\":\"電話號碼\",\"generated\":true}},\"selectedOption\":null}},\"translations\":{}}},\"gallery\":{\"entries\":{},\"order\":[]}}",
+      "recordState": "{\"isPublished\":true,\"isArchived\":false,\"localIsPublished\":true,\"organisationId\":\"4Jsk5LngvFZq\",\"projectId\":\"YuSFnia9VOtG\",\"layerId\":\"7akti7OImSFg\"}",
+      "sequence": 4,
+      "legacyEvidence": null,
+      "baselineAttribution": null
+    },
+    {
+      "id": "ffc4084b-12bd-4a2f-9d0e-00c0fc73ea72",
+      "featureId": "rx81h67xsLkz",
+      "previousRevisionId": "d2345c44-a222-4064-b151-8088a4228ed3",
+      "mergedFromRevisionId": null,
+      "changeSetId": "79e4fb92-b27b-4848-9a7f-5758e682e521",
+      "schemaVersion": 1,
+      "content": "{\"format\":\"feature-content/v1\",\"profile\":{\"featureType\":\"object\",\"kind\":\"object\",\"targetContext\":\"premises\",\"associationRelation\":\"locatedAt\",\"isIntangible\":false,\"visitability\":{\"isVisitable\":true,\"asOf\":\"2026-11-16\"}},\"placement\":{\"geometry\":{\"type\":\"Point\",\"coordinates\":[114.191544043399,22.270451022358557]},\"addressMeta\":{\"address\":{\"version\":1,\"association\":{\"originKind\":\"address\",\"kind\":\"premises\",\"mode\":\"unlinked\",\"lookup\":\"no-match\",\"checkedAt\":\"2026-11-16T08:07:50.706Z\",\"names\":{\"en\":\"Shopping Centre\"}},\"source\":{\"status\":\"resolved\",\"address2dId\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"address3dId\":null,\"address3dUnitId\":null,\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"rawSource\":{\"data\":{\"type\":\"addresses\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"attributes\":{\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"divisionSnapshotId\":\"0ed521c4-d214-5c0a-8d11-8cb6f76d95bf\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"identifiers\":{\"hkgov-dpo\":{\"csuId\":\"3778714631T20050430\"}},\"sources\":[{\"publisher\":\"hkgov-dpo\",\"dataset\":\"ds-hk-hkgov-dpo-address\",\"recordId\":\"29c737f3-b338-5fcd-a7de-e2b2fe82f09a\"}],\"scope\":\"unknown\",\"divisionRelationships\":[{\"role\":\"country\",\"divisionId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\"},{\"role\":\"landform\",\"divisionId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\"},{\"role\":\"area\",\"divisionId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\"},{\"role\":\"district\",\"divisionId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\"},{\"role\":\"neighbourhood\",\"divisionId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\"}],\"countryId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\",\"islandId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\",\"areaId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\",\"districtId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\",\"neighbourhoodId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\",\"createdAt\":\"2026-10-17T08:08:59.992Z\",\"i18n\":{\"en\":{\"meta\":null,\"formattedAddress\":\"5 PERKINS ROAD, WAN CHAI DISTRICT, HK\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"PERKINS ROAD\"},\"zh-hant\":{\"meta\":null,\"formattedAddress\":\"5白建時道灣仔區香港\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"白建時道\"}}}},\"included\":[{\"type\":\"addresses\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"attributes\":{\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"divisionSnapshotId\":\"0ed521c4-d214-5c0a-8d11-8cb6f76d95bf\",\"id\":\"ss-f9cb432e-752b-5cf3-9eeb-f5b83115cfc1\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"identifiers\":{\"hkgov-dpo\":{\"csuId\":\"3778714631T20050430\"}},\"sources\":[{\"publisher\":\"hkgov-dpo\",\"dataset\":\"ds-hk-hkgov-dpo-address\",\"recordId\":\"29c737f3-b338-5fcd-a7de-e2b2fe82f09a\"}],\"scope\":\"unknown\",\"divisionRelationships\":[{\"role\":\"country\",\"divisionId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\"},{\"role\":\"landform\",\"divisionId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\"},{\"role\":\"area\",\"divisionId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\"},{\"role\":\"district\",\"divisionId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\"},{\"role\":\"neighbourhood\",\"divisionId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\"}],\"countryId\":\"fb68fc73-3ac6-41c9-a692-22fcf20cb5be\",\"islandId\":\"ss-5999ed90-1c47-51e7-b79d-80f9251c1e01\",\"areaId\":\"ss-25cec859-44f3-5e1d-a72b-952f804e56ab\",\"districtId\":\"a3f5d985-9d91-4629-a530-f66420a0be01\",\"neighbourhoodId\":\"38c2dec8-4e8d-45ec-971d-621160fbaa80\",\"createdAt\":\"2026-10-17T08:08:59.992Z\",\"i18n\":{\"en\":{\"meta\":null,\"formattedAddress\":\"5 PERKINS ROAD, WAN CHAI DISTRICT, HK\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"PERKINS ROAD\"},\"zh-hant\":{\"meta\":null,\"formattedAddress\":\"5白建時道灣仔區香港\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"白建時道\"}}}}],\"meta\":{\"profile\":\"full\",\"direction\":\"forward\",\"release\":{\"apiReleaseSet\":\"data-hk-addresses-2026-09-23.0\",\"domain\":\"saanseoi\",\"cohort\":\"2026-09-23.0\",\"schemaVersion\":\"sv-address-v1\",\"rulesetVersion\":\"rs-address-merge-v1\",\"snapshots\":[{\"snapshotResourceType\":\"division\",\"snapshotId\":\"0ed521c4-d214-5c0a-8d11-8cb6f76d95bf\",\"role\":\"lookup\",\"variant\":\"overture\"},{\"snapshotResourceType\":\"address\",\"snapshotId\":\"17e3fec1-35b4-5e34-8856-d25604b6bc65\",\"role\":\"supplementary\",\"variant\":\"overture-places\"},{\"snapshotResourceType\":\"address\",\"snapshotId\":\"3420b404-aec0-54ce-b92a-1ac273196f9d\",\"role\":\"primary\",\"variant\":\"hkgov-dpo\"}]},\"resolution\":\"resolved\",\"total\":1,\"truncated\":false,\"nextCursor\":null,\"offset\":0},\"match\":{\"status\":\"resolved\",\"match\":{\"type\":\"partial_text\",\"score\":0.9}}},\"fallbackDisplay\":{\"en\":\"5 Perkins Rd\",\"zh-hant\":\"白建時道5號\",\"zh-hans\":\"白建時道5號\"}},\"coordinates\":[114.19161,22.27052],\"matchStatus\":\"stale\",\"overrides\":{\"en\":{\"premisesName\":\"Shopping Centre\"}},\"query\":\"5 perkins road\"}},\"location\":{\"locationId\":\"PWfsRUiasaYN\",\"associationVersion\":\"d0ca466c-bc17-40fd-aeac-75d14d28afcb\",\"factsRevisionId\":\"ErZzq4tx4PHh\",\"locationRevisionId\":\"ErZzq4tx4PHh\",\"acceptedOverrides\":{\"names\":{\"zh-Hant\":{\"mode\":\"override\",\"value\":\"購物中心\"},\"zh-Hans\":{\"mode\":\"override\",\"value\":\"购物中心\"}}},\"factsOrganisationRevision\":\"SwAbZ_7VZUea\",\"locationOrganisationRevision\":\"SwAbZ_7VZUea\",\"occupancyRevisionId\":null,\"addressRevisionId\":null,\"membershipRevisionIds\":[],\"placementOverrides\":{},\"acceptedGeometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"acceptancePolicy\":{\"factsSharedRevision\":null,\"locationSharedRevision\":null,\"nameMode\":\"independent\",\"locationMode\":\"independent\",\"factsSharedFields\":[{\"field\":\"names\",\"revision\":\"679fe70f-937b-436e-a53d-ad272819170d\"}],\"lastSharedRevision\":\"679fe70f-937b-436e-a53d-ad272819170d\"},\"acceptanceProposalId\":null,\"memberships\":[{\"containerLocationId\":\"PWfsRUiasaYN\",\"role\":\"premises\",\"bindingVersion\":\"d0ca466c-bc17-40fd-aeac-75d14d28afcb\",\"occupancyRevisionId\":null,\"membershipRevisionId\":null}]}},\"detachedBrands\":null,\"translations\":{\"en\":{\"nameOverride\":null,\"title\":{\"value\":\"Revealing Arrow\",\"generated\":false},\"description\":{\"value\":\"\",\"generated\":false},\"address\":{\"value\":\"Shopping Centre, 5 Perkins Road\",\"generated\":false,\"properties\":{}}},\"zh-hans\":{\"translationProvenance\":{\"title\":{\"receipt\":\"b6956417a0ab51b9fef85908f83877eb67eb4afeacaf0b7192b8bbf57d7a5f7f\",\"value\":\"揭示箭头\",\"sourceLocale\":\"en\",\"sourceHash\":\"6591bcb7861f86dfab6aeec90e2469fb368f7f47bda91728d9828e050bd9174e\",\"sourceText\":\"Revealing Arrow\",\"provider\":\"azure-translator\",\"model\":null,\"generatedAt\":\"2026-11-16T08:09:00.190Z\",\"humanVerified\":false,\"acceptedValue\":\"揭示箭头\",\"acceptedBy\":\"qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM\",\"acceptedAt\":\"2026-11-16T08:09:01.624Z\"}},\"nameOverride\":null,\"title\":{\"value\":\"揭示箭头\",\"generated\":false},\"description\":{\"value\":\"\",\"generated\":false},\"address\":{\"value\":\"白建时道5号\",\"generated\":true,\"properties\":{}}},\"zh-hant\":{\"translationProvenance\":{\"title\":{\"receipt\":\"379bf38b2e9ff26fe79e43b7f4f5ac45d6deb2a3ffba187b4d8ce280bb480893\",\"value\":\"揭示箭頭\",\"sourceLocale\":\"en\",\"sourceHash\":\"6591bcb7861f86dfab6aeec90e2469fb368f7f47bda91728d9828e050bd9174e\",\"sourceText\":\"Revealing Arrow\",\"provider\":\"azure-translator\",\"model\":null,\"generatedAt\":\"2026-11-16T08:08:59.694Z\",\"humanVerified\":false,\"acceptedValue\":\"揭示箭頭\",\"acceptedBy\":\"qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM\",\"acceptedAt\":\"2026-11-16T08:09:01.624Z\"}},\"nameOverride\":null,\"title\":{\"value\":\"揭示箭頭\",\"generated\":false},\"description\":{\"value\":\"\",\"generated\":false},\"address\":{\"value\":\"白建時道5號\",\"generated\":true,\"properties\":{}}}},\"properties\":{\"bC7dF9gH2jK5\":{\"selection\":{\"propertyValueId\":null,\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"calligrapher\",\"type\":\"specifier\",\"component\":\"InputField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":false,\"labels\":{\"en\":{\"value\":\"Calligrapher\",\"generated\":false},\"zh-hans\":{\"value\":\"书法家\",\"generated\":true},\"zh-hant\":{\"value\":\"書法家\",\"generated\":true}},\"selectedOption\":null}},\"translations\":{}},\"gPropGrade01\":{\"selection\":{\"propertyValueId\":null,\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"grade\",\"type\":\"classifier\",\"component\":\"RangeField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":1,\"max\":5,\"audience\":\"public\",\"isTranslatable\":false,\"labels\":{\"en\":{\"value\":\"Grade\",\"generated\":false},\"zh-hans\":{\"value\":\"等级\",\"generated\":true},\"zh-hant\":{\"value\":\"等級\",\"generated\":true}},\"selectedOption\":null}},\"translations\":{}},\"gPropPhNum01\":{\"selection\":{\"propertyValueId\":null,\"value\":\"[]\",\"valueJson\":null,\"definition\":{\"key\":\"phoneNumber\",\"type\":\"specifier\",\"component\":\"PhoneField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":false,\"labels\":{\"en\":{\"value\":\"Phone Number\",\"generated\":false},\"zh-hans\":{\"value\":\"电话号码\",\"generated\":true},\"zh-hant\":{\"value\":\"電話號碼\",\"generated\":true}},\"selectedOption\":null}},\"translations\":{}},\"hJ4kA9mN9283\":{\"selection\":{\"propertyValueId\":\"tU5v28xY1zA4\",\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"collection\",\"type\":\"classifier\",\"component\":\"SelectField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":true,\"labels\":{\"en\":{\"value\":\"Collection\",\"generated\":false},\"zh-hans\":{\"value\":\"合集\",\"generated\":false},\"zh-hant\":{\"value\":\"合集\",\"generated\":false}},\"selectedOption\":{\"id\":\"tU5v28xY1zA4\",\"value\":null,\"translations\":{\"en\":{\"value\":\"Official\",\"generated\":false},\"zh-hans\":{\"value\":\"官方合集\",\"generated\":true},\"zh-hant\":{\"value\":\"官方合集\",\"generated\":true}}}}},\"translations\":{\"en\":{\"value\":\"\",\"generated\":false},\"zh-hans\":{\"value\":\"\",\"generated\":false},\"zh-hant\":{\"value\":\"\",\"generated\":false}}},\"hJ4kL7mN9pQ2\":{\"selection\":{\"propertyValueId\":\"vW0xY3zA6bC9\",\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"condition\",\"type\":\"classifier\",\"component\":\"SelectField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":true,\"labels\":{\"en\":{\"value\":\"Condition\",\"generated\":false},\"zh-hans\":{\"value\":\"状态\",\"generated\":false},\"zh-hant\":{\"value\":\"狀態\",\"generated\":false}},\"selectedOption\":{\"id\":\"vW0xY3zA6bC9\",\"value\":null,\"translations\":{\"en\":{\"value\":\"Revealed From Under Something Else\",\"generated\":false},\"zh-hans\":{\"value\":\"从别的东西中显露\",\"generated\":false},\"zh-hant\":{\"value\":\"從別的東西中顯露\",\"generated\":false}}}}},\"translations\":{\"en\":{\"value\":\"\",\"generated\":false},\"zh-hans\":{\"value\":\"\",\"generated\":false},\"zh-hant\":{\"value\":\"\",\"generated\":false}}},\"kL9mN2pQ5rS4\":{\"selection\":{\"propertyValueId\":\"wA3bC6dF9gH3\",\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"size\",\"type\":\"classifier\",\"component\":\"SelectField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":true,\"labels\":{\"en\":{\"value\":\"Size\",\"generated\":false},\"zh-hans\":{\"value\":\"大小\",\"generated\":true},\"zh-hant\":{\"value\":\"大小\",\"generated\":true}},\"selectedOption\":{\"id\":\"wA3bC6dF9gH3\",\"value\":null,\"translations\":{\"en\":{\"value\":\"Medium\",\"generated\":false},\"zh-hans\":{\"value\":\"中\",\"generated\":true},\"zh-hant\":{\"value\":\"中\",\"generated\":true}}}}},\"translations\":{\"en\":{\"value\":\"\",\"generated\":false},\"zh-hans\":{\"value\":\"\",\"generated\":false},\"zh-hant\":{\"value\":\"\",\"generated\":false}}},\"tU5vW8xY1zA4\":{\"selection\":{\"propertyValueId\":null,\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"characters\",\"type\":\"specifier\",\"component\":\"InputField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":false,\"labels\":{\"en\":{\"value\":\"Characters\",\"generated\":false},\"zh-hans\":{\"value\":\"字样\",\"generated\":false},\"zh-hant\":{\"value\":\"字樣\",\"generated\":false}},\"selectedOption\":null}},\"translations\":{}},\"vX7yZ1wA3bC6\":{\"selection\":{\"propertyValueId\":\"rbOSdVBy3Guc\",\"value\":\"\",\"valueJson\":null,\"definition\":{\"key\":\"material\",\"type\":\"classifier\",\"component\":\"SelectField\",\"dataType\":\"text\",\"dateResolution\":\"day\",\"timeMaxHour\":24,\"cardinality\":\"one\",\"presentation\":\"text\",\"min\":null,\"max\":null,\"audience\":\"public\",\"isTranslatable\":true,\"labels\":{\"en\":{\"value\":\"Material\",\"generated\":false},\"zh-hans\":{\"value\":\"材料\",\"generated\":true},\"zh-hant\":{\"value\":\"材料\",\"generated\":true}},\"selectedOption\":{\"id\":\"rbOSdVBy3Guc\",\"value\":null,\"translations\":{\"en\":{\"value\":\"Tiles\",\"generated\":false}}}}},\"translations\":{\"en\":{\"value\":\"\",\"generated\":false},\"zh-hans\":{\"value\":\"\",\"generated\":false},\"zh-hant\":{\"value\":\"\",\"generated\":false}}}},\"gallery\":{\"entries\":{\"upload-e21dd2bfb9581f13e555c2fe199551a6ae048c731233a0902f42b4f81b16203e\":{\"imageRevisionId\":\"6b7e5a7d-081e-4aae-bdc5-e73f03f73e9a\",\"intent\":\"research\",\"isPublished\":false,\"caption\":{},\"alt\":{}},\"upload-c4f0600fd346540df07b7663d50dbac929f09a87e82aab9f16a62f0bdda1f6c1\":{\"imageRevisionId\":\"340f5e02-7d34-4031-9b38-04da74567699\",\"intent\":\"canonical\",\"isPublished\":true,\"caption\":{},\"alt\":{}}},\"order\":[\"upload-e21dd2bfb9581f13e555c2fe199551a6ae048c731233a0902f42b4f81b16203e\",\"upload-c4f0600fd346540df07b7663d50dbac929f09a87e82aab9f16a62f0bdda1f6c1\"]}}",
+      "recordState": "{\"isPublished\":true,\"isArchived\":false,\"localIsPublished\":true,\"organisationId\":\"4Jsk5LngvFZq\",\"projectId\":\"YuSFnia9VOtG\",\"layerId\":\"7akti7OImSFg\"}",
+      "sequence": 11,
+      "legacyEvidence": null,
+      "baselineAttribution": null
+    }
+  ],
+  "featureOrigin": [
+    {
+      "featureId": "rx81h67xsLkz",
+      "origin": "admin_contribution",
+      "originId": null,
+      "recordedAt": "2026-11-16T08:09:01.782Z",
+      "recordedBy": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM"
+    }
+  ],
+  "locationRevision": [
+    {
+      "id": "ErZzq4tx4PHh",
+      "locationId": "PWfsRUiasaYN",
+      "version": 1,
+      "origin": "local",
+      "ssId": null,
+      "apiVersion": null,
+      "releaseId": null,
+      "snapshotId": null,
+      "contentHash": "31e50c73c03c6ac97a1c6d0bbd45ea2aa62a8def98686f52634014b4bb1c8c51",
+      "rawSource": "{\"kind\":\"local-baseline\",\"actorId\":\"qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM\",\"organisationId\":\"4Jsk5LngvFZq\",\"input\":{\"state\":\"unresolved\",\"kind\":\"premises\",\"sharingPreference\":\"private\",\"facts\":{\"names\":{\"en\":\"Shopping Centre\"},\"phoneNumber\":[],\"brands\":[],\"location\":{\"geometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"address\":{\"status\":\"unresolved\",\"authored\":{\"scope\":\"unknown\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"identifiers\":{\"hkgov-dpo\":{\"csuId\":\"3778714631T20050430\"}},\"i18n\":{\"en\":{\"formattedAddress\":\"\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":\"Shopping Centre\",\"streetName\":\"PERKINS ROAD\"},\"zh-hant\":{\"formattedAddress\":\"5白建時道灣仔區香港\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"白建時道\"},\"zh-hans\":{\"formattedAddress\":\"白建时道5号\"}},\"unit\":null,\"unitI18n\":{}},\"address2dId\":null,\"address3dId\":null,\"address3dUnitId\":null,\"snapshotId\":null,\"rawSource\":{},\"fallbackDisplay\":{},\"displayOverrides\":{}}}}}}",
+      "facts": "{\"kind\":\"premises\",\"details\":{},\"schemaVersion\":1,\"common\":{\"location\":{\"geometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"address\":{\"status\":\"unresolved\",\"authored\":{\"scope\":\"unknown\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[114.19161,22.27052]},\"identifiers\":{\"hkgov-dpo\":{\"csuId\":\"3778714631T20050430\"}},\"i18n\":{\"en\":{\"formattedAddress\":\"\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":\"Shopping Centre\",\"streetName\":\"PERKINS ROAD\"},\"zh-hant\":{\"formattedAddress\":\"5白建時道灣仔區香港\",\"buildingName\":null,\"buildingNumberExpression\":\"5\",\"buildingNumberFrom\":\"5\",\"buildingNumberTo\":null,\"buildingNumberConnector\":null,\"blockExpression\":null,\"blockType\":null,\"blockRef\":null,\"blockTypeBeforeNumber\":null,\"phaseExpression\":null,\"phaseName\":null,\"phaseRef\":null,\"premisesName\":null,\"streetName\":\"白建時道\"},\"zh-hans\":{\"formattedAddress\":\"白建时道5号\"}},\"unit\":null,\"unitI18n\":{}},\"address2dId\":null,\"address3dId\":null,\"address3dUnitId\":null,\"snapshotId\":null,\"rawSource\":{}}}}}",
+      "createdAt": "2026-11-16T08:09:02.603Z"
+    }
+  ],
+  "organisationLocation": [
+    {
+      "id": "SwAbZ_7VZUea",
+      "organisationId": "4Jsk5LngvFZq",
+      "locationId": "PWfsRUiasaYN",
+      "previousRevisionId": null,
+      "overrides": "{\"names\":{\"zh-Hant\":{\"mode\":\"override\",\"value\":\"購物中心\"},\"zh-Hans\":{\"mode\":\"override\",\"value\":\"购物中心\"}}}",
+      "provenance": "{\"kind\":\"feature-staff-edit\",\"featureId\":\"rx81h67xsLkz\"}",
+      "actorId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+      "createdAt": "2026-11-16T08:11:46.871Z"
+    }
+  ],
+  "locationSharedRevision": [
+    {
+      "id": "679fe70f-937b-436e-a53d-ad272819170d",
+      "locationId": "PWfsRUiasaYN",
+      "previousRevisionId": null,
+      "sourceRevisionId": "ErZzq4tx4PHh",
+      "corrections": "{\"names\":{\"actorId\":\"qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM\",\"editedAt\":\"2026-11-16T08:11:46.854Z\",\"sourceRevisionId\":\"ErZzq4tx4PHh\",\"choice\":{\"mode\":\"override\",\"value\":{\"en\":\"Shopping Centre\",\"zh-Hant\":\"購物中心\",\"zh-Hans\":\"购物中心\"}},\"original\":{\"present\":true,\"value\":{\"en\":\"Shopping Centre\"}}}}",
+      "actorId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+      "provenance": "{\"kind\":\"feature-community-edit\",\"featureId\":\"rx81h67xsLkz\",\"authorOrganisationId\":\"4Jsk5LngvFZq\"}",
+      "createdAt": "2026-11-16T08:11:46.854Z"
+    }
+  ],
+  "locationCanonicalDraft": [],
+  "locationOperator": [],
+  "locationAddress": [],
+  "locationAccessibility": [],
+  "locationRevisionI18n": [
+    {
+      "revisionId": "ErZzq4tx4PHh",
+      "locale": "en",
+      "name": "Shopping Centre",
+      "branch": null,
+      "format": null,
+      "displayAddress": null,
+      "displayAddressOverride": null
+    }
+  ],
+  "image": [
+    {
+      "id": "upload-c4f0600fd346540df07b7663d50dbac929f09a87e82aab9f16a62f0bdda1f6c1",
+      "contributorId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+      "cdn": "cloudflareR2",
+      "env": "local",
+      "cdnId": null,
+      "publicId": "h/features/rx81h67xsLkz/0ScxUFJ97UAnzwWi",
+      "version": 1794816848539,
+      "isArchived": 0,
+      "localIsArchived": null,
+      "presentationMode": "cast-edges",
+      "contentHash": "d6e61e86a131fd0b8d4a17541ac35f2c1e947628be9ab75b5251a3b6d025f008",
+      "createdAt": "2026-11-16T08:14:09.815Z",
+      "modifiedAt": "2026-11-16T08:14:09.815Z"
+    },
+    {
+      "id": "upload-e21dd2bfb9581f13e555c2fe199551a6ae048c731233a0902f42b4f81b16203e",
+      "contributorId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+      "cdn": "cloudflareR2",
+      "env": "local",
+      "cdnId": null,
+      "publicId": "h/features/rx81h67xsLkz/IiBf-nRkY81l7JZ1",
+      "version": 1794816845988,
+      "isArchived": 0,
+      "localIsArchived": null,
+      "presentationMode": "cast-edges",
+      "contentHash": "97ae2492542bf6283c739c1de3b98b189e59932548c47f076c7534714e56d442",
+      "createdAt": "2026-11-16T08:14:07.541Z",
+      "modifiedAt": "2026-11-16T08:14:07.541Z"
+    }
+  ],
+  "imageRevision": [
+    {
+      "id": "340f5e02-7d34-4031-9b38-04da74567699",
+      "imageId": "upload-c4f0600fd346540df07b7663d50dbac929f09a87e82aab9f16a62f0bdda1f6c1",
+      "previousRevisionId": "5ae494ec-3dd8-4ef0-b674-dbc524517f1c",
+      "assetVersionId": "0fc474d5-46cb-4d94-ba57-788e719a2f73",
+      "changeSetId": "5c5465c3-a7fa-4c96-b88c-2759a09c9988",
+      "metadata": "{\"originalFilename\":\"PXL_20230622_082836728.jpg\",\"originalExtension\":\"jpg\",\"contentHash\":\"d6e61e86a131fd0b8d4a17541ac35f2c1e947628be9ab75b5251a3b6d025f008\",\"originalWidth\":3072,\"originalHeight\":4080,\"rotation\":0,\"cameraModel\":\"Google Pixel 6\",\"capturedAt\":\"2023-06-22T08:28:36.000Z\",\"credit\":null,\"latitude\":null,\"longitude\":null,\"metadata\":{\"uploadedWidth\":\"1542\",\"uploadedHeight\":\"2048\",\"clientResizeApplied\":\"true\",\"clientResizeMaxDimension\":\"2048\",\"editorTool\":\"HDR+ 1.0.538010570zd\"},\"sourceVersion\":1794816848539,\"uploadedAt\":\"2026-11-16T08:14:08.539Z\",\"modifiedAt\":\"2026-11-16T08:17:07.463Z\",\"version\":1794817027463,\"presentationMode\":\"contain\"}"
+    },
+    {
+      "id": "5ae494ec-3dd8-4ef0-b674-dbc524517f1c",
+      "imageId": "upload-c4f0600fd346540df07b7663d50dbac929f09a87e82aab9f16a62f0bdda1f6c1",
+      "previousRevisionId": "a70928ce-8e9a-4b6f-a526-f6b0e2fe3b6f",
+      "assetVersionId": "0fc474d5-46cb-4d94-ba57-788e719a2f73",
+      "changeSetId": "2f38bad8-3611-40a8-b185-1d40ce131392",
+      "metadata": "{\"originalFilename\":\"PXL_20230622_082836728.jpg\",\"originalExtension\":\"jpg\",\"contentHash\":\"d6e61e86a131fd0b8d4a17541ac35f2c1e947628be9ab75b5251a3b6d025f008\",\"originalWidth\":3072,\"originalHeight\":4080,\"rotation\":0,\"cameraModel\":\"Google Pixel 6\",\"capturedAt\":\"2023-06-22T08:28:36.000Z\",\"credit\":null,\"latitude\":null,\"longitude\":null,\"metadata\":{\"uploadedWidth\":\"1542\",\"uploadedHeight\":\"2048\",\"clientResizeApplied\":\"true\",\"clientResizeMaxDimension\":\"2048\",\"editorTool\":\"HDR+ 1.0.538010570zd\"},\"sourceVersion\":1794816848539,\"uploadedAt\":\"2026-11-16T08:14:08.539Z\",\"modifiedAt\":\"2026-11-16T08:16:57.151Z\",\"version\":1794817017151,\"presentationMode\":\"cover\"}"
+    },
+    {
+      "id": "a70928ce-8e9a-4b6f-a526-f6b0e2fe3b6f",
+      "imageId": "upload-c4f0600fd346540df07b7663d50dbac929f09a87e82aab9f16a62f0bdda1f6c1",
+      "previousRevisionId": null,
+      "assetVersionId": "0fc474d5-46cb-4d94-ba57-788e719a2f73",
+      "changeSetId": "ba2171d2-2a0c-40b5-a84a-66017989c48d",
+      "metadata": "{\"originalFilename\":\"PXL_20230622_082836728.jpg\",\"originalExtension\":\"jpg\",\"contentHash\":\"d6e61e86a131fd0b8d4a17541ac35f2c1e947628be9ab75b5251a3b6d025f008\",\"originalWidth\":3072,\"originalHeight\":4080,\"rotation\":0,\"cameraModel\":\"Google Pixel 6\",\"capturedAt\":\"2023-06-22T08:28:36.000Z\",\"credit\":null,\"latitude\":null,\"longitude\":null,\"metadata\":{\"uploadedWidth\":\"1542\",\"uploadedHeight\":\"2048\",\"clientResizeApplied\":\"true\",\"clientResizeMaxDimension\":\"2048\",\"editorTool\":\"HDR+ 1.0.538010570zd\"},\"sourceVersion\":1794816848539,\"uploadedAt\":\"2026-11-16T08:14:08.539Z\",\"modifiedAt\":\"2026-11-16T08:14:08.539Z\",\"version\":1794816848539,\"presentationMode\":\"cast-edges\"}"
+    },
+    {
+      "id": "6b7e5a7d-081e-4aae-bdc5-e73f03f73e9a",
+      "imageId": "upload-e21dd2bfb9581f13e555c2fe199551a6ae048c731233a0902f42b4f81b16203e",
+      "previousRevisionId": null,
+      "assetVersionId": "723a722a-17bf-432f-9b54-7ff13f2fd179",
+      "changeSetId": "a0aaa90b-98ca-4591-abf6-0d93cc0fd167",
+      "metadata": "{\"originalFilename\":\"PXL_20230622_082835548.jpg\",\"originalExtension\":\"jpg\",\"contentHash\":\"97ae2492542bf6283c739c1de3b98b189e59932548c47f076c7534714e56d442\",\"originalWidth\":3072,\"originalHeight\":4080,\"rotation\":0,\"cameraModel\":\"Google Pixel 6\",\"capturedAt\":\"2023-06-22T08:28:35.000Z\",\"credit\":null,\"latitude\":null,\"longitude\":null,\"metadata\":{\"uploadedWidth\":\"1542\",\"uploadedHeight\":\"2048\",\"clientResizeApplied\":\"true\",\"clientResizeMaxDimension\":\"2048\",\"editorTool\":\"HDR+ 1.0.538010570zd\"},\"sourceVersion\":1794816845988,\"uploadedAt\":\"2026-11-16T08:14:05.988Z\",\"modifiedAt\":\"2026-11-16T08:14:05.988Z\",\"version\":1794816845988,\"presentationMode\":\"cast-edges\"}"
+    }
+  ],
+  "imageAssetVersion": [
+    {
+      "id": "0fc474d5-46cb-4d94-ba57-788e719a2f73",
+      "imageId": "upload-c4f0600fd346540df07b7663d50dbac929f09a87e82aab9f16a62f0bdda1f6c1",
+      "storageNamespace": "local",
+      "storageKey": "h/features/rx81h67xsLkz/0ScxUFJ97UAnzwWi",
+      "contentHash": "d6e61e86a131fd0b8d4a17541ac35f2c1e947628be9ab75b5251a3b6d025f008",
+      "mediaType": "image/jpeg",
+      "byteSize": 2282486,
+      "changeSetId": "ba2171d2-2a0c-40b5-a84a-66017989c48d"
+    },
+    {
+      "id": "723a722a-17bf-432f-9b54-7ff13f2fd179",
+      "imageId": "upload-e21dd2bfb9581f13e555c2fe199551a6ae048c731233a0902f42b4f81b16203e",
+      "storageNamespace": "local",
+      "storageKey": "h/features/rx81h67xsLkz/IiBf-nRkY81l7JZ1",
+      "contentHash": "97ae2492542bf6283c739c1de3b98b189e59932548c47f076c7534714e56d442",
+      "mediaType": "image/jpeg",
+      "byteSize": 2276484,
+      "changeSetId": "a0aaa90b-98ca-4591-abf6-0d93cc0fd167"
+    }
+  ],
+  "revisionChangeSet": [
+    {
+      "id": "b235f378-540e-4ac9-97b7-78f5f394626f",
+      "actorId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+      "origin": "user",
+      "reason": null,
+      "createdAt": "2026-11-16T08:09:01.781Z",
+      "legacyEvidence": null
+    },
+    {
+      "id": "1999f21c-50ef-4fcf-8d2d-c403fbf20826",
+      "actorId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+      "origin": "user",
+      "reason": "Feature linked to Location",
+      "createdAt": "2026-11-16T08:09:02.921Z",
+      "legacyEvidence": null
+    },
+    {
+      "id": "0c553e60-6226-4de4-81b6-9eb4b1493e77",
+      "actorId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+      "origin": "user",
+      "reason": "Feature published",
+      "createdAt": "2026-11-16T08:10:42.057Z",
+      "legacyEvidence": null
+    },
+    {
+      "id": "79e4fb92-b27b-4848-9a7f-5758e682e521",
+      "actorId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+      "origin": "user",
+      "reason": null,
+      "createdAt": "2026-11-16T08:11:46.933Z",
+      "legacyEvidence": null
+    },
+    {
+      "id": "5c5465c3-a7fa-4c96-b88c-2759a09c9988",
+      "actorId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+      "origin": "user",
+      "reason": "Image metadata edited",
+      "createdAt": "2026-11-16T08:17:07.576Z",
+      "legacyEvidence": null
+    },
+    {
+      "id": "2f38bad8-3611-40a8-b185-1d40ce131392",
+      "actorId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+      "origin": "user",
+      "reason": "Image metadata edited",
+      "createdAt": "2026-11-16T08:16:57.250Z",
+      "legacyEvidence": null
+    },
+    {
+      "id": "ba2171d2-2a0c-40b5-a84a-66017989c48d",
+      "actorId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+      "origin": "user",
+      "reason": "Photo added to Feature gallery",
+      "createdAt": "2026-11-16T08:14:09.553Z",
+      "legacyEvidence": null
+    },
+    {
+      "id": "a0aaa90b-98ca-4591-abf6-0d93cc0fd167",
+      "actorId": "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM",
+      "origin": "user",
+      "reason": "Photo added to Feature gallery",
+      "createdAt": "2026-11-16T08:14:07.271Z",
+      "legacyEvidence": null
+    }
+  ]
+}
