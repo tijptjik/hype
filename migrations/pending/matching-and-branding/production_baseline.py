@@ -18,10 +18,10 @@ def packed(value):
 
 
 def one(db, sql, *values):
-    row = db.execute(sql, values).fetchone()
-    if row is None:
-        raise ValueError("Missing production ancestry for " + repr(values))
-    return dict(row)
+    rows = db.execute(sql, values).fetchmany(2)
+    if len(rows) != 1:
+        raise ValueError("Expected one production ancestry row for " + repr(values))
+    return dict(rows[0])
 
 
 def root_revision(db, fid):
