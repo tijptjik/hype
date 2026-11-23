@@ -1004,6 +1004,20 @@ it('routes a creation proposal through a task without a provisional Feature row'
       .prepare(`UPDATE task SET ${field}=? WHERE id='new-task'`)
       .run(task[field] as string)
   }
+  f.sqlite
+    .prepare(`INSERT INTO revisionChangeSet(id,actorId,origin,createdAt,legacyEvidence)
+    VALUES ('draft-conversion:new-task','migration:feature-lifecycle','migration','2026-11-24',?)`)
+    .run(
+      JSON.stringify({
+        format: 'legacy-creation-conversion/v1',
+        proposalId: proposal.proposalId,
+        before: {
+          featureOrigin: [
+            { origin: 'admin_contribution', recordedAt: 'historical-clock' },
+          ],
+        },
+      }),
+    )
   const accepted = await acceptFeatureCreationProposal(f.db, {
     ...command,
     proposalId: proposal.proposalId,
@@ -1023,6 +1037,18 @@ it('routes a creation proposal through a task without a provisional Feature row'
       }),
   })
   expect(accepted).not.toBeNull()
+  expect(
+    f.sqlite
+      .prepare(
+        'SELECT origin,originId,recordedAt,recordedBy FROM featureOrigin WHERE featureId=?',
+      )
+      .get(accepted!.featureId),
+  ).toMatchObject({
+    origin: 'admin_contribution',
+    originId: null,
+    recordedAt: 'historical-clock',
+    recordedBy: null,
+  })
   expect(
     f.sqlite
       .prepare("SELECT featureId,isReviewed,reviewerId FROM task WHERE id='new-task'")

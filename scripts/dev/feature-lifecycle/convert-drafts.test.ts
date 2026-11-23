@@ -28,6 +28,7 @@ function fixture() {
   const path = join(root, 'db.sqlite')
   const sqlite = new Database(path)
   sqlite.exec(`CREATE TABLE feature(id TEXT PRIMARY KEY,currentRevisionId TEXT,revisionVersion INTEGER,isDraft INTEGER,isPublished INTEGER,isArchived INTEGER,contributorId TEXT,organisationId TEXT,projectId TEXT,layerId TEXT);
+    CREATE TABLE featureOrigin(featureId TEXT PRIMARY KEY REFERENCES feature(id),origin TEXT,originId TEXT,recordedAt TEXT,recordedBy TEXT);
     CREATE TABLE featureRevision(id TEXT PRIMARY KEY,featureId TEXT REFERENCES feature(id),content TEXT,recordState TEXT,sequence INTEGER);
     CREATE TABLE featureRevisionProposal(id TEXT PRIMARY KEY,featureId TEXT REFERENCES feature(id),baseRevisionId TEXT REFERENCES featureRevision(id),kind TEXT,status TEXT,version TEXT,contributorId TEXT,changes TEXT,creationScope TEXT);
     CREATE TABLE featureRevisionReview(id TEXT PRIMARY KEY,featureId TEXT REFERENCES feature(id));
@@ -38,6 +39,7 @@ function fixture() {
     CREATE TABLE revisionChangeSet(id TEXT PRIMARY KEY,actorId TEXT,origin TEXT,reason TEXT,createdAt TEXT,legacyEvidence TEXT);
     CREATE TRIGGER feature_revision_no_delete BEFORE DELETE ON featureRevision BEGIN SELECT RAISE(ABORT,'immutable'); END;
     INSERT INTO feature VALUES('f','r',0,1,0,0,'author','org','project','layer');
+    INSERT INTO featureOrigin VALUES('f','admin_contribution',NULL,'legacy-clock',NULL);
     INSERT INTO task VALUES('task','f','proposal','newFeature',1,0,'author','clock');`)
   const content = featureRevisionContentFixture()
   content.gallery = { entries: {}, order: [] }
@@ -60,6 +62,7 @@ function fixture() {
   const groups = prepareLegacyDraftConversion(sqlite)
   const tables = [
     'feature',
+    'featureOrigin',
     'featureRevision',
     'featureRevisionProposal',
     'featureRevisionReview',
@@ -121,6 +124,15 @@ test('atomically converts and cleans a draft, retaining its original rows and ma
         }
       ).legacyEvidence,
     )
+    expect(evidence.before.featureOrigin).toEqual([
+      {
+        featureId: 'f',
+        origin: 'admin_contribution',
+        originId: null,
+        recordedAt: 'legacy-clock',
+        recordedBy: null,
+      },
+    ])
     expect(evidence.before.featureRevision[0].id).toBe('r')
     expect(evidence.before.task[0].featureId).toBe('f')
     expect(d.sqlite.query('PRAGMA foreign_key_check').all()).toEqual([])

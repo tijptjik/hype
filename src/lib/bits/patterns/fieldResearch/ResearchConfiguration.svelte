@@ -335,7 +335,7 @@ onDestroy(() => {
                     <Select
                       variant="ghost"
                       reserveTriggerSpace={true}
-                      class="h-auto! min-h-12 w-full! max-w-full min-w-0 border-0! px-0! [&_.bits-form__select-display]:gap-2! [&_.bits-form__select-display]:px-0! [&_.bits-form__select-label]:overflow-visible! [&_.bits-form__select-label]:pl-0! [&_.bits-form__select-label]:break-words [&_.bits-form__select-label]:text-clip! [&_.bits-form__select-label]:whitespace-normal!"
+                      class="h-auto! min-h-12 w-full! max-w-full min-w-0 border-0! px-0! [&>div]:gap-2! [&>div]:p-0! [&>div>span]:overflow-visible! [&>div>span]:pl-0! [&>div>span]:whitespace-normal! [&>span]:overflow-visible! [&>span]:pl-0! [&>span]:whitespace-normal!"
                       triggerClass="gap-2!"
                       isEditing={editing}
                       triggerAttrs={{ 'aria-label': label + ' default value' }}
@@ -381,7 +381,7 @@ onDestroy(() => {
                     <Select
                       variant="ghost"
                       reserveTriggerSpace={true}
-                      class="h-auto! min-h-12 w-full! max-w-full min-w-0 border-0! px-0! [&_.bits-form__select-display]:gap-2! [&_.bits-form__select-display]:px-0! [&_.bits-form__select-label]:overflow-visible! [&_.bits-form__select-label]:pl-0! [&_.bits-form__select-label]:break-words [&_.bits-form__select-label]:text-clip! [&_.bits-form__select-label]:whitespace-normal!"
+                      class="h-auto! min-h-12 w-full! max-w-full min-w-0 border-0! px-0! [&>div]:gap-2! [&>div]:p-0! [&>div>span]:overflow-visible! [&>div>span]:pl-0! [&>div>span]:whitespace-normal! [&>span]:overflow-visible! [&>span]:pl-0! [&>span]:whitespace-normal!"
                       triggerClass="gap-2!"
                       isEditing={editing}
                       triggerAttrs={{ 'aria-label': label + ' default value' }}
