@@ -423,7 +423,12 @@ export async function saveFeatureFormRevision(
           profileEdit: data.locationProfileEdit,
           authorizeOrganisation: input.authorizeLocationCorrection,
         })
-      : { queries: [], comparison: previous, authorized: false }
+      : {
+          queries: [],
+          comparison: previous,
+          authorized: false,
+          preparedSharedCorrections: [],
+        }
   const validationPrevious = transfer
     ? {
         ...previous,
@@ -516,6 +521,7 @@ export async function saveFeatureFormRevision(
   const capture = await prepareFeatureAcceptedCapture(db, {
     ...input,
     resultingScope,
+    preparedSharedCorrections: corrections.preparedSharedCorrections,
     revisionBoundary: Boolean(resultingScope) || input.revisionBoundary,
     derive: current => {
       if (!equalRevisionValue(current, previous))

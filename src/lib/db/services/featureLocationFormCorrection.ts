@@ -18,6 +18,7 @@ import {
   prepareSharedLocationCorrection,
   readSharedLocationCorrection,
   sharedLocationFacts,
+  type PreparedSharedCorrection,
 } from './locationShared'
 import type { SharedCorrectionPatch } from '#lib/locations/sharedCorrection.js'
 import {
@@ -69,10 +70,12 @@ export async function prepareFeatureLocationFormCorrection(
   queries: BatchItem<'sqlite'>[]
   comparison: FeatureRevisionContent
   authorized: boolean
+  preparedSharedCorrections?: PreparedSharedCorrection[]
 }> {
   const association = input.content.placement.location
   const comparison = structuredClone(input.previous)
   const queries: BatchItem<'sqlite'>[] = []
+  const preparedSharedCorrections: PreparedSharedCorrection[] = []
   if (!association) {
     if (input.profileEdit) throw new Error('LOCATION_REQUIRED')
     return { queries, comparison, authorized: false }
@@ -153,6 +156,7 @@ export async function prepareFeatureLocationFormCorrection(
         factsRevisionId: association.factsRevisionId,
         locationRevisionId: association.locationRevisionId,
         acceptancePolicy: association.acceptancePolicy,
+        preparedSharedCorrections,
       })
       if (!sources) throw new Error('LOCATION_SOURCE_UNAVAILABLE')
       const effective = resolveFeatureLocation(
@@ -240,6 +244,7 @@ export async function prepareFeatureLocationFormCorrection(
           factsRevisionId: association.factsRevisionId,
           locationRevisionId: association.locationRevisionId,
           acceptancePolicy: association.acceptancePolicy,
+          preparedSharedCorrections,
         })
         if (!sources) throw new Error('LOCATION_SOURCE_UNAVAILABLE')
         const effective = resolveFeatureLocation(
@@ -376,6 +381,11 @@ export async function prepareFeatureLocationFormCorrection(
       },
     })
     queries.push(...shared.queries)
+    preparedSharedCorrections.push({
+      id: shared.id,
+      locationId: association.locationId,
+      corrections: shared.corrections,
+    })
     const priorPins = (association.acceptancePolicy?.factsSharedFields ?? []) as {
       field: string
       revision: string | null
@@ -455,6 +465,7 @@ export async function prepareFeatureLocationFormCorrection(
       factsRevisionId: association.factsRevisionId,
       locationRevisionId: association.locationRevisionId,
       acceptancePolicy: association.acceptancePolicy,
+      preparedSharedCorrections,
     })
     if (!sources) throw new Error('LOCATION_SOURCE_UNAVAILABLE')
     const effective = resolveFeatureLocation(
@@ -500,6 +511,7 @@ export async function prepareFeatureLocationFormCorrection(
   comparison.placement.location = structuredClone(association)
   return {
     queries,
+    preparedSharedCorrections,
     comparison,
     authorized:
       authorized ||
