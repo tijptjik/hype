@@ -1,6 +1,5 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "hype"
-main = ".svelte-kit/cloudflare/_worker.js"
 
 # Whether Wrangler should send usage data to Cloudflare for this project.
 send_metrics = false
@@ -70,6 +69,12 @@ remote = true
 binding = "ASSET_RAW_PRODUCTION"
 bucket_name = "hype-assets-raw-prod"
 remote = true
+
+# Local catalogue research shares the importer persistence without changing published assets.
+[[r2_buckets]]
+binding = "CATALOGUE_LOCAL_ASSETS"
+bucket_name = "hype-assets-dev"
+remote = false
 
 [[r2_buckets]]
 binding = "ASSET_PUBLIC_DEV"
