@@ -132,6 +132,8 @@ function update(locale: string, text: string): void {
             issues={undefined}
             attrs={{
               id: `${uid}-${locale}`,
+              // The parent serializes this draft through its registered remote fields.
+              name: '',
               maxlength: 1000,
               oninput: (event: Event) =>
                 update(locale, (event.currentTarget as HTMLInputElement).value),
