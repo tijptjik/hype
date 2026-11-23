@@ -44,6 +44,19 @@ afterEach(() => {
 })
 
 describe('reviewed unassigned collection attribution', () => {
+  it('allows a donor eligibility export without user identities', () => {
+    const db = fixture()
+    installRunAttributionViews(db)
+    db.run('DROP TABLE breadline__public__users')
+    expect(installRunAttributionViews(db)).toBe(0)
+    expect(db.query('SELECT count(*) AS n FROM breadline__public__runs').get()).toEqual(
+      { n: 4 },
+    )
+    expect(() => readImportRuns(db)).toThrow()
+    expect(db.query("SELECT name FROM sqlite_master WHERE type='view'").all()).toEqual(
+      [],
+    )
+  })
   it('includes zero, preserves existing owners and raw evidence, and repeats safely', () => {
     const db = fixture()
     const raw = db.query('SELECT * FROM breadline__public__runs ORDER BY id').all()

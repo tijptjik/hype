@@ -56,16 +56,23 @@ export function readImportRuns(db: Database): Record<string, unknown>[] {
 /**
  * Install repeatable import and audit views after a successful source-table pull.
  * @param db Writable mirror inside the caller's transaction.
- * @returns Number of runs receiving fallback attribution, or zero without a runs table.
+ * @returns Number of runs receiving fallback attribution, or zero for a place-only export.
  * @remarks Raw tables and their change journal remain faithful to PostgreSQL.
  */
 export function installRunAttributionViews(db: Database): number {
+  // Donor eligibility exports need raw runs but deliberately omit user identities.
   if (
-    !db
-      .query('SELECT 1 FROM sqlite_master WHERE type = ? AND name = ?')
-      .get('table', runsTable)
-  )
+    [runsTable, 'breadline__public__users', 'breadline__public__volunteers'].some(
+      table =>
+        !db
+          .query('SELECT 1 FROM sqlite_master WHERE type = ? AND name = ?')
+          .get('table', table),
+    )
+  ) {
+    db.run('DROP VIEW IF EXISTS _breadline_import_runs')
+    db.run('DROP VIEW IF EXISTS _breadline_run_attribution')
     return 0
+  }
   const select = importRunSelect(db)
   db.run('DROP VIEW IF EXISTS _breadline_import_runs')
   db.run(`CREATE VIEW _breadline_import_runs AS ${select}`)
