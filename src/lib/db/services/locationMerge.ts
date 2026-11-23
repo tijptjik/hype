@@ -6,7 +6,7 @@ import {
 } from '../schema/locationRelationships'
 import { assessMergeDependencies, mergeDependencyToken } from './locationMergeImpact'
 import { prepareFeatureLocationMergeCapture } from './featureLocationMergeRevision'
-import { executeRevisionBatch } from './revisionBatch'
+import { executeRevisionBatch, prepareRevisionCheck } from './revisionBatch'
 // +++ Table Of Contents
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -40,6 +40,7 @@ import {
 } from '../schema/location'
 // DOMAIN
 import { equalLocationValue } from '#lib/locations/baseline.js'
+import { prepareMtrShopCataloguePromotion } from './mtrShopCataloguePromotion'
 // SERVICES
 import { readLocationIdentityBaseline } from './locationIdentityReview'
 import { prepareSaanSeoiRevision } from './locationSource'
@@ -425,7 +426,13 @@ export async function applyLocationMergeReview(
     guard: mergeGuard(row),
   })
   // The absorbed Location's redirect is the unique receipt; subsequent writes require it.
+  const cataloguePromotion = await prepareMtrShopCataloguePromotion(db, {
+    locationId: input.locationId,
+    actorId: input.actorId,
+    guard: mergeGuard(row),
+  })
   const result = await executeRevisionBatch(db, mergeGuard(row), [
+    ...cataloguePromotion.checks,
     ...capture.before,
     db
       .update(locationTable)
@@ -443,6 +450,9 @@ export async function applyLocationMergeReview(
         },
       })
       .where(and(eq(locationTable.id, input.sourceLocationId), mergeGuard(row))),
+    // Catalogue writes follow the redirect fence so they cannot invalidate the reviewed dependency token.
+    ...(cataloguePromotion.writes.length ? [prepareRevisionCheck(db, receipt)] : []),
+    ...cataloguePromotion.writes,
     db
       .insert(locationRevisionInput)
       .select(sql`SELECT ${prefix}||version,${input.locationId},${targetLatest.version}+version,
@@ -550,7 +560,13 @@ export async function applyLocationMergeReview(
     ),
     ...capture.after,
   ])
-  return result && (result[capture.before.length + 6] as unknown[]).length
+  const historyResultIndex =
+    capture.before.length +
+    6 +
+    cataloguePromotion.checks.length +
+    cataloguePromotion.writes.length +
+    Number(cataloguePromotion.writes.length > 0)
+  return result && (result[historyResultIndex] as unknown[]).length
     ? { status: 'applied', redirectId: id, affectedFeatures: row.sourceFeatureCount }
     : { status: 'conflict' }
 }

@@ -136,7 +136,7 @@ export async function prepareSharedLocationCorrection(
     sourceRevisionId: string
     expectedRevision: string | null
     actorId: string
-    /** Directory draft editor validates a patch without retaining its correction plan. */
+    /** Directory draft validation, or catalogue retention within an atomic identity promotion. */
     draftWorkingCopy?: boolean
     patch: SharedCorrectionPatch
     guard: SQL

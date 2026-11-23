@@ -1,5 +1,6 @@
 // SNAPSHOT CONTRACT
 import { serializeLocationFacts } from '#lib/locations/factsSnapshot.js'
+import { prepareMtrShopCataloguePromotion } from './mtrShopCataloguePromotion'
 // +++ Table Of Contents
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -174,7 +175,15 @@ export async function acceptLocationIdentity(
     })
   }
   // Source revision, review evidence and identity change either all commit or all roll back.
+  // The revision input is a view: use the concurrency guards, not an unsupported UPSERT clause.
+  const cataloguePromotion = await prepareMtrShopCataloguePromotion(db, {
+    locationId: input.locationId,
+    actorId: input.actorId,
+    guard: sql`${guard} AND ${revisionGuard}`,
+  })
   const results = await db.batch([
+    ...cataloguePromotion.checks,
+    ...cataloguePromotion.writes,
     ...(correction?.queries ?? []),
     db
       .insert(locationRevisionInput)
@@ -211,7 +220,7 @@ export async function acceptLocationIdentity(
     import('drizzle-orm/batch').BatchItem<'sqlite'>,
     ...import('drizzle-orm/batch').BatchItem<'sqlite'>[],
   ])
-  return (results[(correction?.queries.length ?? 0) + 2] as unknown[]).length
+  return (results.at(-1) as unknown[]).length
     ? { status: 'applied', historyId, revisionId }
     : { status: 'conflict' }
 }
