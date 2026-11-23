@@ -702,16 +702,15 @@ it('only requests enabled search types including Buildings', async () => {
   const signal = mocks.addresses.mock.lastCall?.[1].signal
   await fireEvent.click(addresses)
   expect(signal.aborted).toBe(true)
-  expect(screen.queryByText('Select a search type.')).toBeNull()
-  expect(screen.getByRole('textbox')).toBeTruthy()
-  expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('lego')
-  expect(
-    await screen.findByText('Select a search type.', {}, { timeout: 3000 }),
-  ).toBeTruthy()
-  expect(screen.queryByRole('textbox')).toBeNull()
+  const input = screen.getByRole('textbox') as HTMLInputElement
+  expect(input.disabled).toBe(true)
+  expect(input.placeholder).toBe('Select at least one source.')
+  expect(input.value).toBe('')
+  expect(mocks.places).not.toHaveBeenCalled()
+  expect(mocks.addresses).toHaveBeenCalledTimes(1)
   await fireEvent.click(shops)
-  expect(screen.queryByText('Select a search type.')).toBeNull()
-  expect(screen.getByRole('textbox')).toBeTruthy()
+  expect(input.disabled).toBe(false)
+  expect(input.value).toBe('lego')
   await waitFor(() => expect(mocks.places).toHaveBeenCalledTimes(1))
   expect(mocks.addresses).toHaveBeenCalledTimes(1)
 })

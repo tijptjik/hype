@@ -5,6 +5,7 @@ const sourceDescriptionId = $props.id()
 import { onDestroy, tick, untrack, type Snippet } from 'svelte'
 import { prefersReducedMotion } from 'svelte/motion'
 // COMPONENTS
+import LocationSearchRadius from './LocationSearchRadius.svelte'
 import { locationSyncMode } from '#lib/locations/associationSync.js'
 import LocationSyncSelect from './LocationSyncSelect.svelte'
 import { locationKindLabel } from '#lib/locations/kinds.i18n.js'
@@ -347,16 +348,7 @@ const textSearchKinds = $derived(
     : [],
 )
 const canSearch = $derived(textSearchKinds.length > 0)
-let showSearchTypePrompt = $state(false)
-// Allow quick inclusion changes before replacing the search control with guidance.
-$effect(() => {
-  showSearchTypePrompt = false
-  if (hasSearchTypes) return
-  const promptTimer = setTimeout(() => {
-    showSearchTypePrompt = true
-  }, 2000)
-  return () => clearTimeout(promptTimer)
-})
+// Keep the search control visible; disabled inputs explain missing sources inline.
 let associationOrigin = $state<Result | null>(null)
 let associationOpen = $state(false)
 let selected = $state<Result | null>(null)
@@ -2070,31 +2062,30 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
       <div
         class="flex min-w-0 flex-1 basis-64 flex-wrap items-center justify-center gap-2"
       >
-        {#if showSearchTypePrompt && !hasSearchTypes}
-          <p
-            role="status"
-            class="text-muted-foreground flex min-h-12 w-full items-center justify-center text-center text-sm"
-          >
-            {m.feature_search_select_types()}
-          </p>
-        {:else if findMode === 'search'}
+        {#if findMode === 'search'}
           <div
             bind:this={searchOutline}
             class="border-border bg-panel focus-within:ring-primary flex min-w-0 flex-1 items-center rounded-lg border focus-within:ring-2"
           >
             <input
               bind:this={input}
-              bind:value={query}
-              oninput={() => schedule(true)}
+              value={hasSearchTypes ? query : ''}
+              disabled={!hasSearchTypes}
+              oninput={event => {
+                query = event.currentTarget.value
+                schedule(true)
+              }}
               maxlength="200"
               aria-label={m.feature_start_search()}
-              placeholder={includeShops && !includeBuildings && !includeAddresses
-                ? 'Search for an establishment'
-                : includeBuildings && !includeShops && !includeAddresses
-                  ? 'Search for a building'
-                  : includeAddresses && !includeShops && !includeBuildings
-                    ? 'Search for an address'
-                    : m.feature_start_search()}
+              placeholder={!hasSearchTypes
+                ? m.feature_search_select_types()
+                : includeShops && !includeBuildings && !includeAddresses
+                  ? 'Search for an establishment'
+                  : includeBuildings && !includeShops && !includeAddresses
+                    ? 'Search for a building'
+                    : includeAddresses && !includeShops && !includeBuildings
+                      ? 'Search for an address'
+                      : m.feature_start_search()}
               class="text-foreground w-full min-w-0 flex-1 rounded-lg border-0! bg-transparent py-3 pr-2 pl-4 shadow-none! ring-0! outline-none!"
               onkeydown={event => {
                 if (event.key === 'Escape' && !event.isComposing) {
@@ -2140,7 +2131,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
               data-tooltip={searched || rows.length
                 ? m.feature_search_clear()
                 : m.feature_search_submit()}
-              disabled={!searched && !rows.length && !canSearch}
+              disabled={!hasSearchTypes || (!searched && !rows.length && !canSearch)}
               onclick={() => {
                 if (searched || rows.length) clearSearch()
                 else {
@@ -2200,10 +2191,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
             {/if}
           </div>
         {/if}
-        {#if findMode === 'pin' &&
-          hasPin &&
-          coordinates &&
-          !(showSearchTypePrompt && !hasSearchTypes)}
+        {#if findMode === 'pin' && hasPin && coordinates && hasSearchTypes}
           <button
             type="button"
             class="bg-primary min-h-12 min-w-48 shrink-0 rounded-lg px-6 py-3 text-sm font-semibold text-white disabled:opacity-40"
@@ -2837,23 +2825,11 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
     </div>
   {/if}
   {#if findMode === 'pin' && hasPin && !selected}
-    <label
-      class="border-border bg-panel text-foreground flex w-52 flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm shadow-sm"
-    >
-      {m.feature_location_radius()}
-      <output class="tabular-nums">{radius} m</output>
-      <input
-        type="range"
-        min="50"
-        max="1000"
-        step="50"
-        bind:value={radius}
-        onchange={() => scheduleNearby()}
-        disabled={loading}
-        aria-label={m.feature_location_radius()}
-        class="accent-primary h-4 w-full cursor-pointer"
-      >
-    </label>
+    <LocationSearchRadius
+      bind:value={radius}
+      onchange={() => scheduleNearby()}
+      disabled={loading}
+    />
   {/if}
 {/snippet}
 {#snippet syncControl(disabled = false)}
