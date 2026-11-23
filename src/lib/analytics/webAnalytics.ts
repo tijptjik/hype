@@ -6,6 +6,10 @@ const WEB_ANALYTICS_SITES: Readonly<
     token: '83c62304f42740d29a10fcb3007edb35',
     collector: '/cdn-cgi/rum',
   },
+  'wtw.hype.hk': {
+    token: '83c62304f42740d29a10fcb3007edb35',
+    collector: '/cdn-cgi/rum',
+  },
   'hkghostsigns.com': {
     token: 'ef71ccbaeda247df9bcfa15d5af1a190',
     collector: 'https://cloudflareinsights.com/cdn-cgi/rum',
@@ -16,7 +20,7 @@ const WEB_ANALYTICS_SITES: Readonly<
  * Installs the site's public Web Analytics beacon when edge injection is absent.
  * @param document - Mounted browser document.
  * @returns Whether a new beacon script was inserted.
- * @remarks Only the two production origins are tracked. Existing Cloudflare
+ * @remarks Only explicitly configured production origins are tracked. Existing Cloudflare
  * injection wins, and repeated mounts never install a second beacon. The beacon
  * manages SPA navigation itself; do not emit additional page-view events here.
  */
