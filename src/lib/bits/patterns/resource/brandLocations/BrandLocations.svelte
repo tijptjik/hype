@@ -18,6 +18,7 @@ import { readFreshRemoteQuery } from '#lib/remote/index.js'
 // COMPONENTS
 import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
 import EmptyIcon from 'virtual:icons/lucide/map-pin-off'
+import WarningIcon from 'virtual:icons/lucide/triangle-alert'
 import { SimpleTooltip } from '#lib/bits/core/tooltip/index.js'
 import SaanSeoiMarkIcon from '#lib/bits/patterns/cards/resourceCard/components/SaanSeoiMarkIcon.svelte'
 import { BRAND_LOCATION_STATES } from '#lib/locations/brandLocationMap.js'
@@ -538,7 +539,13 @@ $effect(() => {
   data-brand-locations
 >
   {#if failure && !mapView}
-    <p role="alert">{failure}</p>
+    <div
+      role="alert"
+      class={`text-muted-foreground flex w-full flex-col items-center justify-center gap-4 px-6 py-8 text-center ${!localRows.length && !sourceRows.length ? 'min-h-[calc(100dvh-12rem)]' : ''}`}
+    >
+      <WarningIcon class="size-12 shrink-0" aria-hidden="true" />
+      <p class="max-w-md text-sm">{failure}</p>
+    </div>
   {/if}
   {#if mapMounted}
     <div class={mapView ? 'absolute inset-0' : 'hidden'}>
