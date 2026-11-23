@@ -720,3 +720,17 @@ proximity. The same endpoint lookup prevents these internal landings being miscl
 as station exterior. Kowloon Tong is the first regenerated station using this additional
 evidence; other artifacts retain the preceding matching pass until regenerated and
 reviewed.
+
+### Station access and lift symbols
+
+Blue 5 px non-scaling lines (`#168bd2`) mark verified exterior crossing edges. The
+legend calls them **Station access**. Kennedy Town Exit B also marks the source
+principal opening of its ground-level lift-only lobby, even without a sloping exterior
+network segment. Walls and entire lift shafts are not outlined. Full MTR access coverage
+is tracked in [#244](https://github.com/tijptjik/hype/issues/244); existing network
+matches do not establish complete entrance coverage.
+
+Lift shafts show an ink-coloured lift symbol on every floor in floor-plan mode, with a
+paper-coloured halo matching the level-change arrows. Expanded 3D mode hides these
+symbols. The level-change legend symbol is smaller. Indoor views prevent text selection
+while retaining tooltips and existing interactions.

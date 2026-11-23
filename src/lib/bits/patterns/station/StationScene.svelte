@@ -718,6 +718,9 @@ function chooseFloor(id: string): void {
           )}
           entries={station.entries.filter(p => p.levelId === id)}
           treads={treads.filter(f => f.properties.level_id === id)}
+          openings={data.opening_line.features.filter(
+            f => f.properties.level_id === id,
+          )}
           {projection}
           {screenAlignedLogos}
           {flatProjection}

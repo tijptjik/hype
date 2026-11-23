@@ -193,6 +193,20 @@ function animateEntriesHeight(node: HTMLDivElement): { destroy: () => void } {
       </summary>
       <ul class="mt-3 grid gap-2.5" aria-label="Map symbol legend">
         {#if !legend.isBuilding}
+          <li class="flex items-center gap-1.5 px-2 py-1" data-station-access-legend>
+            <svg
+              width="30"
+              height="30"
+              viewBox="0 0 30 30"
+              class="shrink-0"
+              aria-hidden="true"
+            >
+              <path d="M2 15H28" fill="none" stroke="#168bd2" stroke-width="5" />
+            </svg>
+            <span>Station access</span>
+          </li>
+        {/if}
+        {#if !legend.isBuilding}
           <li
             class="flex items-center gap-2"
             title="Solid: lifts. Dashed: escalators. Dotted: stairs. Dot-dash: ramps. Arrows do not indicate travel direction."

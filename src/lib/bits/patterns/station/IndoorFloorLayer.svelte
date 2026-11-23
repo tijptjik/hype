@@ -25,6 +25,7 @@ let {
   hitUnits,
   entries,
   treads,
+  openings = [],
   projection: cameraProjection,
   flatProjection,
   screenAlignedLogos = false,
@@ -50,6 +51,7 @@ let {
   hitUnits: IndoorFeature[]
   entries: Place[]
   treads: IndoorFeature[]
+  openings?: IndoorFeature[]
   projection: StationProjection
   flatProjection: StationProjection
   screenAlignedLogos?: boolean
@@ -556,6 +558,30 @@ const facilityMarkers = $derived.by(() => {
         {/if}
       {/each}
     </g>
+  {/if}
+  <!-- A ground-level lift-only lobby can have a principal entrance without a sloping network edge. -->
+  {#if Number(level.properties.level_ordinal) === 0 &&
+    units.some(
+      unit => facilityCategory(value(unit.properties, 'unit_category')) === 'elevator',
+    ) &&
+    units.every(unit =>
+      ['elevator', 'walkway'].includes(value(unit.properties, 'unit_category')),
+    )}
+    {#each openings.filter(
+      opening => opening.properties.opening_category === 'pedestrian.principal',
+    ) as opening}
+      <path
+        d={projection.path(opening)}
+        fill="none"
+        stroke="#168bd2"
+        stroke-width="5"
+        vector-effect="non-scaling-stroke"
+        pointer-events="none"
+        data-station-access-opening={value(opening.properties, 'opening_id')}
+      >
+        <title>Station access</title>
+      </path>
+    {/each}
   {/if}
   {#if !exploded}
     <!-- Every lift shaft gets a screen-aligned symbol on its own floor. -->
