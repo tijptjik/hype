@@ -70,9 +70,11 @@ export const authConfig = {
     // HUBS :: SUBDOMAINS
     'https://hkghostsigns.hype.hk',
     'https://breadline.hype.hk',
+    'https://wtw.hype.hk',
     // HUBS :: DOMAINS
     'https://hkghostsigns.com',
     'https://breadline.hk',
+    'https://whythisway.hk',
     // HUBS :: PREVIEW
     'https://hkghostsigns.preview.hype.hk',
     'https://breadline.preview.hype.hk',

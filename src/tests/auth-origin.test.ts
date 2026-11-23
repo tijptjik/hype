@@ -86,87 +86,89 @@ describe('authentication origin resolution', () => {
     ).toThrow()
   })
 
-  it('keeps password-reset links and trusted origins on the routed host', async () => {
-    const host = 'hype.hk'
-    const headers = new Headers({
-      host,
-      'x-forwarded-proto': 'https',
-      'x-forwarded-host': 'attacker.example',
-    })
-    sqlite = new DatabaseSync(':memory:')
-    createAuthHookTables(sqlite)
-    const runtime = getAuthForRequest(headers, {
-      DB: createAuthDatabase(sqlite),
-      AUTH_SECRET: 'test-secret-long-enough-for-auth-origin-tests',
-      AUTH_GOOGLE_ID: '',
-      AUTH_GOOGLE_SECRET: '',
-      AUTH_FACEBOOK_ID: '',
-      AUTH_FACEBOOK_SECRET: '',
-    })
-    const sendResetPassword = vi.fn(async () => {})
-    const auth = betterAuth({
-      ...runtime.options,
-      // Better Auth relaxes origin checks in test mode unless explicitly enabled.
-      advanced: {
-        ...runtime.options.advanced,
-        disableOriginCheck: false,
-        disableCSRFCheck: false,
-      },
-      database: memoryAdapter({
-        user: [
-          {
-            id: 'user',
-            name: 'User',
-            email: 'user@example.com',
-            emailVerified: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
+  it.each(['hype.hk', 'whythisway.hk', 'wtw.hype.hk'])(
+    'keeps password-reset links and trusted origins on the routed host %s',
+    async host => {
+      const headers = new Headers({
+        host,
+        'x-forwarded-proto': 'https',
+        'x-forwarded-host': 'attacker.example',
+      })
+      sqlite = new DatabaseSync(':memory:')
+      createAuthHookTables(sqlite)
+      const runtime = getAuthForRequest(headers, {
+        DB: createAuthDatabase(sqlite),
+        AUTH_SECRET: 'test-secret-long-enough-for-auth-origin-tests',
+        AUTH_GOOGLE_ID: '',
+        AUTH_GOOGLE_SECRET: '',
+        AUTH_FACEBOOK_ID: '',
+        AUTH_FACEBOOK_SECRET: '',
+      })
+      const sendResetPassword = vi.fn(async () => {})
+      const auth = betterAuth({
+        ...runtime.options,
+        // Better Auth relaxes origin checks in test mode unless explicitly enabled.
+        advanced: {
+          ...runtime.options.advanced,
+          disableOriginCheck: false,
+          disableCSRFCheck: false,
+        },
+        database: memoryAdapter({
+          user: [
+            {
+              id: 'user',
+              name: 'User',
+              email: 'user@example.com',
+              emailVerified: true,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+          ],
+          verification: [],
+          account: [],
+        }),
+        emailAndPassword: {
+          ...runtime.options.emailAndPassword,
+          enabled: true,
+          sendResetPassword,
+        },
+        rateLimit: { enabled: false },
+      })
+      const response = await auth.handler(
+        new Request(`https://${host}/api/auth/request-password-reset`, {
+          method: 'POST',
+          headers: {
+            ...Object.fromEntries(headers),
+            origin: `https://${host}`,
+            'content-type': 'application/json',
           },
-        ],
-        verification: [],
-        account: [],
-      }),
-      emailAndPassword: {
-        ...runtime.options.emailAndPassword,
-        enabled: true,
-        sendResetPassword,
-      },
-      rateLimit: { enabled: false },
-    })
-    const response = await auth.handler(
-      new Request(`https://${host}/api/auth/request-password-reset`, {
-        method: 'POST',
-        headers: {
-          ...Object.fromEntries(headers),
-          origin: `https://${host}`,
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({ email: 'user@example.com' }),
-      }),
-    )
-    expect(response.status).toBe(200)
-    expect(sendResetPassword).toHaveBeenCalledWith(
-      expect.objectContaining({
-        url: expect.stringMatching(/^https:\/\/hype\.hk\/api\/auth\/reset-password\//),
-      }),
-      expect.anything(),
-    )
-    const context = await auth.$context
-    expect(context.trustedOrigins).not.toContain('https://attacker.example')
-    expect(runtime.options.onAPIError?.errorURL).toBe(`https://${host}/signin`)
-    const rejected = await auth.handler(
-      new Request(`https://${host}/api/auth/request-password-reset`, {
-        method: 'POST',
-        headers: {
-          ...Object.fromEntries(headers),
-          origin: 'https://attacker.example',
-          cookie: 'theme=dark',
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({ email: 'user@example.com' }),
-      }),
-    )
-    expect(rejected.status).toBe(403)
-    expect(sendResetPassword).toHaveBeenCalledTimes(1)
-  })
+          body: JSON.stringify({ email: 'user@example.com' }),
+        }),
+      )
+      expect(response.status).toBe(200)
+      expect(sendResetPassword).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: expect.stringContaining(`https://${host}/api/auth/reset-password/`),
+        }),
+        expect.anything(),
+      )
+      const context = await auth.$context
+      expect(context.trustedOrigins).not.toContain('https://attacker.example')
+      expect(runtime.options.onAPIError?.errorURL).toBe(`https://${host}/signin`)
+      const rejected = await auth.handler(
+        new Request(`https://${host}/api/auth/request-password-reset`, {
+          method: 'POST',
+          headers: {
+            ...Object.fromEntries(headers),
+            origin: 'https://attacker.example',
+            cookie: 'theme=dark',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({ email: 'user@example.com' }),
+        }),
+      )
+      expect(rejected.status).toBe(403)
+      expect(sendResetPassword).toHaveBeenCalledTimes(1)
+    },
+  )
 })

@@ -14,10 +14,13 @@ describe('resolveAppStage', () => {
     expect(resolveAppStage('https://hype.hk')).toBe('production')
     expect(resolveAppStage('https://assets.hype.hk')).toBe('production')
     expect(resolveAppStage('https://breadline.hk')).toBe('production')
+    expect(resolveAppStage('https://whythisway.hk')).toBe('production')
+    expect(resolveAppStage('https://wtw.hype.hk')).toBe('production')
   })
 
   it('falls back to local for unknown hosts', () => {
     expect(resolveAppStage('http://localhost:5173')).toBe('local')
     expect(resolveAppStage('')).toBe('local')
+    expect(resolveAppStage('https://whythisway.hk.example.com')).toBe('local')
   })
 })

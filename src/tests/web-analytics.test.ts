@@ -17,7 +17,7 @@ function documentAt(url: string): Document {
 }
 
 describe('production Web Analytics installation', () => {
-  it.each(['hype.hk', 'hkghostsigns.com'])(
+  it.each(['hype.hk', 'wtw.hype.hk', 'hkghostsigns.com'])(
     'installs one public beacon for %s',
     hostname => {
       const doc = documentAt(`https://${hostname}/`)
@@ -29,7 +29,7 @@ describe('production Web Analytics installation', () => {
         JSON.parse(scripts[0].getAttribute('data-cf-beacon') ?? '{}').send,
       ).toEqual({
         to:
-          hostname === 'hype.hk'
+          hostname === 'hype.hk' || hostname === 'wtw.hype.hk'
             ? '/cdn-cgi/rum'
             : 'https://cloudflareinsights.com/cdn-cgi/rum',
       })
