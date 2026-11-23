@@ -3997,6 +3997,26 @@ selected building. Source matching tests cover exact-address preference, unnamed
 selection callbacks and hierarchy transport with mocked persistence; they do not prove
 an authenticated production write or live MapLibre interaction.
 
+### MTR donor matching uses the existing review flows
+
+Refs #194. Resolve an uncertain donor-to-shop identity in the project's existing
+`/admin/projects/[project]/match-locations` flow, which searches shared imported shop
+drafts as well as upstream candidates. Reuse the existing establishment and its recorded
+occupancy; do not ask for a new station room merely because the donor match was
+ambiguous. Shared drafts already associated with a Feature are treated as reviewed
+identities and do not automatically enter that pending queue. An incorrect existing
+association is changed through the Feature editor's existing Location selection flow.
+
+A genuinely missing or conflicting unit relationship is reviewed in the establishment's
+relationship editor. Adoption of its address or pin remains an explicit decision in the
+existing Feature placement review. Identity matching alone does not accept occupancy or
+prove a room assignment. Missing source geometry or a conflicting kiosk code stays
+unresolved until supported by evidence.
+
+There is no separate MTR placement route, fixed donor cohort or station-specific
+placement command. Removing that prototype does not remove accepted relationships, mark
+unresolved donors complete, or change the shared placement services.
+
 ## Source-specific Location changes
 
 See
