@@ -20,7 +20,7 @@ import {
   releaseSourceFiles,
 } from './production/prepare'
 import { digest } from './production/contract'
-import { checkpoint } from './production/recovery'
+import { checkpoint, verifyLocalBackup } from './production/recovery'
 import { readQueues, setQueueMaintenance } from './production/queues'
 // TYPES
 import type { Journal, Plan } from './production/contract'
@@ -98,15 +98,17 @@ export async function main(args: string[]): Promise<void> {
     throw new Error('Expected production or preview')
   let apply = false,
     abort = false,
+    localBackup = false,
     directory: string | undefined
   while (args.length) {
     const arg = args.shift()
     if (arg === '--apply') apply = true
     else if (arg === '--abort-before-migration') abort = true
+    else if (arg === '--local-backup') localBackup = true
     else if (arg === '--run-dir' && args[0]) directory = resolve(args.shift()!)
     else
       throw new Error(
-        'Usage: rollout.ts production|preview [--apply] [--run-dir DIRECTORY]',
+        'Usage: rollout.ts production|preview [--apply] [--local-backup] [--run-dir DIRECTORY]',
       )
   }
   if (abort && (!directory || apply))
@@ -139,6 +141,15 @@ export async function main(args: string[]): Promise<void> {
     new Date().toISOString().replaceAll(':', '-'),
   )
   mkdirSync(directory, { recursive: true, mode: 0o700 })
+  // Retain this operator's backup destination for every retry of the same run.
+  const localMarker = join(directory, 'local-backup.target')
+  if (existsSync(localMarker)) {
+    if (readFileSync(localMarker, 'utf8') !== target)
+      throw new Error('Local backup target differs')
+    localBackup = true
+  } else if (localBackup) {
+    writeFileSync(localMarker, target, { flag: 'wx', mode: 0o600 })
+  }
   const selectionPath = join(directory, 'selected-plan.json')
   let selected = existsSync(selectionPath)
     ? JSON.parse(readFileSync(selectionPath, 'utf8')).directory
@@ -216,6 +227,7 @@ export async function main(args: string[]): Promise<void> {
       join(snapshotDirectory, 'export.log'),
     )
     restoreD1Export(sqlPath, schemaPath, join(snapshotDirectory, 'source.sqlite'))
+    if (localBackup) await verifyLocalBackup(snapshotDirectory)
     return await prepareRelease(
       join(snapshotDirectory, 'source.sqlite'),
       join(snapshotDirectory, 'release'),
@@ -308,12 +320,18 @@ export async function main(args: string[]): Promise<void> {
     console.info('Unstarted rollout cancelled; prior queue delivery state restored')
     return
   }
-  const recover = (label: string) =>
-    checkpoint(
+  const recover = async (label: string) => {
+    if (localBackup) {
+      await verifyLocalBackup(join(directory, 'initial'))
+      if (selected !== 'initial') await verifyLocalBackup(join(directory, selected))
+      return
+    }
+    await checkpoint(
       directory,
       environment === 'production' ? 'hype-assets-raw-prod' : 'hype-assets-raw-preview',
       label,
     )
+  }
   try {
     const sourceDirectory = join(directory, 'source')
     if (!existsSync(sourceDirectory)) {

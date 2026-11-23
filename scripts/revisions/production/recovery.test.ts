@@ -6,7 +6,21 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 // STORAGE
 import { AwsClient } from 'aws4fetch'
-import { checkpoint } from './recovery'
+import { checkpoint, verifyLocalBackup } from './recovery'
+
+test('local backup verifies all three retained files and rejects a changed copy', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'revision-local-backup-'))
+  try {
+    for (const name of ['source.sql', 'schema.json', 'source.sqlite'])
+      writeFileSync(join(root, name), name)
+    await verifyLocalBackup(root)
+    await verifyLocalBackup(root)
+    writeFileSync(join(root, 'source.sqlite'), 'changed')
+    await expect(verifyLocalBackup(root)).rejects.toThrow('differs')
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
 
 test('encrypts a recoverable archive and verifies remote ciphertext without uploading plaintext', async () => {
   const root = mkdtempSync(join(tmpdir(), 'revision-recovery-test-'))

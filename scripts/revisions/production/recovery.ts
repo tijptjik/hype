@@ -1,10 +1,38 @@
 // NODE
 import { createHash } from 'node:crypto'
 import { basename, dirname, join } from 'node:path'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  createReadStream,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 // STORAGE
 import { AwsClient } from 'aws4fetch'
+
+/** Verify the restored database and source export remain intact on the operator's disk.
+ * @param snapshot Directory holding a completed D1 export and its checked SQLite restore.
+ * @returns A receipt local to this snapshot. Later checks reject changed backup bytes.
+ */
+export async function verifyLocalBackup(snapshot: string): Promise<void> {
+  const hashes: Record<string, string> = {}
+  for (const name of ['source.sql', 'schema.json', 'source.sqlite']) {
+    const hash = createHash('sha256')
+    for await (const chunk of createReadStream(join(snapshot, name))) hash.update(chunk)
+    hashes[name] = hash.digest('hex')
+  }
+  const file = join(snapshot, 'local-backup.sha256.json')
+  const receipt = JSON.stringify(hashes, null, 2) + '\n'
+  if (existsSync(file)) {
+    if (readFileSync(file, 'utf8') !== receipt)
+      throw new Error('Local backup differs from its receipt')
+  } else {
+    writeFileSync(file, receipt, { flag: 'wx', mode: 0o600 })
+  }
+}
 
 /** Save an encrypted, hash-addressed recovery checkpoint before any irreversible stage.
  * @param directory Private release artifact directory.
