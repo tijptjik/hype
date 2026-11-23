@@ -473,10 +473,6 @@ export default defineConfig(async ({ command }) => ({
       'hype.localhost',
       'fi.tailb49776.ts.net',
       '0.0.0.0',
-      '192.168.1.100',
-      '192.168.1.100.traefik.me',
-      'dove-main-tapir.ngrok-free.app',
-      'timri-58-153-118-141.a.free.pinggy.link',
     ],
   },
 }))
