@@ -1,2 +1,2 @@
-# Format staged Markdown and sort Tailwind classes without staging unstaged work.
-bun run scripts/checks/staged-lint.ts --fix-markdown --sort-classes
+# Apply Biome's safe fixes and format staged Markdown without staging unstaged work.
+bun run scripts/checks/staged-lint.ts --fix-markdown --fix-safe --sort-classes

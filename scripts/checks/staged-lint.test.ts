@@ -76,6 +76,22 @@ describe('staged lint snapshot', () => {
     expect(readFileSync(join(root, 'a space/config.jsonc'), 'utf8')).toBe('{"value":3}')
   })
 
+  test('applies safe fixes to staged TypeScript and preserves separate working edits', () => {
+    const root = fixture()
+    write(root, 'partial.ts', 'export function value(){let answer=1;return answer}')
+    write(root, 'clean.json', '{"value":2}')
+    git(root, ['add', 'partial.ts', 'clean.json'])
+    write(root, 'partial.ts', 'export const unstaged = 3\n')
+    checkStaged(root, true, false, true)
+    const staged = Bun.spawnSync(['git', 'show', ':partial.ts'], { cwd: root })
+    expect(staged.stdout.toString()).toContain('const answer = 1;')
+    expect(readFileSync(join(root, 'partial.ts'), 'utf8')).toBe(
+      'export const unstaged = 3\n',
+    )
+    expect(readFileSync(join(root, 'clean.json'), 'utf8')).toBe('{ "value": 2 }\n')
+    expect(() => checkStaged(root)).not.toThrow()
+  })
+
   test('shows blocking errors without burying them beneath advisory warnings', () => {
     const root = fixture()
     write(
@@ -125,6 +141,7 @@ describe('staged lint snapshot', () => {
     )
     git(root, ['add', 'biome.json'])
     expect(() => checkStaged(root)).toThrow('existing.json')
+    expect(() => checkStaged(root, true, false, true)).toThrow('existing.json')
   })
 
   test('rejects deleting the lint policy instead of silently using defaults', () => {
@@ -197,6 +214,11 @@ describe('staged lint snapshot', () => {
     write(root, 'item.svelte', '<div class="py-2 flex"></div>\n')
     git(root, ['add', 'biome.json', 'item.svelte'])
     write(root, 'item.svelte', '<div class="py-2 flex">unstaged</div>\n')
+    const index = readFileSync(join(root, '.git/index'))
+    expect(() => checkStaged(root, true, false, true)).toThrow(
+      'useTailwindSortedClasses',
+    )
+    expect(readFileSync(join(root, '.git/index'))).toEqual(index)
     checkStaged(root, false, true)
     expect(readFileSync(join(root, 'item.svelte'), 'utf8')).toBe(
       '<div class="py-2 flex">unstaged</div>\n',

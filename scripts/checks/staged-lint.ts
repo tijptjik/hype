@@ -39,6 +39,7 @@ function run(args: string[], cwd: string, env: NodeJS.ProcessEnv): string {
  * @param cwd Directory within the repository to validate.
  * @param fixMarkdown Whether to apply staged Markdown formatting after validation.
  * @param sortClasses Whether to apply the Tailwind class sorting lint fix.
+ * @param fixSafe Whether to format staged files and apply Biome's safe fixes.
  * @returns Nothing when all staged content passes the configured checks.
  * @remarks Configuration, tool-version and lockfile changes trigger a full-tree check.
  */
@@ -46,6 +47,7 @@ export function checkStaged(
   cwd = process.cwd(),
   fixMarkdown = false,
   sortClasses = false,
+  fixSafe = false,
 ): void {
   const repository = run(
     ['git', 'rev-parse', '--show-toplevel'],
@@ -124,10 +126,10 @@ export function checkStaged(
       throw new Error('The staged tree must retain its Biome configuration.')
     }
     const biome = join(toolsRoot, 'node_modules/.bin/biome')
-    const markdown = files.filter(
+    const regularFiles = files.filter(file => lstatSync(join(snapshot, file)).isFile())
+    const markdown = regularFiles.filter(
       file => file.endsWith('.md') || /(^|\/)llms\.txt$/.test(file),
     )
-    const regularFiles = files.filter(file => lstatSync(join(snapshot, file)).isFile())
     const originals = new Map(
       regularFiles.map(file => [file, readFileSync(join(snapshot, file))]),
     )
@@ -151,16 +153,20 @@ export function checkStaged(
         )
       }
     }
-    const batches = fullTree
-      ? [['.']]
-      : Array.from({ length: Math.ceil(files.length / 100) }, (_, i) =>
-          files.slice(i * 100, (i + 1) * 100).map(file => `./${file}`),
-        )
+    // Write only to staged regular files. Policy changes also require a read-only full check.
+    const batches: string[][] = []
+    if (!fullTree || fixSafe) {
+      for (let i = 0; i < regularFiles.length; i += 100) {
+        batches.push(regularFiles.slice(i, i + 100).map(file => `./${file}`))
+      }
+    }
+    if (fullTree) batches.push(['.'])
     for (const paths of batches) {
       run(
         [
           biome,
           'check',
+          ...(fixSafe && paths[0] !== '.' ? ['--write'] : []),
           // Advisory warnings must not consume the diagnostic limit and hide blockers.
           '--diagnostic-level=error',
           '--max-diagnostics=none',
@@ -182,7 +188,7 @@ export function checkStaged(
       false,
       toolEnv,
     )
-    if (fixMarkdown || sortClasses) {
+    if (fixMarkdown || sortClasses || fixSafe) {
       const formatted = regularFiles.filter(
         file => !originals.get(file)?.equals(readFileSync(join(snapshot, file))),
       )
@@ -206,7 +212,10 @@ export function checkStaged(
         // Update a working file only when it still exactly matches the original staged bytes.
         for (const file of formatted) {
           const path = join(repository, file)
-          if (existsSync(path) && originals.get(file)?.equals(readFileSync(path))) {
+          if (
+            lstatSync(path, { throwIfNoEntry: false })?.isFile() &&
+            originals.get(file)?.equals(readFileSync(path))
+          ) {
             writeFileSync(path, readFileSync(join(snapshot, file)))
           }
         }
@@ -224,6 +233,7 @@ if (import.meta.main) {
       process.cwd(),
       process.argv.includes('--fix-markdown'),
       process.argv.includes('--sort-classes'),
+      process.argv.includes('--fix-safe'),
     )
     console.log('Staged lint checks passed.')
   } catch (error) {
