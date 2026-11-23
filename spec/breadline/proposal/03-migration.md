@@ -449,3 +449,10 @@ feature-only import target with shared Places and project-specific Features. It 
 SaanSeoi Addresses, project-controlled source-change adoption, array-valued
 phones/brands, and unresolved/manual identities. Existing import SQL remains rehearsal
 evidence; rebase it before production application.
+
+## Donor and drop-off incremental synchronization
+
+[Feature synchronization](feature-sync.md) documents the production Place-schema
+adapter, complete-export comparison, three-way field reconciliation, guarded atomic
+application and retained private accepted state. It permits the initial production
+cohort to precede the newer Location and Feature revision migrations. Refs #194.

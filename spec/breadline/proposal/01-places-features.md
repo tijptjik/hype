@@ -126,10 +126,10 @@ Coordinate ownership (11 November 2026, Refs #194, parent #180): Feature geometr
 the user marker. Address coordinates retain the provider address point; reverse lookup
 must not substitute the requested pin. Location materialization, adoption and reset read
 that point from retained address evidence, using null when no source point exists.
-Address formatting receives marker geometry separately for Plus Codes. Legacy
-`address.markerCoordinates` is accepted on read and omitted from new writes; immutable
-historical revisions are not rewritten. Canonical relocation clears the former address
-point rather than assigning the new marker to it.
+Address formatting receives marker geometry separately for Plus Codes and HKGeocodes.
+Legacy `address.markerCoordinates` is accepted on read and omitted from new writes;
+immutable historical revisions are not rewritten. Canonical relocation clears the former
+address point rather than assigning the new marker to it.
 
 # Locations, Feature inheritance and SaanSeoi Addresses
 
@@ -4090,7 +4090,13 @@ The saved Feature Location toolbar exposes **Sync policy** as a read-only inspec
 control. Feature read authorization permits seeing the effective Project policy,
 Organisation fallback or default rules without granting policy-management rights. The
 panel shows Community and SaanSeoi rules independently, including empty-value and
-newly-resolved-address exceptions. Manual links remain explicitly unsynced.
+newly-resolved-address exceptions. Manual links remain explicitly unsynced. Inspection
+uses the shared structured tooltip surface, not the legacy modal styling. Opening or
+dismissing policy help must never submit the surrounding Feature form. The inspector
+lists SaanSeoi before Community and shows “Defined by” with the actual Project or
+Organisation name linked to its Advanced policy controls. Defaults identify Hype rather
+than implying a Layer definition. Unused Layer relocation settings have a separate named
+link to that Layer’s Advanced controls.
 
 The current placement processor reads source-specific Project/Organisation relocation
 rules. A configured Layer relocation setting is shown separately as not applied by this
@@ -4395,20 +4401,56 @@ remaining missing development logo objects. Deployment is deferred.
 
 ### Brand Location discovery (Refs #194)
 
+An upstream discovery request requires either search text or a selected taxonomy
+category. Category-only discovery uses SaanSeoi category browsing with its normal
+continuation cursor; clearing the text does not disable a selected category.
+
+The map uses a clustered GeoJSON source and MapLibre symbol layers without per-location
+DOM markers. HYPE is the outer ring, SaanSeoi the middle ring and Features the centre.
+Individual locations use colored rings for presence and thin neutral rings for absence.
+Numbered clusters show the proportion present as colored arcs on each ring. Cluster
+images are resolved before MapLibre builds symbol tiles, so new cluster sizes remain
+visible across zooms. Clustering ends at zoom 14 (with a 40px radius); zoom 15 and above
+shows individual locations. Clicking zooms into a cluster; coincident locations expand
+around their shared position without changing stored coordinates. The camera fits once
+when the first results arrive and then remains under user control, including across
+map/list switches. The map stays mounted across those switches; the list reveals cached
+rows in batches as the user scrolls. Shared filter bars collapse in document flow
+without fading their content or exposing a gap above the results.
+
 Brand profiles expose Locations beside the read-only Features header action, before
 search. Locations uses the existing three-state filter control: Hype (not added / all /
 added), Upstream (community only / all / backed), and Linked Features (unlinked / all /
-linked). The initial Hype state is not added; source searches require an explicit Search
-SaanSeoi action. Organisation-scoped usage checks include only that organisation's
-linked Features.
+linked). The initial Hype state is not added. Search runs automatically on entry and
+whenever text or filters change, with a 300 ms debounce and stale-response protection.
+Empty text skips the upstream search. Organisation-scoped usage checks include only that
+organisation's linked Features.
+
+The Locations header owns the shared resource filter bar, including these switches and
+an explicitly labelled taxonomy Category selector. Free-text searching uses the header
+search alone. Results use the standard resource rows. Profile does not expose a separate
+discovery-settings card; existing saved search preferences remain readable.
 
 Catalogue revision content optionally stores `discovery.terms` and `discovery.category`.
 These search preferences are independent of classification `categories` and translated
 catalogue names. Discovery category filtering uses the existing taxonomy and applies to
-the upstream search. Local catalogue matches and source candidates retain independent
-bounded continuations; an empty filtered source page may still have a next page.
-Coverage means branches found, never an exhaustive branch census. No discovery request
-writes a Location or Feature.
+both upstream search and local Location results. Local matching uses the latest retained
+source classification, includes descendants, and precedes counts and pagination;
+unclassified Locations do not match a selected category. Category selection refreshes
+immediately and displays as a taxonomy token with a tag icon inside the picker. Local
+catalogue matches and source candidates retain independent bounded continuations. A
+viewport sentinel loads subsequent pages automatically, including filtered-empty source
+pages; failed continuations pause for explicit retry. The source text-search contract
+provides a cursor, not an exact total. Local-only searches count the full matching scope
+once on the first page, without hydrating every result. Upstream and mixed searches show
+an unavailable count until all pages finish, then show the deduplicated total; page size
+is never presented as the full count. An inexpensive upstream total requires a separate
+filtered FTS count contract and query-level caching, plus reconciliation for
+Hype-specific filters. Status icons distinguish confirmed brand identity from text-name
+matching, Hype presence, and linked Feature usage. Link Existing Hype Location opens
+identity review; Add Location to Hype imports the source identity. Both actions remain
+explicit. Coverage means branches found, never an exhaustive branch census. No discovery
+request writes a Location or Feature.
 
 The current source search contract supports names and taxonomy, not an exact upstream
 brand-identifier filter. Results are labelled Name match unless the source identity
@@ -4448,14 +4490,28 @@ pending profile and identity changes. Unit coverage lives in
 `identity-catalogue.test.ts` and `wikidata-brands.test.ts`; the authenticated
 live-provider interaction check is `scripts/visual-checks/wikidata-brand-check.ts`.
 
-### Brand and group artwork
+### Catalogue archival
 
-Catalogue revisions include a source-artwork library with solid-background general logos
-and approved marker variants. Selection uses exact theme, light/dark mode, default
-marker, then a general logo or generic icon with a white ring. Candidates stay in admin
-review. Corporate ownership evidence is separate from local franchise operation;
-imported artwork does not change pinned Location identity revisions. See
-[the artwork contract and local MTR import](../../../docs/catalogue/mtr-artwork.md).
+Brands and groups expose Archive/Restore in the standard title dropdown only to
+SuperAdmins. The server independently enforces that role and the inspected revision.
+`isArchived` is stored in immutable catalogue revision content; absent means active.
+Archiving removes the entry from catalogue searches, pickers and family listings, while
+ID/code reads, historical revisions and existing Location references remain available.
+Codes stay reserved. Normal publishing cannot archive, restore or edit an archived
+entry; restoration uses the dedicated SuperAdmin command. Archived groups cannot be
+newly assigned, but existing memberships remain intact.
+
+### Imported donor identity resolution (Refs #194)
+
+Breadline-created Locations retain local provenance until an explicit upstream identity
+acceptance. Resolution compares branch/base and catalogue brand names, complete phone
+numbers, spatial distance and competing candidates against a pinned source publication.
+A candidate's category is evidence to retain, not proof of its identity or correctness.
+Canonical API verification precedes acceptance; provider failures and ambiguous matches
+remain unresolved. Acceptance preserves Feature values and accepted revision pointers
+while recording the source identity and canonical Location revision. Converted local
+lifecycle schemas must retain the computed-title guard exception described in
+`migrations/pending/feature-lifecycle/README.md`.
 
 ### Project Location reconciliation (Refs #194)
 
@@ -4562,3 +4618,21 @@ Address labels use the shared structured formatter and wrap without truncation.
 Reset persistence and authorization regressions and the updated Chrome interaction
 fixture are prepared. Runtime verification of this UI revision remains outstanding: the
 managed runner could not reach Li over SSH on 2026-11-14.
+
+### Brand and group artwork
+
+Catalogue revisions include a source-artwork library with solid-background general logos
+and approved marker variants. Selection uses exact theme, light/dark mode, default
+marker, then a general logo or generic icon with a white ring. Candidates stay in admin
+review. Corporate ownership evidence is separate from local franchise operation;
+imported artwork does not change pinned Location identity revisions. See
+[the artwork contract and local MTR import](../../../docs/catalogue/mtr-artwork.md).
+
+Saved Feature skips are covered by the managed Chrome check
+`scripts/visual-checks/reconciliation-skip-check.ts`: an unlinked Feature can be
+skipped, a failed save stays on the current record, saved progress survives reload, and
+Reset returns it to matching at 1440px and 1200px. Database coverage in
+`location-reconciliation-state.test.ts` verifies attribution, retry stability, stale
+content/association rejection, project boundaries, shared-Location isolation and later
+match precedence. Local migration 0252 is applied; remote migration and deployment
+remain separate release steps. Refs #194.
