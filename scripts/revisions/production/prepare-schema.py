@@ -79,7 +79,9 @@ def placeholder_fences(db):
 
 def main():
     """Rehearse pending migrations and retain the exact successful units."""
-    database, output = sys.argv[1:]
+    database, output, *options = sys.argv[1:]
+    if options not in ([], ['--defer-lifecycle']):
+        raise ValueError('Unexpected schema preparation option')
     db = sqlite3.connect(database, factory=RecordingConnection)
     db.execute('PRAGMA foreign_keys=ON')
     helper = load('revision_migration_helpers', 'scripts/dev/rebuild-database.py')
@@ -96,7 +98,7 @@ def main():
     for path in paths:
         if path.name in done:
             continue
-        if path.name == bookstores and not current_lifecycle:
+        if path.name == bookstores and not current_lifecycle and options == ['--defer-lifecycle']:
             continue
         db.execute('BEGIN IMMEDIATE')
         db.recorded = []

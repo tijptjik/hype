@@ -37,6 +37,35 @@ import type { Group, Plan, Statement } from './contract'
 
 type Domain = ReturnType<typeof openSqliteDomain>
 
+/** Apply missing numbered migrations on the private rehearsal copy and capture D1 groups.
+ * @param database Private SQLite snapshot. @param directory Private run artifacts.
+ * @param phase Artifact prefix. @param deferLifecycle Whether a subsequent conversion pass owns lifecycle-dependent SQL.
+ * @returns Transactions in the exact order applied to the copy.
+ */
+function prepareNumberedMigrations(
+  database: string,
+  directory: string,
+  phase: string,
+  deferLifecycle = false,
+): Group[] {
+  const schemaFile = join(directory, phase + '-groups.json')
+  const migration = spawnSync(
+    'python3',
+    [
+      'scripts/revisions/production/prepare-schema.py',
+      database,
+      schemaFile,
+      ...(deferLifecycle ? ['--defer-lifecycle'] : []),
+    ],
+    { encoding: 'utf8' },
+  )
+  const log = join(directory, phase + '.log')
+  writeFileSync(log, migration.stdout + migration.stderr, { mode: 0o600 })
+  if (migration.status !== 0)
+    throw new Error(`Migration rehearsal failed; inspect ${log}`)
+  return JSON.parse(readFileSync(schemaFile, 'utf8')) as Group[]
+}
+
 /** Inventory executable source, migrations and lockfiles, including uncommitted release work. @returns Sorted repository-relative paths. */
 export function releaseSourceFiles(): string[] {
   const inventory = spawnSync(
@@ -155,20 +184,12 @@ export async function prepareRelease(
       initial,
       initialSchema,
     )
-  const schemaFile = join(directory, 'schema-groups.json')
-  const migration = spawnSync(
-    'python3',
-    ['scripts/revisions/production/prepare-schema.py', database, schemaFile],
-    { encoding: 'utf8' },
+  const groups = prepareNumberedMigrations(
+    database,
+    directory,
+    'schema',
+    options.featureLifecycle === 'current',
   )
-  writeFileSync(
-    join(directory, 'migrations.log'),
-    migration.stdout + migration.stderr,
-    { mode: 0o600 },
-  )
-  if (migration.status !== 0)
-    throw new Error('Migration rehearsal failed; inspect private migrations.log')
-  const groups = JSON.parse(readFileSync(schemaFile, 'utf8')) as Group[]
   const media = join(directory, 'media')
   const cached = await cacheMedia(database, media, { baselineOnly: true })
   if (cached.blocked)
@@ -331,6 +352,8 @@ export async function prepareRelease(
         await atomic(d.binding, group.statements)
         groups.push(group)
       }
+      // Revisit deferred numbered data only after accepted heads and draft conversion exist.
+      groups.push(...prepareNumberedMigrations(database, directory, 'post-lifecycle'))
       for (const check of completeness(true))
         d.sqlite.query(check.sql).all(...check.params)
       // Preserve the existing projection contract and add exact lifecycle/media evidence.
@@ -437,27 +460,31 @@ function prepareCurrentLifecycleRelease(
         .get()
     )
       d.sqlite.exec('UPDATE _revisionDeployment SET writable=1')
+    // Install the converted form of 0203 before generic discovery considers its ledger entry.
+    const policy = prepareRevisionIdlePolicy(d.sqlite)
+    for (const group of policy)
+      d.sqlite.transaction(() => applyLegacyDraftConversion(d.sqlite, [group]))()
     const groups = [
-      ...prepareRevisionIdlePolicy(d.sqlite),
-      ...prepareLegacyDraftConversion(d.sqlite),
+      ...policy,
+      ...prepareNumberedMigrations(database, directory, 'schema'),
     ]
+    const cleanup = prepareLegacyDraftConversion(d.sqlite)
+    for (const group of cleanup)
+      d.sqlite.transaction(() => applyLegacyDraftConversion(d.sqlite, [group]))()
+    groups.push(...cleanup)
     for (const group of groups) {
+      const statements = [
+        ...group.statements,
+        ...(group.tables ? fences(group.fenceTables ?? group.tables) : []),
+      ]
       if (
-        group.statements.length + 4 > 950 ||
-        group.statements.some(
+        statements.length + 4 > 950 ||
+        statements.some(
           statement =>
             Buffer.byteLength(statement.sql) > 95_000 || statement.params.length > 100,
         )
       )
-        throw new Error(`Oversized cleanup unit: ${group.label}`)
-      d.sqlite.exec('BEGIN')
-      try {
-        applyLegacyDraftConversion(d.sqlite, [group])
-        d.sqlite.exec('COMMIT')
-      } catch (error) {
-        d.sqlite.exec('ROLLBACK')
-        throw error
-      }
+        throw new Error(`Oversized atomic unit: ${group.label}`)
     }
     for (const check of completeness(true)) {
       try {
