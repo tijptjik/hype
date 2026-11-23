@@ -1,0 +1,46 @@
+{
+  "mtr-business-197517397a64c5dd1e3a1a2f6169ce79985206c8437f4712923b4a7d62452a36": {
+    "action": "service",
+    "name": "\"iAM Smart\" Self-Registration Kiosk"
+  },
+  "mtr-business-2ea96234b421173ec05a045aa2966a632becab6938180431d0a359787af6dd04": {
+    "action": "service",
+    "name": "“iAM Smart” Self-Registration Kiosk"
+  },
+  "mtr-business-0139638a5463a2c10a1aa9beff619a72607f77ba283d543cee0c7ebdc2e10b9a": {
+    "action": "service",
+    "name": "Art Gallery"
+  },
+  "mtr-business-6ac1ef81082b2cde2a2a43e1b3f828efc4deaf7043a3e84f6520479a7e4c8cbe": {
+    "action": "service",
+    "name": "Foreign Exchange"
+  },
+  "mtr-business-814626f139eae5df866450edebefac3a8d982ba389e1662d294f022be1b95df0": {
+    "action": "service",
+    "name": "Hong Kong Police Self-service Kiosk"
+  },
+  "mtr-business-4841e7b37ed3248d02307c281c3395c0b32de5d1b8107ff0851b2da50027e28b": {
+    "action": "service",
+    "name": "i'AM Smart"
+  },
+  "mtr-business-b19caeae7f5f9f072b205ff84bed32b42077ce10d13debd01520292516c06c1b": {
+    "action": "skip",
+    "name": "K Station powered by K Fest"
+  },
+  "mtr-business-f02dc24359a75e05be4bde2b5c5904af85d18bc7c16a5a16624fbe1c702d7508": {
+    "action": "service",
+    "name": "Left Baggage"
+  },
+  "mtr-business-7341088fb8ff10eaf42197965ae3d8f5b33b80bc9a07537c18829c4054369473": {
+    "action": "service",
+    "name": "Octopus Service Point"
+  },
+  "mtr-business-08adca1e6adeae9ccc7c45bd134ddc1a9de1b91d5af753ec85b439b45610ebed": {
+    "action": "service",
+    "name": "Octopus Service Points"
+  },
+  "mtr-business-c379708d317a22b9d4aaefada5ac26966b2d0e34f3cb57d2eecffd980ba728f9": {
+    "action": "skip",
+    "name": "Official Franchised Product Store of the National Games"
+  }
+}
