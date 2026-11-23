@@ -46,3 +46,12 @@ it('does not mark an in-flight response fresh across invalidation', async () => 
   await readFreshRemoteQuery(query)
   expect(query.refresh).toHaveBeenCalledTimes(2)
 })
+
+it('refreshes a failed native handle even before its first successful payload', async () => {
+  const query = Object.assign(nativeQuery(), {
+    ready: false,
+    error: new Error('offline'),
+  })
+  expect(await readFreshRemoteQuery(query, true)).toEqual({ version: 1 })
+  expect(query.refresh).toHaveBeenCalledOnce()
+})

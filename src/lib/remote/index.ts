@@ -95,7 +95,8 @@ export async function readFreshRemoteQuery<T>(
     return current as T
   if (current && typeof current === 'object') freshResults.delete(current)
   const epoch = freshnessEpoch
-  const result = ready ? await refreshRemoteQuery(query) : await query
+  // Failed native handles retain their rejection until explicitly refreshed.
+  const result = ready || handle.error ? await refreshRemoteQuery(query) : await query
   if (result && typeof result === 'object' && epoch === freshnessEpoch) {
     const at = Date.now()
     freshResults.set(result, { at, epoch })
