@@ -163,7 +163,7 @@ $effect(() => {
 {#if station.active || indoorMatch}
   <section
     in:fade={{ duration: prefersReducedMotion.current ? 0 : 420 }}
-    class="absolute inset-0 z-10 overflow-hidden bg-[var(--station-canvas)]"
+    class="absolute inset-0 z-10 overflow-hidden bg-[var(--station-canvas)] select-none [&_*]:select-none"
     aria-label={`${premisesLabel(station.metadata, getLocale()) || 'Premises'} indoor layout`}
     style:opacity={station.returnFading ? 0 : 1}
     style:transition={prefersReducedMotion.current ? 'none' : 'opacity 420ms ease'}

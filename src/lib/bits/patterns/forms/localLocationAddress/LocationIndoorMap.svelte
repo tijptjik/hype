@@ -98,7 +98,7 @@ $effect(() => {
 
 <!-- Use the public indoor canvas token so legend backgrounds blend in every theme. -->
 <div
-  class="relative h-full w-full bg-[var(--station-canvas)]"
+  class="relative h-full w-full bg-[var(--station-canvas)] select-none [&_*]:select-none"
   data-location-indoor-canvas
 >
   {#if failed}
