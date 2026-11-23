@@ -98,52 +98,37 @@ try {
   assert.equal(await nav.getByRole('link').count(), 4)
   await page.waitForTimeout(400)
   const motion = await nav.evaluate(async node => {
-    const first = node.querySelector('a')
-    if (!first) throw new Error('Missing first shortcut')
-    const initialTop = first.getBoundingClientRect().top
     node.querySelector('button')?.click()
-    await new Promise(resolve => setTimeout(resolve, 100))
-    const label = first.querySelector('[data-admin-menu-label]')
-    if (!label) throw new Error('Missing view label')
-    const opacity = Number(getComputedStyle(label).opacity)
-    const moving = (first.parentElement?.getAnimations().length ?? 0) > 0
-    const icons = [...node.querySelectorAll('[data-admin-menu-icon]')].map(icon => {
-      const wrapper = icon.parentElement?.parentElement
-      if (!wrapper) throw new Error('Missing animated wrapper')
-      const style = getComputedStyle(wrapper)
-      const matrix = new DOMMatrixReadOnly(style.transform)
-      return {
-        opacity: Number(style.opacity),
-        scaleX: matrix.a,
-        scaleY: matrix.d,
-        x: matrix.e,
-        moving: wrapper.getAnimations().length > 0,
-      }
-    })
-    await new Promise(resolve => setTimeout(resolve, 400))
-    return {
-      retained: first === node.querySelector('a'),
-      initialTop,
-      finalTop: first.getBoundingClientRect().top,
-      opacity,
-      moving,
-      icons,
+    await new Promise(resolve => setTimeout(resolve, 60))
+    const panel = node.querySelector<HTMLElement>('[data-admin-menu-expanded="true"]')
+    if (!panel) throw new Error('Missing expanded panel')
+    const sample = () => {
+      const panelBox = panel.getBoundingClientRect()
+      return [...panel.querySelectorAll<HTMLElement>('[data-menu-item]')].map(item => ({
+        y: item.getBoundingClientRect().y - panelBox.y,
+        transform: getComputedStyle(item).transform,
+        opacity: Number(getComputedStyle(item).opacity),
+      }))
     }
+    const during = sample()
+    const moving = panel.getAnimations().length > 0
+    const labels = [...panel.querySelectorAll('[data-admin-menu-label]')].map(label =>
+      Number(getComputedStyle(label).opacity),
+    )
+    await new Promise(resolve => setTimeout(resolve, 400))
+    return { during, after: sample(), moving, labels }
   })
-  assert(motion.retained && motion.moving && motion.finalTop < motion.initialTop)
-  assert(motion.opacity < 1, 'Labels fade in during expansion')
-  assert.equal(motion.icons.length, 12)
+  assert(motion.moving, 'The panel itself slides open')
+  assert.equal(motion.during.length, 13)
   assert(
-    motion.icons.every(
-      icon =>
-        icon.opacity === 1 &&
-        icon.scaleX === 1 &&
-        icon.scaleY === 1 &&
-        Math.abs(icon.x) < 1 &&
-        icon.moving,
-    ),
-    'Every icon translates vertically without fading or scaling',
+    motion.labels.every(opacity => opacity === 1),
+    'Labels remain attached and visible',
   )
+  for (const [index, item] of motion.during.entries()) {
+    assert(Math.abs(item.y - motion.after[index].y) < 0.5)
+    assert.equal(item.transform, 'none', 'Icons have no individual transforms')
+    assert.equal(item.opacity, 1)
+  }
   assert.equal(await popup.getByRole('link').count(), 12)
   assert.equal(
     await popup
@@ -161,27 +146,24 @@ try {
     await new Promise(resolve => setTimeout(resolve, 120))
     return wrappers.map((wrapper, index) => {
       const rect = wrapper.getBoundingClientRect()
-      const style = getComputedStyle(wrapper)
-      const matrix = new DOMMatrixReadOnly(style.transform)
       return {
         dx: rect.x - before[index].x,
         dy: rect.y - before[index].y,
-        opacity: Number(style.opacity),
-        scaleX: matrix.a,
-        scaleY: matrix.d,
+        transform: getComputedStyle(wrapper).transform,
+        opacity: Number(getComputedStyle(wrapper).opacity),
       }
     })
   })
+  assert(retraction[0].dy > 0, 'The panel slides down')
   assert(
     retraction.every(
       item =>
         Math.abs(item.dx) < 1 &&
-        item.dy >= 0 &&
+        Math.abs(item.dy - retraction[0].dy) < 0.5 &&
         item.opacity === 1 &&
-        item.scaleX === 1 &&
-        item.scaleY === 1,
+        item.transform === 'none',
     ),
-    'Retraction keeps the expanded layout while every icon moves vertically down without scaling or fading',
+    'Every row moves with the panel by the same distance without collapsing together',
   )
   await popup.waitFor({ state: 'detached' })
   assert.equal(await popup.count(), 0)

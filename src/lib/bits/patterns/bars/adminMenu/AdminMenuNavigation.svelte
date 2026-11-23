@@ -1,10 +1,6 @@
 <script lang="ts">
 // SVELTE
 import { tick, untrack } from 'svelte'
-import { cubicInOut } from 'svelte/easing'
-import { fade, fly } from 'svelte/transition'
-import type { AnimationConfig } from 'svelte/animate'
-import type { TransitionConfig } from 'svelte/transition'
 import { prefersReducedMotion } from 'svelte/motion'
 // ICONS
 import GridIcon from 'virtual:icons/proicons/apps'
@@ -33,6 +29,8 @@ const destinations = $derived(items.map(item => item.href).join('|'))
 const duration = $derived(prefersReducedMotion.current ? 0 : 320)
 let trigger = $state<HTMLButtonElement>()
 let nav = $state<HTMLElement>()
+let panel = $state<HTMLDivElement>()
+let panelAnimation: Animation | undefined
 // The wide bar keeps its fifth slot; the narrow bar keeps its bottom control.
 const entries = $derived.by(() => {
   const destinations: { key: string; item: AdminMenuItem | null }[] = visibleItems.map(
@@ -46,89 +44,64 @@ const entries = $derived.by(() => {
   return destinations
 })
 
-/** Translate retained icons without the size scaling of the default FLIP animation.
- * @param _node Animated item wrapper.
- * @param bounds Before and after layout rectangles.
- * @returns A translation using the same timing as newly revealed items.
+/** Slide the panel as one rigid surface, clipping the portion below the footer.
+ * @param opening Whether to reveal the expanded panel.
+ * @returns Completion of the panel movement, including interrupted animations.
  */
-function moveItem(
-  _node: Element,
-  bounds: { from: DOMRect; to: DOMRect },
-): AnimationConfig {
-  const x =
-    bounds.from.left + bounds.from.width / 2 - bounds.to.left - bounds.to.width / 2
-  const y = bounds.from.top - bounds.to.top
-  return {
-    duration: retracting ? 0 : duration,
-    easing: cubicInOut,
-    css: t => `transform: translate(${(1 - t) * x}px, ${(1 - t) * y}px)`,
+async function slidePanel(opening: boolean): Promise<void> {
+  if (!panel || !nav) return
+  const distance = Math.max(0, panel.offsetHeight - nav.offsetHeight)
+  const hidden = {
+    transform: `translateY(${distance}px)`,
+    clipPath: `inset(0 0 ${distance}px 0)`,
+  }
+  const visible = { transform: 'translateY(0)', clipPath: 'inset(0)' }
+  const current = panelAnimation
+    ? {
+        transform: getComputedStyle(panel).transform,
+        clipPath: getComputedStyle(panel).clipPath,
+      }
+    : opening
+      ? hidden
+      : visible
+  panelAnimation?.cancel()
+  // Every row keeps its expanded position; only the panel moves over the footer edge.
+  const animation = panel.animate([current, opening ? visible : hidden], {
+    duration,
+    easing: 'cubic-bezier(0.65, 0, 0.35, 1)',
+    fill: 'forwards',
+  })
+  panelAnimation = animation
+  await animation.finished.catch(() => {})
+  if (panelAnimation === animation && opening) {
+    animation.cancel()
+    panelAnimation = undefined
   }
 }
 
-/** Reveal additional icons from the footer with full opacity throughout.
- * @param node Newly revealed destination wrapper.
- * @returns An upward translation with no fade or scaling.
+/** Lay out every destination before revealing the panel.
+ * @returns Completion of the opening movement.
  */
-function revealItem(node: Element): TransitionConfig {
-  const bottom =
-    nav?.getBoundingClientRect().bottom ?? node.getBoundingClientRect().bottom
-  return fly(node, {
-    y: Math.max(0, bottom - 60 - node.getBoundingClientRect().top),
-    opacity: 1,
-    duration: retracting ? 0 : duration,
-    easing: cubicInOut,
-  })
+async function open(): Promise<void> {
+  if (expanded || retracting) return
+  expanded = true
+  await tick()
+  if (!retracting) await slidePanel(true)
 }
 
-/** Retract against the expanded geometry before switching back to the compact layout.
+/** Slide the expanded panel away before restoring the compact shortcuts.
  * @param restoreFocus Whether Escape should return focus to the toggle.
- * @returns Completion after the reverse movement and compact layout commit.
+ * @returns Completion after the panel movement and compact layout commit.
  */
 async function close(restoreFocus = false): Promise<void> {
   if (!expanded || retracting) return
   retracting = true
-  const bounds = nav?.getBoundingClientRect()
-  const wrappers = [...(nav?.querySelectorAll<HTMLElement>('[data-menu-item]') ?? [])]
-  const animations: Animation[] = []
-  if (bounds && duration) {
-    const firstTop = wrappers[0]?.getBoundingClientRect().top ?? bounds.top
-    const narrowExitDistance = bounds.top + 12 - firstTop
-    for (const [index, wrapper] of wrappers.entries()) {
-      const rect = wrapper.getBoundingClientRect()
-      // Retained shortcuts return to their exact compact slots; other views exit below them.
-      const isToggle = wrapper.querySelector('button') !== null
-      const targetTop = isNarrow
-        ? isToggle
-          ? rect.top
-          : index < 4
-            ? bounds.top + 12 + index * 56
-            : rect.top + narrowExitDistance
-        : bounds.bottom - 60
-      animations.push(
-        wrapper.animate(
-          [
-            { transform: 'translateY(0)' },
-            { transform: `translateY(${targetTop - rect.top}px)` },
-          ],
-          { duration, easing: 'cubic-bezier(0.65, 0, 0.35, 1)', fill: 'forwards' },
-        ),
-      )
-      const label = wrapper.querySelector('[data-admin-menu-label]')
-      if (label)
-        animations.push(
-          label.animate([{ opacity: 1 }, { opacity: 0 }], {
-            duration,
-            fill: 'forwards',
-          }),
-        )
-    }
-    await Promise.all(animations.map(animation => animation.finished.catch(() => {})))
-  }
+  await slidePanel(false)
   expanded = false
-  // Suppress layout/outro animation: the icons have already reached their resting slots.
+  // Restore the compact layout only once the expanded panel has reached the footer.
   await tick()
-  for (const animation of animations) animation.cancel()
-  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+  panelAnimation?.cancel()
+  panelAnimation = undefined
   retracting = false
   if (restoreFocus) trigger?.focus()
 }
@@ -178,18 +151,32 @@ $effect(() => {
           class="border-base-100 bg-primary text-primary-content pointer-events-none absolute -top-3 -right-3 flex size-5 items-center justify-center rounded-full border text-[10px] font-bold"
           role="img"
           aria-label={`${count}`}
+          aria-busy={item.notificationPending || undefined}
+          style:opacity={item.notificationPending ? 0.6 : 1}
         >
-          {count > 99 ? '∞' : count}
+          {#if count > 99}
+            <svg
+              class="h-2.5 w-3.5 shrink-0"
+              viewBox="-1 0 26 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 8C9 4 8 3 6 3a5 5 0 0 0 0 10c2 0 3-1 6-5s4-5 6-5a5 5 0 0 1 0 10c-2 0-3-1-6-5Z"
+              />
+            </svg>
+          {:else}
+            {count}
+          {/if}
         </span>
       {/if}
     </span>
     {#if labeled}
       <span
         data-admin-menu-label
-        in:fade={{
-          duration: retracting ? 0 : duration,
-          delay: expanded ? 80 : 0,
-        }}
         class="w-full text-[10px] leading-snug whitespace-pre-line"
         >{item.compactLabel ?? item.label}</span
       >
@@ -207,6 +194,7 @@ $effect(() => {
 >
   <div
     {id}
+    bind:this={panel}
     data-admin-menu-expanded={expanded}
     class="border-border bg-panel absolute bottom-0 left-0 z-50 w-full [scrollbar-width:none] items-start border-t py-3"
     class:grid={expanded || isNarrow}
@@ -227,8 +215,6 @@ $effect(() => {
     {#each entries as entry (entry.key)}
       <div
         data-menu-item
-        animate:moveItem
-        in:revealItem
         class="flex min-w-0 justify-center"
         class:w-12={!expanded && !isNarrow}
         class:shrink-0={!expanded}
@@ -248,7 +234,7 @@ $effect(() => {
             title={expanded ? 'Close views' : 'All views'}
             onclick={() => {
               if (expanded) void close()
-              else expanded = true
+              else void open()
             }}
             class="hover:bg-base-300 focus-visible:outline-primary flex min-h-12 w-full min-w-0 flex-col items-center justify-center gap-2 rounded-xl px-1 py-3 focus-visible:outline-2"
             class:text-primary={expanded}
@@ -259,12 +245,7 @@ $effect(() => {
               <GridIcon class="size-6 shrink-0" />
             {/if}
             {#if expanded}
-              <span
-                in:fade={{ duration: retracting ? 0 : duration }}
-                data-admin-menu-label
-                class="text-[10px] leading-snug"
-                >Close</span
-              >
+              <span data-admin-menu-label class="text-[10px] leading-snug">Close</span>
             {/if}
           </button>
         {/if}

@@ -9,6 +9,7 @@ export interface AdminMenuItem {
   icon: Component<Record<string, unknown>>
   onClick?: ((event: MouseEvent) => void) | null
   notificationCount?: number
+  notificationPending?: boolean
   tone?: 'primary' | 'secondary' | 'accent'
 }
 

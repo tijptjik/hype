@@ -4,6 +4,7 @@ import { page } from '$app/state'
 import { untrack } from 'svelte'
 // API
 import { getTasks } from '#lib/api/tasks.remote.js'
+import { getFeatureIndexPage } from '#lib/api/featureIndex.remote.js'
 // I18N
 import * as m from '#lib/paraglide/messages.js'
 // BITS COMPONENTS
@@ -17,7 +18,10 @@ import { authorizeTaskListForContext } from '#lib/api/services/authz/task.js'
 import { canBrowseUsers } from '#lib/api/services/authz/userDirectory.js'
 // NAVIGATION
 import { navigateOnAdmin } from '#lib/navigation/index.js'
-import { messagingNavigationEnabled } from '#lib/navigation/releases.js'
+import {
+  fieldEntriesEnabled,
+  messagingNavigationEnabled,
+} from '#lib/navigation/releases.js'
 // ENUMS
 import { FirstClassResource } from '#lib/enums.js'
 // ICONS
@@ -37,6 +41,7 @@ import FieldResearchIcon from '#lib/bits/custom/icon/FieldResearchIcon.svelte'
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // TYPES
 import type { SessionUser } from '#lib/types.js'
+import type { FeatureIndexQuery } from '#lib/features/indexQuery.js'
 import type { AdminMenuItem, AdminMenuProps } from './adminMenu.types'
 
 const adminCtx = getAdminCtx()
@@ -57,9 +62,19 @@ const canListTasks = $derived(
 const taskCountQuery = $derived(
   canListTasks
     ? getTasks({
+        resource: adminCtx.view.isSuperAdmin()
+          ? adminCtx.view.filters.viewFilters.task.resource
+          : undefined,
         conditions: {
           isReviewed: adminCtx.view.filters.viewFilters.task.isReviewed,
           type: adminCtx.view.filters.viewFilters.task.type,
+          reviewAction: adminCtx.view.filters.viewFilters.task.reviewAction,
+          reviewOutcome:
+            adminCtx.view.filters.viewFilters.task.reviewOutcome == null
+              ? null
+              : adminCtx.view.filters.viewFilters.task.reviewOutcome
+                ? 'accepted'
+                : 'rejected',
         },
         prisms: adminCtx.view.scope.prisms,
         pagination: { limit: 1, offset: 0 },
@@ -67,9 +82,51 @@ const taskCountQuery = $derived(
       })
     : null,
 )
-const notificationCount = $derived(
-  canListTasks ? (taskCountQuery?.current?.totalCount ?? 0) : 0,
+const taskCount = $derived(taskCountQuery?.current?.totalCount ?? null)
+// Count independently of the mounted view; matching index requests share the remote cache.
+const featureCountQuery = $derived(
+  adminCtx.view.user && !adminCtx.view.user.isAnonymous
+    ? getFeatureIndexPage({
+        conditions: adminCtx.view.isSuperAdmin()
+          ? { isArchived: null, isPublished: null }
+          : { isArchived: false, isPublished: null },
+        prisms: adminCtx.view.scope.prisms,
+        sorting: adminCtx.view.filters.sorting.feature as FeatureIndexQuery['sorting'],
+        filters: adminCtx.view.filters.viewFilters.feature,
+        q: (adminCtx.view.filters.values.feature.text ?? '').trim(),
+        pagination: { limit: 50, offset: 0 },
+        includeCount: true,
+        countOnly: true,
+        summaryOnly: true,
+        meta: { ...adminCtx.view.resources.queryMeta, profile: 'admin' },
+      })
+    : null,
 )
+const featureCount = $derived(featureCountQuery?.current?.totalCount ?? null)
+const countOwner = $derived(
+  JSON.stringify([adminCtx.view.user?.id, adminCtx.view.hub?.id, canListTasks]),
+)
+let retainedCounts = $state<{ owner: string; task: number; feature: number } | null>(
+  null,
+)
+// Keep settled totals latched across prism loads, but never across account/authority changes.
+$effect(() => {
+  const owner = countOwner
+  const task = taskCount
+  const feature = featureCount
+  untrack(() => {
+    const previous = retainedCounts?.owner === owner ? retainedCounts : null
+    retainedCounts = {
+      owner,
+      task: task ?? previous?.task ?? 0,
+      feature: feature ?? previous?.feature ?? 0,
+    }
+  })
+})
+const previousCounts = $derived(
+  retainedCounts?.owner === countOwner ? retainedCounts : null,
+)
+const notificationCount = $derived(taskCount ?? previousCounts?.task ?? 0)
 let previousTaskRows: unknown
 // Task reviews refresh the queue rows; refresh the small badge query alongside that update.
 $effect(() => {
@@ -82,7 +139,6 @@ $effect(() => {
       void query.refresh().catch(() => {})
     })
 })
-const featureCount = $derived(adminCtx.featureIndexCount ?? 0)
 
 // Index navigation preserves prisms; empty selections show all server-permitted resources.
 const adminMenuItems = $derived.by((): AdminMenuItem[] => {
@@ -127,6 +183,7 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
       icon: InboxArrowDown,
       onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.task),
       notificationCount,
+      notificationPending: taskCount === null || Boolean(taskCountQuery?.loading),
     })
   }
 
@@ -136,7 +193,8 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
     compactLabel: 'Feature',
     icon: MapPin,
     onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.feature),
-    notificationCount: featureCount,
+    notificationCount: featureCount ?? previousCounts?.feature ?? 0,
+    notificationPending: featureCount === null || Boolean(featureCountQuery?.loading),
   })
 
   if (directoryAllowed) {
@@ -197,13 +255,22 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
         (role.type === 'organisation' && role.role === 'owner') ||
         (role.type === 'hub' && role.role === 'admin'),
     )
-  )
+  ) {
+    if (fieldEntriesEnabled) {
+      items.push({
+        href: `${ADMIN_PATH}/fieldresearch`,
+        label: 'Field Entries',
+        compactLabel: 'Field\nEntries',
+        icon: FieldResearchIcon,
+      })
+    }
     items.push({
-      href: `${ADMIN_PATH}/fieldresearch`,
-      label: 'Field Research',
-      compactLabel: 'Field\nWork',
+      href: `${ADMIN_PATH}/field-recorder`,
+      label: 'Field Sessions',
+      compactLabel: 'Field\nSessions',
       icon: FieldResearchIcon,
     })
+  }
 
   items.push({
     href: `${ADMIN_PATH}/catalogue`,
