@@ -1,4 +1,11 @@
 <script lang="ts">
+import {
+  isMultiSelectProperty,
+  encodePropertySelection,
+  displayPropertyValueIds,
+} from '#lib/properties/selection.js'
+import FeatureFieldMultiSelect from '#lib/bits/patterns/forms/formFeatureField/components/FeatureFieldMultiSelect.svelte'
+
 import { isRangeProperty } from '#lib/properties/range.js'
 import FeatureFieldInterval from '#lib/bits/patterns/forms/formFeatureField/components/FeatureFieldInterval.svelte'
 import FeatureFieldLinks from '#lib/bits/patterns/forms/formFeatureField/components/FeatureFieldLinks.svelte'
@@ -112,6 +119,19 @@ function cancelEditing(propertyId: Id): void {
               <FeatureFieldLinks
                 value={getFeatureProperty(appCtx, propertyId)?.valueJson}
                 cardinality={property.cardinality}
+                onChange={value =>
+                  handleSpecifierChange(appCtx, propertyId, 'core', value)}
+              />
+            {:else if isMultiSelectProperty(property)}
+              <FeatureFieldMultiSelect
+                id={`new-feature-${propertyId}`}
+                value={encodePropertySelection(
+                  displayPropertyValueIds(getFeatureProperty(appCtx, propertyId) ?? {}),
+                )}
+                options={[...propertyValues].map(([value, label]) => ({
+                  value,
+                  label,
+                }))}
                 onChange={value =>
                   handleSpecifierChange(appCtx, propertyId, 'core', value)}
               />
