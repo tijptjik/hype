@@ -85,11 +85,18 @@ def main():
     helper = load('revision_migration_helpers', 'scripts/dev/rebuild-database.py')
     historical = load('revision_historical_dependency', 'scripts/locations/setup-historical-layers.py')
     done = {r[0] for r in db.execute('SELECT name FROM d1_migrations')}
+    current_lifecycle = any(row[1] == 'currentRevisionId' for row in db.execute("PRAGMA table_info('feature')"))
+    bookstores = '0207_former_bookstore_occupancy.sql'
     groups = []
     placeholder_fences(db)
     db.commit()
-    for path in sorted((ROOT / 'migrations').glob('*.sql')):
+    # The reviewed bookstore data uses accepted Feature heads and the current Location
+    # taxonomy. It is journaled after those contracts exist on the converted snapshot.
+    paths = sorted((ROOT / 'migrations').glob('*.sql'), key=lambda p: (p.name == bookstores, p.name))
+    for path in paths:
         if path.name in done:
+            continue
+        if path.name == bookstores and not current_lifecycle:
             continue
         db.execute('BEGIN IMMEDIATE')
         db.recorded = []
@@ -118,9 +125,9 @@ def main():
             group = dict(label=path.name, statements=recorded, tables=canonical_tables(db), fenceTables=missing)
             db.commit()
             groups.append(group)
-        except Exception:
+        except Exception as exc:
             db.rollback()
-            raise
+            raise RuntimeError(f'Migration rehearsal failed at {path.name}') from exc
         finally:
             db.recorded = None
     if db.execute('PRAGMA integrity_check').fetchone()[0] != 'ok':
