@@ -279,7 +279,7 @@ onDestroy(() => {
         <p role="alert" class="text-error">{failure}</p>
       {/if}
       {#if section !== 'fields'}
-        <div class="grid grid-cols-1 gap-8 xl:grid-cols-2">
+        <div class="grid grid-cols-1 xl:grid-cols-2">
           <section class="min-w-0">
             <SectionHeader title="Session details" icon={LayersIcon} />
             <div class="grid items-start gap-6 px-6 py-5">
@@ -334,7 +334,9 @@ onDestroy(() => {
                   {#if key === 'featureType'}
                     <Select
                       variant="ghost"
-                      class="h-auto! min-h-12 w-full! max-w-full min-w-0 [&_.bits-form__select-display]:px-0! [&_.bits-form__select-label]:overflow-visible! [&_.bits-form__select-label]:break-words [&_.bits-form__select-label]:text-clip! [&_.bits-form__select-label]:whitespace-normal!"
+                      reserveTriggerSpace={true}
+                      class="h-auto! min-h-12 w-full! max-w-full min-w-0 border-0! px-0! [&_.bits-form__select-display]:gap-2! [&_.bits-form__select-display]:px-0! [&_.bits-form__select-label]:overflow-visible! [&_.bits-form__select-label]:pl-0! [&_.bits-form__select-label]:break-words [&_.bits-form__select-label]:text-clip! [&_.bits-form__select-label]:whitespace-normal!"
+                      triggerClass="gap-2!"
                       isEditing={editing}
                       triggerAttrs={{ 'aria-label': label + ' default value' }}
                       {disabled}
@@ -378,7 +380,9 @@ onDestroy(() => {
                     {@const override = selected?.overrides.defaults[key]}
                     <Select
                       variant="ghost"
-                      class="h-auto! min-h-12 w-full! max-w-full min-w-0 [&_.bits-form__select-display]:px-0! [&_.bits-form__select-label]:overflow-visible! [&_.bits-form__select-label]:break-words [&_.bits-form__select-label]:text-clip! [&_.bits-form__select-label]:whitespace-normal!"
+                      reserveTriggerSpace={true}
+                      class="h-auto! min-h-12 w-full! max-w-full min-w-0 border-0! px-0! [&_.bits-form__select-display]:gap-2! [&_.bits-form__select-display]:px-0! [&_.bits-form__select-label]:overflow-visible! [&_.bits-form__select-label]:pl-0! [&_.bits-form__select-label]:break-words [&_.bits-form__select-label]:text-clip! [&_.bits-form__select-label]:whitespace-normal!"
+                      triggerClass="gap-2!"
                       isEditing={editing}
                       triggerAttrs={{ 'aria-label': label + ' default value' }}
                       {disabled}

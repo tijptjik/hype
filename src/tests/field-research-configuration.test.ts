@@ -2,7 +2,15 @@
 import { describe, expect, it } from 'vitest'
 import { DatabaseSync } from 'node:sqlite'
 import { readFileSync } from 'node:fs'
-import { renderDisplayTemplate } from '#lib/templates/displayTemplate.js'
+import {
+  componentFields,
+  expressionSource,
+  updateComponentField,
+} from '#lib/templates/componentEditor.js'
+import {
+  parseDisplayTemplate,
+  renderDisplayTemplate,
+} from '#lib/templates/displayTemplate.js'
 import {
   researchConfigurationSchema,
   researchLayerOverridesSchema,
@@ -63,6 +71,32 @@ describe('field research configuration', () => {
         titleTemplate: '{{session.code}}',
       }),
     ).toThrow()
+  })
+  it('edits legacy sequences with named digit and padding options', () => {
+    const legacy = parseDisplayTemplate('{{000}}').components[0].expression
+    expect(componentFields(legacy).map(field => [field.label, field.value])).toEqual([
+      ['Number of digits', '3'],
+      ['Zero-padded', 'true'],
+    ])
+    const unpadded = updateComponentField(legacy, [1], 'false')
+    const wider = updateComponentField(unpadded, [0], '5')
+    const source = `{{ ${expressionSource(wider)} }}`
+    expect(source).toBe('{{ sequence(5, false) }}')
+    expect(renderDisplayTemplate(source, { 'session.sequence': 7 })).toBe('7')
+    const padded = `{{ ${expressionSource(updateComponentField(wider, [1], 'true'))} }}`
+    expect(renderDisplayTemplate(padded, { 'session.sequence': 7 })).toBe('00007')
+    expect(renderDisplayTemplate(padded, { 'session.sequence': 123456 })).toBe('123456')
+    expect(
+      researchConfigurationSchema.parse({
+        code: 'ACTUAL',
+        properties: {},
+        titleTemplate: `{{session.code}}-${source}`,
+      }).titleTemplate,
+    ).toContain('sequence(5, false)')
+    expect(updateComponentField(wider, [0], '0')).toEqual(wider)
+    expect(updateComponentField(wider, [0], '21')).toEqual(wider)
+    expect(() => parseDisplayTemplate('{{ sequence(21, true) }}')).toThrow()
+    expect(() => parseDisplayTemplate('{{ sequence(0, false) }}')).toThrow()
   })
   it('migrates the legacy default and enforces only one default layer', () => {
     const db = new DatabaseSync(':memory:')
