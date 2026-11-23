@@ -15,6 +15,7 @@ type FakeMap = {
   stop: ReturnType<typeof vi.fn>
   loaded: () => boolean
   once: ReturnType<typeof vi.fn>
+  on: ReturnType<typeof vi.fn>
   off: ReturnType<typeof vi.fn>
 }
 
@@ -31,6 +32,7 @@ const createFakeMap = (): FakeMap => ({
   stop: vi.fn(),
   loaded: () => true,
   once: vi.fn(),
+  on: vi.fn(),
   off: vi.fn(),
 })
 
@@ -71,6 +73,25 @@ describe('map controller', () => {
     controller.resize()
     controller.stop()
     expect(map).toBeNull()
+  })
+
+  it('removes orientation listeners from their original map after replacement', () => {
+    const original = createFakeMap()
+    let current = original
+    const listener = vi.fn()
+    const controller = createMapController(() => current as never)
+    const unsubscribe = controller.onOrientationChange?.(listener)
+    expect(original.on.mock.calls).toEqual([
+      ['rotate', listener],
+      ['pitch', listener],
+    ])
+    current = createFakeMap()
+    unsubscribe?.()
+    expect(original.off.mock.calls).toEqual([
+      ['rotate', listener],
+      ['pitch', listener],
+    ])
+    expect(current.off).not.toHaveBeenCalled()
   })
 
   it('stops orbit frames when the map is replaced or cleanup runs', () => {
