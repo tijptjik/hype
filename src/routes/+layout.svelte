@@ -460,7 +460,7 @@ watch(
   ($session.isPending || $session.data?.user?.id === DEV_PERSONAS[data.devPersona].id)}
   <div
     role="status"
-    class="fixed bottom-2 left-2 z-[1200] rounded-md border border-amber-900 bg-amber-200 px-3 py-1 text-xs font-semibold text-amber-950 shadow-lg"
+    class="pointer-events-none fixed bottom-2 left-2 z-[1200] rounded-md border border-amber-900 bg-amber-200 px-3 py-1 text-xs font-semibold text-amber-950 shadow-lg"
   >
     Local development: {data.devPersona === 'admin' ? 'Admin' : 'Ordinary user'}
   </div>
