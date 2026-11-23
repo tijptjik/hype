@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   CatalogueArtworkSchema,
+  resolveCatalogueFullLogo,
   resolveCatalogueFormatArtwork,
   resolveCatalogueDisplayLogo,
   catalogueArtworkMeetsMinimum,
@@ -177,5 +178,44 @@ describe('establishment format artwork', () => {
     expect(
       resolveCatalogueMarker(candidate, 'milk', 'light', undefined, 'flavor')?.src,
     ).toBe(asset('2').src)
+  })
+})
+
+describe('full logos and brand marks', () => {
+  const full = { ...asset('2'), composition: 'full-logo' as const }
+  const mark = { ...asset('3'), composition: 'brand-mark' as const }
+  it('keeps a full logo independently retrievable when the mark is preferred', () => {
+    const owner = { artwork: { 'logo-full': full, 'logo-mark': mark } }
+    expect(CatalogueArtworkSchema.safeParse(owner.artwork).success).toBe(true)
+    expect(resolveCatalogueDisplayLogo(owner, 'milk', 'light')).toBe(mark.src)
+    expect(resolveCatalogueMarker(owner, 'milk', 'light')?.src).toBe(mark.src)
+    expect(resolveCatalogueFullLogo(owner)?.src).toBe(full.src)
+    expect(catalogueGeneralLogo(owner)).toBe(mark.src)
+  })
+  it('falls back to the complete logo and ignores unapproved or cropped full slots', () => {
+    const owner = {
+      artwork: {
+        'logo-full': full,
+        'logo-mark': { ...mark, status: 'candidate' as const },
+      },
+    }
+    expect(resolveCatalogueDisplayLogo(owner, 'milk', 'light')).toBe(full.src)
+    expect(resolveCatalogueMarker(owner, 'milk', 'light')).toMatchObject({
+      src: full.src,
+      slot: 'logo-full',
+      whiteRing: true,
+    })
+    expect(resolveCatalogueFullLogo({ artwork: { 'logo-full': mark } })).toBeNull()
+  })
+  it('selects themed complete logos without reusing a mark', () => {
+    const owner = {
+      artwork: {
+        'logo-full': full,
+        'logo-full-dark': { ...full, src: asset('4').src },
+        'logo-mark-milk': mark,
+      },
+    }
+    expect(resolveCatalogueFullLogo(owner, 'milk', 'dark')?.src).toBe(asset('4').src)
+    expect(resolveCatalogueDisplayLogo(owner, 'milk', 'dark')).toBe(mark.src)
   })
 })

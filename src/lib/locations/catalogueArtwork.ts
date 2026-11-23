@@ -1,6 +1,14 @@
 // VALIDATION
 import { z } from 'zod'
 const assetPath = z.string().regex(/^\/api\/identity-catalogue\/logos\/[a-f0-9-]{36}$/)
+/** Independent artwork roles preserve complete logos alongside compact marks. */
+export const CATALOGUE_ARTWORK_ROLES = [
+  { slot: 'logo', label: 'Logo' },
+  { slot: 'logo-full', label: 'Full logo' },
+  { slot: 'logo-mark', label: 'Brand mark' },
+  { slot: 'marker', label: 'Marker' },
+] as const
+
 /** Revisioned logo and marker variants; new artwork is active when saved. */
 export const CatalogueArtworkSchema = z
   .record(
@@ -105,15 +113,19 @@ export function resolveCatalogueMarker(
     const asset = owner.artwork?.[slot]
     if (asset?.status === 'approved') return { ...asset, slot, whiteRing: false }
   }
+  for (const slot of [`logo-mark-${theme}`, `logo-mark-${mode}`, 'logo-mark']) {
+    const asset = owner.artwork?.[slot]
+    if (asset?.status === 'approved') return { ...asset, slot, whiteRing: true }
+  }
   const general = owner.artwork?.logo
-  const src = general?.status === 'approved' ? general.src : (owner.logo ?? genericIcon)
-  return src
-    ? {
-        src,
-        background: general?.status === 'approved' ? general.background : '#ffffff',
-        whiteRing: true,
-        slot: 'logo',
-      }
+  if (general?.status === 'approved')
+    return { ...general, slot: 'logo', whiteRing: true }
+  if (owner.logo)
+    return { src: owner.logo, background: '#ffffff', slot: 'logo', whiteRing: true }
+  const full = resolveCatalogueFullLogo(owner, theme, mode)
+  if (full) return { ...full, whiteRing: true }
+  return genericIcon
+    ? { src: genericIcon, background: '#ffffff', slot: 'logo', whiteRing: true }
     : null
 }
 /** Resolve the general artwork, optionally showing candidates in the catalogue editor.
@@ -127,7 +139,11 @@ export function catalogueGeneralLogo(
   const asset = owner.artwork?.logo
   return asset && (review || asset.status === 'approved')
     ? asset.src
-    : (owner.logo ?? null)
+    : (owner.logo ??
+        (owner.artwork?.['logo-mark']?.status === 'approved'
+          ? owner.artwork['logo-mark'].src
+          : resolveCatalogueFullLogo(owner)?.src) ??
+        null)
 }
 
 /** Select approved artwork for a catalogue card or profile, never research candidates.
@@ -141,16 +157,23 @@ export function resolveCatalogueDisplayLogo(
   mode: 'light' | 'dark',
   themeFallback?: string,
 ): string | null {
-  for (const slot of [`logo-${theme}`, `marker-${theme}`]) {
+  for (const slot of [`logo-mark-${theme}`, `logo-${theme}`, `marker-${theme}`]) {
     const asset = owner.artwork?.[slot]
     if (asset?.status === 'approved') return asset.src
   }
   if (themeFallback) return themeFallback
-  for (const slot of [`logo-${mode}`, `marker-${mode}`, 'marker', 'logo']) {
+  for (const slot of [
+    `logo-mark-${mode}`,
+    `logo-${mode}`,
+    `marker-${mode}`,
+    'marker',
+    'logo-mark',
+    'logo',
+  ]) {
     const asset = owner.artwork?.[slot]
     if (asset?.status === 'approved') return asset.src
   }
-  return owner.logo ?? null
+  return owner.logo ?? resolveCatalogueFullLogo(owner, theme, mode)?.src ?? null
 }
 
 /** Require source resolution rather than the dimensions of an enlarged preview.
@@ -161,4 +184,29 @@ export function catalogueArtworkMeetsMinimum(asset: CatalogueArtwork[string]): b
     asset.format === 'svg' ||
     Math.min(asset.sourceWidth ?? 0, asset.sourceHeight ?? 0) >= 512
   )
+}
+
+/** Resolve a complete logo without substituting a cropped mark.
+ * @param owner Catalogue content. @param theme Effective theme ID.
+ * @param mode Effective luminance. @returns Approved full-logo asset or null.
+ */
+export function resolveCatalogueFullLogo(
+  owner: CatalogueArtworkOwner,
+  theme?: string,
+  mode?: 'light' | 'dark',
+): (ResolvedCatalogueArtwork & CatalogueArtwork[string]) | null {
+  const slots = [
+    ...(theme ? [`logo-full-${theme}`] : []),
+    ...(mode ? [`logo-full-${mode}`] : []),
+    'logo-full',
+    ...(theme ? [`logo-${theme}`] : []),
+    ...(mode ? [`logo-${mode}`] : []),
+    'logo',
+  ]
+  for (const slot of slots) {
+    const asset = owner.artwork?.[slot]
+    if (asset?.status === 'approved' && asset.composition === 'full-logo')
+      return { ...asset, slot, whiteRing: false }
+  }
+  return null
 }

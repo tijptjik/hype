@@ -1,6 +1,7 @@
 <script lang="ts">
 // API
 import { uploadIdentityCatalogueLogo } from '#lib/api/identityCatalogue.remote.js'
+import { CATALOGUE_ARTWORK_ROLES } from '#lib/locations/catalogueArtwork.js'
 // TYPES
 import type { IdentityCatalogueContent } from '#lib/locations/identityCatalogue.js'
 let {
@@ -26,9 +27,7 @@ async function upload(event: Event): Promise<void> {
   failure = ''
   try {
     if (!/^(?:logo|marker)(?:-[a-z0-9]+(?:-[a-z0-9]+)*)?$/.test(slot))
-      throw new Error(
-        'Use logo, marker, marker-dark, marker-light or marker-theme-code.',
-      )
+      throw new Error('Use logo, logo-full, logo-mark, marker, or a theme variant.')
     if (content.artwork?.[slot])
       throw new Error(
         'Remove the existing variant before replacing it; its saved revision remains in history.',
@@ -74,6 +73,11 @@ async function upload(event: Event): Promise<void> {
           background,
           status: 'approved',
           format: 'png',
+          ...(slot === 'logo-full' || slot.startsWith('logo-full-')
+            ? { composition: 'full-logo' as const }
+            : slot === 'logo-mark' || slot.startsWith('logo-mark-')
+              ? { composition: 'brand-mark' as const }
+              : {}),
           sourceWidth,
           sourceHeight,
           ...(sourceUrl ? { sourceUrl } : {}),
@@ -95,12 +99,16 @@ async function upload(event: Event): Promise<void> {
       <article class="border-border rounded-lg border p-3" data-artwork-slot={key}>
         <img
           src={asset.src}
-          alt={key.replaceAll('-', ' ')}
+          alt={CATALOGUE_ARTWORK_ROLES.find(role => role.slot === key)?.label ??
+            key.replaceAll('-', ' ')}
           class="mx-auto size-24 rounded-lg object-contain"
           style:background={asset.background}
         >
         <div class="mt-2 flex flex-wrap items-baseline gap-2">
-          <p class="text-sm font-medium break-words">{key.replaceAll('-', ' ')}</p>
+          <p class="text-sm font-medium break-words">
+            {CATALOGUE_ARTWORK_ROLES.find(role => role.slot === key)?.label ??
+              key.replaceAll('-', ' ')}
+          </p>
           {#if asset.format}
             <span class="text-muted-foreground text-[10px] uppercase"
               >{asset.format}</span
@@ -175,7 +183,8 @@ async function upload(event: Event): Promise<void> {
           class="border-border bg-surface rounded border p-2"
           bind:value={slot}
           disabled={pending}
-          placeholder="marker-null-space"
+          placeholder="logo-full"
+          list="catalogue-artwork-roles"
         ></label
       >
       <label class="grid gap-1 text-xs"
@@ -203,6 +212,11 @@ async function upload(event: Event): Promise<void> {
       >
     </div>
   {/if}
+  <datalist id="catalogue-artwork-roles">
+    {#each CATALOGUE_ARTWORK_ROLES as role (role.slot)}
+      <option value={role.slot}>{role.label}</option>
+    {/each}
+  </datalist>
   {#if failure}
     <p role="alert" class="text-error mt-2 text-sm">{failure}</p>
   {/if}
