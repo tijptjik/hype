@@ -200,6 +200,80 @@ try {
     await expect(
       page.getByRole('button', { name: 'Save connections', exact: true }),
     ).toBeDisabled()
+    // A pair sharing a directed 3D source segment exposes the upstream direction.
+    await page.getByRole('combobox', { name: 'Left floor' }).click()
+    await page.getByRole('option', { name: 'Concourse Level', exact: true }).click()
+    await left.locator('[data-facility="5bb51bb9-0b86-40c8-8b8a-f14daa7886c6"]').focus()
+    await page.keyboard.press('Enter')
+    await page.getByRole('combobox', { name: 'Right floor' }).click()
+    await page.getByRole('option', { name: 'Platform Level', exact: true }).click()
+    await right
+      .locator('[data-facility="5612a492-35a4-46ff-923c-269ed7c206ce"]')
+      .focus()
+    await page.keyboard.press('Enter')
+    await expect(
+      page.getByText('3D network: right to left', { exact: true }),
+    ).toBeVisible()
+    const useSource = page.getByRole('button', {
+      name: 'Use source direction',
+      exact: true,
+    })
+    if (await useSource.count()) await useSource.click()
+    await expect(page.locator('button[data-direction]')).toHaveAttribute(
+      'data-direction',
+      'reverse',
+    )
+    if (
+      await page
+        .getByRole('button', { name: 'Discard unsaved edits', exact: true })
+        .isEnabled()
+    )
+      await page
+        .getByRole('button', { name: 'Discard unsaved edits', exact: true })
+        .click()
+    await expect(left.locator('[data-facility]').first()).toHaveAttribute(
+      'aria-disabled',
+      'false',
+    )
+    await page.getByRole('button', { name: 'Clear selection', exact: true }).click()
+    // Exterior portals use the selected indoor edge and a point in the aligned right view.
+    await left.locator('[data-facility]').first().focus()
+    await page.keyboard.press('Enter')
+    await left.locator('[data-entrance-edge]').first().focus()
+    await page.keyboard.press('Enter')
+    await expect(left.locator('[data-entrance-edge][aria-pressed="true"]')).toHaveCount(
+      1,
+    )
+    await page.getByRole('combobox', { name: 'Right floor' }).click()
+    await page.getByRole('option', { name: 'Outside / street', exact: true }).click()
+    await expect(left.locator('[data-entrance-edge][aria-pressed="true"]')).toHaveCount(
+      1,
+    )
+    await expect(
+      page.getByRole('button', { name: 'Connect selected facilities', exact: true }),
+    ).toHaveCount(0)
+    const exteriorBox = await right.boundingBox()
+    assert(exteriorBox)
+    await page.mouse.click(
+      exteriorBox.x + exteriorBox.width * 0.8,
+      exteriorBox.y + exteriorBox.height * 0.8,
+    )
+    await expect(right.locator('[data-exterior-point]')).toHaveCount(1)
+    await page
+      .getByRole('button', { name: 'Connect selected facilities', exact: true })
+      .click()
+    for (const state of ['forward', 'reverse', 'unknown', 'both']) {
+      await page.locator('button[data-direction]').click()
+      await expect(page.locator('button[data-direction]')).toHaveAttribute(
+        'data-direction',
+        state,
+      )
+      await expect(right.locator('[data-exterior-point]')).toHaveCount(1)
+    }
+    await page.screenshot({ path: `${artifacts}/exterior-connection-editor.png` })
+    await page
+      .getByRole('button', { name: 'Discard unsaved edits', exact: true })
+      .click()
     console.log(
       'PASS: auth, header, explicit pairing, synchronized wheel zoom/pan, persistent tabs, history comparison, page scrolling and discard',
     )

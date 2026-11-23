@@ -34,8 +34,60 @@ try {
     await expect(page).toHaveTitle(`ᴰᴱⱽ ${name} · ${label} · HYPE.HK`)
     await index.getByRole('button', { name: 'All', exact: true }).click()
     await expect(page).toHaveTitle(`ᴰᴱⱽ ${name} · HYPE.HK`)
+    if (slug === 'kennedy-town-mtr') {
+      await expect(
+        page.locator('[data-connector-relief][data-source-network-edge]'),
+      ).toHaveCount(41)
+      await expect(
+        page.locator('[data-connector-relief][data-exterior-continuation="true"]'),
+      ).toHaveCount(7)
+      assert((await page.locator('[data-connector-recess-face]').count()) > 0)
+      const exterior = page.locator(
+        '[data-connector-relief][data-exterior-continuation="true"]',
+      )
+      for (const item of await exterior.all()) {
+        assert.equal(await item.getAttribute('clip-path'), null)
+        await expect(item.locator('[data-connector-recess-face]')).toHaveCount(0)
+      }
+      for (const floorIndex of [1, 2, 3, 4]) {
+        const floor = index.getByRole('button').nth(floorIndex)
+        await floor.click()
+        await page.waitForTimeout(900)
+        const camera = page.getByRole('application', {
+          name: 'Station plan controls',
+          exact: true,
+        })
+        await camera.focus()
+        await camera.press('0')
+        for (let i = 0; i < 8; i++) await camera.press('ArrowUp')
+        await page.waitForTimeout(700)
+        await page.screenshot({
+          path: `${artifacts}/kennedy-town-exit-${floorIndex}.png`,
+        })
+      }
+      await index.getByRole('button', { name: 'All', exact: true }).click()
+      console.log(
+        'Kennedy Town source-backed reliefs:',
+        await page.locator('[data-connector-relief][data-source-network-edge]').count(),
+      )
+    }
     await page.screenshot({ path: `${artifacts}/${slug}-title.png` })
   }
+  await page.goto(`${origin}/admin/locations/wY-1kSY7x1kL?panel=settings`)
+  const scene = page.locator('[data-location-indoor-map] [data-station-scene]')
+  await expect(scene).toBeVisible({ timeout: 120000 })
+  await page.screenshot({ path: `${artifacts}/kennedy-town-admin.png` })
+  const controls = page.getByRole('application', {
+    name: 'Station plan controls',
+    exact: true,
+  })
+  const bearing = Number(await scene.getAttribute('data-camera-bearing'))
+  await controls.focus()
+  await controls.press('ArrowRight')
+  await expect
+    .poll(async () => Number(await scene.getAttribute('data-camera-bearing')))
+    .toBeCloseTo(bearing + 10, 1)
+  await page.screenshot({ path: `${artifacts}/kennedy-town-admin-rotated.png` })
   console.log(
     'PASS: public premises titles, development prefix, selected floor and all-level reset',
   )
