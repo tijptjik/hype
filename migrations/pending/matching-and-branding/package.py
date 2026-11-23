@@ -12,6 +12,7 @@ import sqlite3
 from pathlib import Path
 
 from scope import FILTERS, initialize_scope, layout, read_db, records
+from production_baseline import ProductionAncestry, REFERENCE
 
 ACTOR = "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM"
 STAGE = "_matchingBrandingReleaseRows"
@@ -447,6 +448,12 @@ def compare(directory, manifest, db, conflict_path=None):
         raise ValueError("Target contributor identity differs")
     pending, table_ops, conflicts = [], {}, []
     seeds = release_seed(db)
+    ancestry = None
+    if (directory / REFERENCE).is_file() and db.execute(
+        """SELECT 1 FROM featureLocationHistory h JOIN breadlineImportFeature b
+           ON b.featureId=h.featureId WHERE h.action='baseline' AND h.version='initial' LIMIT 1"""
+    ).fetchone():
+        ancestry = ProductionAncestry(directory, manifest, db, stream)
     for entry in stream(directory, manifest):
         if isinstance(entry, dict):
             table, cols, keys = entry["table"], entry["cols"], tuple(entry["keys"])
@@ -466,6 +473,11 @@ def compare(directory, manifest, db, conflict_path=None):
         before, after = entry
         if after == "=":
             after = before
+        if ancestry:
+            pair = ancestry.adapt(table, before, after)
+            if pair is None:
+                continue
+            before, after = pair
         identity = key(after or before, keys)
         current = existing.get(identity)
         if current == after or seeded_equal(current, after, table):
