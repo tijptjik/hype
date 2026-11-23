@@ -6,6 +6,10 @@ import { resolve } from 'node:path'
 import { createHash } from 'node:crypto'
 // CONVERSION
 import {
+  verifyPublishedSubmission,
+  type PublishedSubmission,
+} from '../../revisions/production/published-submissions'
+import {
   prepareLegacyDraftConversion,
   applyLegacyDraftConversion,
 } from './convert-drafts'
@@ -70,7 +74,10 @@ function insert(db: Database, table: string, row: Row): void {
 export async function rehearseFeatureLifecycle(
   sourcePath: string,
   destinationPath: string,
-  options: { cleanupDrafts?: boolean } = {},
+  options: {
+    cleanupDrafts?: boolean
+    publishedSubmissions?: readonly PublishedSubmission[]
+  } = {},
 ): Promise<Record<string, unknown>> {
   if (resolve(sourcePath) === resolve(destinationPath))
     throw new Error('Rehearsal requires a separate destination')
@@ -145,6 +152,32 @@ export async function rehearseFeatureLifecycle(
       const parent = transfers.get(String(row.transferId))
       if (!parent) throw new Error('Task upload transfer has no transfer evidence')
       preserve(String(parent.changeSetId), 'taskUploadTransfers', row)
+    }
+    // Link the approved creation task to its submitted photo proposal on the existing published identity.
+    const publishedTaskProposals = new Map<string, string>()
+    for (const entry of options.publishedSubmissions ?? []) {
+      verifyPublishedSubmission(db, entry)
+      const uploads = conversion.uploads.filter(
+        row =>
+          row.featureId === entry.featureId &&
+          row.imageId === entry.imageId &&
+          row.taskIds === JSON.stringify([entry.taskId]),
+      )
+      const proposal = conversion.proposals.find(
+        row => row.id === uploads[0]?.proposalId,
+      )
+      if (
+        uploads.length !== 1 ||
+        !proposal ||
+        proposal.status !== 'submitted' ||
+        proposal.version !== uploads[0].proposalVersion ||
+        proposal.contributorId !== uploads[0].actorId
+      )
+        throw new Error(
+          'Published task lacks exact submitted upload proposal: ' + entry.taskId,
+        )
+      proposal.creationScope = JSON.stringify({ legacyPublishedTaskId: entry.taskId })
+      publishedTaskProposals.set(entry.taskId, String(proposal.id))
     }
     const migrationId = crypto.randomUUID(),
       now = new Date().toISOString()
@@ -348,6 +381,8 @@ export async function rehearseFeatureLifecycle(
           `INSERT INTO task_lifecycle_new (${taskFields.map(identifier).join(',')}) SELECT ${taskFields.map(identifier).join(',')} FROM task`,
         )
       db.exec('DROP TABLE task; ALTER TABLE task_lifecycle_new RENAME TO task')
+      for (const [taskId, proposalId] of publishedTaskProposals)
+        db.query('UPDATE task SET proposalId=? WHERE id=?').run(proposalId, taskId)
       for (const initial of original.featureInitialRevision)
         db.query(
           "UPDATE task SET proposalId=? WHERE featureId=? AND type='newFeature'",
