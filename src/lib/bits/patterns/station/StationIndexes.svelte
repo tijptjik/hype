@@ -203,7 +203,7 @@ function animateEntriesHeight(node: HTMLDivElement): { destroy: () => void } {
               onclick={() => station.selectIndex('level-change')}
               disabled={!indexMatches(legend.entries, 'level-change').length}
             >
-              <span class="w-7 shrink-0 text-center text-2xl" aria-hidden="true">↕</span
+              <span class="w-7 shrink-0 text-center text-lg" aria-hidden="true">↕</span
               >Level change
             </button>
           </li>

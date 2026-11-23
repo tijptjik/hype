@@ -41,7 +41,7 @@ const pictograms: Record<string, Omit<FacilitySymbol, 'color' | 'background'>> =
   },
   elevator: {
     label: 'Lift',
-    path: 'M5 8h14v14H5zM10 12v6m4-6v6M5 5V1m-2 2 2-2 2 2M19 1v4m-2-2 2 2 2-2',
+    path: 'M4 8h16v14H4zM12 8v14M8 5V1M6 3l2-2 2 2M16 1v4m-2-2 2 2 2-2M8 12h.01M16 12h.01M8 15v4m8-4v4',
   },
   escalator: {
     label: 'Escalator',

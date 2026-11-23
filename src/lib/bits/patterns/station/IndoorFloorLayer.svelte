@@ -557,6 +557,41 @@ const facilityMarkers = $derived.by(() => {
       {/each}
     </g>
   {/if}
+  {#if !exploded}
+    <!-- Every lift shaft gets a screen-aligned symbol on its own floor. -->
+    {#each units.filter(
+      unit => facilityCategory(value(unit.properties, 'unit_category')) === 'elevator',
+    ) as unit}
+      {@const symbol = facilitySymbol('elevator')}
+      {#each polygonLabels(unit, point => projection.project(point, id)) as placement}
+        {@const size = 24 * textScale}
+        <g
+          data-elevator-access={value(unit.properties, 'unit_id')}
+          aria-label="Lift access"
+          pointer-events="none"
+          transform={`translate(${placement.point[0] - size / 2} ${placement.point[1] - size / 2}) scale(${size / 24})`}
+        >
+          <title>Lift access</title>
+          <path
+            d={symbol.path}
+            fill="none"
+            stroke="var(--station-paper)"
+            stroke-width="4.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+          <path
+            d={symbol.path}
+            fill="none"
+            stroke="var(--station-ink)"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </g>
+      {/each}
+    {/each}
+  {/if}
   <!-- One floor target is enough in overview; detailed targets stay above artwork so logos remain selectable. -->
   {#each exploded
     ? [level]
