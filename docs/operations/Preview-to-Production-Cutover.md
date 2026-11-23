@@ -28,11 +28,24 @@ accepted Feature revision heads exist. A separate Location rehearsal verified 1,
 splits, with original Feature rows and effective values preserved, one history entry per
 split, and a clean replay. All 330 existing links were retained.
 
-Of 2,112 referenced images, 2,105 passed the original and metadata checks. Seven
-originals matched the retained file hashes but lacked their exact versioned metadata.
-The local rehearsal stopped before revision enrollment. Production remains on its
-pre-cutover schema. The run directory contains the backup verification, affected-image
-readback and aggregate initiation receipt.
+The local rehearsal enrolled all 2,112 referenced images. Seven originals had verified
+bytes and lacked their versioned metadata. The operator approved a marked recovery
+baseline for each. The rehearsal matched all seven recovered rows to their approved
+image IDs, original hashes and metadata versions. All 16 focused media tests passed.
+
+Feature enrollment reached 1,668 of 1,670 on the same copy. Two published Independent
+Bookstores Features each have an open, submitted creation task and one submitted photo
+already in the gallery. One Feature is archived and the other is active. Neither task
+has a recorded review decision. Enrollment stopped before lifecycle conversion. The
+normalized source projections matched, SQLite integrity passed and the foreign-key check
+found zero violations. The private run directory retains the task IDs, visibility flags
+and recovery receipts under `approved-first/`.
+
+All 42 Features selected by `0207` were classified as intangible and excluded from the
+1,018 Location splits. The ten local Revealing Arrow objects matched the package hashes
+and sizes. The matching and branding package's three input files and 769 local media
+objects also matched their manifests. Production object verification and a complete
+rehearsal from the original export through the deployment entry point remain pending.
 
 ## 1. Freeze the candidate and control deployment
 
