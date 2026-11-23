@@ -344,8 +344,7 @@
     position: relative;
     z-index: 19;
     flex: 0 0 auto;
-    transition-property: transform, opacity;
-    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: transform, opacity;
+    /* The shell alone collapses; fading/translating the bar exposes the background. */
+    background: var(--color-panel);
   }
 }

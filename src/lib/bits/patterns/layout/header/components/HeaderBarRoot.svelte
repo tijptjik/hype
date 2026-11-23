@@ -24,14 +24,10 @@ const shellClass = $derived(
 const shellStyle = $derived(
   `--bits-pattern-header-control-bar-height: ${height}; transition-duration: ${transitionDurationMs}ms;`,
 )
-
-const barStyle = $derived(
-  `opacity: ${isExpanded ? 1 : 0}; transform: translateY(${isExpanded ? 0 : -12}px); transition-duration: ${transitionDurationMs}ms;`,
-)
 </script>
 
 <div class={shellClass} style={shellStyle} {...restProps}>
-  <div class="bits-theme bits-pattern-header__control-bar" style={barStyle}>
+  <div class="bits-theme bits-pattern-header__control-bar">
     {@render children?.()}
   </div>
 </div>
