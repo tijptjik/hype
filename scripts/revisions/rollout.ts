@@ -19,6 +19,10 @@ import {
   releaseSourceHash,
   releaseSourceFiles,
 } from './production/prepare'
+import {
+  matchingBrandingHash,
+  retainMatchingBranding,
+} from './production/matching-branding'
 import { digest } from './production/contract'
 import { checkpoint, verifyLocalBackup } from './production/recovery'
 import { readQueues, setQueueMaintenance } from './production/queues'
@@ -99,16 +103,19 @@ export async function main(args: string[]): Promise<void> {
   let apply = false,
     abort = false,
     localBackup = false,
+    curationInput: string | undefined,
     directory: string | undefined
   while (args.length) {
     const arg = args.shift()
     if (arg === '--apply') apply = true
     else if (arg === '--abort-before-migration') abort = true
     else if (arg === '--local-backup') localBackup = true
+    else if (arg === '--curation-package' && args[0])
+      curationInput = resolve(args.shift()!)
     else if (arg === '--run-dir' && args[0]) directory = resolve(args.shift()!)
     else
       throw new Error(
-        'Usage: rollout.ts production|preview [--apply] [--local-backup] [--run-dir DIRECTORY]',
+        'Usage: rollout.ts production|preview [--apply] [--local-backup] [--run-dir DIRECTORY] [--curation-package DIRECTORY]',
       )
   }
   if (abort && (!directory || apply))
@@ -157,6 +164,13 @@ export async function main(args: string[]): Promise<void> {
   if (!/^(initial|fenced-[0-9]+|migrated-[0-9]+)$/.test(selected))
     throw new Error('Invalid retained plan directory')
   let planPath = join(directory, selected, 'release', 'plan.json')
+  if (
+    curationInput &&
+    (environment !== 'production' ||
+      (existsSync(planPath) && !existsSync(join(directory, 'matching-and-branding'))))
+  )
+    throw new Error('Select production curation before preparing this run')
+  const curation = abort ? undefined : retainMatchingBranding(directory, curationInput)
   const remoteConfig = join(directory, 'remote.json')
   writeFileSync(
     remoteConfig,
@@ -233,7 +247,7 @@ export async function main(args: string[]): Promise<void> {
       join(snapshotDirectory, 'release'),
       target,
       undefined,
-      { featureLifecycle: 'current' },
+      { featureLifecycle: 'current', matchingBranding: curation },
     )
   }
   if (!existsSync(planPath)) await snapshot(join(directory, selected))
@@ -242,9 +256,25 @@ export async function main(args: string[]): Promise<void> {
     throw new Error(
       'Source/target differs from the retained release; do not resume with different code',
     )
+  if (
+    !abort &&
+    plan.matchingBrandingHash !==
+      (curation ? matchingBrandingHash(curation) : undefined)
+  )
+    throw new Error('Retained curation selection differs from this plan')
   let release = digest(plan)
   console.info(`Prepared revision deployment ${release}: ${directory}`)
   if (!apply && !abort) return
+  if (apply && curation)
+    await run(
+      [
+        'bun',
+        'migrations/pending/matching-and-branding/transfer-media.ts',
+        curation,
+        '--verify-production',
+      ],
+      join(directory, 'curation-media.log'),
+    )
   // Build before pausing; retries reuse the exact retained bundle, never silently rebuild it.
   const artifact = join(directory, 'application'),
     artifactReceipt = join(directory, 'application.json')

@@ -8,6 +8,8 @@ export type LegacyMediaOptions = {
   baselineOnly?: boolean
   /** Explicit user-approved reason; permits empty metadata only for missing exact sidecars. */
   emptyMetadataReason?: string
+  /** Exact locator digests and original file hashes approved for this release. */
+  approvedImages?: Readonly<Record<string, { contentHash: string; reason: string }>>
 }
 
 /** Validates an explicit repair cohort before fetching or registering any image.

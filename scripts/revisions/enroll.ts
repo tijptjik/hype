@@ -8,6 +8,10 @@ import { sql } from 'drizzle-orm'
 import { openSqliteDomain } from '../locations/lib/sqlite-domain'
 import { mediaCacheKey } from './cache-media'
 import { scopedMediaRows, validateMediaScope } from './media-scope'
+import {
+  verifyPublishedSubmission,
+  type PublishedSubmission,
+} from './production/published-submissions'
 import { retainedMetadata, verifiedRetainedPin } from './retained-media'
 import { registerImageRevisionBaseline } from '../../src/lib/db/services/imageRevisionBaseline'
 import { readFeatureRevisionSource } from '../../src/lib/db/services/featureRevisionSource'
@@ -143,6 +147,7 @@ export function projectionHashes(domain: Domain): Record<string, string> {
 
 /** Enrolls one complete legacy Feature and its still-pending task evidence.
  * @param domain Offline locked database. @param id Identity to enroll. @param pins Verified exact image revisions.
+ * @param approved Exact published submission retained for staff review, if applicable.
  * @returns Nothing; any failure rolls back the enclosing per-Feature transaction.
  * @remarks Completed tasks and all normalized projections remain unchanged. Ambiguous ownership
  * blocks enrollment rather than manufacturing contributor attribution or publishing pending photos.
@@ -151,6 +156,7 @@ async function enrollFeature(
   domain: Domain,
   id: string,
   pins: Map<string, Pin>,
+  approved?: PublishedSubmission,
 ): Promise<void> {
   const { db, sqlite } = domain
   const source = await readFeatureRevisionSource(db, id, sql`1`)
@@ -163,7 +169,8 @@ async function enrollFeature(
     .all(id) as PendingTask[]
   const initialTasks = tasks.filter(task => task.type === 'newFeature')
   const published = Boolean(parsed.record.localIsPublished ?? parsed.record.isPublished)
-  if (initialTasks.length > 1 || (initialTasks.length && published))
+  if (approved) verifyPublishedSubmission(sqlite, approved)
+  if (initialTasks.length > 1 || (initialTasks.length && published && !approved))
     throw new Error('Ambiguous initial contribution state')
   const photos = sqlite
     .query(
@@ -242,7 +249,9 @@ async function enrollFeature(
       caption: {},
       alt: {},
     }
-    candidate.gallery.entries[photo.id] = entry
+    // The submitted photo is already in this approved published gallery with its exact presentation.
+    if (!approved || photo.id !== approved.imageId)
+      candidate.gallery.entries[photo.id] = entry
     if (!candidate.gallery.order.includes(photo.id))
       candidate.gallery.order.push(photo.id)
     const proposal = await prepareFeatureRevisionProposal(db, {
@@ -321,7 +330,9 @@ export async function enrollLegacyRevisions(
   cache: string,
   output: string,
   transaction?: Domain,
-  options: LegacyMediaOptions = {},
+  options: LegacyMediaOptions & {
+    publishedSubmissions?: readonly PublishedSubmission[]
+  } = {},
 ): Promise<{ images: number; features: number; blocked: number }> {
   process.umask(0o077)
   const domain = transaction ?? openSqliteDomain(database),
@@ -342,6 +353,8 @@ export async function enrollLegacyRevisions(
           evidence = JSON.parse(
             readFileSync(base + '.receipt.json', 'utf8'),
           ) as MediaEvidence
+        const approval = options.approvedImages?.[mediaCacheKey(row)]
+        const recoveryReason = approval?.reason ?? options.emptyMetadataReason
         if (
           evidence.status !== 'verified' ||
           JSON.stringify(evidence.locator) !== JSON.stringify(row)
@@ -349,8 +362,9 @@ export async function enrollLegacyRevisions(
           throw new Error(evidence.reason ?? 'Exact evidence unavailable')
         if (
           evidence.metadataRecovery &&
-          (!options.emptyMetadataReason ||
-            evidence.metadataRecovery.reason !== options.emptyMetadataReason)
+          (!recoveryReason ||
+            evidence.metadataRecovery.reason !== recoveryReason ||
+            (approval && evidence.contentHash !== approval.contentHash))
         )
           throw new Error(
             'Empty metadata evidence requires explicit recovery authorization',
@@ -425,7 +439,8 @@ export async function enrollLegacyRevisions(
       const nested = domain.sqlite.inTransaction
       domain.sqlite.exec(nested ? 'SAVEPOINT feature_enrollment' : 'BEGIN IMMEDIATE')
       try {
-        await enrollFeature(domain, id, pins)
+        const approved = options.publishedSubmissions?.find(row => row.featureId === id)
+        await enrollFeature(domain, id, pins, approved)
         domain.sqlite.exec(nested ? 'RELEASE feature_enrollment' : 'COMMIT')
         features++
       } catch (error) {

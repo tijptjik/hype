@@ -114,6 +114,8 @@ export async function cacheRevisionMedia(
       while (cursor < rows.length) {
         const row = rows[cursor++],
           base = join(directory, mediaCacheKey(row))
+        const approval = options.approvedImages?.[mediaCacheKey(row)]
+        const recoveryReason = approval?.reason ?? options.emptyMetadataReason
         let result: MediaEvidence = { locator: row, status: 'blocked' }
         try {
           if (existsSync(base + '.receipt.json')) {
@@ -127,7 +129,8 @@ export async function cacheRevisionMedia(
                   retained.get(row.id)?.imageRevisionId) &&
               JSON.stringify(prior.locator) === JSON.stringify(row) &&
               (!prior.metadataRecovery ||
-                prior.metadataRecovery.reason === options.emptyMetadataReason) &&
+                (prior.metadataRecovery.reason === recoveryReason &&
+                  (!approval || prior.contentHash === approval.contentHash))) &&
               existsSync(base + '.image') &&
               existsSync(base + '.json')
             ) {
@@ -165,11 +168,7 @@ export async function cacheRevisionMedia(
             metadataResponse.status === 404 ? retained.get(row.id) : undefined
           const { bytes: metadataBytes, recovery } = source
             ? { bytes: new TextEncoder().encode(source.metadata), recovery: undefined }
-            : await readMetadataEvidence(
-                metadataResponse,
-                row.version!,
-                options.emptyMetadataReason,
-              )
+            : await readMetadataEvidence(metadataResponse, row.version!, recoveryReason)
           const metadata = ImageMetadataFullSchema.parse(
             JSON.parse(new TextDecoder().decode(metadataBytes)),
           )
@@ -184,9 +183,12 @@ export async function cacheRevisionMedia(
             throw new Error('Unsupported original media')
           const contentHash = createHash('sha256').update(bytes).digest('hex')
           if (
-            [row.contentHash, metadata.contentHash, source?.contentHash].some(
-              hash => hash && hash.toLowerCase() !== contentHash,
-            )
+            [
+              row.contentHash,
+              metadata.contentHash,
+              source?.contentHash,
+              recovery && approval?.contentHash,
+            ].some(hash => hash && hash.toLowerCase() !== contentHash)
           )
             throw new Error('Recorded hash differs from original bytes')
           writeFileSync(base + '.image', bytes, { mode: 0o600 })

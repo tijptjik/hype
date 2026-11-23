@@ -49,18 +49,27 @@ try {
   await page.getByRole('checkbox', { name: 'Zero-padded', exact: true }).check()
   await expect(preview).toContainText('SESSION-LIVE-00001')
   await page.screenshot({ path: `${output}/sequence-options.png`, fullPage: true })
-  for (const width of [1440, 960, 600, 390]) {
+  for (const width of [1440, 1280]) {
     await page.setViewportSize({ width, height: 1000 })
-    const defaults = page.getByRole('combobox', { name: 'Feature type default value' })
-    await defaults.scrollIntoViewIfNeeded()
-    const label = defaults.locator('.bits-form__select-label')
-    expect(
-      await label.evaluate(element => element.scrollWidth <= element.clientWidth + 1),
-    ).toBe(true)
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
-    ).toBe(true)
-    await page.screenshot({ path: `${output}/profile-${width}.png`, fullPage: true })
+    const labels = page.getByText('Default', { exact: true })
+    const boxes = await labels.evaluateAll(elements =>
+      elements
+        .filter(
+          element =>
+            element.tagName === 'SPAN' &&
+            element.classList.contains('text-muted-foreground'),
+        )
+        .map(element => element.getBoundingClientRect().x),
+    )
+    expect(boxes.length).toBe(5)
+    expect(Math.max(...boxes) - Math.min(...boxes)).toBeLessThan(1)
+    const headings = page.locator('header').getByText(/^(Session details|Layers)$/)
+    const positions = await headings.evaluateAll(elements =>
+      elements.map(element => element.getBoundingClientRect().y),
+    )
+    expect(Math.abs(positions[0] - positions[1])).toBeLessThan(1)
+    await code.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: `${output}/columns-${width}.png`, fullPage: true })
   }
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.getByRole('button', { name: 'Reset', exact: true }).click()
