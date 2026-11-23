@@ -28,6 +28,10 @@ try {
     await page.goto(`${origin}/admin/catalogue?kind=${kind}`, { timeout: 120000 })
     await expect(page.getByText('Archived', { exact: true })).toHaveCount(0)
     await page.getByRole('button', { name: 'Show filters', exact: true }).click()
+    if (!(await page.getByText('Archived', { exact: true }).isVisible())) {
+      await page.getByRole('button', { name: 'Image quality', exact: true }).click()
+      await page.getByRole('button', { name: 'Status', exact: true }).click()
+    }
     await expect(page.getByText('Archived', { exact: true })).toBeVisible({
       timeout: 120000,
     })

@@ -7,6 +7,8 @@ import CatalogueQualityFilters from './CatalogueQualityFilters.svelte'
 // ICONS
 import OriginIcon from 'virtual:icons/lucide/map-pin'
 import ImageIcon from 'virtual:icons/lucide/image'
+import StatusIcon from 'virtual:icons/lucide/list-filter'
+import TriStateToggle from '../resourceControlBar/components/ResourceControlBarTriStateToggle.svelte'
 // TYPES
 import type {
   LogoQualityFilters,
@@ -14,6 +16,12 @@ import type {
 } from '#lib/locations/catalogueQuality'
 let {
   quality,
+  isArchived = false,
+  independent = null,
+  showArchive = false,
+  showIndependent = false,
+  onArchive,
+  onIndependent,
   origin,
   origins,
   count,
@@ -22,6 +30,12 @@ let {
   onOrigin,
   onReset,
 }: {
+  isArchived?: boolean | null
+  independent?: boolean | null
+  showArchive?: boolean
+  showIndependent?: boolean
+  onArchive?: (value: boolean | null) => void
+  onIndependent?: (value: boolean | null) => void
   quality: LogoQualityFilters
   origin: string
   origins: string[]
@@ -38,36 +52,72 @@ const originLabels: Record<string, string> = {
   'brand:breadlineBrand': 'Breadline',
   'brand:source-name': 'Imported by name',
 }
-let section = $state<'origin' | 'quality'>('quality')
+let section = $state<'origin' | 'quality' | 'status'>('quality')
+const sections = $derived([
+  { key: 'origin' as const, label: 'Origin', icon: OriginIcon },
+  { key: 'quality' as const, label: 'Image quality', icon: ImageIcon },
+  ...(showArchive || showIndependent
+    ? [{ key: 'status' as const, label: 'Status', icon: StatusIcon }]
+    : []),
+])
+const activeSection = $derived(
+  sections.find(item => item.key === section) ?? sections[1],
+)
 </script>
 <Root
-  filterLabel={section === 'origin' ? 'Origin' : 'Image quality'}
-  filterIcon={section === 'origin' ? OriginIcon : ImageIcon}
+  filterLabel={activeSection.label}
+  filterIcon={activeSection.icon}
   hasActiveSection
   showSort={false}
   {count}
   countLoading={loading}
-  resetDisabled={!origin && !Object.keys(quality).length}
+  resetDisabled={!origin &&
+    !Object.keys(quality).length &&
+    isArchived === false &&
+    independent === null}
   {onReset}
   class="[container-type:inline-size]"
 >
   {#snippet filterMenuContent({ closeMenu })}
-    <Button
-      text={section === 'origin' ? 'Image quality' : 'Origin'}
-      iconComponent={section === 'origin' ? ImageIcon : OriginIcon}
-      style="transparent"
-      size="sm"
-      onClick={() => {
-        section = section === 'origin' ? 'quality' : 'origin'
-        closeMenu()
-      }}
-    />
+    {#each sections.filter(item => item.key !== activeSection.key) as item (item.key)}
+      <Button
+        text={item.label}
+        iconComponent={item.icon}
+        style="transparent"
+        size="sm"
+        onClick={() => {
+          section = item.key
+          closeMenu()
+        }}
+      />
+    {/each}
   {/snippet}
   {#snippet filterActiveContent()}
     <div
       class="flex h-16 max-w-[calc(100cqw-18rem)] items-center gap-6 overflow-x-auto px-4"
     >
-      {#if section === 'quality'}
+      {#if activeSection.key === 'status'}
+        {#if showArchive}
+          <TriStateToggle
+            label="Archived"
+            alwaysShowLabels
+            falseLabel="Not"
+            trueLabel="Is"
+            currentValue={isArchived}
+            onCheckedChange={value => onArchive?.(value)}
+          />
+        {/if}
+        {#if showIndependent}
+          <TriStateToggle
+            label="Independent"
+            alwaysShowLabels
+            falseLabel="No"
+            trueLabel="Yes"
+            currentValue={independent}
+            onCheckedChange={value => onIndependent?.(value)}
+          />
+        {/if}
+      {:else if activeSection.key === 'quality'}
         <CatalogueQualityFilters value={quality} onChange={onQuality} />
       {:else}
         <div class="w-72 shrink-0">

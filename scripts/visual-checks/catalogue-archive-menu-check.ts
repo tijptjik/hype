@@ -36,7 +36,7 @@ try {
     await trigger.click()
     await expect(
       page.getByRole('menuitem', { name: 'Delete', exact: true }),
-    ).toBeVisible()
+    ).toBeEnabled()
     await page.screenshot({
       path: resolve(artifacts, `catalogue-archive-${kind}.png`),
       fullPage: true,

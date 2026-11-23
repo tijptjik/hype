@@ -479,7 +479,7 @@ $effect(() => {
           {
             label: selected.isArchived ? m.catalogue_restore() : m.forms__delete(),
             icon: selected.isArchived ? RestoreIcon : DeleteIcon,
-            disabled: busy || isEditing,
+            disabled: busy || (isEditing && dirty),
             class: 'bits-pattern-header__title-menu-item--danger',
             iconClass: selected.isArchived
               ? undefined
@@ -790,7 +790,7 @@ function reset(): void {
  * @returns Completion after refreshing the detail and active catalogue list.
  */
 async function toggleArchive(): Promise<void> {
-  if (!selected || busy || isEditing || !admin.view.isSuperAdmin()) return
+  if (!selected || busy || (isEditing && dirty) || !admin.view.isSuperAdmin()) return
   busy = true
   try {
     const record = await archiveIdentityCatalogue({
@@ -1081,6 +1081,12 @@ function openRecord(record: IdentityCatalogueRecord | null): void {
   {#if !detail}
     {#if filtersVisible}
       <CatalogueFilterBar
+        {isArchived}
+        {independent}
+        showArchive={admin.view.isSuperAdmin()}
+        showIndependent={kind === 'brand'}
+        onArchive={value => (isArchived = value)}
+        onIndependent={value => (independent = value)}
         quality={qualityFilters}
         origin={catalogueOrigin}
         origins={catalogueOrigins}
