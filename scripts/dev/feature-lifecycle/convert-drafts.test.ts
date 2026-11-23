@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { featureRevisionContentFixture } from '../../../src/tests/fixtures/featureRevisionContent'
@@ -197,7 +197,12 @@ test('the managed planner detects current lifecycle storage and verifies its cle
     d.sqlite.exec(
       'CREATE TABLE resourceLogoImageHead(imageId TEXT); CREATE TABLE propertyCatalogRevisionHead(scope TEXT,resourceId TEXT); CREATE TABLE propertyCatalogRevisionWrite(id TEXT); CREATE TABLE featureRevisionWriteScope(featureId TEXT); CREATE TABLE d1_migrations(name TEXT)',
     )
-    // This planner test represents an enrolled lifecycle database awaiting the additive idle policy.
+    // Model a converted target missing both the compatibility policy and a later numbered migration.
+    const retireRecorder = '0264_remove_web_field_recorder.sql'
+    d.sqlite.exec('CREATE TABLE fieldRecorderConfig(id TEXT)')
+    for (const name of readdirSync('migrations').filter(name => name.endsWith('.sql')))
+      if (!['0203_revision_edit_windows.sql', retireRecorder].includes(name))
+        d.sqlite.query('INSERT INTO d1_migrations(name) VALUES (?)').run(name)
     for (const resource of ['organisation', 'project', 'layer', 'hub']) {
       d.sqlite.exec(`CREATE TABLE ${resource}Revision(id TEXT PRIMARY KEY,${resource}Id TEXT,previousRevisionId TEXT,changeSetId TEXT,content TEXT,schemaVersion INTEGER);
         ALTER TABLE ${resource}RevisionHead ADD COLUMN currentRevisionId TEXT;
@@ -246,9 +251,15 @@ test('the managed planner detects current lifecycle storage and verifies its cle
         d.sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} TEXT`)
     const plan = await prepareRelease(path, join(root, 'release'), 'local:test')
     expect(plan.featureLifecycle).toBe('current')
-    expect(plan.groups).toHaveLength(2)
+    expect(plan.groups).toHaveLength(3)
+    expect(plan.groups[1].label).toBe(retireRecorder)
     await pause(d.binding, plan)
     await applyGroups(d.binding, plan)
+    expect(
+      d.sqlite
+        .query("SELECT 1 FROM sqlite_schema WHERE name='fieldRecorderConfig'")
+        .get(),
+    ).toBeNull()
     await markVerified(d.binding, plan)
     expect(
       d.sqlite.query('SELECT phase,writable FROM _revisionDeployment').get(),
