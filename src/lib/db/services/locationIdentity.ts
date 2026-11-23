@@ -182,8 +182,7 @@ export async function acceptLocationIdentity(
       (SELECT coalesce(max(version),0)+1 FROM locationRevisionContent AS locationRevision WHERE locationId=${input.locationId}),
       'saanseoi',${projection.ssId},${projection.apiVersion},${projection.releaseId},
       ${projection.snapshotId},${prepared.contentHash},${JSON.stringify(prepared.rawSource)},
-      ${serializeLocationFacts(prepared.facts, 'establishment')},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard} AND ${revisionGuard}`)
-      .onConflictDoNothing({ target: locationRevision.id }),
+      ${serializeLocationFacts(prepared.facts, 'establishment')},strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard} AND ${revisionGuard}`),
     db
       .insert(locationIdentityHistory)
       .select(sql`SELECT ${historyId},${input.locationId},

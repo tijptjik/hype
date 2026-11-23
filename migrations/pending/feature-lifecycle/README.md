@@ -89,3 +89,10 @@ verification, a clean release typecheck and the final deployment rehearsal. This
 directory remains outside numbered migrations: the managed planner owns the schema
 transition and enforces baseline completeness. No successful local rehearsal authorizes
 live application.
+
+The identity-resolution path needs the computed-title exception retained from migration 0220.
+The converted `target.sql` guard permits only the exact computed title to refresh
+without an authored revision; authored fields and translation acceptance metadata remain
+protected. `derived-title-guard.sql` repairs an already-converted local database and
+must be rehearsed against its current schema before use. Identity acceptance writes the
+`locationRevisionContent` view without UPSERT, which SQLite does not support on views.
