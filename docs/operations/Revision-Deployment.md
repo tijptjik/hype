@@ -8,14 +8,23 @@ Development database rebuilds are a separate operation.
 
 ## Prerequisites
 
-Use Bun, Node, Python 3, tar, GnuPG and the locked dependencies. Deployment requires
-`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `R2_S3_ACCESS_KEY_ID`,
-`R2_S3_SECRET_ACCESS_KEY`, and `REVISION_RECOVERY_PUBLIC_KEY`. The latter contains one
-ASCII-armored GPG public encryption key. Retain its private key outside CI; verify
-recovery with that key before approving the first live rollout. R2 credentials need read
-access to original media and conditional write access for encrypted recovery objects in
-the environment's raw bucket. CI receives these values through environment secrets.
-Missing recovery configuration stops before queues or D1 are paused.
+The default CI path uses Bun, Node, Python 3, tar, GnuPG and the locked dependencies.
+Its encrypted R2 checkpoints require `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`,
+`R2_S3_ACCESS_KEY_ID`, `R2_S3_SECRET_ACCESS_KEY`, and `REVISION_RECOVERY_PUBLIC_KEY`.
+The latter contains one ASCII-armored GPG public encryption key. Retain its private key
+outside CI; verify recovery with that key before approving the first live rollout. R2
+credentials need read access to original media and conditional write access for
+encrypted recovery objects in the environment's raw bucket. CI receives these values
+through environment secrets. Missing encryption configuration stops the default R2 path
+before queues or D1 are paused.
+
+For a workstation cutover with a local database backup, pass `--local-backup` at
+preparation. The runner restores the canonical export to `initial/source.sqlite`, checks
+integrity and foreign keys, and records SHA-256 hashes of the export, schema and SQLite
+file. It checks those hashes before pausing writers and at subsequent checkpoints. The
+run directory retains this choice across retries and contains the private database,
+selected plan, source, build and queue states. Resume on the same machine from that
+directory. R2 read access for the original application media is still required.
 
 Exact image originals and metadata must exist. Missing media blocks preparation; this
 workflow does not synthesize metadata or silently exclude resources.

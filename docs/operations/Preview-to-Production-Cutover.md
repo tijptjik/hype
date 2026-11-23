@@ -80,15 +80,15 @@ must be proven on the production snapshot.
 | Catalogue, indoor and field data           | Verify the `0247` catalogue and the referenced logo assets in the production delivery path. Inventory reviewed Location kinds/policies, station/operator/shop drafts, premises releases and their R2 manifests, and Field Sessions data selected for publication. Record any approved local-only data that needs promotion with a source, owner and verifier. Retain unresolved station-shop matches as pending reviews. Local seeds, example personas and synthetic records belong outside the production manifest. Inventory rows and retain a before-image before `0264` drops the four retired web-recorder staging tables. Its SQL leaves audio objects in storage. [MTR shop onboarding](../maps/mtr-shop-onboarding.md)                                     |
 | Ghost Signs Stratigraphy                   | Preserve the existing single-select taxonomy and assignments through the cutover. Apply the pending cardinality package only after `0263` **and** the compatible application are deployed. Verify singleton reads and multi-select writes and history through the application. [Ordered package](../../migrations/pending/ghost-signs-stratigraphy/README.md)                                                                                                                                                                                                                                                                                                                                                                                                      |
 
-## 4. Rehearse end to end and set the window
+## 4. Rehearse end to end
 
-1. Take a **fresh private export of production** in an agreed low-traffic period. D1
-   exports can briefly block requests. Use the canonical-table export and schema
-   sidecar, restore views/indexes/triggers, rebuild derived FTS, and verify the restored
-   backup. Record a D1 Time Travel bookmark and retention, deployment versions and
-   source/media manifests. Prove an independent operator can decrypt the encrypted
-   recovery checkpoint and recover the retained run.
-   [D1 backup procedure](D1-Backups.md) ·
+1. Take a **fresh private export of production** on the deployment machine. D1 exports
+   can briefly block requests. Use the canonical-table export and schema sidecar,
+   restore views/indexes/triggers, rebuild derived FTS, and verify the restored backup.
+   Record a D1 Time Travel bookmark and retention, deployment versions and source/media
+   manifests. Verify the private local SQLite copy and the retained run directory on
+   this machine. Use the local-backup option for preparation and every apply or resume
+   of this cutover. [D1 backup procedure](D1-Backups.md) ·
    [D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)
 2. Run the fixed planner against a private copy. Preserve before/after fingerprints per
    table, plus ID-level reconciliation for each intentional addition, transformation or
@@ -101,35 +101,32 @@ must be proven on the production snapshot.
    and schema drift, private media and test-only routes/queues. Keep production
    credentials, personal data and outbound deliveries out of public preview. Use an
    access-controlled production-shaped rehearsal target where exact private data is
-   required. Verify D1 batch behavior, permissions, recovery upload/download, queue
-   pause/resume and release health. Stop the runner after schema, enrollment, lifecycle,
-   verification and activation. Resume each time from retained artifacts and the D1
-   cursor. Include a lost batch response and a competing write.
+   required. Verify D1 batch behavior, permissions, local recovery, queue pause/resume
+   and release health. Stop the runner after schema, enrollment, lifecycle, verification
+   and activation. Resume each time from retained artifacts and the D1 cursor. Include a
+   lost batch response and a competing write.
 4. Validate the pinned source through managed lint, tests and typecheck on Li. Exercise
    real Chrome interactions on the managed runner. Verify authenticated admin access, an
    existing user's access and role, public search, a multilingual Feature edit and
    history, a contribution review, image upload/readback, and a representative consumer
    job. Use disposable rehearsal records. Exercise the production-only hotfix paths as
    well.
-5. Time the initial export, fenced re-export/replanning, data groups, worker
-   propagation, activation and queue catch-up. Use the measured maintenance duration
-   plus an agreed contingency to schedule the release. Record acceptable backlog/error
-   thresholds and the latest safe cancellation time. A historical rehearsal of 84
+5. Record the observed results and outstanding exceptions. A historical rehearsal of 84
    migrations through `0197` on the November 6 export covers only part of this
    candidate.
 
 **Go/no-go.** Require the pinned release, complete package manifest, exact-target
-preparation, proven recovery and resume, full conservation report, passing browser
-flows, named operators and measured window. Any unresolved discrepancy in identity,
-history, permissions, required media or rollback capability holds the release.
+preparation, proven recovery and resume, full conservation report, passing browser flows
+and named operators. Any unresolved discrepancy in identity, history, permissions,
+required media or rollback capability holds the release.
 
 ## 5. Execute one approved production run
 
 1. After those gates pass, prepare a production run using
-   `bun run revisions:prepare:prod` from the frozen checkout. Review its release ID,
-   target database, input hashes, counts and exceptions. Retain its private run
-   directory. Preparation exports live data and writes private local artifacts. Confirm
-   all bindings, deployment permissions, recovery recipient and access to required R2
+   `bun run revisions:prepare:prod --local-backup` from the frozen checkout. Review its
+   release ID, target database, input hashes, counts and exceptions. Retain its private
+   run directory. Preparation exports live data and writes private local artifacts.
+   Confirm the local backup, deployment permissions, bindings and access to required R2
    objects.
 2. Announce maintenance. Record current Worker versions/routes, queue and scheduler
    states, D1 bookmark, and external writer state. Quiesce or drain writers with side
@@ -139,11 +136,10 @@ history, permissions, required media or rollback capability holds the release.
    in the app environment.
 3. Run the repaired operator once, using the reviewed directory. The current invocation
    shape is
-   `bun --env-file=.dev.vars scripts/revisions/rollout.ts production --apply --run-dir .local/revision-deployments/RUN`.
-   Check the retained build and encrypted checkpoint before closing writes. Verify
+   `bun --env-file=.dev.vars scripts/revisions/rollout.ts production --apply --local-backup --run-dir .local/revision-deployments/RUN`.
+   Check the retained build and verified local backup before closing writes. Verify
    fencing, recheck source fingerprints, and re-export/replan under the fence if
-   production changed. Stop if the resulting plan exceeds the reviewed scope or downtime
-   budget.
+   production changed. Stop if the resulting plan exceeds the reviewed scope.
 4. Apply each group's data, guard restoration and D1 cursor in the same transaction.
    After schema operations that allocate IDs, re-export the **actual migrated production
    state** and derive dependent references from it. Advance through the rehearsed
@@ -153,8 +149,8 @@ history, permissions, required media or rollback capability holds the release.
    division/location consumers and retained application, plus other changed workers
    identified in the manifest at their compatible boundary. Read back each affected
    route/binding. Require `/api/health/revisions` to report the exact selected release,
-   contract and readiness while maintenance is still closed. Save the verified encrypted
-   checkpoint.
+   contract and readiness while maintenance is still closed. Verify the local backup and
+   retain the selected plan and queue state.
 6. Activate revision recording. Confirm active health and make a controlled production
    write/readback through the application with an agreed account and record. Restore the
    original delivery states of queues and other writers. Verify actual consumption,
@@ -166,7 +162,7 @@ history, permissions, required media or rollback capability holds the release.
 | Last durable state                                                  | Operator action                                                                                                                                                                                                                                                                                                      |
 | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Preparation failed, or fenced with no migration/enrollment mutation | Retain the failure evidence. If fenced and cancellation is chosen, use the managed `--abort-before-migration --run-dir …` path. Verify the previous app can write, and restore every writer to its recorded state.                                                                                                   |
-| First mutation committed, application still fenced                  | Keep maintenance closed. Read the journal and receipts, fix the cause, then resume the same retained plan. A lost runner recovers the encrypted run from the environment's raw bucket. If the plan itself is wrong, use a separately reviewed forward repair or an explicitly authorized disaster recovery.          |
+| First mutation committed, application still fenced                  | Keep maintenance closed. Read the journal and receipts, fix the cause, then resume the same retained plan. Restart the runner from the retained directory on this machine. If the plan itself is wrong, use a separately reviewed forward repair or an explicitly authorized disaster recovery.                      |
 | Activated or new writes accepted                                    | Check active release health first and finish queue restoration. Prefer forward repair. A point-in-time restore requires an incident decision, a new freeze, accounting for writes and external side effects since the bookmark, and restoration of a compatible app/worker set. A Worker rollback changes code only. |
 
 Close the release after authenticated access, public read/search, revision history,
