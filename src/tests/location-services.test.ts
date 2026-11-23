@@ -1305,6 +1305,41 @@ describe('immutable SaanSeoi Place ingestion', () => {
     ).toBeNull()
   })
 
+  it('rejects identity acceptance when shared draft content changes under the same revision ID', async () => {
+    const { db, sqlite } = setup()
+    const local = await persistSaanSeoiPlace(db, projection())
+    sqlite
+      .prepare("UPDATE location SET state='unresolved',ssId=NULL WHERE id=?")
+      .run(local.locationId)
+    const baseline = await readLocationIdentityBaseline(db, local.locationId, null)
+    if (!baseline?.expectedLatestContentHash) throw new Error('Missing draft hash')
+    const reviewId = await captureLocationIdentityReview(
+      db,
+      baseline,
+      { ...projection(), ssId: 'new-source' },
+      'reviewer',
+    )
+    if (!reviewId) throw new Error('Missing comparison')
+    // This historical fixture models a mutable draft edit without advancing its revision ID.
+    sqlite.exec('DROP TRIGGER location_revision_no_update')
+    sqlite
+      .prepare('UPDATE locationRevision SET contentHash=? WHERE id=?')
+      .run('edited-draft', baseline.expectedLatestRevisionId)
+    const input = { locationId: local.locationId, ownerOrganisationId: null, reviewId }
+    expect(await readLocationIdentityReview(db, input)).toMatchObject({ stale: true })
+    expect(
+      await acceptLocationIdentityReview(db, {
+        ...input,
+        actorId: 'reviewer',
+        reason: 'Stale preview',
+      }),
+    ).toEqual({ status: 'conflict' })
+    expect(
+      sqlite.prepare('SELECT ssId FROM location WHERE id=?').get(local.locationId)
+        ?.ssId,
+    ).toBeNull()
+  })
+
   it('captures immutable review evidence, accepts it, and keeps source ingestion idempotent', async () => {
     const { db, sqlite } = setup()
     const local = await createLocalLocation(

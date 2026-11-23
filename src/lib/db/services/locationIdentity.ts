@@ -46,6 +46,7 @@ export type LocationIdentityTransition = {
   expectedHistoryId: string | null
   expectedOwnerOrganisationId: string | null
   reviewId?: string
+  expectedLatestContentHash?: string
   expectedLatestRevisionId?: string
   expectedSourceAvailability?: 'current' | 'missing' | 'review'
   actorId: string
@@ -128,10 +129,16 @@ export async function acceptLocationIdentity(
   if (historicalClaim) return { status: 'merge-required' }
   if (current.ssId === projection.ssId) return { status: 'unchanged' }
 
-  const revisionGuard = input.expectedLatestRevisionId
+  const revisionIdGuard = input.expectedLatestRevisionId
     ? sql`(SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=${input.locationId}
         ORDER BY version DESC LIMIT 1)=${input.expectedLatestRevisionId}`
     : sql`(SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=${input.locationId} ORDER BY version DESC LIMIT 1) IS ${retained?.id ?? null}`
+  // Shared draft edits retain their revision ID, so adoption also fences their content.
+  const revisionGuard = sql`${revisionIdGuard} AND ${
+    input.expectedLatestContentHash
+      ? sql`(SELECT contentHash FROM locationRevisionContent WHERE id=${input.expectedLatestRevisionId ?? null})=${input.expectedLatestContentHash}`
+      : sql`1`
+  }`
   const availabilityGuard = input.expectedSourceAvailability
     ? sql`(SELECT sourceAvailability FROM location WHERE id=${input.locationId})=${input.expectedSourceAvailability}`
     : sql`1`

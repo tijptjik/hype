@@ -68,6 +68,11 @@ function baselineGuard(value: LocationIdentityBaseline): SQL {
     AND sourceAvailability=${value.expectedSourceAvailability})
     AND (SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=${value.locationId} ORDER BY version DESC LIMIT 1)
       =${value.expectedLatestRevisionId}
+    AND ${
+      value.expectedLatestContentHash
+        ? sql`(SELECT contentHash FROM locationRevisionContent WHERE id=${value.expectedLatestRevisionId})=${value.expectedLatestContentHash}`
+        : sql`1`
+    }
     AND (SELECT h.id FROM locationIdentityHistory h WHERE h.locationId=${value.locationId}
       AND NOT EXISTS(SELECT 1 FROM locationIdentityHistory n WHERE n.previousHistoryId=h.id))
       IS ${value.expectedHistoryId}`

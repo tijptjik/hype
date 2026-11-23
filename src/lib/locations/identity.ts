@@ -5,6 +5,8 @@ export type LocationIdentityBaseline = {
   expectedSsId: string | null
   expectedHistoryId: string | null
   expectedOwnerOrganisationId: string | null
+  /** Shared drafts mutate in place; pin their content as well as their revision ID. */
+  expectedLatestContentHash?: string
   expectedLatestRevisionId: string
   expectedSourceAvailability: 'current' | 'missing' | 'review'
 }

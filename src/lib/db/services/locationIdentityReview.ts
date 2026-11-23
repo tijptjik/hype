@@ -97,6 +97,7 @@ export async function readLocationIdentityBaseline(
       expectedOwnerOrganisationId: locationTable.ownerOrganisationId,
       expectedSourceAvailability: locationTable.sourceAvailability,
       expectedLatestRevisionId: locationRevision.id,
+      latestContentHash: locationRevision.contentHash,
       expectedHistoryId: sql<string | null>`(SELECT h.id FROM locationIdentityHistory h
       WHERE h.locationId=${locationTable.id} AND NOT EXISTS
       (SELECT 1 FROM locationIdentityHistory n WHERE n.previousHistoryId=h.id))`,
@@ -112,7 +113,14 @@ export async function readLocationIdentityBaseline(
     )
     .get()
   if (!row || row.expectedState === 'redirect') return null
-  return { ...row, expectedState: row.expectedState }
+  const { latestContentHash, ...baseline } = row
+  return {
+    ...baseline,
+    expectedState: row.expectedState,
+    ...(row.expectedState === 'unresolved' && row.expectedOwnerOrganisationId === null
+      ? { expectedLatestContentHash: latestContentHash }
+      : {}),
+  }
 }
 
 /**
@@ -149,6 +157,11 @@ export async function captureLocationIdentityReview(
       AND sourceAvailability=${baseline.expectedSourceAvailability})
     AND (SELECT id FROM locationRevisionContent AS locationRevision WHERE locationId=${baseline.locationId} ORDER BY version DESC LIMIT 1)
       =${baseline.expectedLatestRevisionId}
+    AND ${
+      baseline.expectedLatestContentHash
+        ? sql`(SELECT contentHash FROM locationRevisionContent WHERE id=${baseline.expectedLatestRevisionId})=${baseline.expectedLatestContentHash}`
+        : sql`1`
+    }
     AND (SELECT h.id FROM locationIdentityHistory h WHERE h.locationId=${baseline.locationId}
       AND NOT EXISTS (SELECT 1 FROM locationIdentityHistory n WHERE n.previousHistoryId=h.id))
       IS ${baseline.expectedHistoryId}`)
