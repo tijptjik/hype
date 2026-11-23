@@ -3,6 +3,7 @@ export type FormProjectLayersSectionItem = {
   projectNameShort: string
   layerName: string
   isDefaultVisible: boolean
+  isIncluded?: boolean
 }
 
 export type FormProjectLayersSectionProps = {
@@ -13,6 +14,8 @@ export type FormProjectLayersSectionProps = {
   isEditing?: boolean
   isSubmitting?: boolean
   onToggleDefault: (layerId: string, nextValue: boolean) => void
-  onMove: (sourceLayerId: string, targetLayerId: string) => void
+  onToggleIncluded?: (layerId: string, included: boolean) => void
+  defaultControl?: 'visibility' | 'selection'
+  onMove?: (sourceLayerId: string, targetLayerId: string) => void
   class?: string
 }
