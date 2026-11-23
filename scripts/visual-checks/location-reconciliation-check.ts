@@ -293,10 +293,8 @@ try {
         page.getByRole('button', { name: 'Link Location', exact: true }),
       ).toBeEnabled()
     }
-    await page.getByRole('button', { name: 'Skip for now', exact: true }).click()
-    await expect(page).not.toHaveURL(/feature=blD9f1f9dce3/)
-    await page.getByRole('button', { name: 'Previous', exact: true }).click()
-    await expect(page).toHaveURL(/feature=blD9f1f9dce3/)
+    // Saved skip/reset writes are simulated in reconciliation-skip-check.ts; this check leaves shop reviews intact.
+    await expect(page.getByRole('button', { name: 'Skip', exact: true })).toBeEnabled()
     await expect(filters.getByRole('slider')).toHaveValue('100')
     await page.reload({ waitUntil: 'load' })
     await expect(page.getByRole('slider')).toHaveValue('100', { timeout: 60000 })

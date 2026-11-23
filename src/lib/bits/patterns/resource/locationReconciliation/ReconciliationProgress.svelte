@@ -7,6 +7,7 @@ let {
   unavailable,
   onclick,
   onmatched,
+  onskipped,
 }: {
   matched: number
   drafts?: number
@@ -15,6 +16,7 @@ let {
   unavailable: number
   onclick: () => void
   onmatched: () => void
+  onskipped: () => void
 } = $props()
 
 const matchedCount = $derived(Math.min(total, Math.max(0, matched)))
@@ -30,7 +32,7 @@ const skippedCount = $derived(
 const remaining = $derived(
   total - matchedCount - unavailableCount - skippedCount - draftCount,
 )
-const reviewed = $derived(matchedCount + unavailableCount + draftCount)
+const reviewed = $derived(matchedCount + unavailableCount + draftCount + skippedCount)
 const percent = $derived(total > 0 ? Math.round((reviewed / total) * 100) : 0)
 </script>
 
@@ -55,13 +57,15 @@ const percent = $derived(total > 0 ? Math.round((reviewed / total) * 100) : 0)
         <span class="size-1.5 rounded-full bg-emerald-500"></span>{matchedCount}
         matched
       </button>
-      <span
-        class="flex items-center gap-1"
-        title="Skipped this session; still awaiting review"
+      <button
+        type="button"
+        onclick={onskipped}
+        class="flex items-center gap-1 underline-offset-2 hover:underline"
+        title="Saved skips; reset to review again"
       >
         <span class="size-1.5 rounded-full bg-amber-400"></span>{skippedCount}
         skipped
-      </span>
+      </button>
       <button
         type="button"
         {onclick}

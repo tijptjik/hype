@@ -8,6 +8,8 @@ import {
   FeatureAdminProfileAPI,
   FeatureListProfileAPI,
   FeatureListRow,
+  FeatureUpdate,
+  FeatureInsert,
 } from '#lib/db/zod/schema/feature.js'
 
 it('projects only record-owned naming state without querying parent tables', () => {
@@ -36,4 +38,18 @@ it('projects only record-owned naming state without querying parent tables', () 
   } finally {
     db.close()
   }
+})
+
+it('keeps saved matching decisions out of ordinary Feature write inputs', () => {
+  const spoofed = {
+    reconciliationSkippedAt: '2026-11-15T00:00:00.000Z',
+    reconciliationSkippedBy: 'another-user',
+  }
+  expect(FeatureUpdate.parse(spoofed)).toEqual({})
+  expect(FeatureInsert.partial().parse(spoofed)).not.toHaveProperty(
+    'reconciliationSkippedAt',
+  )
+  expect(FeatureInsert.partial().parse(spoofed)).not.toHaveProperty(
+    'reconciliationSkippedBy',
+  )
 })

@@ -22,6 +22,7 @@ let {
   onlink,
   onunavailable,
   onmatched,
+  onskipped,
 }: {
   skipped: number
   matched: number
@@ -38,6 +39,7 @@ let {
   onlink: () => void
   onunavailable: () => void
   onmatched: () => void
+  onskipped: () => void
 } = $props()
 </script>
 <div class="flex items-center gap-2">
@@ -49,18 +51,19 @@ let {
     {unavailable}
     onclick={onunavailable}
     {onmatched}
+    {onskipped}
   />
 
   {#if canPrevious}
     <Button
-      text="Previous"
+      text="Review skipped"
       iconComponent={BackIcon}
       hideLabel
       {disabled}
       onClick={onprevious}
     />
   {/if}
-  <Button text="Skip for now" {disabled} onClick={onskip} />
+  <Button text="Skip" {disabled} onClick={onskip} />
   <Button
     text="Location unavailable"
     color="info"

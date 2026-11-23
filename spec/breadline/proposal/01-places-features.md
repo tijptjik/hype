@@ -4461,13 +4461,18 @@ imported artwork does not change pinned Location identity revisions. See
 
 The project title menu opens **Match locations** at
 `/admin/projects/[project]/match-locations`. The queue excludes archived Features and
-counts only upstream-linked Locations as matched; skipping never marks a record
-complete. Search defaults to the curated Brand and a 50 m radius, with Feature name or a
-project field available as the automation source. Search text remains editable. Search
-spans all upstream locales: an English brand can occur in a Chinese-labelled source
-record. The interface language affects presentation, not candidate eligibility. Provider
-radius constraints apply before pagination, and changing the record, query, radius or
-authority invalidates prior candidates and reviews.
+counts only upstream-linked Locations as matched. **Skip** saves a Feature-specific
+review decision, including for Features without a Location. Saved skips count as
+reviewed but never as matched, persist across sessions, and leave the pending queue. The
+skipped count opens a list with **Reset** to return a Feature to review. Migration
+`0252_feature_reconciliation_skip.sql` records the first skip date and actor; commands
+recheck project scope, Feature content and association before saving. Search defaults to
+the curated Brand and a 50 m radius, with Feature name or a project field available as
+the automation source. Search text remains editable. Search spans all upstream locales:
+an English brand can occur in a Chinese-labelled source record. The interface language
+affects presentation, not candidate eligibility. Provider radius constraints apply
+before pagination, and changing the record, query, radius or authority invalidates prior
+candidates and reviews.
 
 Selecting a result on the map or candidate list displays canonical details below it.
 **Link Location** imports or reuses the selected SaanSeoi Location and associates the
@@ -4503,18 +4508,18 @@ Focused tests are `location-reconciliation.test.ts` and
 `location.lastManualMatchAttemptAt` is nullable operational review state, separate from
 publisher `sourceAvailability` and immutable Location facts. **Mark location as
 unavailable** writes a server-generated UTC timestamp only after an explicit manual
-decision. Searching, empty results, provider errors and **Skip for now** do not write
-it. Migration `0249_location_manual_match_attempt.sql` leaves all existing Locations
+decision. Searching, empty results, provider errors and **Skip** do not write it.
+Migration `0249_location_manual_match_attempt.sql` leaves all existing Locations
 unattempted. The action requires an existing Location and rechecks its ownership,
 current Feature association, active Project membership and unmatched state atomically;
 retries preserve the accepted timestamp.
 
 An unmatched Location with a timestamp is excluded from the default queue. The header
 shows a large reviewed percentage and count to the left of the action buttons. A small
-legend sits above the segmented bar: green matched, amber skipped this session, blue
-unavailable, and gray remaining. Skips are deduplicated and do not count as completed.
-Counts are per active Feature, so one shared Location can resolve multiple queue
-entries. A subsequently linked Location counts as matched only, even if its historical
+legend sits above the segmented bar: green matched, amber saved skips, blue unavailable,
+and gray remaining. Saved skips are Feature-specific and count as reviewed. Counts are
+per active Feature, so one shared Location can resolve multiple queue entries. A
+subsequently linked Location counts as matched only, even if its historical
 manual-attempt timestamp remains. The no-Location path continues to require a Location
 before it can store this disposition. The search source uses the standard Select
 dropdown rather than an editable search picker.
@@ -4534,17 +4539,18 @@ identity acceptance remain separately verified. Refs #194.
 The accepted-unavailable count opens the shared row display with a **Reset** action.
 Reset checks Project and Location authority and clears only the manual-attempt
 timestamp, rechecking ownership and association atomically. All active Features sharing
-that Location return to review. The matching header owns **Skip for now**, blue
-**Location unavailable**, and green **Link Location** actions; deletion uses the current
-Feature's title dropdown rather than an inherited form callback. Feature address
-components remain in a bottom comparison card beside the selected upstream Location,
-with both cards centered clear of the map legend. The compact radius control sits at the
-far right of the filter bar. Refs #194.
+that Location return to review. The matching header owns **Skip**, blue **Location
+unavailable**, and green **Link Location** actions; deletion uses the current Feature's
+title dropdown rather than an inherited form callback. Feature address components remain
+in a bottom comparison card beside the selected upstream Location, with both cards
+centered clear of the map legend. The compact radius control sits at the far right of
+the filter bar. Refs #194.
 
-Both matched and unavailable counts open sortable row lists, with Name, Address and Date
-sorting and inline relative timestamps. Matching filters are hidden in either list.
+Matched, skipped and unavailable counts open sortable row lists, with Name, Address and
+Date sorting and inline relative timestamps. Matching filters are hidden in these lists.
 Matched dates use recorded association and identity history; imported baselines without
-reliable dates show “Date unavailable”. Reset is available only for unavailable records.
+reliable dates show “Date unavailable”. Reset is available for skipped and unavailable
+records.
 
 The header retains confirmed values while loading and keeps Link visible but disabled
 without a valid selection. Location options have a selected outline; list selection and

@@ -15,6 +15,9 @@ import {
   markReconciliationUnavailable,
   getUnavailableReconciliation,
   getMatchedReconciliation,
+  getSkippedReconciliation,
+  skipReconciliationFeature,
+  resetReconciliationSkip,
   getReconciliationLinkedSources,
   resetReconciliationUnavailable,
   acceptReconciliationMatch,
@@ -79,10 +82,14 @@ let loading = $state(true),
   preparing = $state(false),
   linking = $state(false)
 let dispositionFailure = $state('')
-let listView = $state<'unavailable' | 'matched' | null>(null)
+let listView = $state<'unavailable' | 'matched' | 'skipped' | null>(null)
 let listRequest = 0
 const listTitle = $derived(
-  listView === 'matched' ? 'Matched' : 'Accepted as unavailable',
+  listView === 'matched'
+    ? 'Matched'
+    : listView === 'skipped'
+      ? 'Skipped'
+      : 'Accepted as unavailable',
 )
 let unavailableLoading = $state(false)
 let unavailableFailure = $state('')
@@ -92,7 +99,7 @@ let unavailableRows = $state<
     id: string
     name: string
     address: string | null
-    locationId: string
+    locationId: string | null
     date: string | null
   }>
 >([])
@@ -131,7 +138,7 @@ function unavailableDate(value: string | null): string {
 }
 
 /** Read the selected reviewed list. @param view List to display. @returns Completion after refresh. */
-async function openList(view: 'matched' | 'unavailable'): Promise<void> {
+async function openList(view: 'matched' | 'unavailable' | 'skipped'): Promise<void> {
   const request = ++listRequest
   listView = view
   unavailableRows = []
@@ -139,13 +146,20 @@ async function openList(view: 'matched' | 'unavailable'): Promise<void> {
   unavailableFailure = ''
   try {
     const rows =
-      view === 'matched'
-        ? (await readFreshRemoteQuery(getMatchedReconciliation({ project }), true)).map(
-            row => ({ ...row, date: row.matchedAt }),
+      view === 'skipped'
+        ? (await readFreshRemoteQuery(getSkippedReconciliation({ project }), true)).map(
+            row => ({ ...row, date: row.skippedAt }),
           )
-        : (
-            await readFreshRemoteQuery(getUnavailableReconciliation({ project }), true)
-          ).map(row => ({ ...row, date: row.lastManualMatchAttemptAt }))
+        : view === 'matched'
+          ? (
+              await readFreshRemoteQuery(getMatchedReconciliation({ project }), true)
+            ).map(row => ({ ...row, date: row.matchedAt }))
+          : (
+              await readFreshRemoteQuery(
+                getUnavailableReconciliation({ project }),
+                true,
+              )
+            ).map(row => ({ ...row, date: row.lastManualMatchAttemptAt }))
     if (alive && request === listRequest) unavailableRows = rows
   } catch {
     if (alive && request === listRequest)
@@ -154,20 +168,24 @@ async function openList(view: 'matched' | 'unavailable'): Promise<void> {
     if (alive && request === listRequest) unavailableLoading = false
   }
 }
-/** Reset the shared Location disposition and refresh progress. @param row Selected Feature row. @returns Completion. */
+/** Reset the selected Feature skip or shared Location disposition and refresh progress. @param row Selected Feature row. @returns Completion. */
 async function resetUnavailable(row: (typeof unavailableRows)[number]): Promise<void> {
   if (resetting || linking) return
-  resetting = row.locationId
+  resetting = row.id
   unavailableFailure = ''
   const currentId = item?.id
   try {
-    await resetReconciliationUnavailable({
-      project,
-      featureId: row.id,
-      locationId: row.locationId,
-    })
+    if (listView === 'skipped' && row.date) {
+      await resetReconciliationSkip({ project, featureId: row.id, skippedAt: row.date })
+    } else if (row.locationId) {
+      await resetReconciliationUnavailable({
+        project,
+        featureId: row.id,
+        locationId: row.locationId,
+      })
+    } else return
     if (!alive) return
-    await openList('unavailable')
+    await openList(listView === 'skipped' ? 'skipped' : 'unavailable')
     await load(undefined, currentId)
   } catch {
     if (alive) unavailableFailure = 'Could not reset this Location. Please retry.'
@@ -181,10 +199,8 @@ let failure = $state(''),
 let canonical = $state<LocationFacts | null>(null)
 let reviewExpanded = $state(false)
 let mapFocus = $state<{ coordinates: [number, number] } | null>(null)
-let history = $state<string[]>([]),
-  skippedRecords = $state<Array<{ id: string; locationId: string | null }>>([]),
-  ready = $state(false)
-const skipped = $derived(skippedRecords.length)
+let ready = $state(false)
+const skipped = $derived(progress?.skipped ?? 0)
 let generation = 0,
   queueGeneration = 0,
   detailGeneration = 0,
@@ -257,7 +273,7 @@ function label(value: LocationFacts): string {
     'Unnamed location'
   )
 }
-/** Load the next unresolved record without counting skipped items as completed. @param after Cursor. @param featureId Explicit previous/current record. @returns Completion. */
+/** Load the next unresolved record and authoritative saved review counts. @param after Cursor. @param featureId Explicit previous/current record. @returns Completion. */
 async function load(after?: string, featureId?: string): Promise<void> {
   const token = ++queueGeneration
   generation++
@@ -403,7 +419,6 @@ async function link(): Promise<void> {
       expectedFeatureModifiedAt: current.modifiedAt,
       expectedRevision: current.associationVersion ?? null,
     })
-    skippedRecords = skippedRecords.filter(row => row.id !== current.id)
     await load(current.id)
   } catch {
     detailFailure =
@@ -424,8 +439,6 @@ async function markUnavailable(): Promise<void> {
   detailGeneration++
   try {
     await markReconciliationUnavailable({ project, featureId: current.id, locationId })
-    skippedRecords = skippedRecords.filter(row => row.locationId !== locationId)
-    skippedRecords = skippedRecords.filter(row => row.id !== current.id)
     await load(current.id)
   } catch {
     dispositionFailure =
@@ -452,8 +465,6 @@ async function deleteCurrentFeature(): Promise<void> {
       meta: { isAdminRequest: true },
     })
     if (!alive) return
-    history = history.filter(id => id !== current.id)
-    skippedRecords = skippedRecords.filter(row => row.id !== current.id)
     await load(current.id)
   } catch {
     if (alive)
@@ -464,20 +475,34 @@ async function deleteCurrentFeature(): Promise<void> {
     searching = false
   }
 }
-/** Move past this record without changing its resolution state. @returns Completion. */
+/** Save an explicit skip and advance only after the server confirms it. @returns Completion. */
 async function skip(): Promise<void> {
-  if (!item) return
-  history = [...history, item.id]
-  if (!skippedRecords.some(row => row.id === item.id))
-    skippedRecords = [...skippedRecords, { id: item.id, locationId: item.locationId }]
-  await load(item.id)
+  if (!item || loading || linking) return
+  const current = item
+  linking = true
+  dispositionFailure = ''
+  // Skipping is independent of upstream availability and invalidates pending candidate work.
+  generation++
+  detailGeneration++
+  try {
+    await skipReconciliationFeature({
+      project,
+      featureId: current.id,
+      modifiedAt: current.modifiedAt,
+      associationVersion: current.associationVersion,
+    })
+    if (alive) await load()
+  } catch {
+    if (alive) dispositionFailure = 'Could not save this skip. Retry before moving on.'
+  } finally {
+    linking = false
+    preparing = false
+    searching = false
+  }
 }
-/** Revisit a skipped record without accepting it. @returns Completion. */
+/** Open saved skips so a record can be reset for review. @returns Completion. */
 async function previous(): Promise<void> {
-  const id = history.at(-1)
-  if (!id) return
-  history = history.slice(0, -1)
-  await load(undefined, id)
+  await openList('skipped')
 }
 
 onMount(() => {
@@ -526,8 +551,6 @@ $effect(() => {
       listView = null
       listRequest++
       unavailableRows = []
-      history = []
-      skippedRecords = []
       linkedSourceIds = []
       void load()
     })
@@ -594,13 +617,14 @@ $effect(() => {
     disabled: !item || loading || linking || Boolean(listView),
     canMark: Boolean(item?.locationId),
     canLink: !preparing && Boolean(selected && canonical),
-    canPrevious: history.length > 0,
+    canPrevious: skipped > 0,
     onskip: () => void skip(),
     onprevious: () => void previous(),
     onmark: () => void markUnavailable(),
     onlink: () => void link(),
     onunavailable: () => void openList('unavailable'),
     onmatched: () => void openList('matched'),
+    onskipped: () => void openList('skipped'),
     skipped,
     matched: progress?.matched ?? 0,
     drafts: progress?.drafts ?? 0,
@@ -668,7 +692,11 @@ onDestroy(() => {
                 {
                   value: 'date',
                   label:
-                    listView === 'matched' ? 'Date matched' : 'Date marked unavailable',
+                    listView === 'matched'
+                      ? 'Date matched'
+                      : listView === 'skipped'
+                        ? 'Date skipped'
+                        : 'Date marked unavailable',
                 },
               ],
             }}
@@ -676,7 +704,11 @@ onDestroy(() => {
           <Button text="Back to matching" onClick={() => (listView = null)} />
         </div>
       </div>
-      {#if listView === 'unavailable'}
+      {#if listView === 'skipped'}
+        <p class="text-muted-foreground mb-4 text-sm">
+          Skips are saved. Reset returns this Feature to the matching queue.
+        </p>
+      {:else if listView === 'unavailable'}
         <p class="text-muted-foreground mb-4 text-sm">
           Reset returns a Location and its associated Features to the matching queue.
         </p>
@@ -706,9 +738,9 @@ onDestroy(() => {
                 class="text-muted-foreground w-36 shrink-0 text-right text-sm whitespace-nowrap"
                 >{unavailableDate(row.date)}</time
               >
-              {#if listView === 'unavailable'}
+              {#if listView === 'unavailable' || listView === 'skipped'}
                 <Button
-                  text={resetting === row.locationId ? 'Resetting…' : 'Reset'}
+                  text={resetting === row.id ? 'Resetting…' : 'Reset'}
                   disabled={Boolean(resetting)}
                   onClick={() => void resetUnavailable(row)}
                 />
@@ -721,7 +753,9 @@ onDestroy(() => {
               ? 'Loading…'
               : listView === 'matched'
                 ? 'No matched records.'
-                : 'No locations accepted as unavailable.'}
+                : listView === 'skipped'
+                  ? 'No skipped records.'
+                  : 'No locations accepted as unavailable.'}
           </p>
         {/each}
       </div>
@@ -856,13 +890,13 @@ onDestroy(() => {
           </dl>
           {#if item && !item.locationId}
             <p class="text-muted-foreground mt-3 text-xs">
-              Link a Location before marking it unavailable.
+              Use Skip to finish reviewing this Feature without linking a Location.
             </p>
           {/if}
           {#if skipped}
             <p class="text-muted-foreground mt-2 text-xs">
               {skipped}
-              skipped this session.
+              saved skips.
             </p>
           {/if}
         </section>

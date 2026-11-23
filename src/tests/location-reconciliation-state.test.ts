@@ -15,6 +15,8 @@ vi.mock('#lib/db/services/identityCatalogueImport', () => ({
 }))
 import {
   markLocationUnavailable,
+  skipFeatureReconciliation,
+  resetFeatureReconciliationSkip,
   resetLocationUnavailable,
   pendingLocationReconciliation,
   readLocationReconciliationProgress,
@@ -45,6 +47,12 @@ beforeEach(() => {
   `)
   fixture.sqlite.exec(
     readFileSync('migrations/0249_location_manual_match_attempt.sql', 'utf8'),
+  )
+  fixture.sqlite.exec(
+    readFileSync('migrations/0252_feature_reconciliation_skip.sql', 'utf8'),
+  )
+  fixture.sqlite.exec(
+    "ALTER TABLE feature ADD COLUMN modifiedAt TEXT DEFAULT 'v1'; ALTER TABLE featureLocation ADD COLUMN version TEXT DEFAULT 'a1';",
   )
 })
 afterEach(() => fixture.sqlite.close())
@@ -240,4 +248,111 @@ it('keeps shared canonical drafts out of unmatched and unavailable queues', asyn
     sql`SELECT l.id FROM feature f LEFT JOIN featureLocation fl ON fl.featureId=f.id LEFT JOIN location l ON l.id=fl.locationId WHERE ${pendingLocationReconciliation}`,
   )
   expect(rows).not.toContainEqual({ id: 'draft' })
+})
+
+it('saves an unlinked Feature skip with attribution, keeps retries stable, and resets it', async () => {
+  const request = {
+    projectId: 'p',
+    featureId: 'missing',
+    modifiedAt: 'v1',
+    associationVersion: null,
+    actorId: 'reviewer',
+  }
+  const saved = await skipFeatureReconciliation(db, request)
+  if (!saved) throw new Error('Expected saved skip')
+  expect(saved.skippedAt).toMatch(/^\d{4}-\d{2}-\d{2}T.*Z$/)
+  expect(
+    await skipFeatureReconciliation(db, { ...request, actorId: 'another' }),
+  ).toEqual(saved)
+  expect(
+    fixture.sqlite
+      .prepare("SELECT reconciliationSkippedBy FROM feature WHERE id='missing'")
+      .get(),
+  ).toEqual({ reconciliationSkippedBy: 'reviewer' })
+  expect(
+    fixture.sqlite
+      .prepare("SELECT * FROM featureLocation WHERE featureId='missing'")
+      .all(),
+  ).toEqual([])
+  expect(await readLocationReconciliationProgress(db, 'p')).toEqual({
+    total: 4,
+    matched: 1,
+    unavailable: 0,
+    skipped: 1,
+    remaining: 2,
+  })
+  expect(
+    await resetFeatureReconciliationSkip(db, {
+      projectId: 'other',
+      featureId: 'missing',
+      skippedAt: saved.skippedAt,
+    }),
+  ).toBeNull()
+  expect(
+    await resetFeatureReconciliationSkip(db, {
+      projectId: 'p',
+      featureId: 'missing',
+      skippedAt: 'stale',
+    }),
+  ).toBeNull()
+  expect(
+    await resetFeatureReconciliationSkip(db, {
+      projectId: 'p',
+      featureId: 'missing',
+      skippedAt: saved.skippedAt,
+    }),
+  ).toEqual({ id: 'missing' })
+  expect(await readLocationReconciliationProgress(db, 'p')).toEqual({
+    total: 4,
+    matched: 1,
+    unavailable: 0,
+    remaining: 3,
+  })
+})
+
+it('rejects stale or unauthorized skip scope and skips only one Feature sharing a Location', async () => {
+  const request = {
+    projectId: 'p',
+    featureId: 'one',
+    modifiedAt: 'v1',
+    associationVersion: 'a1',
+    actorId: 'reviewer',
+  }
+  expect(
+    await skipFeatureReconciliation(db, { ...request, projectId: 'other' }),
+  ).toBeNull()
+  expect(
+    await skipFeatureReconciliation(db, { ...request, modifiedAt: 'stale' }),
+  ).toBeNull()
+  expect(
+    await skipFeatureReconciliation(db, { ...request, associationVersion: null }),
+  ).toBeNull()
+  expect(
+    await skipFeatureReconciliation(db, { ...request, featureId: 'archived' }),
+  ).toBeNull()
+  expect(
+    await skipFeatureReconciliation(db, { ...request, featureId: 'linked' }),
+  ).toBeNull()
+  expect(await skipFeatureReconciliation(db, request)).not.toBeNull()
+  expect(await readLocationReconciliationProgress(db, 'p')).toEqual({
+    total: 4,
+    matched: 1,
+    unavailable: 0,
+    skipped: 1,
+    remaining: 2,
+  })
+  expect(
+    await db.all(
+      sql`SELECT f.id FROM feature f LEFT JOIN featureLocation fl ON fl.featureId=f.id LEFT JOIN location l ON l.id=fl.locationId WHERE f.projectId='p' AND f.isArchived=0 AND ${pendingLocationReconciliation} ORDER BY f.id`,
+    ),
+  ).toEqual([{ id: 'missing' }, { id: 'two' }])
+  fixture.sqlite.exec(
+    "UPDATE location SET state='linked',ssId='source' WHERE id='local'",
+  )
+  expect(await readLocationReconciliationProgress(db, 'p')).toEqual({
+    total: 4,
+    matched: 3,
+    unavailable: 0,
+    remaining: 1,
+  })
 })

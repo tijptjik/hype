@@ -21,6 +21,9 @@ import {
   readLocationReconciliationProgress,
   markLocationUnavailable,
   resetLocationUnavailable,
+  skipFeatureReconciliation,
+  resetFeatureReconciliationSkip,
+  listFeatureReconciliationSkips,
 } from '#lib/db/services/locationReconciliation.js'
 import { readLocationFacts } from '#lib/locations/factsSnapshot.js'
 import {
@@ -123,6 +126,61 @@ export const getLocationReconciliation = guardedQuery(
         }, {}),
       },
     }
+  },
+)
+
+/** Save a Feature-specific matching skip, including Features without a Location.
+ * @param input Project and displayed Feature before-image. @returns Persisted skip date.
+ * @remarks Requires project management and atomically rejects changed content or associations.
+ */
+export const skipReconciliationFeature = guardedCommand(
+  z.strictObject({
+    project: z.string().min(1).max(200),
+    featureId: z.string().min(1).max(200),
+    modifiedAt: z.string().min(1),
+    associationVersion: z.string().nullable(),
+  }),
+  async (input, ctx) => {
+    const project = await scope(ctx, input.project)
+    const result = await skipFeatureReconciliation(ctx.db, {
+      ...input,
+      projectId: project.id,
+      actorId: ctx.user.id,
+    })
+    if (!result) error(409, 'FEATURE_RECONCILIATION_CHANGED')
+    return result
+  },
+)
+
+/** List saved skipped Features for a project manager.
+ * @param input Project reference. @returns Feature rows and saved skip dates.
+ */
+export const getSkippedReconciliation = guardedQuery(
+  z.strictObject({ project: z.string().min(1).max(200) }),
+  async (input, ctx) => {
+    const project = await scope(ctx, input.project)
+    return listFeatureReconciliationSkips(ctx.db, project.id)
+  },
+)
+
+/** Return one saved skip to review without changing a Location.
+ * @param input Project, Feature and displayed skip date. @returns Reset Feature identity.
+ * @remarks Requires project management and rejects stale review dates.
+ */
+export const resetReconciliationSkip = guardedCommand(
+  z.strictObject({
+    project: z.string().min(1).max(200),
+    featureId: z.string().min(1).max(200),
+    skippedAt: z.string().min(1),
+  }),
+  async (input, ctx) => {
+    const project = await scope(ctx, input.project)
+    const result = await resetFeatureReconciliationSkip(ctx.db, {
+      ...input,
+      projectId: project.id,
+    })
+    if (!result) error(409, 'FEATURE_RECONCILIATION_CHANGED')
+    return result
   },
 )
 

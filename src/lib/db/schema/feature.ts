@@ -59,6 +59,9 @@ import type { LocationBrand } from '#lib/locations/model.js'
 export const feature = sqliteTable(
   'feature',
   {
+    // Saved matching review outcome; independent of Location identity and Feature facts.
+    reconciliationSkippedAt: text('reconciliationSkippedAt'),
+    reconciliationSkippedBy: text('reconciliationSkippedBy'),
     localLocationBrands: text('localLocationBrands', { mode: 'json' }).$type<{
       brands: LocationBrand[]
       revision: string
