@@ -1187,39 +1187,39 @@ does not complete them.
 #### Required acceptance evidence — local verification only
 
 - [x] Correction-array migration preserves every version and accepted reference;
-  root/successor races and cross-scope references fail; retirement appends a row and
-  historic reads remain authorized.
+      root/successor races and cross-scope references fail; retirement appends a row and
+      historic reads remain authorized.
 
 - [ ] Closed establishment in a standing building retains former/current/unconfirmed
-  occupancy evidence.
+      occupancy evidence.
 - [ ] Surviving business and removed sign remain distinct, with the sign fixed at its
-  accepted building.
+      accepted building.
 - [ ] Demolished building and unknown-status record remain readable in authorized
-  historical views.
+      historical views.
 - [x] Replacement lineage retains both building IDs without a redirect; evidenced
-  multi-building redevelopment supports multiple before/after participants.
+      multi-building redevelopment supports multiple before/after participants.
 - [ ] Duplicate identity merges retain redirect receipts; reviewed splits retain every
-  result and do not arbitrarily reassign accepted bindings.
+      result and do not arbitrarily reassign accepted bindings.
 - [ ] Sign condition continues to use existing scoped property/value identities
-  independently of Location lifecycle.
+      independently of Location lifecycle.
 - [x] [O](#scenario-o), [P](#scenario-p), [Q](#scenario-q): fixed/review/follow outcomes
-  retain separate associations, placements and decisions.
+      retain separate associations, placements and decisions.
 - [x] Project default, Layer inheritance/override/clear and the six persisted dataset
-  mappings resolve correctly.
+      mappings resolve correctly.
 - [x] Policy changes, reparenting, stale edits and rejected targets cannot silently
-  adopt a move.
+      adopt a move.
 - [ ] Multiple address choices and priorities, nested premises, multiple/unresolved
-  buildings and address-only occupancy group correctly.
+      buildings and address-only occupancy group correctly.
 - [x] Canonical address review accepts/reasserts/retires sparse overrides without
-  rewriting other Features.
+      rewriting other Features.
 - [x] Local address/unit/pin conflicts and planned moves stop automatic adoption with an
-  actionable review.
+      actionable review.
 - [ ] Source omission/stale open data preserves historical assertions, accepted
-  placements and immutable media context.
+      placements and immutable media context.
 - [ ] Private-target joins, counts, previews and writes enforce scope; unlinks/deletion
-  retain non-public audit evidence.
+      retain non-public audit evidence.
 - [x] Populated local migration rehearsal preserves IDs, publication, ownership and
-  unrelated tables; replay is a no-op.
+      unrelated tables; replay is a no-op.
 
 Placement service acceptance (Refs #194) runs on a private SQLite copy with an explicit
 Wrangler persistence path. Synthetic policy layers must not be written into the normal

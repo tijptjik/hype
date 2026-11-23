@@ -1183,27 +1183,27 @@ TODO : split the `support` into 2 roles : `supportManager` and
     intelligence) [completion:: 2025-10-19]
   - [-] to report missing/ change of info [completion:: 2025-10-19]
 - [x] User prompt - most runners on average pick up X amount of bread this day … could
-  you do more? [completion:: 2025-10-19]
+      you do more? [completion:: 2025-10-19]
 - [x] Show bakery track record (volume) (whether its a high/ med/ low yield shop)
-  [completion:: 2025-10-19]
+      [completion:: 2025-10-19]
 - [x] Include Volunteer Badge within the App (maybe a user-specific dynamically
-  generated badge?) [completion:: 2025-10-19]
+      generated badge?) [completion:: 2025-10-19]
 - [-] Potentially Make Front-end so that it would be at the same time a Web App but also
   an Android and iPhone App [completion:: 2025-10-19]
 - [x] Add a STATS section for the latest day of joining in each Runner account (we do
-  this manually now) [completion:: 2025-10-19]
+      this manually now) [completion:: 2025-10-19]
 - [x] Shop pick up time should be expressed as periods instead of fixed time
-  [completion:: 2025-10-19]
+      [completion:: 2025-10-19]
 - [x] Remove present “Run Suggestion” totally or replace it with something much smarter
-  [completion:: 2025-10-19]
+      [completion:: 2025-10-19]
 - [x] New map provider, OSM instead of Gmaps. It should also show the current location,
-  since at the moment it’s quite hard to use it to find your way to the shop
-  [completion:: 2025-10-19]
+      since at the moment it’s quite hard to use it to find your way to the shop
+      [completion:: 2025-10-19]
 - [-] New Auth: is whatsapp auth possible? It’s our main communication channel. At least
   we should open it to non-Google email accounts? [completion:: 2025-10-19]
 - [x] Design a way for users to confirm their presence for the night, otherwise Runs
-  would be automatically deleted: whips spend most of their time checking on the day
-  that runners are actually coming [completion:: 2025-10-19]
+      would be automatically deleted: whips spend most of their time checking on the day
+      that runners are actually coming [completion:: 2025-10-19]
 - [x] Update Roles: [completion:: 2025-10-19]
   - [x] Update Admin: [completion:: 2025-10-19]
     - [x] System to manage Peninsula. [completion:: 2025-10-19]
@@ -1213,8 +1213,8 @@ TODO : split the `support` into 2 roles : `supportManager` and
   - [-] Donor (as is?) [completion:: 2025-10-19]
   - [-] Group/Leader (as is?) [completion:: 2025-10-19]
   - [x] Create a Support Team role (caller + DPMs): new functionality of ticking people
-    off when arrived at dropoff and exporting excel lists for assigning calls
-    [completion:: 2025-10-17]
+        off when arrived at dropoff and exporting excel lists for assigning calls
+        [completion:: 2025-10-17]
   - [x] Delete NGOs [completion:: 2025-09-15]
 - [x] Make the work and future software Open Source (source file on GitHub, no more
-  GitLab since it does not operate in HK and it’s private mode only)
+      GitLab since it does not operate in HK and it’s private mode only)

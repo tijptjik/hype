@@ -349,7 +349,7 @@ through the full collection response in `data-hk-places-2026-09-23.0`, catalog r
   travel_and_transportation category, point [114.128602, 22.281523]. Possible duplicate.
 - `ss-8d7b9b3a-043e-59d8-91b6-b177fdf79730`: MTR Kennedy Town Station, point
   [114.17455,
-  22.27374],
+22.27374],
   roughly 4.8 km away. Do not match by name alone.
 
 All three have null identifiers and structured address/unit links. Their source evidence

@@ -29,9 +29,9 @@ Related checklist: `docs/refactor-todo.md` Resource cache architecture:
 - [x] Tailwind v4 config moved to CSS-first (`src/lib/styles/app.css`).
 - [x] DaisyUI v5 theme config aligned with Tailwind v4.
 - [x] Font loading moved to `<svelte:head>` and locale-specific CJK fonts loaded
-  conditionally.
+      conditionally.
 - [x] Guardrails added for post-migration UX regressions (pointer cursor, button border
-  defaults).
+      defaults).
 
 ### Phase 2: Forms Migration (`in progress`)
 
