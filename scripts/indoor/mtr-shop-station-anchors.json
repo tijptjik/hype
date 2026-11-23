@@ -1,0 +1,52 @@
+{
+  "WEK": {
+    "sourceUrl": "http://api.atlas.localhost/places/v0.1/search?q=Hong%20Kong%20West%20Kowloon&limit=20&paginate=true&include=preview",
+    "sourceRecord": {
+      "placeId": "ss-4138e69d-9727-5ad7-9206-20596b3db739",
+      "resourceReleaseId": "7cdbd963-309e-5967-8f76-61415806d895",
+      "locale": "zh-hant",
+      "nameText": "Hong Kong West Kowloon Station 高鐵香港西九龍站",
+      "brandText": "",
+      "preview": {
+        "place": {
+          "id": "ss-4138e69d-9727-5ad7-9206-20596b3db739",
+          "resourceReleaseId": "7cdbd963-309e-5967-8f76-61415806d895",
+          "geometry": {
+            "type": "Point",
+            "coordinates": [114.16486999031, 22.303656363133]
+          },
+          "phones": null,
+          "basicCategory": "train_station",
+          "operatingStatus": null,
+          "taxonomy": {
+            "primary": "train_station",
+            "hierarchy": [
+              "travel_and_transportation",
+              "ground_transport_facility_or_service",
+              "rail_facility_or_service",
+              "train_station"
+            ],
+            "alternates": null
+          }
+        },
+        "i18n": {
+          "en": {
+            "name": null,
+            "brandName": null,
+            "freeformAddress": "Austin Road West"
+          },
+          "zh-hant": {
+            "name": "Hong Kong West Kowloon Station 高鐵香港西九龍站",
+            "brandName": null,
+            "freeformAddress": null
+          }
+        }
+      }
+    },
+    "geometry": {
+      "type": "Point",
+      "coordinates": [114.16486999031, 22.303656363133]
+    },
+    "precision": "station"
+  }
+}

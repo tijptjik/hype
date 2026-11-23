@@ -78,7 +78,7 @@ def audit_occupants(layers):
             p = feature['properties']
             name = (p.get('occupant_name_en') or '').strip()
             reasons = []
-            if not name or re.fullmatch(r'(?:KET|HOK|KOT)\s*\d+[A-Z]?(?:\s*[-/&]\s*\d+[A-Z]?)*', name, re.I):
+            if not name or re.fullmatch(r'[A-Z]{3}\s*\d+[A-Z]?(?:\s*[-/&]\s*\d+[A-Z]?)*', name, re.I):
                 reasons.append('code-only-or-unnamed')
             if unit['properties'].get('unit_category') in ('lobby', 'walkway', 'platform'):
                 reasons.append('shared-area-not-exclusive-shop-unit')
@@ -94,7 +94,7 @@ def audit_occupants(layers):
     return result
 
 
-def build_plan(root=ROOT):
+def build_plan(root=ROOT, baseline=None):
     """Describe premises, physical members and unlinked occupants without assigning canonical IDs."""
     catalogue = json.loads((root / 'src/lib/routing/mtr-catalog.json').read_text())
     premises, units, memberships, occupants = [], [], [], []
@@ -108,9 +108,10 @@ def build_plan(root=ROOT):
             'source': {'name': catalogue['source'], 'sha256': catalogue['sourceSha256']},
             'geometry': {'type': 'Point', 'coordinates': station['coordinates']},
         })
-        if station['id'] not in SNAPSHOTS:
+        if baseline is None and station['id'] not in SNAPSHOTS:
             continue
-        directory = root / '.research/indoor' / SNAPSHOTS[station['id']]
+        directory = (Path(baseline) / 'stations' / station['id'] if baseline
+                     else root / '.research/indoor' / SNAPSHOTS[station['id']])
         manifest, layers = read_snapshot(directory)
         venues = indexed(layers['venue_polygon'], 'venue_id')
         if len(venues) != 1:
@@ -155,8 +156,9 @@ def main():
     """Write a new review artifact; refuse to replace an existing plan."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('output', type=Path)
+    parser.add_argument('--baseline', type=Path, help='Complete retained network baseline directory')
     args = parser.parse_args()
-    plan = build_plan()
+    plan = build_plan(baseline=args.baseline)
     with args.output.open('x') as output:
         json.dump(plan, output, ensure_ascii=False, indent=2)
         output.write('\n')

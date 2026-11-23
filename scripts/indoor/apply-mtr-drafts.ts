@@ -212,6 +212,17 @@ async function main(): Promise<void> {
       const unit = plan.units.find(u => u.ref === member.childRef)
       if (!unit) throw new Error('Membership source unit is missing')
       const id = deriveLocationId('canonical-draft', `membership:${member.childRef}`)
+      // Retain reviewed relationship history when refreshing the source snapshot.
+      const retained = domain.sqlite
+        .query(
+          'SELECT childLocationId,parentLocationId FROM locationMembership WHERE id=?',
+        )
+        .get(id) as { childLocationId: string; parentLocationId: string } | null
+      if (retained) {
+        if (retained.childLocationId !== child || retained.parentLocationId !== parent)
+          throw new Error('Existing membership endpoints differ from source')
+        continue
+      }
       await appendLocationRelationship(
         domain.db,
         {
@@ -239,6 +250,25 @@ async function main(): Promise<void> {
         },
         actorId,
       )
+    }
+    // Join published map polygons by their exact source ID, independently of tenants.
+    for (const member of plan.memberships) {
+      const code = member.parentRef.slice('mtr-station:'.length)
+      const map = domain.sqlite
+        .query('SELECT id FROM premisesMap WHERE code=?')
+        .get(code) as { id: string } | null
+      if (!map) throw new Error(`Station map missing: ${code}`)
+      const unitId = member.childRef.slice('landsd-mtr-unit:'.length)
+      const locationId = refs.get(member.childRef)!
+      const prior = domain.sqlite
+        .query('SELECT locationId FROM premisesMapUnit WHERE mapId=? AND unitId=?')
+        .get(map.id, unitId) as { locationId: string } | null
+      if (prior && prior.locationId !== locationId)
+        throw new Error('Map unit identity conflict')
+      if (!prior)
+        domain.sqlite
+          .query('INSERT INTO premisesMapUnit(mapId,unitId,locationId) VALUES(?,?,?)')
+          .run(map.id, unitId, locationId)
     }
     for (const mapping of mappings) {
       const source = plan.occupantEvidence.find(
