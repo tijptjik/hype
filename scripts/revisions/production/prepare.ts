@@ -15,12 +15,15 @@ import { enrollResourceLogo } from '../../../src/lib/db/services/resourceLogoRev
 // ROLLOUT
 import { rehearseFeatureLifecycle } from '../../dev/feature-lifecycle/rehearse'
 import { prepareLifecycleSchemaGroup } from './lifecycle-schema'
+import { matchingBrandingHash, prepareMatchingBranding } from './matching-branding'
 import { prepareRevisionIdlePolicy } from './revision-idle-policy'
 import {
   prepareLegacyDraftConversion,
   applyLegacyDraftConversion,
 } from '../../dev/feature-lifecycle/convert-drafts'
 import { enrollLegacyRevisions } from '../enroll'
+import { publishedSubmissions } from './published-submissions'
+import approvedImages from './approved-image-recovery.json'
 import { cacheRevisionMedia, mediaCacheKey } from '../cache-media'
 import { verifiedRetainedPin } from '../retained-media'
 import {
@@ -140,8 +143,15 @@ export async function prepareRelease(
   directory: string,
   target: string,
   cacheMedia: typeof cacheRevisionMedia = cacheRevisionMedia,
-  options: { featureLifecycle?: 'current' } = {},
+  options: { featureLifecycle?: 'current'; matchingBranding?: string } = {},
 ): Promise<Plan> {
+  if (
+    options.matchingBranding &&
+    (!target.startsWith('production:') || options.featureLifecycle !== 'current')
+  )
+    throw new Error(
+      'The matching and branding package requires the production lifecycle cutover',
+    )
   mkdirSync(directory, { mode: 0o700 })
   const database = join(directory, 'prepared.sqlite')
   const backup = spawnSync(
@@ -183,6 +193,7 @@ export async function prepareRelease(
       target,
       initial,
       initialSchema,
+      options.matchingBranding,
     )
   const groups = prepareNumberedMigrations(
     database,
@@ -191,7 +202,16 @@ export async function prepareRelease(
     options.featureLifecycle === 'current',
   )
   const media = join(directory, 'media')
-  const cached = await cacheMedia(database, media, { baselineOnly: true })
+  const mediaOptions = {
+    baselineOnly: true,
+    publishedSubmissions:
+      target === 'production:7786af0e-3782-47f8-b70d-de645ba836ad' &&
+      options.featureLifecycle === 'current'
+        ? publishedSubmissions
+        : undefined,
+    approvedImages: target.startsWith('production:') ? approvedImages : undefined,
+  }
+  const cached = await cacheMedia(database, media, mediaOptions)
   if (cached.blocked)
     throw new Error(
       `${cached.blocked} images require explicit source repair before rollout`,
@@ -220,7 +240,7 @@ export async function prepareRelease(
       media,
       join(directory, 'feature-enrollment.json'),
       d,
-      { baselineOnly: true },
+      mediaOptions,
     )
     if (enrollment.blocked)
       throw new Error(
@@ -323,7 +343,10 @@ export async function prepareRelease(
     if (options.featureLifecycle === 'current') {
       // Rehearse first, then replay the portable D1 group with foreign keys enabled.
       const converted = join(directory, 'lifecycle-schema.sqlite')
-      await rehearseFeatureLifecycle(database, converted, { cleanupDrafts: false })
+      await rehearseFeatureLifecycle(database, converted, {
+        cleanupDrafts: false,
+        publishedSubmissions: mediaOptions.publishedSubmissions,
+      })
       const targetSnapshot = new SQLite(converted, { readonly: true })
       try {
         const group = prepareLifecycleSchemaGroup(d.sqlite, targetSnapshot)
@@ -356,6 +379,15 @@ export async function prepareRelease(
       groups.push(...prepareNumberedMigrations(database, directory, 'post-lifecycle'))
       for (const check of completeness(true))
         d.sqlite.query(check.sql).all(...check.params)
+      if (options.matchingBranding)
+        groups.push(
+          ...prepareMatchingBranding(
+            d.sqlite,
+            database,
+            directory,
+            options.matchingBranding,
+          ),
+        )
       // Preserve the existing projection contract and add exact lifecycle/media evidence.
       // Unrelated resource journals mint their own SQL IDs during enrollment replay;
       // their completeness checks remain mandatory instead of comparing rehearsal IDs.
@@ -389,6 +421,9 @@ export async function prepareRelease(
     }
     const plan: Plan = {
       version: 1,
+      ...(options.matchingBranding
+        ? { matchingBrandingHash: matchingBrandingHash(options.matchingBranding) }
+        : {}),
       ...(options.featureLifecycle
         ? { featureLifecycle: options.featureLifecycle }
         : {}),
@@ -451,6 +486,7 @@ function prepareCurrentLifecycleRelease(
   target: string,
   initial: Plan['initial'],
   initialSchema: Plan['initialSchema'],
+  matchingBranding?: string,
 ): Plan {
   const d = openSqliteDomain(database)
   try {
@@ -472,6 +508,10 @@ function prepareCurrentLifecycleRelease(
     for (const group of cleanup)
       d.sqlite.transaction(() => applyLegacyDraftConversion(d.sqlite, [group]))()
     groups.push(...cleanup)
+    if (matchingBranding)
+      groups.push(
+        ...prepareMatchingBranding(d.sqlite, database, directory, matchingBranding),
+      )
     for (const group of groups) {
       const statements = [
         ...group.statements,
@@ -510,6 +550,9 @@ function prepareCurrentLifecycleRelease(
     )
     const plan: Plan = {
       version: 1,
+      ...(matchingBranding
+        ? { matchingBrandingHash: matchingBrandingHash(matchingBranding) }
+        : {}),
       featureLifecycle: 'current',
       target,
       sourceHash: releaseSourceHash(),

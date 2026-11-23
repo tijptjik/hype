@@ -18,6 +18,7 @@ export type Fingerprint = { rows: number; hash: string }
 export type Plan = {
   version: 1
   featureLifecycle?: 'current'
+  matchingBrandingHash?: string
   parentCursor?: number
   parentHash?: string
   target: string
@@ -203,8 +204,9 @@ export async function applyGroups(
   plan: Plan,
   until = plan.groups.length,
 ): Promise<number> {
+  const planHash = digest(plan)
   let state = await journal(db)
-  if (!state || state.planHash !== digest(plan) || state.writable !== 0)
+  if (!state || state.planHash !== planHash || state.writable !== 0)
     throw new Error('Rollout journal differs')
   if (state.phase !== 'paused') return state.nextGroup
   if (until < 0 || until > plan.groups.length)
@@ -215,7 +217,7 @@ export async function applyGroups(
     await atomic(db, [
       guard(
         `EXISTS(SELECT 1 FROM ${CONTROL} WHERE planHash=? AND nextGroup=? AND phase='paused' AND writable=0)`,
-        [digest(plan), n],
+        [planHash, n],
       ),
       { sql: `UPDATE ${CONTROL} SET writable=1 WHERE singleton=1`, params: [] },
       ...group.statements,
