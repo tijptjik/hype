@@ -1,4 +1,6 @@
 <script lang="ts">
+// ICONS
+import ChevronRight from 'virtual:icons/lucide/chevron-right'
 // TYPES
 import type { HeaderBreadcrumbsProps } from '../headerPrimitive.types.js'
 
@@ -18,9 +20,12 @@ let { crumbs = [] }: HeaderBreadcrumbsProps = $props()
             >{crumb.name}</span
           >
         {/if}
-        <span aria-hidden="true" class="bits-header__breadcrumb-separator"
-          >{index < crumbs.length - 1 ? '/' : ''}</span
-        >
+        {#if index < crumbs.length - 1}
+          <ChevronRight
+            aria-hidden="true"
+            class="bits-header__breadcrumb-separator size-3"
+          />
+        {/if}
       </span>
     {/each}
   </nav>

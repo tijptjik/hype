@@ -37,7 +37,7 @@ const symbol = $derived(
 {#if symbol}
   <svg
     viewBox="0 0 24 24"
-    class={`shrink-0 ${className}`}
+    class={'shrink-0' + className}
     style:color={symbol.color}
     fill="none"
     stroke="currentColor"
