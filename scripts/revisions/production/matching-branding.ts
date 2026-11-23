@@ -17,7 +17,12 @@ import type { Database } from 'bun:sqlite'
 import type { Group } from './contract'
 
 const source = 'migrations/pending/matching-and-branding'
-const inputs = ['records.jsonl.gz', 'curation.json', 'media.json'] as const
+const inputs = [
+  'records.jsonl.gz',
+  'curation.json',
+  'media.json',
+  'production-baseline.json.gz',
+] as const
 
 /** Pin the private release data for all preparations and retries in this run.
  * @param directory Managed run directory. @param provided Explicit operator-selected package.
@@ -109,16 +114,20 @@ export function prepareMatchingBranding(
     })()
   // The private staging table exists across journal groups. Install its ordinary write fences
   // in the creation transaction. Dropping the table in the installation group removes them.
-  if (groups.length)
-    groups[0]!.statements.push(...fences(['_matchingBrandingReleaseRows']))
+  groups[0]?.statements.push(...fences(['_matchingBrandingReleaseRows']))
   return groups
 }
 
 /** Identify the pinned curation package inside a retained plan, including a zero-write replay.
- * @param path Directory already verified against the release manifest. @returns SHA-256 of the data manifest.
+ * @param path Directory already verified against the release manifest.
+ * @returns SHA-256 over the ordered filenames and their verified SHA-256 digests.
  */
 export function matchingBrandingHash(path: string): string {
-  return createHash('sha256')
-    .update(readFileSync(join(path, 'curation.json')))
-    .digest('hex')
+  const digests = inputs.map(file => [
+    file,
+    createHash('sha256')
+      .update(readFileSync(join(path, file)))
+      .digest('hex'),
+  ])
+  return createHash('sha256').update(JSON.stringify(digests)).digest('hex')
 }

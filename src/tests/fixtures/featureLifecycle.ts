@@ -101,6 +101,10 @@ export function lifecycleFixture(
     )
     sqlite.exec(`CREATE TABLE "${name}" (${columns.join(',')}${composite[name] ?? ''})`)
   }
+  // These lifecycle fixtures use plain Feature names. The deployed title guard queries this view on every edit.
+  sqlite.exec(`CREATE VIEW featureComputedName AS
+    SELECT i.featureId,i.locale,COALESCE(i.baseName,i.title,'') title
+    FROM featureI18n i JOIN feature f ON f.id=i.featureId WHERE f.nameTemplate IS NULL`)
   const source = featureRevisionSourceFixture()
   if (linked) {
     const accepted = featureRevisionLocationFixture()

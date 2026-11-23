@@ -149,7 +149,6 @@ class ProductionAncestry:
         self.dev_roots = {}
         self.dev_binding = {}
         self.roots = {}
-        self.source_hashes = set()
         for fid, ref in self.rows.items():
             root = root_revision(db, fid)
             if any(

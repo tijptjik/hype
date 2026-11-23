@@ -21,8 +21,8 @@ their recorded values. The data groups create no user or authentication rows.
 ## Use during the cutover
 
 Set `PACKAGE` to the private directory containing `curation.json`, `records.jsonl.gz`,
-`media.json` and `objects/`. Choose the run directory for the reviewed cutover. The
-November 24 release on the managed desktop is
+`production-baseline.json.gz`, `media.json` and `objects/`. Choose the run directory for
+the reviewed cutover. The November 24 release on the managed desktop is
 `.local/curation-release/20261123T180818Z/release`.
 
 1. Follow the cutover plan for the production export, schema, lifecycle enrollment and
@@ -33,7 +33,7 @@ November 24 release on the managed desktop is
    Check overlapping donor work against the target before selecting any separate donor
    migration. Revealing Arrow retains its own release package.
 2. Select the curation package during managed preparation. The runner copies and
-   verifies the three pinned manifests, rehearses on its private post-schema copy and
+   verifies the four pinned inputs, rehearses on its private post-schema copy and
    includes the resulting D1 groups and fingerprints in the retained plan. The selection
    follows a fenced replan and resumes from the same run directory.
 
@@ -48,6 +48,17 @@ November 24 release on the managed desktop is
    divergence requires a target-specific reconciliation using the stable source keys and
    reviewed evidence. Retain production edits. A data plan from the development
    rehearsal is specific to its input.
+
+   The November production-derived rehearsal has the same 330 donor and drop-off source
+   fingerprints, Feature IDs, Location IDs and source revision IDs as dev. Independent
+   enrollment gave all 330 different binding versions and revision ancestry. Twenty-one
+   source revisions also differ in their recorded phone facts. The private production
+   baseline anchors each source to its production import, original binding and enrolled
+   Feature content. The planner keeps those facts and histories, appends the captured
+   curation to the target's own predecessors and checks the resulting projections.
+   Unexpected edits to the same field require review. A private `conflicts.json.gz`
+   records divergent row keys and their before, target and desired values when row
+   comparison fails.
 4. Preview media with the command below. After **separate production upload
    authorization**, append `--apply-production` to create missing objects using a
    conditional write and read-back SHA-256 verification. Retries check existing bytes.
@@ -81,6 +92,12 @@ dev-check python3 migrations/pending/matching-and-branding/package.py prepare \
 dev-check python3 migrations/pending/matching-and-branding/rehearse-mirror.py \
   "$PACKAGE" "$NEW_OUTPUT/rehearsal.sqlite" "$NEW_MIRROR"
 ```
+
+For a journal rehearsal, run
+`dev-check bun migrations/pending/matching-and-branding/rehearse-journal.ts "$SCHEMA_CURRENT_TARGET" "$PLAN_JSON" "$NEW_JOURNAL"`.
+It interrupts installation with a stale before-image, checks rollback and resumes the
+retained plan. To inspect the independent source bindings, run
+`dev-check python3 migrations/pending/matching-and-branding/compare-bindings.py "$PRE_CURATION_DEV" "$POST_SCHEMA_PRODUCTION_COPY" "$NEW_PRIVATE_REPORT"`.
 
 The package also contains the freeze tools.
 `package.py capture BASELINE SNAPSHOT OUTPUT` uses an aligned, pre-curation database
