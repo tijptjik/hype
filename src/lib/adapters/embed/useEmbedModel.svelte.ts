@@ -1,4 +1,3 @@
-import { displayPropertyValueIds } from '#lib/properties/selection.js'
 // SVELTE
 import { onMount } from 'svelte'
 // EMBED
@@ -13,6 +12,8 @@ import {
 import type { ThemeId } from '#lib/themes/themes.types.js'
 import type { EmbedPayload } from '#lib/embed/embed.types.js'
 import type { FeatureFromCollection } from '#lib/db/zod/schema/feature.types.js'
+// PROPERTY SELECTION
+import { displayPropertyValueIds } from '#lib/properties/selection.js'
 
 /** Owns anonymous embed loading and visitor-local narrowing.
  * @param url Initial embed URL. @returns Reactive map state and retry controls.
