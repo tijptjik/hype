@@ -409,3 +409,44 @@ it('sorts the full scope in both directions with stable tie pagination and curso
     }),
   ).rejects.toThrow('LOCATION_SORT_CURSOR_MISMATCH')
 })
+
+it('finds a shared MTR draft by shop code and punctuation-insensitive name without exposing private records', async () => {
+  const f = fixture()
+  f.add('kot122')
+  f.add('private', null, 'manual')
+  const facts = {
+    names: { en: '7-Eleven' },
+    brands: [],
+    phoneNumber: [],
+    location: {
+      geometry: { type: 'Point', coordinates: [114.18, 22.337] },
+      address: {
+        status: 'unresolved',
+        address2dId: null,
+        address3dId: null,
+        address3dUnitId: null,
+        snapshotId: null,
+        rawSource: {},
+        fallbackDisplay: { en: 'KOT 122, MTR Kowloon Tong Station' },
+      },
+    },
+  }
+  for (const id of ['kot122', 'private']) {
+    f.sqlite
+      .prepare(
+        'INSERT INTO locationRevisionContent(id,locationId,version,origin,facts,contentHash) VALUES (?,?,1,?,?,?)',
+      )
+      .run(`${id}_draft`, id, 'local', JSON.stringify(facts), 'draft-hash')
+  }
+  for (const q of ['KOT 122', 'KOT122', '7 Eleven']) {
+    const result = await listLocationResources(f.db, {
+      q,
+      searchAddress: true,
+      includeCount: true,
+      excludeCanonicalDrafts: false,
+    })
+    expect(result.data.map(row => row.id)).toEqual(['kot122'])
+    expect(result.data[0].ssId).toBeNull()
+    expect(result.data[0].draftVersion).toBe('draft-hash')
+  }
+})

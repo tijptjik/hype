@@ -59,6 +59,8 @@ export async function listLocationResources(
     linkedFeatures?: boolean
     buildingId?: string
     q?: string
+    /** Include retained address labels when discovering reconciliation candidates. */
+    searchAddress?: boolean
     after?: string
     id?: string
     lifecycleStatus?: LifecycleStatus
@@ -168,6 +170,9 @@ export async function listLocationResources(
       ? or(
           eq(locationTable.id, input.q),
           eq(locationTable.ssId, input.q),
+          input.searchAddress
+            ? sql`(EXISTS (SELECT 1 FROM json_tree(${locationRevision.facts}) a WHERE a.type='text' AND (a.fullkey LIKE '%address%' OR a.fullkey LIKE '%Address%') AND instr(replace(lower(a.value),' ',''),replace(lower(${input.q}),' ',''))>0) OR EXISTS (SELECT 1 FROM json_each(${fields.names}) n WHERE n.type='text' AND instr(replace(replace(lower(n.value),'-',''),' ',''),replace(replace(lower(${input.q}),'-',''),' ',''))>0))`
+            : undefined,
           sql`EXISTS (SELECT 1 FROM json_each(${fields.names}) n WHERE n.type='text' AND instr(lower(n.value), lower(${input.q}))>0)`,
         )
       : undefined,
