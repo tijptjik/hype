@@ -121,6 +121,7 @@ it('requires a managed organisation scope for non-admin discovery', async () => 
 it('forwards local filters before paging rather than filtering the returned slice', async () => {
   await getBrandLocations({
     brandId: 'brand',
+    taxonomyCategory: 'bakery',
     upstream: false,
     linkedFeatures: true,
     after: 'cursor',
@@ -129,6 +130,7 @@ it('forwards local filters before paging rather than filtering the returned slic
     mocks.ctx.db,
     expect.objectContaining({
       brandId: 'brand',
+      taxonomyCategory: 'bakery',
       upstream: false,
       linkedFeatures: true,
       after: 'cursor',
@@ -158,4 +160,91 @@ it('prepares an explicit identity review instead of silently relinking', async (
     }),
   ).toEqual({ locationId: 'target', reviewId: 'review' })
   expect(mocks.persist).not.toHaveBeenCalled()
+})
+
+it('displays the original source label without search aliases or empty brand separators', async () => {
+  mocks.search.mockResolvedValue({
+    candidates: [
+      {
+        placeId: 'ss-one',
+        resourceReleaseId: 'r',
+        nameText: 'Arome Bakery\u001farome bakery',
+        brandText: '\u001f',
+      },
+    ],
+    nextCursor: null,
+  })
+  const result = await discoverBrandLocations(input)
+  expect(result.rows[0]).toMatchObject({
+    name: 'Arome Bakery',
+    brand: null,
+    ssId: 'ss-one',
+    match: 'name',
+  })
+})
+
+it('uses embedded branch addresses only when their identity and release match', async () => {
+  const preview = {
+    place: {
+      id: 'ss-one',
+      resourceReleaseId: 'r',
+      geometry: { type: 'Point', coordinates: [114.1, 22.3] },
+    },
+    i18n: { en: { name: 'AROME Central', freeformAddress: '10 Example Street' } },
+  }
+  mocks.search.mockResolvedValue({
+    candidates: [
+      {
+        placeId: 'ss-one',
+        resourceReleaseId: 'r',
+        nameText: 'Search name',
+        brandText: null,
+        preview,
+      },
+      {
+        placeId: 'ss-two',
+        resourceReleaseId: 'r',
+        nameText: 'Other branch',
+        brandText: null,
+        preview,
+      },
+    ],
+    nextCursor: null,
+  })
+  const result = await discoverBrandLocations(input)
+  expect(result.rows[0]).toMatchObject({
+    name: 'AROME Central',
+    address: '10 Example Street',
+    coordinates: [114.1, 22.3],
+  })
+  expect(result.rows[1]).toMatchObject({
+    name: 'Other branch',
+    address: null,
+    coordinates: null,
+  })
+})
+
+it('allows category-only discovery and forwards category pagination', async () => {
+  const result = await discoverBrandLocations({
+    ...input,
+    q: '  ',
+    filters: { taxonomyCategory: 'bakery' },
+    cursor: 'category-page',
+  })
+  expect(mocks.search).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.objectContaining({
+      q: '',
+      filters: { taxonomyCategory: 'bakery' },
+      cursor: 'category-page',
+    }),
+  )
+  expect(result.rows).toHaveLength(2)
+})
+
+it('rejects discovery without either a term or category', async () => {
+  await expect(discoverBrandLocations({ ...input, q: '  ' })).rejects.toThrow(
+    'Enter a search term or select a category',
+  )
+  expect(mocks.search).not.toHaveBeenCalled()
 })

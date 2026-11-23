@@ -172,6 +172,67 @@ it('does not match superseded or cleared brand assignments', async () => {
   ).toEqual(['current'])
 })
 
+it('applies taxonomy descendants to local counts and pages using only the current source revision', async () => {
+  const f = fixture()
+  f.sqlite.exec('ALTER TABLE locationRevisionContent ADD COLUMN rawSource TEXT')
+  const addCategory = (id: string, category: string, version = 1): void => {
+    f.sqlite
+      .prepare(
+        'INSERT INTO locationRevisionContent(id,locationId,version,origin,rawSource) VALUES(?,?,?,?,?)',
+      )
+      .run(
+        `${id}-${version}`,
+        id,
+        version,
+        'saanseoi',
+        JSON.stringify({
+          resource: { attributes: { taxonomy: { primary: category } } },
+        }),
+      )
+  }
+  for (let i = 0; i < 28; i++) {
+    const id = `match-${String(i).padStart(2, '0')}`
+    f.add(id)
+    addCategory(id, 'bakery')
+  }
+  f.add('changed')
+  addCategory('changed', 'bakery')
+  addCategory('changed', '3d_printing_service', 2)
+  f.add('unclassified')
+  const query = { brandId: 'brand', taxonomyCategory: 'bakery', includeCount: true }
+  const first = await listLocationResources(f.db, query)
+  expect(first.totalCount).toBe(28)
+  expect(first.data).toHaveLength(25)
+  expect(first.nextCursor).not.toBeNull()
+  const second = await listLocationResources(f.db, {
+    ...query,
+    after: first.nextCursor!,
+  })
+  expect(second.data).toHaveLength(3)
+  expect(second.nextCursor).toBeNull()
+  const { placeTaxonomyPath } = await import('#lib/locations/placeTaxonomy.js')
+  const parent = placeTaxonomyPath('bakery').at(-2)!.name
+  expect(
+    (await listLocationResources(f.db, { ...query, taxonomyCategory: parent }))
+      .totalCount,
+  ).toBe(28)
+  expect(
+    (
+      await listLocationResources(f.db, {
+        ...query,
+        taxonomyCategory: '3d_printing_service',
+      })
+    ).data.map(row => row.id),
+  ).toEqual(['changed'])
+  expect(
+    (await listLocationResources(f.db, { ...query, q: 'match-00' })).totalCount,
+  ).toBe(1)
+  expect(
+    (await listLocationResources(f.db, { ...query, taxonomyCategory: undefined }))
+      .totalCount,
+  ).toBe(30)
+})
+
 it('separates upstream published records from ownerless canonical drafts before counting', async () => {
   const f = fixture()
   f.add('draft')

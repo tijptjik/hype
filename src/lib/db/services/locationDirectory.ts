@@ -16,6 +16,10 @@ import { premisesMap as premisesMapTable } from '../schema/premisesMap'
 import { availablePremisesMap } from '#lib/indoor/registry.js'
 // LOCATION
 import type { LocationSortKey } from '#lib/locations/sorting.js'
+import {
+  placeTaxonomyPath,
+  type PlaceTaxonomyNode,
+} from '#lib/locations/placeTaxonomy.js'
 import { locationTaxonomy } from '#lib/locations/taxonomy.js'
 import { locationFacilityNames } from '#lib/locations/facilityNames.js'
 import { locationSourceReference, type LocationKind } from '#lib/locations/kinds.js'
@@ -50,6 +54,7 @@ export async function listLocationResources(
     restrictToOrganisation?: boolean
     kind?: LocationKind
     brandId?: string
+    taxonomyCategory?: string
     upstream?: boolean
     linkedFeatures?: boolean
     buildingId?: string
@@ -83,6 +88,16 @@ export async function listLocationResources(
     sql`${locationRevision.version} = (SELECT max(r.version) FROM locationRevisionContent r WHERE r.locationId=${locationTable.id} AND (${locationTable.state}!='linked' OR r.origin='saanseoi'))`,
   )
   const linked = sql`EXISTS(SELECT 1 FROM featureLocation fl JOIN feature f ON f.id=fl.featureId JOIN project p ON p.id=f.projectId WHERE fl.locationId=${locationTable.id} AND (${input.organisationId ?? null} IS NULL OR p.organisationId=${input.organisationId ?? null}))`
+  // Expand the selected taxonomy branch into one JSON parameter, keeping the query bounded.
+  const categoryNode = input.taxonomyCategory
+    ? placeTaxonomyPath(input.taxonomyCategory).at(-1)
+    : undefined
+  /** Collect a category branch without expanding SQL bindings. @param node Taxonomy root. @returns Exact descendant keys. */
+  const categoryKeys = (node: PlaceTaxonomyNode): string[] => [
+    node.name,
+    ...(node.children ?? []).flatMap(categoryKeys),
+  ]
+  const categoryValues = JSON.stringify(categoryNode ? categoryKeys(categoryNode) : [])
   const canonicalDraft = sql`${locationTable.state}='unresolved' AND ${locationTable.ssId} IS NULL AND ${locationTable.ownerOrganisationId} IS NULL`
   const match = and(
     input.excludeCanonicalDrafts ? sql`NOT (${canonicalDraft})` : undefined,
@@ -91,6 +106,9 @@ export async function listLocationResources(
       : input.publication === 'published'
         ? sql`${locationTable.ssId} IS NOT NULL`
         : undefined,
+    input.taxonomyCategory
+      ? sql`EXISTS(SELECT 1 FROM json_each(${categoryValues}) category WHERE category.value = coalesce(json_extract(${locationRevision.rawSource},'$.resource.attributes.taxonomy.primary'),json_extract(${locationRevision.rawSource},'$.resource.attributes.taxonomyPrimary')))`
+      : undefined,
     sql`${locationTable.state} != 'redirect'`,
     input.brandId
       ? sql`EXISTS(SELECT 1 FROM locationSharedHead h WHERE h.locationId=${locationTable.id} AND json_extract(h.corrections,'$.brandId.supersededBy') IS NULL AND json_extract(h.corrections,'$.brandId.choice.mode')='override' AND json_extract(h.corrections,'$.brandId.choice.value')=${input.brandId})`
@@ -157,7 +175,7 @@ export async function listLocationResources(
   // Count the complete scope without hydrating facts, labels or associated records.
   const countQuery = db.select({ count: sql<number>`count(*)` }).from(locationTable)
   const counted = input.includeCount
-    ? await (input.q || input.lifecycleStatus
+    ? await (input.q || input.lifecycleStatus || input.taxonomyCategory
         ? countQuery.leftJoin(locationRevision, revisionJoin).where(match)
         : countQuery.where(match))
     : null

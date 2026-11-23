@@ -26,6 +26,7 @@ import {
   type PlaceSourceClient,
   searchSaanSeoiPlacesPage,
 } from '#lib/locations/sourceClient.js'
+import { projectSaanSeoiPlacePreview } from '#lib/locations/sourcePreview.js'
 import { PlaceSearchFiltersSchema } from '#lib/locations/placeSearchFilters.js'
 import { locationSourceEndpoint } from '#lib/locations/sourceEndpoint.server.js'
 import { discoverLocationPublication } from '#lib/locations/publication.js'
@@ -57,6 +58,14 @@ function client(ctx: GuardedBaseContext): PlaceSourceClient {
   return { ...locationSourceEndpoint(apiKey), fetch: ctx.event.fetch }
 }
 
+/** Read the display label before the provider's search-alias separator.
+ * @param value Search-index text, which may include alternate names after U+001F.
+ * @returns Original label or null; alias text is never presented as a combined name.
+ */
+function sourceSearchLabel(value: string | null): string | null {
+  return value?.split('\u001f', 1)[0]?.trim() || null
+}
+
 const scope = z.object({
   brandId: z.string().min(1).max(200),
   organisationId: z.string().min(1).optional(),
@@ -71,31 +80,37 @@ export const getBrandLocations = guardedQuery(
     linkedFeatures: z.boolean().optional(),
     after: z.string().optional(),
     q: z.string().max(200).optional(),
+    taxonomyCategory: PlaceSearchFiltersSchema.shape.taxonomyCategory,
   }),
   async (input, ctx) => {
     await authorize(ctx, input.organisationId)
-    return listLocationResources(ctx.db, { ...input, includeCount: false })
+    return listLocationResources(ctx.db, { ...input, includeCount: !input.after })
   },
 )
 
 /** Search source candidates without importing or assigning a catalogue brand.
  * @param input Editable term, category, source cursor and independent presence/usage filters.
- * @returns Name-match candidates and a provider continuation, even when a filtered page is empty.
+ * @returns Text or category candidates and a provider continuation, even when a filtered page is empty.
  * @remarks Provider text search is not a verified brand identity match or an exhaustive branch census.
  */
 export const discoverBrandLocations = guardedQuery(
-  scope.extend({
-    q: z.string().trim().min(1).max(200),
-    locale: z.enum(['en', 'zh-hant', 'zh-hans']),
-    filters: PlaceSearchFiltersSchema.optional(),
-    cursor: z.string().max(8192).optional(),
-    hype: z.boolean().optional(),
-    linkedFeatures: z.boolean().optional(),
-  }),
+  scope
+    .extend({
+      q: z.string().trim().max(200),
+      locale: z.enum(['en', 'zh-hant', 'zh-hans']),
+      filters: PlaceSearchFiltersSchema.optional(),
+      cursor: z.string().max(8192).optional(),
+      hype: z.boolean().optional(),
+      linkedFeatures: z.boolean().optional(),
+    })
+    .refine(input => Boolean(input.q || input.filters?.taxonomyCategory?.trim()), {
+      message: 'Enter a search term or select a category',
+      path: ['q'],
+    }),
   async (input, ctx) => {
     await authorize(ctx, input.organisationId)
     const brand = await readIdentityCatalogue(ctx.db, input.brandId)
-    if (!brand || brand.kind !== 'brand') error(404, 'BRAND_NOT_FOUND')
+    if (brand?.kind !== 'brand') error(404, 'BRAND_NOT_FOUND')
     const page = await searchSaanSeoiPlacesPage(client(ctx), {
       q: input.q,
       locale: input.locale,
@@ -120,11 +135,34 @@ export const discoverBrandLocations = guardedQuery(
         Boolean(existing?.linked) !== input.linkedFeatures
       )
         continue
+      // Only identity-checked embedded facts may supply a branch address or display name.
+      let preview: ReturnType<typeof projectSaanSeoiPlacePreview> | null = null
+      if (candidate.preview !== undefined) {
+        try {
+          preview = projectSaanSeoiPlacePreview(candidate.preview, {
+            ssId: candidate.placeId,
+            resourceReleaseId: candidate.resourceReleaseId,
+          })
+        } catch {
+          /* A malformed preview leaves a text-only candidate for explicit review. */
+        }
+      }
+      const address = preview?.location.address.fallbackDisplay
       rows.push({
         ssId: candidate.placeId,
         resourceReleaseId: candidate.resourceReleaseId,
-        name: candidate.nameText ?? candidate.placeId,
-        brand: candidate.brandText,
+        name:
+          preview?.names[input.locale] ||
+          preview?.names.en ||
+          sourceSearchLabel(candidate.nameText) ||
+          candidate.placeId,
+        address:
+          address?.[input.locale] ||
+          address?.en ||
+          Object.values(address ?? {}).find(Boolean) ||
+          null,
+        coordinates: preview?.location.geometry.coordinates ?? null,
+        brand: sourceSearchLabel(candidate.brandText),
         locationId: existing?.id ?? null,
         linked: Boolean(existing?.linked),
         match:
