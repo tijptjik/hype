@@ -641,7 +641,8 @@ export async function prepareLifecycleCapture(
   })
   const token = crypto.randomUUID(),
     revisionId = idle.revisionId
-  const guard = sql`(${input.guard}) AND (${source.unchanged}) AND (${featureContentProjectionMatches(input.featureId, current.content)})
+  // The captured source already includes the caller guard.
+  const guard = sql`(${source.unchanged}) AND (${featureContentProjectionMatches(input.featureId, current.content)})
     AND EXISTS(SELECT 1 FROM feature WHERE id=${input.featureId} AND currentRevisionId=${current.revisionId} AND revisionVersion=${current.version})
     AND NOT EXISTS(SELECT 1 FROM featureIdentityOperationMember i WHERE i.featureId=${input.featureId} AND i.role='input'
       AND NOT EXISTS(SELECT 1 FROM featureIdentityOperationMember o WHERE o.operationId=i.operationId AND o.role='output' AND o.featureId=i.featureId))`
