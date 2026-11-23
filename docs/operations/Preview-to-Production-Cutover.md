@@ -60,9 +60,14 @@ Two additional packages require reconciliation on the production-derived databas
   production records. Retain the authored history and resolve the current classification
   against the production catalogue before importing the recording.
 
-The matching and branding package's three original input files and 769 local media
-objects matched their manifests. Recheck the pinned package at release freeze. The
-revision rehearsal starts from the locally split database. A complete deployment
+Select the matching and branding package with `--curation-package` during managed
+preparation. Its original inputs and 769 local media objects matched their manifests.
+The production ancestry file pins the donor import used to reconcile the histories.
+Read-only production inspection found five matching media objects and 764 required
+uploads. Recheck all pinned inputs and production media at release freeze.
+[Matching and branding runbook](../../migrations/pending/matching-and-branding/README.md)
+
+The revision rehearsal starts from the locally split database. A complete deployment
 rehearsal must start at the original export and include every selected package.
 
 ## 1. Freeze the candidate and control deployment
