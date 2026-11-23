@@ -4337,6 +4337,13 @@ Rehearsal:
 `dev-check python3 -m unittest discover -s scripts/catalogue -p test_release_seed.py -v`.
 No production database application is implied by generating or testing the migration.
 
+The November 24 post-schema release advances this catalogue and carries the reviewed
+Location associations, donor naming, MTR placements and their media into the cutover.
+The operator selects the private package during managed preparation. The planner
+compares each affected row with its accepted before-image and verifies a zero-write
+replay on a copy of the target.
+[Matching and branding package](../../../migrations/pending/matching-and-branding/README.md)
+
 Catalogue Identity displays the immediate group followed by indented, linked ancestors
 in nearest-first order. The connector says “Part of” because group membership does not
 encode ownership percentage. The ancestor chain follows the draft's selected group and
