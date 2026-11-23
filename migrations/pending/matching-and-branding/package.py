@@ -122,7 +122,8 @@ def release_seed(db):
     for kind in ("table", "view", "trigger"):
         for (sql,) in db.execute(
             """SELECT sql FROM sqlite_schema WHERE type=? AND
-                (tbl_name GLOB 'identityCatalogue*') AND sql IS NOT NULL ORDER BY name""",
+                (tbl_name GLOB 'identityCatalogue*') AND name NOT GLOB 'revision_deploy_*'
+                AND sql IS NOT NULL ORDER BY name""",
             (kind,),
         ):
             seed.execute(sql)
@@ -449,7 +450,11 @@ def compare(directory, manifest, db, conflict_path=None):
     for entry in stream(directory, manifest):
         if isinstance(entry, dict):
             table, cols, keys = entry["table"], entry["cols"], tuple(entry["keys"])
-            if table not in FILTERS or layout(db, table) != (cols, keys):
+            if table not in FILTERS:
+                raise ValueError(f"Unexpected table {table}")
+            target_cols, target_keys = layout(db, table)
+            # All reads and writes name their columns. Enrollment order can change physical order.
+            if set(target_cols) != set(cols) or target_keys != keys:
                 raise ValueError(f"Target schema differs for {table}")
             existing = {}
             for row in db.execute(f'SELECT {",".join(cols)} FROM "{table}"'):

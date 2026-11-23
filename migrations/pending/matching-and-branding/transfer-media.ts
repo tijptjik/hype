@@ -16,6 +16,7 @@ type ObjectEntry = {
 /** Check the immutable source manifest and read back each production object.
  * @param directory Private package containing media.json and objects/.
  * @param apply Create missing objects only when explicitly selected.
+ * @param verify Require every production object to exist and match the manifest.
  * @returns Counts and a private, per-key verification receipt.
  */
 async function transfer(
@@ -23,15 +24,19 @@ async function transfer(
   apply: boolean,
   verify: boolean,
 ): Promise<void> {
-  const { objects } = JSON.parse(
-    await readFile(resolve(directory, 'media.json'), 'utf8'),
-  ) as {
+  const digest = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex')
+  const pins = await Bun.file(new URL('./release.json', import.meta.url)).json()
+  const manifest = await readFile(resolve(directory, 'media.json'))
+  if (digest(manifest) !== pins.files['media.json'])
+    throw new Error('Media inventory differs from the pinned release')
+  const { objects } = JSON.parse(manifest.toString('utf8')) as {
     objects: ObjectEntry[]
   }
   const account = process.env.CLOUDFLARE_ACCOUNT_ID
+  const config = Bun.TOML.parse(await readFile('wrangler.toml', 'utf8'))
   const accessKeyId = process.env.R2_S3_ACCESS_KEY_ID
   const secretAccessKey = process.env.R2_S3_SECRET_ACCESS_KEY
-  if (!account?.match(/^[a-f0-9]{32}$/) || !accessKeyId || !secretAccessKey)
+  if (account !== config.account_id || !account || !accessKeyId || !secretAccessKey)
     throw new Error('Production R2 read credentials are required')
   const client = new AwsClient({
     accessKeyId,
@@ -41,7 +46,6 @@ async function transfer(
   })
   const receipt: Array<{ key: string; bucket: string; sha256: string; state: string }> =
     []
-  const digest = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex')
   // Refuse unrecognized namespaces, changed local bytes and conflicting production bytes before upload.
   async function check(entry: ObjectEntry): Promise<boolean> {
     const response = await client.fetch(url(entry))
@@ -78,12 +82,12 @@ async function transfer(
   for (const [bucket, prefix] of [
     ['hype-assets-prod', 'identity-catalogue/'],
     ['hype-assets-raw-prod', 'premises-maps/'],
-  ]) {
+  ] as const) {
     const endpoint = new URL(
       'https://' + account + '.r2.cloudflarestorage.com/' + bucket,
     )
     endpoint.searchParams.set('list-type', '2')
-    endpoint.searchParams.set('prefix', prefix!)
+    endpoint.searchParams.set('prefix', prefix)
     for (;;) {
       const response = await client.fetch(endpoint)
       if (!response.ok) throw new Error('R2 inventory failed ' + response.status)
@@ -154,7 +158,11 @@ async function transfer(
   )
 }
 
-function pick(entry: ObjectEntry) {
+/** Select immutable receipt fields.
+ * @param entry Verified inventory entry.
+ * @returns Its object identity and expected digest.
+ */
+function pick(entry: ObjectEntry): Pick<ObjectEntry, 'key' | 'bucket' | 'sha256'> {
   return { key: entry.key, bucket: entry.bucket, sha256: entry.sha256 }
 }
 
