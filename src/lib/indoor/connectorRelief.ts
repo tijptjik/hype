@@ -1,3 +1,6 @@
+// DOMAIN
+import { networkConnectorPlan } from './exteriorRelief'
+import { networkAnnotation } from './networkAnnotations'
 // DATA
 import { footprintFrame } from './geometry'
 import { contains } from './navigation/geometry'
@@ -7,10 +10,16 @@ import type { Point, StationProjection } from './scene'
 import type { Position } from 'geojson'
 
 export type ConnectorRelief = {
+  outdoorEdge?: string
+  exteriorTreads?: string
+  exterior?: boolean
+  sourceTravel?: 'depart' | 'arrive' | 'both'
+  sourceEdge?: string
   descending: boolean
   opening: string
   bridges: string[]
   bridgeFaces: { path: string; upper: Point; lower: Point }[]
+  surfaces?: string[]
   surface: string
   depthEdges: string[]
   recessFaces: string[]
@@ -70,7 +79,16 @@ export function prepareConnectorReliefs(
       )
     )
       continue
-    const frame = footprintFrame(unit)
+    const annotation = networkAnnotation(data, unit)
+    const frame = footprintFrame(
+      unit,
+      annotation
+        ? [
+            annotation.destination[0] - annotation.entrance[0],
+            annotation.destination[1] - annotation.entrance[1],
+          ]
+        : undefined,
+    )
     if (!frame || unit.geometry.type !== 'Polygon') continue
     const id = value(unit.properties, 'unit_id')
     const levelId = value(unit.properties, 'level_id')
@@ -92,8 +110,14 @@ export function prepareConnectorReliefs(
         })
         .filter(n => Number.isFinite(n) && n !== 0),
     )
-    if (directions.size !== 1) continue
-    const direction = [...directions][0]
+    if (annotation?.exterior) {
+      builders.set(id, (projection, result) => {
+        result.set(id, networkConnectorPlan(unit, annotation, projection))
+      })
+      continue
+    }
+    if (!annotation && directions.size !== 1) continue
+    const direction = annotation ? Math.sign(annotation.rise) : [...directions][0]
     const peers = data.unit_polygon.features.filter(
       f => f !== unit && f.properties.level_id === levelId,
     )
@@ -131,16 +155,30 @@ export function prepareConnectorReliefs(
     }
     const start = score(-1),
       end = score(1)
-    if (Math.max(start, end) <= 0 || Math.abs(start - end) < 3 || start === end)
+    if (
+      !annotation &&
+      (Math.max(start, end) <= 0 || Math.abs(start - end) < 3 || start === end)
+    )
       continue
-    const entranceAtStart = start > end
+    const entranceAtStart = annotation
+      ? Math.hypot(
+          ...frame
+            .world(frame.minU, (frame.minV + frame.maxV) / 2)
+            .map((v, i) => v - annotation.entrance[i]),
+        ) <
+        Math.hypot(
+          ...frame
+            .world(frame.maxU, (frame.minV + frame.maxV) / 2)
+            .map((v, i) => v - annotation.entrance[i]),
+        )
+      : start > end
     const a = frame.world(frame.minU, (frame.minV + frame.maxV) / 2)
     const b = frame.world(frame.maxU, (frame.minV + frame.maxV) / 2)
     const metresX = 111320 * Math.cos((a[1] * Math.PI) / 180)
     const axis = [(b[0] - a[0]) * metresX, (b[1] - a[1]) * 111320]
     const norm = axis[0] ** 2 + axis[1] ** 2
-    // Every schematic flight reaches the same destination height; length only changes its grade.
-    const rise = 1.8
+    // Schematic relief is capped at 1.8 m; source-backed small rises retain their physical height.
+    const rise = annotation ? Math.min(Math.abs(annotation.rise), 1.8) : 1.8
     const progress = (point: Position): number => {
       const along = Math.max(
         0,
@@ -261,6 +299,14 @@ export function prepareConnectorReliefs(
         })
       })
       result.set(id, {
+        sourceTravel: annotation
+          ? annotation.travel === 'both'
+            ? 'both'
+            : annotation.travel === 'outward'
+              ? 'depart'
+              : 'arrive'
+          : undefined,
+        sourceEdge: annotation?.edgeId,
         descending: direction < 0,
         opening: projection.path(unit),
         bridges: [],

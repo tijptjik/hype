@@ -143,8 +143,10 @@ const facilityMarkers = $derived.by(() => {
   <g
     data-connector-relief={facesOnly ? undefined : value(unit.properties, 'unit_id')}
     data-connector-walls={facesOnly ? value(unit.properties, 'unit_id') : undefined}
+    data-source-network-edge={facesOnly ? undefined : relief.sourceEdge}
+    data-exterior-continuation={!facesOnly && relief.exterior ? true : undefined}
     data-descending={relief.descending}
-    clip-path={relief.descending ? `url(#${floorClip})` : undefined}
+    clip-path={relief.descending && !relief.exterior ? `url(#${floorClip})` : undefined}
     pointer-events="none"
   >
     {#if !facesOnly}
@@ -211,7 +213,11 @@ const facilityMarkers = $derived.by(() => {
       </defs>
     {/if}
     <!-- Adjoining flights share an opening; their connecting face meets both independent slopes. -->
-    <g clip-path={relief.descending ? `url(#${openingId})` : undefined}>
+    <g
+      clip-path={relief.descending && !relief.exterior
+        ? `url(#${openingId})`
+        : undefined}
+    >
       <!-- Only exposed edge faces are filled; nearby inclines leave the shared side open. -->
       {#if facesOnly}
         {#each relief.visibleFaces as face, index}
@@ -245,16 +251,40 @@ const facilityMarkers = $derived.by(() => {
           />
         {/each}
         <!-- Both travel directions shade toward the lower end, with opaque warm colours. -->
-        <path
-          d={relief.surface}
-          fill={`url(#${openingId}-depth)`}
-          stroke="var(--station-connector)"
-          stroke-width="0.9"
-          vector-effect="non-scaling-stroke"
-          fill-rule="evenodd"
-        />
+        {#each relief.surfaces ?? [relief.surface] as surface}
+          <path
+            d={surface}
+            fill={`url(#${openingId}-depth)`}
+            stroke="var(--station-connector)"
+            stroke-width="0.9"
+            vector-effect="non-scaling-stroke"
+            fill-rule="evenodd"
+          />
+        {/each}
+        {#if relief.outdoorEdge}
+          <path
+            d={relief.outdoorEdge}
+            fill="none"
+            stroke="#168bd2"
+            stroke-width="5"
+            vector-effect="non-scaling-stroke"
+            data-outdoor-edge
+          >
+            <title>Outdoor connection · source direction; schematic slope</title>
+          </path>
+        {/if}
+        {#if relief.exteriorTreads}
+          <path
+            d={relief.exteriorTreads}
+            fill="none"
+            stroke="var(--station-connector)"
+            stroke-width="0.8"
+            vector-effect="non-scaling-stroke"
+          />
+        {/if}
         {#each treads.filter(
-          tread => tread.properties.unit_id === unit.properties.unit_id,
+          tread =>
+            !relief.exterior && tread.properties.unit_id === unit.properties.unit_id,
         ) as tread}
           <path
             d={relief.line(tread)}
@@ -481,11 +511,19 @@ const facilityMarkers = $derived.by(() => {
           f => f.properties.unit_id === place.feature.properties.unit_id,
         )}
         {@const p = projection.project(centre(unit ?? place.feature), id)}
-        {@const direction = connectorTravelDirection(
-          value(place.feature.properties, 'unit_id'),
-          connections,
-        )}
         {@const relief = reliefs.get(value(place.feature.properties, 'unit_id'))}
+        {@const hasReviewedDirection = connections.some(
+          c =>
+            (c.from === place.feature.properties.unit_id ||
+              c.to === place.feature.properties.unit_id) &&
+            ['editor-verified', 'reviewed-layout'].includes(c.evidence),
+        )}
+        {@const direction = hasReviewedDirection
+          ? connectorTravelDirection(
+              value(place.feature.properties, 'unit_id'),
+              connections,
+            )
+          : relief?.sourceTravel}
         {#if direction && relief}
           {@const angle =
             (Math.atan2(
@@ -508,7 +546,11 @@ const facilityMarkers = $derived.by(() => {
             paint-order="stroke"
             pointer-events="none"
           >
-            <title>Reviewed travel direction</title>
+            <title>
+              {hasReviewedDirection
+                ? 'Reviewed travel direction'
+                : `3D indoor network · ${relief.sourceEdge}`}
+            </title>
             {direction === 'both' ? '↔' : direction === 'depart' ? '→' : '←'}
           </text>
         {/if}
