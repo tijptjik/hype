@@ -4,6 +4,10 @@ import { resolveTheme, THEME_COOKIE } from '#lib/themes/themes.js'
 // SVELTE
 import { sequence, type Handle } from '@sveltejs/kit/hooks'
 
+// API
+// The bundled Recorder calls this remote directly, even before a web route loads it.
+import '#lib/api/recorderAccount.remote.js'
+
 // I18N
 import { paraglideMiddleware } from '#lib/paraglide/server.js'
 // SECURITY
@@ -330,6 +334,18 @@ const handle_auth: Handle = async ({ event, resolve }) => {
     // SET LOCALS
     event.locals.auth = auth
 
+    // Tailscale terminates HTTPS before forwarding the request to the loopback Vite server.
+    if (
+      import.meta.env.DEV &&
+      event.locals.platform.env.ENVIRONMENT === 'local' &&
+      event.request.headers.get('host') === 'fi.tailb49776.ts.net:9443' &&
+      event.url.pathname.startsWith('/api/auth/')
+    ) {
+      const url = new URL(event.request.url)
+      url.protocol = 'https:'
+      url.host = 'fi.tailb49776.ts.net:9443'
+      return auth.handler(new Request(url, event.request))
+    }
     return svelteKitHandler({ event, resolve, auth, building: false })
   } catch (error) {
     console.error('🔴 Auth setup error:', error)
