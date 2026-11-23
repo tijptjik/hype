@@ -307,15 +307,27 @@ export async function acceptFeatureCreationProposal(
     featureId = prepared.featureId
     revisionId = prepared.revisionId
     statements = prepared.statements
+    // Restore the historical creation channel for a converted draft when its original provenance exists.
+    const historicalOrigin = await db.get<{ origin: string; recordedAt: string }>(sql`
+      SELECT json_extract(c.legacyEvidence,'$.before.featureOrigin[0].origin') origin,
+        json_extract(c.legacyEvidence,'$.before.featureOrigin[0].recordedAt') recordedAt
+      FROM task t JOIN revisionChangeSet c ON c.id='draft-conversion:'||t.id
+      WHERE t.proposalId=${input.proposalId} AND json_extract(c.legacyEvidence,'$.proposalId')=t.proposalId
+        AND json_extract(c.legacyEvidence,'$.format')='legacy-creation-conversion/v1'
+        AND json_type(c.legacyEvidence,'$.before.featureOrigin[0]')='object'`)
     // Acceptance preserves the app creation channel, independently of the reviewing actor.
     statements.push(
-      db.insert(featureOrigin).values({
-        featureId,
-        origin: 'app_contribution',
-        originId: input.proposalId,
-        recordedBy: proposal.contributorId,
-        recordedAt: new Date().toISOString(),
-      }),
+      db.insert(featureOrigin).values(
+        historicalOrigin
+          ? { featureId, ...historicalOrigin, originId: null, recordedBy: null }
+          : {
+              featureId,
+              origin: 'app_contribution',
+              originId: input.proposalId,
+              recordedBy: proposal.contributorId,
+              recordedAt: new Date().toISOString(),
+            },
+      ),
     )
   }
   return (await executeRevisionBatch(db, acceptanceGuard, [

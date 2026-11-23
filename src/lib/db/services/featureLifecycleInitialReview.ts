@@ -50,14 +50,17 @@ export async function reviewMigratedInitialContribution(
     version: string
     changes: string
     content: string
+    publishedSubmission: number
   }>(sql`
-    SELECT p.id,p.version,p.changes,r.content FROM task t
+    SELECT p.id,p.version,p.changes,r.content,
+      json_extract(p.creationScope,'$.legacyPublishedTaskId') IS t.id publishedSubmission FROM task t
     JOIN featureRevisionProposal p ON p.id=t.proposalId AND p.featureId=t.featureId
     JOIN featureRevision r ON r.id=p.baseRevisionId AND r.featureId=p.featureId
     WHERE t.id=${input.taskId} AND t.featureId=${input.featureId} AND t.type='newFeature'
       AND t.isDraft=0 AND t.isReviewed=0 AND t.contributorId=p.contributorId
       AND p.kind='update' AND p.status='submitted'
-      AND json_extract(p.creationScope,'$.legacyInitial.mode')='contribution' AND (${input.guard})`)
+      AND (json_extract(p.creationScope,'$.legacyInitial.mode')='contribution'
+        OR json_extract(p.creationScope,'$.legacyPublishedTaskId')=t.id) AND (${input.guard})`)
   const current = await readCurrentFeatureRevision(db, input)
   if (!initial || !current || current.retired) return false
   const imageReview = input.accept
@@ -114,9 +117,12 @@ export async function reviewMigratedInitialContribution(
     guard,
     expectedRevisionId: current.revisionId,
     expectedVersion: current.version,
-    state: input.accept
-      ? { isPublished: false }
-      : { isArchived: true, isPublished: false },
+    // Moderating the retained task has no effect on publication or archive choices for an existing identity.
+    state: initial.publishedSubmission
+      ? undefined
+      : input.accept
+        ? { isPublished: false }
+        : { isArchived: true, isPublished: false },
     derive: () => content,
     validate: () => [],
     attachmentGuard: imageReview.review?.reviewId

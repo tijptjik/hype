@@ -841,10 +841,15 @@ import { taskLifecycleScopeCondition } from '#lib/db/services/task-scope.js'
 import { hasFeatureTaskTransfer } from '#lib/db/services/featureUploadEvidence.js'
 import { reviewInitialFeatureContribution } from '#lib/db/services/featureInitialReview.js'
 import { getTaskHubFilter } from '#lib/db/services/hub.js'
-it.each([true, false])(
-  'reviews migrated initial contributions atomically (accept=%s)',
-  async accept => {
-    const f = await fixture(false),
+it.each([
+  [true, false],
+  [false, false],
+  [true, true],
+  [false, true],
+])(
+  'reviews migrated initial contributions atomically (accept=%s, already published=%s)',
+  async (accept, published) => {
+    const f = await fixture(published),
       proposed = structuredClone(f.initial.content)
     proposed.translations.en.title.value = 'Initial contribution'
     const proposal = (await createPartialFeatureProposal(f.db, {
@@ -869,7 +874,11 @@ it.each([true, false])(
         "UPDATE featureRevisionProposal SET creationScope=?,status='submitted' WHERE id=?",
       )
       .run(
-        JSON.stringify({ legacyInitial: { mode: 'contribution' } }),
+        JSON.stringify(
+          published
+            ? { legacyPublishedTaskId: 'legacy-task' }
+            : { legacyInitial: { mode: 'contribution' } },
+        ),
         proposal.proposalId,
       )
     f.sqlite.exec("UPDATE task SET isDraft=0 WHERE id='legacy-task'")
@@ -906,7 +915,7 @@ it.each([true, false])(
     expect(await reviewInitialFeatureContribution(f.db, input)).toBe(true)
     expect(await reviewInitialFeatureContribution(f.db, input)).toBe(false)
     expect(await readCurrentFeatureRevision(f.db, command)).toMatchObject({
-      state: { isPublished: false, isArchived: !accept },
+      state: { isPublished: published, isArchived: !published && !accept },
       content: {
         translations: {
           en: {
