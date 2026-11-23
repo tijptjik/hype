@@ -16,6 +16,7 @@ import {
 
 type Row = Record<string, string | number | null>
 const owned = new Set([
+  'featureOrigin',
   'featureI18n',
   'featureProperty',
   'featurePropertyI18n',
@@ -82,6 +83,19 @@ export function prepareLegacyDraftConversion(db: Database): Group[] {
       if (!owned.has(table))
         throw new Error(`Legacy draft ${draft.taskId} has retained ${table} references`)
       snapshots[table] = records
+    }
+    // Numbered migration 0243 recorded the creation channel before removing the provisional identity.
+    // External source identities require their own conversion, including any reverse references.
+    for (const origin of snapshots.featureOrigin ?? []) {
+      if (
+        !['admin_contribution', 'app_contribution'].includes(String(origin.origin)) ||
+        origin.originId !== null ||
+        origin.recordedBy !== null ||
+        !origin.recordedAt
+      )
+        throw new Error(
+          'Legacy draft has independently attributed origin: ' + draft.taskId,
+        )
     }
     if (snapshots.task?.length !== 1 || snapshots.task[0].id !== draft.taskId)
       throw new Error('Legacy draft has additional tasks')
