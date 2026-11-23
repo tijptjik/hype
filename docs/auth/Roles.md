@@ -23,6 +23,19 @@ Authority remains resource-specific: Feature editing does not grant Organisation
 correction rights. Contributor task submissions and proposed shared corrections from
 actors without shared-resource edit authority retain their review workflows.
 
+## System tasks
+
+System tasks belong directly to a Location or premises map and have no Feature, Project
+or Organisation ancestry. Only a non-anonymous super admin making an admin request can
+list or review them. Ordinary task permissions do not grant this access. The shared
+Tasks index and navigation count include authorized system issues; the Resource filter
+is visible only to super admins. System-only queries ignore Feature filters and
+hierarchy selections while retaining Result and Reviewed.
+
+Map correction review records a current task result and reviewer user ID. It does not
+change a correction or publish a map. Correction edits rebuild a draft, and publication
+remains a separate explicit map operation.
+
 ## Hub
 
 - Admin
