@@ -16,6 +16,15 @@ from production_baseline import ProductionAncestry, REFERENCE, verify_retained_s
 
 ACTOR = "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM"
 STAGE = "_matchingBrandingReleaseRows"
+# The current Feature revision must carry the same placement as the materialized binding.
+DONOR_HEADS_MATCH = """NOT EXISTS(
+    SELECT 1 FROM breadlineImportFeature b LEFT JOIN feature f ON f.id=b.featureId
+    LEFT JOIN featureLocation l ON l.featureId=f.id
+    LEFT JOIN featureRevision r ON r.featureId=f.id AND r.id=f.currentRevisionId
+    WHERE r.id IS NULL OR l.locationId IS NULL OR r.sequence IS NOT f.revisionVersion
+       OR json_extract(r.content,'$.placement.location.associationVersion') IS NOT l.version
+       OR json_extract(r.content,'$.placement.location.locationId') IS NOT l.locationId
+       OR json_extract(r.content,'$.placement.location.factsRevisionId') IS NOT l.factsRevisionId)"""
 # These triggers would recreate captured immutable evidence, alter historical snapshots,
 # or require the original temporal sequence when restoring normalized storage. The
 # manifest pins every suspended definition. Query, count, spatial and FTS triggers run.
@@ -431,6 +440,7 @@ def groups_for(pending, table_ops, manifest, db):
         )
     final.extend(
         [
+            guard(DONOR_HEADS_MATCH),
             guard("NOT EXISTS(SELECT 1 FROM pragma_foreign_key_check)"),
             statement(f"DROP TABLE {STAGE}"),
         ]
@@ -574,6 +584,7 @@ def prepare(args):
     remaining, _ = compare(args.package, manifest, trial)
     if (
         remaining
+        or not trial.execute("SELECT " + DONOR_HEADS_MATCH).fetchone()[0]
         or trial.execute("pragma integrity_check").fetchone()[0] != "ok"
         or trial.execute("pragma foreign_key_check").fetchone()
     ):
