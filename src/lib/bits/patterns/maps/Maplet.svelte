@@ -20,6 +20,7 @@ import { freezeMapForResize, holdMapSizeDuringFlight } from '#lib/map/resizeSnap
 import { createMapController, type MapController } from '#lib/map/controller.js'
 import MapSurface from '#lib/bits/custom/map/MapSurface.svelte'
 import MapLoading from './MapLoading.svelte'
+import StationFootprintLayer from './StationFootprintLayer.svelte'
 import { VISUAL_TRANSITION_MS } from '#lib/bits/custom/main/visualTransition.js'
 // REVIEW
 import { locationMoveDistance } from '#lib/locations/reviewPresentation.js'
@@ -49,6 +50,7 @@ type MapProps = {
   coordinates: number[]
   /** Waits for the gallery to publish its decoded image before moving the pin and camera. */
   coordinateTransitionPending?: boolean
+  premisesMapId?: string
   initialZoom?: number
   initialCenter?: [number, number] | null
   addressMeta: AddressMeta | null
@@ -777,6 +779,15 @@ $effect(() => {
     <MapLoading />
   {/if}
 
+  {#if map && mapProps.premisesMapId}
+    <StationFootprintLayer
+      {map}
+      premisesMapId={mapProps.premisesMapId}
+      contextOnly
+      theme={listMapStyleCatalog().find(style => style.key === resolvedMapStyleCode)
+        ?.markerTheme ?? 'light'}
+    />
+  {/if}
   <!-- Map Container -->
   <div
     class="map bg-base-300 h-full w-full grow"

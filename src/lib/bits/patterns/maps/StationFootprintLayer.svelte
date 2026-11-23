@@ -21,11 +21,15 @@ import type { Collection } from '#lib/indoor/model.js'
 let {
   map,
   theme,
+  premisesMapId,
+  contextOnly = false,
   showMtrStations = true,
   showComplexInteriorMaps = true,
   showBuildingInteriorMaps = true,
 }: {
   map: MapLibreMap
+  premisesMapId?: string
+  contextOnly?: boolean
   theme: MapMarkerTheme
   showMtrStations?: boolean
   showComplexInteriorMaps?: boolean
@@ -45,6 +49,7 @@ $effect(() => {
             ...feature,
             properties: {
               ...feature.properties,
+              premisesMapId: entry.id,
               stationCode: entry.code,
               indoorName: entry.name,
               indoorNameZh: entry.nameZh,
@@ -66,6 +71,10 @@ $effect(() => {
       ? {
           ...data,
           features: data.features
+            .filter(
+              feature =>
+                !premisesMapId || feature.properties.premisesMapId === premisesMapId,
+            )
             .filter(feature =>
               feature.properties.indoorKind === 'station'
                 ? showMtrStations
@@ -188,7 +197,7 @@ $effect(() => {
               'text-max-width': 20,
               'text-anchor': 'bottom',
               'text-offset': [0, -1],
-              'text-allow-overlap': false,
+              'text-allow-overlap': contextOnly,
             },
             paint: {
               // Keep road typography, but use solid labels without an outlined dark interior.
@@ -217,6 +226,7 @@ $effect(() => {
       target.getCanvas().style.cursor = ''
     }
     const updateAvailability = () => {
+      if (contextOnly) return
       available =
         target.getZoom() < 16
           ? []
@@ -238,11 +248,13 @@ $effect(() => {
     target.on('idle', render)
     target.on('moveend', updateAvailability)
     updateAvailability()
-    target.on('mouseenter', 'hype-station-footprint-fill', enter)
-    target.on('mouseleave', 'hype-station-footprint-fill', leave)
+    if (!contextOnly) {
+      target.on('mouseenter', 'hype-station-footprint-fill', enter)
+      target.on('mouseleave', 'hype-station-footprint-fill', leave)
+    }
     render()
     return () => {
-      preloadVisibleIndoorMaps([])
+      if (!contextOnly) preloadVisibleIndoorMaps([])
       disposed = true
       logo.onload = null
       target.off('style.load', render)

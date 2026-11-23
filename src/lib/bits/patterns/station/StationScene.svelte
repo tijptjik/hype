@@ -24,7 +24,14 @@ let {
   station,
   data,
   onSelect,
-}: { station: StationState; data: IndoorData; onSelect: () => void } = $props()
+  allowSelection = true,
+}: {
+  station: StationState
+  data: IndoorData
+  onSelect: () => void
+  /** Embedded profiles retain their selected building part while allowing camera controls. */
+  allowSelection?: boolean
+} = $props()
 // Share the camera control preference between the public viewer and embedded maps.
 const screenAlignedLogos = $derived(station.screenAlignedLogos)
 // Separate the destination camera from the displayed pose so geometry and zoom move together.
@@ -509,7 +516,7 @@ function move(event: PointerEvent): void {
 }
 function activate(event: MouseEvent, feature: IndoorFeature): void {
   event.stopPropagation()
-  if (dragged) return
+  if (dragged || !allowSelection) return
   if (station.exploded) {
     station.openFloor(value(feature.properties, 'level_id'))
     return
@@ -524,6 +531,7 @@ function activate(event: MouseEvent, feature: IndoorFeature): void {
   }
 }
 function chooseFloor(id: string): void {
+  if (!allowSelection) return
   station.openFloor(id)
 }
 </script>
@@ -727,6 +735,7 @@ function chooseFloor(id: string): void {
           {activate}
           {chooseFloor}
           onSelectPlace={place => {
+            if (!allowSelection) return
             station.select(place)
             onSelect()
           }}

@@ -23,6 +23,7 @@ type Props = {
   onLocationCandidateSelect?: (id: string) => void
   coordinates: number[]
   coordinateTransitionPending?: boolean
+  premisesMapId?: string
   initialZoom?: number
   initialCenter?: [number, number] | null
   addressMeta: AddressMeta | null
@@ -43,6 +44,7 @@ let {
   coordinates,
   coordinateTransitionPending = false,
   initialCenter = null,
+  premisesMapId,
   initialZoom = 20,
   addressMeta,
   draggable = false,
@@ -73,6 +75,7 @@ const mapProps = $derived({
   freezeForResize: resizeState?.active ?? false,
   initialCenter,
   initialZoom,
+  premisesMapId,
   addressMeta,
   mapStyleCode,
   draggable,

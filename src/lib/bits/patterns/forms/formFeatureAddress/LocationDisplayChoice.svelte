@@ -60,21 +60,22 @@ $effect(() => {
 const current = $derived(options.find(option => option.value === value) ?? options[0])
 </script>
 
-<!-- Hover help must not add a competing click-to-open popover around the menu. -->
-<Tooltip.Provider delayDuration={1200}>
-  <Tooltip.Root bind:open={helpOpen}>
-    <Tooltip.Trigger tabindex={-1}>
-      {#snippet child({ props })}
-        <span {...props} class="inline-flex">
-          {#if readOnly}
-            <button
-              type="button"
-              aria-label={`Display location using: ${current.label}`}
-              class="text-muted-foreground focus-visible:outline-primary inline-flex shrink-0 items-center justify-center rounded focus-visible:outline-2 focus-visible:outline-offset-2"
-            >
-              <current.icon class={compact ? 'size-5' : 'size-7'} aria-hidden="true" />
-            </button>
-          {:else}
+{#if readOnly}
+  <span
+    class="text-muted-foreground inline-flex shrink-0 cursor-default items-center justify-center"
+    role="img"
+    aria-label={`Display location using: ${current.label}`}
+    data-location-display-readonly
+  >
+    <current.icon class={compact ? 'size-5' : 'size-7'} aria-hidden="true" />
+  </span>
+{:else}
+  <!-- Hover help must not add a competing click-to-open popover around the menu. -->
+  <Tooltip.Provider delayDuration={1200}>
+    <Tooltip.Root bind:open={helpOpen}>
+      <Tooltip.Trigger tabindex={-1}>
+        {#snippet child({ props })}
+          <span {...props} class="inline-flex">
             <DropdownMenu.Root bind:open onOpenChange={() => (helpOpen = false)}>
               <DropdownMenu.Trigger
                 bind:ref={trigger}
@@ -132,35 +133,37 @@ const current = $derived(options.find(option => option.value === value) ?? optio
                 </DropdownMenu.Content>
               </DropdownMenu.Portal>
             </DropdownMenu.Root>
-          {/if}
-        </span>
-      {/snippet}
-    </Tooltip.Trigger>
-    <Tooltip.Portal>
-      <Tooltip.Content
-        role="tooltip"
-        side="top"
-        sideOffset={8}
-        collisionPadding={16}
-        class="bits-theme bits-tooltip__content max-w-80 space-y-3 p-3 text-sm"
-      >
-        <p class="font-semibold">Display location using: {current.label}</p>
-        {#each options as option (option.value)}
-          <div class="flex items-start gap-3">
-            <option.icon
-              class="text-primary mt-0.5 size-5 shrink-0"
-              aria-hidden="true"
-            />
-            <div>
-              <p class="font-medium">{option.label}</p>
-              <p class="text-muted-foreground text-xs">{option.description}</p>
+          </span>
+        {/snippet}
+      </Tooltip.Trigger>
+      <Tooltip.Portal>
+        <Tooltip.Content
+          role="tooltip"
+          side="top"
+          sideOffset={8}
+          collisionPadding={16}
+          class="bits-theme bits-tooltip__content max-w-80 space-y-3 p-3 text-sm"
+        >
+          <p class="font-semibold">Display location using: {current.label}</p>
+          {#each options as option (option.value)}
+            <div class="flex items-start gap-3">
+              <option.icon
+                class="text-primary mt-0.5 size-5 shrink-0"
+                aria-hidden="true"
+              />
+              <div>
+                <p class="font-medium">{option.label}</p>
+                <p class="text-muted-foreground text-xs">{option.description}</p>
+              </div>
             </div>
-          </div>
-        {/each}
-        {#if !readOnly}
-          <p class="text-muted-foreground text-xs">Click to change the display mode.</p>
-        {/if}
-      </Tooltip.Content>
-    </Tooltip.Portal>
-  </Tooltip.Root>
-</Tooltip.Provider>
+          {/each}
+          {#if !readOnly}
+            <p class="text-muted-foreground text-xs">
+              Click to change the display mode.
+            </p>
+          {/if}
+        </Tooltip.Content>
+      </Tooltip.Portal>
+    </Tooltip.Root>
+  </Tooltip.Provider>
+{/if}

@@ -38,6 +38,8 @@ import {
 } from '#lib/locations/lifecycle.js'
 import LocationKindField from './LocationKindField.svelte'
 import MapPrimitive from '../formMapSection/components/MapPrimitive.svelte'
+import LocationIndoorMap from './LocationIndoorMap.svelte'
+import ExpandableMap from '#lib/bits/patterns/maps/ExpandableMap.svelte'
 import LocationAvatar from '#lib/bits/custom/locationIcon/LocationAvatar.svelte'
 import LocationIcon from '#lib/bits/custom/locationIcon/LocationIcon.svelte'
 // API
@@ -52,6 +54,8 @@ import {
 import { discoverLocationKind } from '#lib/locations/combinedDiscovery.js'
 import { LocationNamesEditSchema } from '#lib/locations/validation.js'
 import { locationKindLabel } from '#lib/locations/kinds.i18n.js'
+import { facilitySymbol } from '#lib/indoor/facilities.js'
+import { canonicalFacilityLabel } from '#lib/indoor/facilityLabels.js'
 import type { LocationKind } from '#lib/locations/kinds.js'
 import type { LocationDiscoveryType } from '#lib/locations/kinds.js'
 // DOMAIN
@@ -214,7 +218,11 @@ const point = $derived(
   editing ? coordinates : (place.facts?.location.geometry.coordinates ?? [0, 0]),
 )
 const activeKind = $derived(editing ? kind : place.kind)
-const kindLabel = $derived(locationKindLabel(activeKind))
+const kindLabel = $derived(
+  activeKind === 'building_part' && place.indoorSource?.category
+    ? canonicalFacilityLabel(facilitySymbol(place.indoorSource.category).label)
+    : locationKindLabel(activeKind),
+)
 const status = $derived(lifecycleStatus(editing ? lifecycle : place.facts))
 /** Capture an independent editable copy and both revision fences; no source evidence is rewritten.
  * @returns Nothing; concurrent changes cannot silently replace this draft.
@@ -1051,13 +1059,51 @@ $effect(() => {
       }}
     >
       {#snippet map()}
-        <MapPrimitive
-          onMapReady={controller => (numberMapController = controller)}
-          coordinates={point}
-          addressMeta={{ address }}
-          draggable={editing && !busy && !communityClosed('location.geometry')}
-          onCoordinateChange={moveMarker}
-        />
+        <div
+          class="grid h-full min-h-0 min-w-0"
+          class:grid-cols-2={Boolean(place.indoorSource?.href)}
+          data-location-profile-maps
+        >
+          {#if place.indoorSource?.href}
+            <div
+              class="border-border relative min-h-0 min-w-0 overflow-hidden border-r"
+              data-location-indoor-map
+            >
+              <ExpandableMap label="indoor map">
+                {#snippet children(expanded)}
+                  <LocationIndoorMap
+                    {expanded}
+                    source={place.indoorSource}
+                    contextMap={numberMapController}
+                  />
+                {/snippet}
+              </ExpandableMap>
+            </div>
+          {/if}
+          <div
+            class="relative min-h-0 min-w-0 overflow-hidden"
+            data-location-context-map
+          >
+            <ExpandableMap
+              label="context map"
+              onResize={() => numberMapController?.resize()}
+            >
+              {#snippet children(expanded)}
+                <MapPrimitive
+                  premisesMapId={place.indoorSource?.href
+                    ? place.indoorSource.mapId
+                    : undefined}
+                  initialZoom={place.indoorSource?.href ? 18 : 20}
+                  onMapReady={controller => (numberMapController = controller)}
+                  coordinates={point}
+                  addressMeta={{ address }}
+                  draggable={editing && !busy && !communityClosed('location.geometry')}
+                  onCoordinateChange={moveMarker}
+                />
+              {/snippet}
+            </ExpandableMap>
+          </div>
+        </div>
       {/snippet}
       {#snippet toolbarInfo()}
         <LocaleToolbar
@@ -1087,7 +1133,9 @@ $effect(() => {
             category={place.indoorSource?.category}
             class="size-6"
           />
-          <span class="truncate text-sm font-semibold">{title}</span>
+          <span class="min-w-0 text-sm font-semibold break-words whitespace-normal"
+            >{title}</span
+          >
           <span
             class="text-muted-foreground hidden shrink-0 text-xs @min-[900px]:inline"
             >{kindLabel}</span

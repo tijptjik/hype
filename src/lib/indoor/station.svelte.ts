@@ -98,8 +98,12 @@ export class StationState {
   )
   /** Configure shop visibility without altering physical geometry.
    * @param featuredUnits Null exposes all shops; a set restricts shops to accepted Feature units.
+   * @param navigateSelection Whether selection updates public URLs; false keeps embedded maps local.
    */
-  constructor(featuredUnits: () => ReadonlySet<string> | null = () => null) {
+  constructor(
+    featuredUnits: () => ReadonlySet<string> | null = () => null,
+    private navigateSelection = true,
+  ) {
     this.featuredUnits = featuredUnits
   }
   floor = $state('')
@@ -318,11 +322,19 @@ export class StationState {
     this.exploded = false
     this.selected = null
     if (!preserveCamera) this.fitRevision++
-    void goto(premisesPath(this.code), { replace: true, reset: false })
+    if (this.navigateSelection)
+      void goto(premisesPath(this.code), { replace: true, reset: false })
   }
   /** Opens a source space. @param place Selected record. @returns Nothing. */
   select(place: Place): void {
-    void goto(premisesPath(this.code, place.id), { reset: false })
+    if (this.navigateSelection) {
+      void goto(premisesPath(this.code, place.id), { reset: false })
+    } else {
+      this.floor = place.levelId
+      this.exploded = false
+      this.selected = place
+      this.fitRevision++
+    }
   }
   /** Restores the outdoor map. @param navigation Whether to navigate. @returns Nothing. */
   close(navigation = true): void {
