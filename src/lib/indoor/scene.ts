@@ -127,7 +127,15 @@ export function stationProjection(
       // Fit the entire mark inside a schematic polygon before rotating the floor plane.
       const placement = polygonLabels(feature, p => [p[0], p[1]])[0]
       if (!placement) return ''
-      const fitted = fitPolygonText(placement, 200, aspect / 0.7, 1 / 1.4)
+      // Use the footprint bounds, not a font-size cap, so artwork scales with the shop.
+      const points = placement.rings[0]
+      const xs = points.map(point => point[0]),
+        ys = points.map(point => point[1])
+      const maxHeight = Math.min(
+        (Math.max(...xs) - Math.min(...xs)) / aspect,
+        Math.max(...ys) - Math.min(...ys),
+      )
+      const fitted = fitPolygonText(placement, maxHeight, aspect / 0.7, 1 / 1.4)
       const h = fitted.size * Math.min(padding, 0.85),
         w = h * aspect
       const [x, y] = fitted.point
