@@ -32,10 +32,19 @@ function identifier(value: string): string {
  * edits abort the batch. Replaying an already applied row performs no writes.
  */
 export function userSyncRowStatements(mutation: UserSyncMutation): SyncStatement[] {
-  if (
-    !(USER_SYNC_RUNTIME_TABLES as readonly string[]).includes(mutation.table) ||
-    !Object.keys(mutation.key).length
-  )
+  return guardedSyncRowStatements(mutation, USER_SYNC_RUNTIME_TABLES)
+}
+
+/** Prepare shared before-or-after guards with a caller-owned table allowlist.
+ * @param mutation Exact reviewed row change.
+ * @param allowedTables Fixed runtime table names owned by the importer.
+ * @returns Guard and idempotent mutation for one atomic D1 batch.
+ */
+export function guardedSyncRowStatements(
+  mutation: UserSyncMutation,
+  allowedTables: readonly string[],
+): SyncStatement[] {
+  if (!allowedTables.includes(mutation.table) || !Object.keys(mutation.key).length)
     throw new Error('Invalid plan table/key')
   const table = identifier(mutation.table)
   const match = (row: NonNullable<UserSyncMutation['before']>): string =>
@@ -63,7 +72,7 @@ export function userSyncRowStatements(mutation: UserSyncMutation): SyncStatement
     JSON.stringify(after),
   ]
   const guard = {
-    sql: `${cte}SELECT CASE WHEN (${validBefore}) OR (${validAfter}) THEN 1 ELSE json('stale user sync row') END FROM input`,
+    sql: `${cte}SELECT CASE WHEN (${validBefore}) OR (${validAfter}) THEN 1 ELSE json('stale sync row') END FROM input`,
     values,
   }
   let sql: string
