@@ -8,7 +8,7 @@ export type TemplateValues = Readonly<Record<string, TemplateScalar>>
 export type TemplateExpression =
   | { kind: 'literal'; value: string }
   | { kind: 'property'; path: string }
-  | { kind: 'sequence'; width: number }
+  | { kind: 'sequence'; width: number; zeroPadded?: boolean }
   | { kind: 'fallback'; left: TemplateExpression; right: TemplateExpression }
   | {
       kind: 'call'
@@ -62,6 +62,18 @@ export function parseDisplayTemplate(source: string): DisplayTemplate {
         escaped = char === '\\' && !escaped
       }
       return fail('Unclosed quoted text')
+    }
+    // Named sequences retain their digit setting even when padding is disabled.
+    const sequence = /^sequence\s*\(\s*(\d+)\s*,\s*(true|false)\s*\)/.exec(
+      source.slice(position),
+    )
+    if (sequence) {
+      const width = Number(sequence[1])
+      if (width < 1 || width > 20)
+        fail('Sequence width must be between 1 and 20 digits')
+      position += sequence[0].length
+      dependencies.add('session.sequence')
+      return { kind: 'sequence', width, zeroPadded: sequence[2] === 'true' }
     }
     const zeros = /^0+(?![A-Za-z0-9_.-])/.exec(source.slice(position))
     if (zeros) {
@@ -153,7 +165,7 @@ export function renderDisplayTemplate(source: string, values: TemplateValues): s
           ordinal < 1
         )
           return undefined
-        return String(ordinal).padStart(node.width, '0')
+        return String(ordinal).padStart(node.zeroPadded === false ? 1 : node.width, '0')
       }
       case 'property':
         return Object.hasOwn(values, node.path) ? values[node.path] : undefined

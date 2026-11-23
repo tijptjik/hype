@@ -18,7 +18,11 @@ type ObjectEntry = {
  * @param apply Create missing objects only when explicitly selected.
  * @returns Counts and a private, per-key verification receipt.
  */
-async function transfer(directory: string, apply: boolean): Promise<void> {
+async function transfer(
+  directory: string,
+  apply: boolean,
+  verify: boolean,
+): Promise<void> {
   const { objects } = JSON.parse(
     await readFile(resolve(directory, 'media.json'), 'utf8'),
   ) as {
@@ -107,11 +111,13 @@ async function transfer(directory: string, apply: boolean): Promise<void> {
     if (!valid || seen.has(entry.key))
       throw new Error('Invalid or duplicate key ' + entry.key)
     seen.add(entry.key)
-    await bytesFor(entry)
+    if (!verify) await bytesFor(entry)
     if (existing.has(entry.bucket + '/' + entry.key) && (await check(entry)))
       receipt.push({ ...pick(entry), state: 'verified' })
     else missing.push(entry)
   }
+  if (verify && missing.length)
+    throw new Error('Missing ' + missing.length + ' required production media objects')
   for (const entry of missing) {
     if (apply) {
       const headers = new Headers({
@@ -153,6 +159,12 @@ function pick(entry: ObjectEntry) {
 }
 
 const [directory, flag, ...extra] = process.argv.slice(2)
-if (!directory || (flag && flag !== '--apply-production') || extra.length)
-  throw new Error('Usage: transfer-media.ts PRIVATE_PACKAGE [--apply-production]')
-await transfer(directory, flag === '--apply-production')
+if (
+  !directory ||
+  (flag && !['--apply-production', '--verify-production'].includes(flag)) ||
+  extra.length
+)
+  throw new Error(
+    'Usage: transfer-media.ts PRIVATE_PACKAGE [--apply-production|--verify-production]',
+  )
+await transfer(directory, flag === '--apply-production', flag === '--verify-production')

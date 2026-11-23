@@ -3,7 +3,7 @@ import type { TemplateExpression } from './displayTemplate'
 
 export type TemplateComponentField = {
   path: number[]
-  kind: 'property' | 'literal'
+  kind: 'property' | 'literal' | 'number' | 'boolean'
   label: string
   value: string
 }
@@ -13,7 +13,8 @@ export type TemplateComponentField = {
  */
 export function expressionSource(node: TemplateExpression): string {
   if (node.kind === 'literal') return JSON.stringify(node.value)
-  if (node.kind === 'sequence') return '0'.repeat(node.width)
+  if (node.kind === 'sequence')
+    return `sequence(${node.width}, ${node.zeroPadded !== false})`
   if (node.kind === 'property') return node.path
   if (node.kind === 'fallback')
     return `${expressionSource(node.left)} ?? ${expressionSource(node.right)}`
@@ -32,10 +33,16 @@ export function componentFields(
   if (node.kind === 'sequence')
     return [
       {
-        path,
-        kind: 'literal',
-        label: 'Sequence width (zeros)',
-        value: '0'.repeat(node.width),
+        path: [...path, 0],
+        kind: 'number',
+        label: 'Number of digits',
+        value: String(node.width),
+      },
+      {
+        path: [...path, 1],
+        kind: 'boolean',
+        label: 'Zero-padded',
+        value: String(node.zeroPadded !== false),
       },
     ]
   if (node.kind === 'property' || node.kind === 'literal')
@@ -72,6 +79,13 @@ export function updateComponentField(
   path: number[],
   value: string,
 ): TemplateExpression {
+  if (node.kind === 'sequence' && path.length === 1) {
+    if (path[0] === 1) return { ...node, zeroPadded: value === 'true' }
+    const width = Number(value)
+    return Number.isInteger(width) && width >= 1 && width <= 20
+      ? { ...node, width }
+      : node
+  }
   if (!path.length) {
     if (node.kind === 'property') return { ...node, path: value }
     if (node.kind === 'literal') return { ...node, value }
