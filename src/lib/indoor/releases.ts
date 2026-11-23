@@ -14,6 +14,12 @@ export const entranceSideSchema = z.strictObject({
   edgeIndex: z.number().int().nonnegative(),
 })
 export type EntranceSide = z.infer<typeof entranceSideSchema>
+export const exteriorEndpointSchema = z.strictObject({
+  label: z.string().trim().min(1).max(200),
+  point: z.tuple([z.number().finite(), z.number().finite()]),
+})
+export type ExteriorEndpoint = z.infer<typeof exteriorEndpointSchema>
+export const EXTERIOR_LEVEL = '@exterior'
 export const connectionSchema = z.strictObject({
   from: z.string().min(1).max(200),
   to: z.string().min(1).max(200),
@@ -34,6 +40,8 @@ export const connectionSchema = z.strictObject({
     .optional(),
   direction: z.enum(['both', 'forward']).nullable(),
   enabled: z.boolean(),
+  fromExterior: exteriorEndpointSchema.optional(),
+  toExterior: exteriorEndpointSchema.optional(),
   fromEntrance: entranceSideSchema.nullable().optional(),
   toEntrance: entranceSideSchema.nullable().optional(),
 })
@@ -165,7 +173,31 @@ export function validateMapBundle(input: unknown): MapBundle {
   for (const c of connections) {
     const from = data.unit_polygon.features.find(f => f.properties.unit_id === c.from)
     const to = data.unit_polygon.features.find(f => f.properties.unit_id === c.to)
-    if (
+    const exterior = c.fromExterior ?? c.toExterior
+    if (c.fromExterior && c.toExterior)
+      throw new Error('A connection requires an indoor endpoint')
+    if (exterior) {
+      const indoor = c.fromExterior ? to : from
+      const exteriorId = c.fromExterior ? c.from : c.to
+      const exteriorLevel = c.fromExterior ? c.fromLevel : c.toLevel
+      const indoorLevel = c.fromExterior ? c.toLevel : c.fromLevel
+      if (
+        !indoor ||
+        indoor.properties.level_id !== indoorLevel ||
+        indoor.properties.unit_category !== c.category ||
+        exteriorLevel !== EXTERIOR_LEVEL ||
+        !exteriorId.startsWith('exterior:') ||
+        ids.has(exteriorId) ||
+        !(c.fromExterior ? c.toEntrance : c.fromEntrance) ||
+        (c.fromExterior ? c.fromEntrance : c.toEntrance)
+      )
+        throw new Error('Invalid exterior connection endpoint')
+      if (
+        data.coordinateSpace !== 'image-pixels' &&
+        (Math.abs(exterior.point[0]) > 180 || Math.abs(exterior.point[1]) > 90)
+      )
+        throw new Error('Invalid exterior coordinates')
+    } else if (
       !from ||
       !to ||
       from.properties.level_id !== c.fromLevel ||
@@ -178,7 +210,7 @@ export function validateMapBundle(input: unknown): MapBundle {
       [from, c.fromEntrance],
       [to, c.toEntrance],
     ] as const) {
-      if (!side) continue
+      if (!side || !feature) continue
       const polygons =
         feature.geometry.type === 'Polygon'
           ? [feature.geometry.coordinates]
@@ -190,13 +222,15 @@ export function validateMapBundle(input: unknown): MapBundle {
         throw new Error('Invalid connection entrance side')
     }
     if (
-      from.properties.unit_category !== c.category ||
-      to.properties.unit_category !== c.category
+      (from && from.properties.unit_category !== c.category) ||
+      (to && to.properties.unit_category !== c.category)
     )
       throw new Error('Connection category does not match its endpoints')
     if (
       c.evidence === 'matching-lift-code' &&
-      (c.category !== 'elevator' ||
+      (!from ||
+        !to ||
+        c.category !== 'elevator' ||
         !/^L\d+$/.test(String(from.properties.unit_name_en)) ||
         from.properties.unit_name_en !== to.properties.unit_name_en)
     )

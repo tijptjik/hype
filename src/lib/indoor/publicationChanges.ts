@@ -25,12 +25,13 @@ export function publicationChanges(
       ],
     ),
   )
+  levels.set('@exterior', 'Outside / street')
   const describeConnection = (
     connection: NonNullable<typeof after.connections>[number] | undefined,
   ): string =>
     !connection
       ? 'Absent'
-      : `${levels.get(connection.fromLevel) ?? connection.fromLevel} → ${levels.get(connection.toLevel) ?? connection.toLevel} · ${connection.enabled ? 'Enabled' : 'Disabled'} · ${connection.direction === 'both' ? 'Both ways' : connection.direction === 'forward' ? 'One way' : 'Unknown direction'} · entrances ${JSON.stringify([connection.fromEntrance ?? null, connection.toEntrance ?? null])}`
+      : `${levels.get(connection.fromLevel) ?? connection.fromLevel} → ${levels.get(connection.toLevel) ?? connection.toLevel} · ${connection.enabled ? 'Enabled' : 'Disabled'} · ${connection.direction === 'both' ? 'Both ways' : connection.direction === 'forward' ? 'One way' : 'Unknown direction'} · entrances ${JSON.stringify([connection.fromEntrance ?? null, connection.toEntrance ?? null])}${connection.fromExterior || connection.toExterior ? ` · exterior ${JSON.stringify(connection.fromExterior ?? connection.toExterior)}` : ''}`
   const oldPairs = new Map(
     (before?.connections ?? []).map(c => [connectionIdentity(c), c]),
   )

@@ -576,3 +576,80 @@ test('multipart government openings retain all segments and reject malformed lin
   }
   expect(() => validateMapBundle(input)).toThrow('Malformed geometry')
 })
+
+test('exterior portals survive save and replay with their indoor entrance', async () => {
+  const id = 'exterior-portal'
+  await db.insert(premisesMap).values({
+    id,
+    code: 'EXT',
+    name: 'Exterior portal',
+    nameZh: '',
+    kind: 'station',
+    updatedBy: 'reviewer',
+    updatedAt: '2026-11-16',
+  })
+  const raw = bundle()
+  raw.data.unit_polygon.features = [
+    {
+      ...structuredClone(raw.data.level_polygon.features[0]),
+      properties: { unit_id: 'ramp', unit_category: 'ramp', level_id: 'floor' },
+    },
+  ]
+  const base = await prepareCorrectedMap(db, bucket, {
+    id,
+    sourceDataset: 'landsd-mtr',
+    bundle: raw,
+  })
+  await saveMapDraft(db, bucket, {
+    id,
+    expectedVersion: 0,
+    bundle: base,
+    actorId: 'reviewer',
+  })
+  const { createExteriorConnection } = await import(
+    '../../src/lib/indoor/connectionEditor'
+  )
+  const connection = createExteriorConnection(
+    raw.data.unit_polygon.features[0],
+    { label: 'Street', point: [0.001, 0.001] },
+    { polygonIndex: 0, edgeIndex: 0 },
+    'reverse',
+  )
+  const saved = await saveMapConnectionCurations(db, bucket, {
+    id,
+    expectedVersion: 1,
+    connections: [connection],
+    reason: 'Exterior ramp',
+    actorId: 'reviewer',
+  })
+  const draft = await readMapBundle(bucket, id, saved.hash)
+  expect(draft.data.connections).toEqual([connection])
+  const replay = await prepareCorrectedMap(db, bucket, {
+    id,
+    sourceDataset: 'landsd-mtr',
+    bundle: raw,
+  })
+  expect(replay.data.connections).toEqual([connection])
+  expect(replay.data.correctionIssues).toEqual([])
+  await publishMapDraft(db, bucket, {
+    id,
+    hash: saved.hash,
+    expectedDraftVersion: saved.version,
+    expectedPublishedVersion: 0,
+    actorId: 'reviewer',
+  })
+  const current = await db
+    .select()
+    .from(premisesMap)
+    .where(eq(premisesMap.id, id))
+    .get()
+  expect(current?.publishedHash).toBeTruthy()
+  if (!current?.publishedHash) throw new Error('Missing published portal')
+  const published = await readMapBundle(bucket, id, current.publishedHash)
+  expect(published.data.connections?.[0]).toMatchObject({
+    fromExterior: connection.fromExterior,
+    toEntrance: connection.toEntrance,
+    direction: 'forward',
+    evidence: 'editor-verified',
+  })
+})

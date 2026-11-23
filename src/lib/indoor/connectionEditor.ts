@@ -140,6 +140,8 @@ export function setConnectionDirection(
           to: connection.from,
           fromLevel: connection.toLevel,
           toLevel: connection.fromLevel,
+          fromExterior: connection.toExterior,
+          toExterior: connection.fromExterior,
           fromEntrance: connection.toEntrance,
           toEntrance: connection.fromEntrance,
         }
@@ -180,4 +182,31 @@ export function nearestEntranceSide(
     }
   }
   return nearest
+}
+
+/** Create an explicit station-to-exterior portal in source coordinates.
+ * @param left Indoor facility. @param exterior Chosen exterior point and label.
+ * @param entrance Indoor entrance side. @param direction Pane-relative allowed travel.
+ * @returns Draft portal; outdoor graph attachment is never inferred from proximity.
+ */
+export function createExteriorConnection(
+  left: IndoorFeature,
+  exterior: import('./releases').ExteriorEndpoint,
+  entrance: EntranceSide | null,
+  direction: EditorDirection,
+): MapConnection {
+  const id = value(left.properties, 'unit_id')
+  const connection: MapConnection = {
+    from: id,
+    to: `exterior:${id}`,
+    fromLevel: value(left.properties, 'level_id'),
+    toLevel: '@exterior',
+    category: value(left.properties, 'unit_category') as MapConnection['category'],
+    evidence: 'aligned-footprints',
+    enabled: true,
+    direction: 'both',
+    fromEntrance: entrance,
+    toExterior: exterior,
+  }
+  return setConnectionDirection(connection, id, direction)
 }

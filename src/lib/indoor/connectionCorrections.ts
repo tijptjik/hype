@@ -26,6 +26,8 @@ export function connectionValue(connection: MapConnection | undefined): string |
     fromLevel: reverse ? connection.toLevel : connection.fromLevel,
     toLevel: reverse ? connection.fromLevel : connection.toLevel,
     category: connection.category,
+    fromExterior: (reverse ? connection.toExterior : connection.fromExterior) ?? null,
+    toExterior: (reverse ? connection.fromExterior : connection.toExterior) ?? null,
     direction:
       connection.direction === 'forward' && reverse ? 'reverse' : connection.direction,
     enabled: connection.enabled,
@@ -66,7 +68,11 @@ export function assessConnectionCorrection(
 ): CorrectionResult {
   const connection = connectionSchema.parse(JSON.parse(correction.correctedValue))
   if (!baseline) return 'baseline-unavailable'
-  for (const id of [connection.from, connection.to]) {
+  for (const [id, exterior] of [
+    [connection.from, connection.fromExterior],
+    [connection.to, connection.toExterior],
+  ] as const) {
+    if (exterior) continue
     const matches = source.data.unit_polygon.features.filter(
       f => f.properties.unit_id === id,
     )
