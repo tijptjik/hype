@@ -328,9 +328,12 @@ export function buildFeatureQueryConditions(
           eq(featureProperty.featureId, feature.id),
           sql`${featureProperty.propertyId} = json_extract("requestedProperty"."value", '$[1]')`,
           sql`case json_type("requestedProperty"."value", '$[2]')
-        when 'array' then ${featureProperty.propertyValueId} in (
+        when 'array' then (${featureProperty.propertyValueId} in (
           select value from json_each("requestedProperty"."value", '$[2]')
-        )
+        ) OR EXISTS (
+          select 1 from json_each(CASE WHEN json_valid(${featureProperty.valueJson}) THEN ${featureProperty.valueJson} ELSE '{}' END, '$.propertyValueIds') selected
+          where selected.value in (select value from json_each("requestedProperty"."value", '$[2]'))
+        ))
         when 'true' then ${featureProperty.value} in ('true', '1')
         when 'false' then ${featureProperty.value} in ('false', '0')
         when 'object' then case when exists (

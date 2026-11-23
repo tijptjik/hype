@@ -28,6 +28,11 @@ import type {
   FeatureProperty,
   FeaturePropertyI18nDB,
 } from '#lib/db/zod/schema/feature.types.js'
+// PROPERTY SELECTION
+import {
+  isMultiSelectProperty,
+  displayPropertyValueIds,
+} from '#lib/properties/selection.js'
 
 export { supportedLocaleKeys }
 export {
@@ -354,6 +359,21 @@ export function getFPI18n(
       : display.kind === 'unavailable'
         ? display.text
         : display.text
+  }
+  if (obj.property && isMultiSelectProperty(obj.property)) {
+    return (
+      displayPropertyValueIds(obj)
+        .map(id => {
+          const option = obj.property?.values?.find(option => option.id === id)
+          return getI18n<PropertyValueI18nDB>(
+            option?.i18n as Record<LocaleKey, PropertyValueI18nDB>,
+            'value',
+            userPreferences,
+            option?.value || id,
+          )
+        })
+        .join('; ') || m.great_crazy_squid_promise()
+    )
   }
   const field = 'value'
   const fallback = m.great_crazy_squid_promise()

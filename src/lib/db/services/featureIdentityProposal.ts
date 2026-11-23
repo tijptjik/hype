@@ -772,7 +772,11 @@ export async function buildSelectedFeatureIdentityContent(
     const beforeEdits = structuredClone(content)
     for (const [id, optionId] of Object.entries(output.propertyOptionEdits)) {
       const field = content.properties[id]
-      if (!field || field.selection.definition.type !== 'classifier')
+      if (
+        !field ||
+        field.selection.definition.type !== 'classifier' ||
+        field.selection.definition.cardinality === 'many'
+      )
         throw new Error('This field is not a category')
       if (
         field.selection.definition.audience === 'internal' &&

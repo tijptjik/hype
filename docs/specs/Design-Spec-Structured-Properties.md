@@ -200,3 +200,29 @@ switches, leap-day editing, next-day time editing, Filter-panel keyboard steps, 
 horizontal overflow at desktop/mobile widths. Preview screenshots:
 `output/playwright/temporal-properties-mobile.png` and
 `output/playwright/temporal-filter-mobile.png`.
+
+## Multi-select classifiers
+
+A classifier uses `component: SelectField`, `dataType: text` and `cardinality: many` to
+offer multiple selections. The property editor exposes **Single select** and
+**Multi-select**. This is a cardinality of categorical choices, not a new primitive data
+type.
+
+Collections use `{"version":1,"propertyValueIds":["option-a","option-b"]}` in
+`featureProperty.valueJson`. Option IDs are unique, bounded to 100, checked against the
+owning field, and sorted on write. Empty selection is SQL NULL. Widening a field from
+one to many preserves its existing `propertyValueId` rows and immutable Feature history;
+readers accept both representations. New collection writes clear the scalar columns.
+Narrowing populated collections requires an explicit conversion.
+
+Public text, property filters, presence counts and feature editing read every selected
+option. Revision snapshots retain the labels of all selected options. Catalogue option
+deletion removes that option while retaining the others, and the shared catalogue
+capture records the affected Feature revisions. Filter count revisions invalidate on
+collection changes.
+
+Migration `0263_multi_select_classifiers.sql` installs database guards and collection
+cascade behavior. The separate
+[Ghost Signs Stratigraphy migration](../../migrations/pending/ghost-signs-stratigraphy/README.md)
+widening must follow the initial taxonomy migration and compatible application rollout.
+Production currently retains single-select Stratigraphy.

@@ -420,7 +420,9 @@ export function prepareFeatureEditorialProjection(
     WHERE NOT EXISTS (SELECT 1 FROM property WHERE id=json_extract(expected.value,'$.propertyId'))
     OR (json_extract(expected.value,'$.propertyValueId') IS NOT NULL AND NOT EXISTS
       (SELECT 1 FROM propertyValue WHERE id=json_extract(expected.value,'$.propertyValueId')
-        AND propertyId=json_extract(expected.value,'$.propertyId'))))`
+        AND propertyId=json_extract(expected.value,'$.propertyId')))
+    OR EXISTS (SELECT 1 FROM json_each(COALESCE(json_extract(expected.value,'$.valueJson'),'{}'), '$.propertyValueIds') selected
+      WHERE NOT EXISTS(SELECT 1 FROM propertyValue WHERE id=selected.value AND propertyId=json_extract(expected.value,'$.propertyId'))))`
   const geometryChanged = !equalRevisionValue(
     previous.placement.geometry as RevisionValue,
     content.placement.geometry as RevisionValue,

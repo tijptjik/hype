@@ -27,6 +27,8 @@ import type {
   FeatureQueryInput,
 } from '#lib/api/services/featureQuery.types.js'
 import type { FeatureQueryMatchContext } from '#lib/context/featureQuery.types.js'
+// PROPERTY SELECTION
+import { displayPropertyValueIds } from '#lib/properties/selection.js'
 
 /********************
  *  1. QUERY IDENTITY
@@ -209,7 +211,7 @@ export function matchesFeatureQuery(
         if (property.propertyId !== propertyId) return false
         if (Array.isArray(filter))
           return Boolean(
-            property.propertyValueId && filter.includes(property.propertyValueId),
+            displayPropertyValueIds(property).some(id => filter.includes(id)),
           )
         if (typeof filter === 'boolean')
           return (filter ? ['true', '1'] : ['false', '0']).includes(

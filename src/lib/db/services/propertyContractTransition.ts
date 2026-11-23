@@ -9,12 +9,15 @@ import { prepareRevisionCheck } from './revisionBatch.js'
 // TYPES
 import type { BatchItem } from 'drizzle-orm/batch'
 import type { Database } from '#lib/types.js'
+// PROPERTY SELECTION
+import { isMultiSelectProperty } from '#lib/properties/selection.js'
 
 // TABLE OF CONTENTS
 // 1. Scalar compatibility
 // 2. Transaction validation
 
 type Contract = {
+  type?: string
   component: string
   dataType: string
   cardinality: string
@@ -39,6 +42,20 @@ export function isCompatiblePropertyTransition(
   after: Contract,
   rows: Array<[string, string | null, string | null, string | null, string[]]>,
 ): boolean {
+  if (
+    before.component === 'SelectField' &&
+    after.component === 'SelectField' &&
+    before.dataType === 'text' &&
+    after.dataType === 'text' &&
+    before.cardinality === 'one' &&
+    isMultiSelectProperty({ ...after, type: after.type ?? 'classifier' }) &&
+    before.isTranslatable === after.isTranslatable
+  ) {
+    return rows.every(
+      ([, value, , structured, translations]) =>
+        !value && !structured && translations.every(value => !value),
+    )
+  }
   if (
     before.cardinality !== after.cardinality ||
     before.dateResolution !== after.dateResolution ||

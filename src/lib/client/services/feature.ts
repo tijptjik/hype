@@ -21,6 +21,12 @@ import type {
 import type { Layer } from '#lib/db/zod/schema/layer.types.js'
 import type { CurrentUser, UserProfile } from '#lib/db/zod/schema/user.types.js'
 import type { SessionUser, UserRoleDisco } from '#lib/types.js'
+// PROPERTY SELECTION
+import {
+  isMultiSelectProperty,
+  encodePropertySelection,
+  displayPropertyValueIds,
+} from '#lib/properties/selection.js'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -662,8 +668,9 @@ export function getNonTranslatableFeatureFieldItems({
     )
     .map(property => ({
       property: property.property,
-      value:
-        property.property.dataType === 'link' || isRangeProperty(property.property)
+      value: isMultiSelectProperty(property.property)
+        ? (encodePropertySelection(displayPropertyValueIds(property)) ?? '')
+        : property.property.dataType === 'link' || isRangeProperty(property.property)
           ? (property.valueJson ?? '')
           : property.property.component === 'SelectField'
             ? property.propertyValueId || ''

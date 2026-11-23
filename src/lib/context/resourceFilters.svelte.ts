@@ -42,6 +42,8 @@ import type { Task } from '#lib/db/zod/schema/task.types.js'
 import type { Property } from '#lib/db/zod/schema/property.types.js'
 import type { UserPreferences } from '#lib/db/zod/schema/user.types.js'
 import type { DivisionCtx } from './division.svelte.js'
+// PROPERTY SELECTION
+import { displayPropertyValueIds } from '#lib/properties/selection.js'
 
 /** Inputs used to construct queries and initialize visible property filters. */
 export interface ResourceFilterDependencies {
@@ -1751,8 +1753,8 @@ export class ResourceFilters {
             featureProp?.value !== null &&
             featureProp?.value !== ''
         } else {
-          // SelectField classifier (default): check if there's a propertyValueId
-          hasValue = !!featureProp?.propertyValueId
+          // SelectField classifiers include either a singleton or a populated collection.
+          hasValue = displayPropertyValueIds(featureProp ?? {}).length > 0
         }
 
         if (hasValue !== filterValue) return false

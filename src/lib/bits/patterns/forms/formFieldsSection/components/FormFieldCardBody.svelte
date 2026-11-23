@@ -1351,6 +1351,19 @@ $effect(() => {
           property.timeMaxHour ?? 24,
         )}
       >
+      {#if property.type === 'classifier' && property.component === 'SelectField'}
+        <SelectField
+          label="Selection"
+          {...settingSelectAppearance}
+          value={property.cardinality ?? 'one'}
+          items={[
+            { value: 'one', label: 'Single select' },
+            { value: 'many', label: 'Multi-select' },
+          ]}
+          {isEditing}
+          onValueChange={value => onUpdateBase(property.id, 'cardinality', value)}
+        />
+      {/if}
       {#if hasComponentSettings}
         <div class="grid min-w-0 gap-3">
           {#if property.component === 'TextField' ||

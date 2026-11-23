@@ -1,9 +1,4 @@
 <script lang="ts">
-import {
-  isMultiSelectProperty,
-  encodePropertySelection,
-  displayPropertyValueIds,
-} from '#lib/properties/selection.js'
 import FeatureFieldMultiSelect from '#lib/bits/patterns/forms/formFeatureField/components/FeatureFieldMultiSelect.svelte'
 
 import { isRangeProperty } from '#lib/properties/range.js'
@@ -37,6 +32,12 @@ import type {
 } from '#lib/db/zod/schema/feature.types.js'
 import type { Property } from '#lib/db/zod/schema/property.types.js'
 import type { Id } from '#lib/types.js'
+// PROPERTY SELECTION
+import {
+  isMultiSelectProperty,
+  encodePropertySelection,
+  displayPropertyValueIds,
+} from '#lib/properties/selection.js'
 
 type FeatureCardNewPropertiesFieldProps = {
   feature: Feature | UserContributedFeature

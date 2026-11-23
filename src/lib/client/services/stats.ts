@@ -16,6 +16,8 @@ import type {
   UserContributedFeature,
 } from '#lib/db/zod/schema/feature.types.js'
 import type { Id, LocaleKey } from '#lib/types.js'
+// PROPERTY SELECTION
+import { displayPropertyValueIds } from '#lib/properties/selection.js'
 
 type StatisticType = 'boolean' | 'count' | 'mean' | 'sum'
 type StatisticValue = boolean | number | null
@@ -1116,8 +1118,8 @@ export function calculateClassifierPresence(
       featureProp.value !== ''
     )
   } else {
-    // SelectField classifier (default): check if there's a propertyValueId
-    return !!featureProp.propertyValueId
+    // SelectField classifiers include either a singleton or a populated collection.
+    return displayPropertyValueIds(featureProp).length > 0
   }
 }
 
@@ -1180,15 +1182,16 @@ export function calculateCategoricalStatuses(
       return
     }
 
-    if (featureProperty?.propertyValueId) {
-      const selectedValue = property.values?.find(
-        value => value.id === featureProperty.propertyValueId,
-      )
-      if (selectedValue) {
-        const valueLabel = selectedValue.i18n?.[localeKey]?.value ?? 'Unknown'
+    const selectedIds = displayPropertyValueIds(featureProperty ?? {})
+    const selectedValues =
+      property.values?.filter(value => selectedIds.includes(value.id)) ?? []
+    if (selectedValues.length) {
+      for (const selectedValue of selectedValues) {
+        const valueLabel =
+          selectedValue.i18n?.[localeKey]?.value ?? selectedValue.value ?? 'Unknown'
         result[`${propertyLabel} : ${valueLabel}`] = true
-        return
       }
+      return
     }
 
     result[propertyLabel] = false

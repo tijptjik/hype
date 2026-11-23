@@ -319,7 +319,7 @@ export const featureProperty = sqliteTable(
     // categorical, there will be no value set, and there will be no i18n records for this property. Instead the i18n records will be
     // set on the propertyValue table.
     value: text('value'),
-    // Versioned structured values are separate from legacy scalar and classifier storage.
+    // Versioned links, ranges and multi-select option IDs are separate from legacy scalar and singleton classifier storage.
     valueJson: text('valueJson'),
   },
   table => [

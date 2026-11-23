@@ -169,14 +169,20 @@ export const withPropertyFieldRequirements = <TSchema extends z.ZodTypeAny>(
           message: 'Choose a link presentation',
         })
     } else if (
-      record.cardinality === 'many' ||
+      (record.cardinality === 'many' &&
+        !(
+          record.type === 'classifier' &&
+          record.component === 'SelectField' &&
+          (!record.dataType || record.dataType === 'text')
+        )) ||
       record.component === 'LinkField' ||
       (record.presentation && record.presentation !== 'text')
     ) {
       ctx.addIssue({
         code: 'custom',
         path: ['dataType'],
-        message: 'Collections and link presentations require the link data type',
+        message:
+          'Collections require a multi-select classifier or link property; link presentations require links',
       })
     }
 

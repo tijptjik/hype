@@ -5,6 +5,11 @@ import { FeatureRevisionContentSchema } from '#lib/revisions/featureContent.js'
 // TYPES
 import type { FeatureRevisionContent } from '#lib/revisions/featureContent.js'
 import type { RevisionValue } from '#lib/revisions/merge.js'
+// PROPERTY SELECTION
+import {
+  selectedPropertyValueIds,
+  isMultiSelectProperty,
+} from '#lib/properties/selection.js'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -194,6 +199,34 @@ export function buildFeatureRevisionBaselineContent(
                 'label',
                 'labelGen',
               ),
+              ...(isMultiSelectProperty({
+                type: String(definition.type),
+                component: String(definition.component),
+                cardinality: String(definition.cardinality),
+              }) && value.valueJson
+                ? {
+                    selectedOptions: selectedPropertyValueIds({
+                      valueJson: String(value.valueJson),
+                    }).map(id => {
+                      const option = options[id]
+                      if (!option || option.propertyId !== value.propertyId)
+                        throw new Error(
+                          'Selected option belongs to another field or is missing',
+                        )
+                      return {
+                        id: option.id,
+                        value: option.value,
+                        translations: translations(
+                          source.fieldOptionTranslations.filter(
+                            row => row.propertyValueId === id,
+                          ),
+                          'value',
+                          'valueGen',
+                        ),
+                      }
+                    }),
+                  }
+                : {}),
               selectedOption: selected
                 ? {
                     id: selected.id,

@@ -10,6 +10,11 @@ import { prepareRevisionCheck } from './revisionBatch'
 import type { BatchItem } from 'drizzle-orm/batch'
 import type { Database } from '#lib/types.js'
 import type { OrganisationRevisionActor } from './organisationRevision'
+// PROPERTY SELECTION
+import {
+  selectedPropertyValueIds,
+  encodePropertySelection,
+} from '#lib/properties/selection.js'
 
 /**
  * Captures Feature values removed or cleared by a shared catalogue's FK cascades.
@@ -39,7 +44,9 @@ export async function prepareFeaturePropertyCascadeCapture(
   if (!storage?.n && !(await hasFeatureLifecycleStorage(db))) return empty
   const selected = sql`SELECT DISTINCT featureId FROM featureProperty WHERE
     propertyId IN (SELECT value FROM json_each(${JSON.stringify(input.propertyIds)})) OR
-    propertyValueId IN (SELECT value FROM json_each(${JSON.stringify(input.optionIds)}))`
+    propertyValueId IN (SELECT value FROM json_each(${JSON.stringify(input.optionIds)})) OR
+    EXISTS(SELECT 1 FROM json_each(CASE WHEN json_valid(valueJson) THEN valueJson ELSE '{}' END,'$.propertyValueIds') selected
+      WHERE selected.value IN (SELECT value FROM json_each(${JSON.stringify(input.optionIds)})))`
   const affected = await db.all<{ featureId: string }>(
     sql`${selected} ORDER BY featureId`,
   )
@@ -68,6 +75,18 @@ export async function prepareFeaturePropertyCascadeCapture(
         for (const [id, row] of Object.entries(content.properties)) {
           if (removed.has(id)) delete content.properties[id]
           else if (
+            row.selection.definition.component === 'SelectField' &&
+            row.selection.valueJson
+          ) {
+            const retained = selectedPropertyValueIds(row.selection).filter(
+              id => !options.has(id),
+            )
+            row.selection.valueJson = encodePropertySelection(retained)
+            row.selection.definition.selectedOptions =
+              row.selection.definition.selectedOptions?.filter(
+                option => !options.has(option.id),
+              )
+          } else if (
             row.selection.propertyValueId &&
             options.has(row.selection.propertyValueId)
           ) {

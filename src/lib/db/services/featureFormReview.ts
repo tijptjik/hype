@@ -7,6 +7,8 @@ import { validateFeaturePhoneProperties } from './feature-property-validation'
 import type { Database } from '#lib/types.js'
 import type { FeatureRevisionContent } from '#lib/revisions/featureContent.js'
 import type { RevisionValue } from '#lib/revisions/merge.js'
+// PROPERTY SELECTION
+import { selectedPropertyValueIds } from '#lib/properties/selection.js'
 
 /**
  * Restricts general form publication to currently authorized authored fields.
@@ -117,6 +119,41 @@ export function validateFeatureFormResult(
               ),
             }
           : null
+        if (after.selection.valueJson && definition.component === 'SelectField') {
+          let ids: string[]
+          try {
+            ids = selectedPropertyValueIds(after.selection)
+          } catch {
+            return ['Invalid classifier collection']
+          }
+          const selectedOptions = ids.map(optionId => {
+            const option = source.fieldOptions.find(
+              row => row.id === optionId && row.propertyId === id,
+            )
+            return option
+              ? {
+                  id: option.id,
+                  value: option.value,
+                  translations: Object.fromEntries(
+                    source.fieldOptionTranslations
+                      .filter(row => row.propertyValueId === optionId)
+                      .map(row => [
+                        String(row.locale),
+                        { value: row.value, generated: row.valueGen },
+                      ]),
+                  ),
+                }
+              : null
+          })
+          if (
+            selectedOptions.some(option => !option) ||
+            !equalRevisionValue(
+              after.selection.definition.selectedOptions ?? null,
+              selectedOptions,
+            )
+          )
+            return ['Property interpretation changed; refresh the proposal']
+        }
         if (
           !equalRevisionValue(after.selection.definition.labels, labels) ||
           !equalRevisionValue(after.selection.definition.selectedOption, selectedOption)

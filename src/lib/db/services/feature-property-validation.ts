@@ -11,6 +11,12 @@ import { m } from '#lib/i18n.js'
 import { normalizeLinkValue, propertyValueRegistry } from '#lib/properties/value.js'
 // TYPES
 import type { Database } from '#lib/types.js'
+// PROPERTY SELECTION
+import {
+  isMultiSelectProperty,
+  selectedPropertyValueIds,
+  encodePropertySelection,
+} from '#lib/properties/selection.js'
 
 type PropertyInput = {
   propertyId: string
@@ -39,8 +45,10 @@ export async function validateFeaturePhoneProperties<T extends PropertyInput>(
   if (properties.length === 0) return properties
   // Read the typed catalog without an unbounded SQL parameter list.
   const definitions = await db.query.property.findMany({
+    with: { values: true },
     where: or(
       eq(property.component, 'PhoneField'),
+      eq(property.component, 'SelectField'),
       ne(property.dataType, 'text'),
       eq(property.audience, 'internal'),
     ),
@@ -100,8 +108,37 @@ export async function validateFeaturePhoneProperties<T extends PropertyInput>(
               : normalizeRangeValue(definition, row.valueJson),
         }
       }
+      if (definition && isMultiSelectProperty(definition)) {
+        if (
+          row.value ||
+          (row.i18n &&
+            Object.values(row.i18n).some(
+              entry =>
+                entry && typeof entry === 'object' && 'value' in entry && entry.value,
+            ))
+        )
+          throw new Error(
+            'Classifier selections cannot contain scalar or translated values',
+          )
+        if (assignedIds && !assignedIds.has(row.propertyId))
+          throw new Error('This classifier is not assigned to the feature layer')
+        const ids = selectedPropertyValueIds(row)
+        const options = new Set(definition.values.map(option => option.id))
+        if (ids.some(id => !options.has(id)))
+          throw new Error('Selected option belongs to another field or is missing')
+        // Retain legacy singleton storage until edited; structured collections use canonical IDs.
+        return {
+          ...row,
+          value: null,
+          i18n: undefined,
+          propertyValueId: row.valueJson ? null : row.propertyValueId,
+          valueJson: row.valueJson ? encodePropertySelection(ids) : null,
+        }
+      }
       if (row.valueJson)
-        throw new Error('Structured values require a link or range property')
+        throw new Error(
+          'Structured values require a link, range or multi-select property',
+        )
       if (
         definition?.dataType === 'number' ||
         definition?.dataType === 'date' ||

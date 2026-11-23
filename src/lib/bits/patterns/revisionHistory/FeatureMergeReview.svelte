@@ -208,6 +208,16 @@ function choosePlacement(source: IdentitySource): void {
 function propertyText(source: IdentitySource, id: string, language = locale): string {
   const row = source.content.properties[id]
   if (!row) return ''
+  if (row.selection.definition.selectedOptions?.length)
+    return row.selection.definition.selectedOptions
+      .map(
+        option =>
+          option.translations[language]?.value ??
+          option.value ??
+          Object.values(option.translations)[0]?.value ??
+          option.id,
+      )
+      .join('; ')
   return (
     row.translations[language]?.value ??
     row.selection.definition.selectedOption?.translations[language]?.value ??
@@ -635,7 +645,10 @@ function editProperty(
           keep.content.properties[id] ?? discard.content.properties[id]
         ).selection.definition}
         {@const selected = chosenSource?.content.properties[id]?.selection}
-        {@const translated = definition.isTranslatable && !selected?.propertyValueId}
+        {@const translated =
+          definition.isTranslatable &&
+          definition.type !== 'classifier' &&
+          !selected?.propertyValueId}
         {@const editable =
           selected &&
           definition.type !== 'classifier' &&
@@ -730,7 +743,8 @@ function editProperty(
                 }}
               />
               <div class="min-w-0 space-y-2">
-                {#if definition.type === 'classifier'}
+                {#if definition.type === 'classifier' &&
+                  definition.cardinality !== 'many'}
                   <select
                     class={field}
                     aria-label={`Keep ${propertyLabel(id)} category`}

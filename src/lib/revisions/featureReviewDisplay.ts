@@ -109,6 +109,17 @@ export function featureReviewValue(
         translated(option?.translations) ||
         (typeof option?.value === 'string' ? option.value : '')
       const lines: string[] = []
+      const multiple = Array.isArray(definition?.selectedOptions)
+        ? definition.selectedOptions.map(value => {
+            const option = object(value)
+            return (
+              translated(option?.translations) ||
+              (typeof option?.value === 'string' ? option.value : '') ||
+              'Selected option (label unavailable)'
+            )
+          })
+        : []
+      if (multiple.length) lines.push(multiple.join('; '))
       if (selected) lines.push(selected)
       else if (selection.propertyValueId)
         lines.push('Selected option (label unavailable)')
@@ -119,6 +130,7 @@ export function featureReviewValue(
       )
         lines.push(display(selection.value))
       if (
+        !multiple.length &&
         selection.valueJson !== null &&
         selection.valueJson !== undefined &&
         selection.valueJson !== ''

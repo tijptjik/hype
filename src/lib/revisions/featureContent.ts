@@ -18,6 +18,8 @@ import { LocationBrandsSchema } from '#lib/locations/factsDetails.js'
 import { validateRevisionGallery } from './gallery'
 // TYPES
 import type { RevisionMergePolicy, RevisionValue } from './merge'
+// PROPERTY SELECTION
+import { SelectionValueSchema } from '#lib/properties/selection.js'
 
 // +++ Table Of Contents
 // ═══════════════════════
@@ -174,6 +176,18 @@ const definition = z.strictObject({
   audience: z.enum(['public', 'internal']),
   isTranslatable: z.boolean(),
   labels: z.record(id, z.strictObject({ value: z.string(), generated: z.boolean() })),
+  selectedOptions: z
+    .array(
+      z.strictObject({
+        id,
+        value: z.string().nullable(),
+        translations: z.record(
+          id,
+          z.strictObject({ value: z.string(), generated: z.boolean() }),
+        ),
+      }),
+    )
+    .optional(),
   selectedOption: z
     .strictObject({
       id,
@@ -219,9 +233,29 @@ const property = z.strictObject({
           code: 'custom',
           message: 'Selected option context must match the stored selection',
         })
+      if (
+        selection.definition.selectedOptions?.length &&
+        (selection.definition.component !== 'SelectField' ||
+          selection.definition.cardinality !== 'many' ||
+          selection.valueJson === null)
+      )
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Collection context requires a multi-select collection',
+        })
       if (selection.valueJson !== null) {
         try {
-          z.json().parse(JSON.parse(selection.valueJson))
+          const parsed = z.json().parse(JSON.parse(selection.valueJson))
+          if (selection.definition.component === 'SelectField') {
+            const collection = SelectionValueSchema.parse(parsed)
+            const captured = selection.definition.selectedOptions ?? []
+            if (
+              selection.definition.cardinality !== 'many' ||
+              JSON.stringify(collection.propertyValueIds) !==
+                JSON.stringify(captured.map(option => option.id))
+            )
+              throw new Error('Selected option context must match the collection')
+          }
         } catch {
           ctx.addIssue({
             code: 'custom',

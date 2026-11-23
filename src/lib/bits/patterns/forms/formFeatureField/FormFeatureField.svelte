@@ -26,9 +26,12 @@ import FeatureFieldPhone from './components/FeatureFieldPhone.svelte'
 import FeatureFieldInput from './components/FeatureFieldInput.svelte'
 import FeatureFieldRange from './components/FeatureFieldRange.svelte'
 import FeatureFieldSelect from './components/FeatureFieldSelect.svelte'
+import FeatureFieldMultiSelect from './components/FeatureFieldMultiSelect.svelte'
 import FeatureFieldTextArea from './components/FeatureFieldTextArea.svelte'
 import FeatureFieldToggle from './components/FeatureFieldToggle.svelte'
 import type { FormFeatureFieldProps } from './formFeatureField.types'
+// PROPERTY SELECTION
+import { isMultiSelectProperty } from '#lib/properties/selection.js'
 
 let {
   property,
@@ -206,6 +209,14 @@ const fieldClass = $derived(
           id={`${idPrefix}-${property.id}`}
           value={value == null ? '' : String(value)}
           {placeholder}
+          {isEditing}
+          onChange={nextValue => onChange(nextValue)}
+        />
+      {:else if isMultiSelectProperty(property)}
+        <FeatureFieldMultiSelect
+          id={`${idPrefix}-${property.id}`}
+          {value}
+          {options}
           {isEditing}
           onChange={nextValue => onChange(nextValue)}
         />

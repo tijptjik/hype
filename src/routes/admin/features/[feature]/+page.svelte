@@ -318,6 +318,8 @@ import type {
 } from '#lib/bits/patterns/forms/formParentSection/index.js'
 
 import type { ParentProjectRecord } from '#lib/bits/patterns/forms/formFeatureParentSection/index.js'
+// PROPERTY SELECTION
+import { isMultiSelectProperty } from '#lib/properties/selection.js'
 
 type FeaturePageState = FeatureGetState
 
@@ -3914,11 +3916,13 @@ function updatePropertyValue(propertyId: string, nextValue: string | boolean): v
             ...property,
             valueJson:
               property.property?.dataType === 'link' ||
+              isMultiSelectProperty(property.property ?? {}) ||
               isRangeProperty(property.property ?? {})
                 ? String(nextValue)
                 : null,
             value:
               property.property?.dataType === 'link' ||
+              isMultiSelectProperty(property.property ?? {}) ||
               isRangeProperty(property.property ?? {})
                 ? ''
                 : property.property?.component === 'SelectField'
@@ -3926,8 +3930,9 @@ function updatePropertyValue(propertyId: string, nextValue: string | boolean): v
                   : typeof nextValue === 'boolean'
                     ? String(nextValue)
                     : String(nextValue),
-            propertyValueId:
-              property.property?.component === 'SelectField'
+            propertyValueId: isMultiSelectProperty(property.property ?? {})
+              ? null
+              : property.property?.component === 'SelectField'
                 ? String(nextValue)
                 : property.propertyValueId,
           }

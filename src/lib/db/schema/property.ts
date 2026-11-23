@@ -73,6 +73,7 @@ export const property = sqliteTable(
       .notNull()
       .default('day'),
     timeMaxHour: integer('timeMaxHour').$type<24 | 36>().notNull().default(24),
+    // SelectField classifiers use many for multiple option IDs; legacy selections remain valid.
     cardinality: text('cardinality', { enum: ['one', 'many'] })
       .notNull()
       .default('one'),

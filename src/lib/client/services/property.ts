@@ -42,6 +42,11 @@ import type {
   PropertyValueI18nDB,
   WritableI18nRecord,
 } from '#lib/db/zod/schema/property.types.js'
+// PROPERTY SELECTION
+import {
+  displayPropertyValueIds,
+  isMultiSelectProperty,
+} from '#lib/properties/selection.js'
 
 // ═══════════════════════
 // TABLE OF CONTENTS
@@ -1735,9 +1740,9 @@ export function getFeatureIdsForProperties(appCtx: ResourceViewCtx): Id[] {
         if (property.type === 'classifier' && property.component === 'SelectField') {
           // Categorical filter: check if feature's PropertyValue ID is in selected IDs
           if (Array.isArray(filterValue)) {
-            return featureProperty.propertyValueId
-              ? filterValue.includes(featureProperty.propertyValueId)
-              : false
+            return displayPropertyValueIds(featureProperty).some(id =>
+              filterValue.includes(id),
+            )
           }
           return false
         } else if (
@@ -2197,7 +2202,12 @@ export function handleSpecifierChange(
 ): void {
   const property = appCtx.cache.property.get(propertyId)
 
-  if (property && (property.dataType === 'link' || isRangeProperty(property))) {
+  if (
+    property &&
+    (property.dataType === 'link' ||
+      isRangeProperty(property) ||
+      isMultiSelectProperty(property))
+  ) {
     updateFeatureProperty(appCtx, propertyId, {
       value: null,
       valueJson: newValue,
