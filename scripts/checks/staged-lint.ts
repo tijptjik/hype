@@ -2,6 +2,7 @@
 import {
   copyFileSync,
   existsSync,
+  lstatSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -34,13 +35,18 @@ function run(args: string[], cwd: string, env: NodeJS.ProcessEnv): string {
 }
 
 /**
- * Validate a snapshot of the staged tree, optionally formatting staged Markdown.
+ * Validate a snapshot of the staged tree, optionally fixing selected staged content.
  * @param cwd Directory within the repository to validate.
  * @param fixMarkdown Whether to apply staged Markdown formatting after validation.
+ * @param sortClasses Whether to apply the Tailwind class sorting lint fix.
  * @returns Nothing when all staged content passes the configured checks.
  * @remarks Configuration, tool-version and lockfile changes trigger a full-tree check.
  */
-export function checkStaged(cwd = process.cwd(), fixMarkdown = false): void {
+export function checkStaged(
+  cwd = process.cwd(),
+  fixMarkdown = false,
+  sortClasses = false,
+): void {
   const repository = run(
     ['git', 'rev-parse', '--show-toplevel'],
     cwd,
@@ -121,10 +127,30 @@ export function checkStaged(cwd = process.cwd(), fixMarkdown = false): void {
     const markdown = files.filter(
       file => file.endsWith('.md') || /(^|\/)llms\.txt$/.test(file),
     )
+    const regularFiles = files.filter(file => lstatSync(join(snapshot, file)).isFile())
     const originals = new Map(
-      markdown.map(file => [file, readFileSync(join(snapshot, file))]),
+      regularFiles.map(file => [file, readFileSync(join(snapshot, file))]),
     )
     if (fixMarkdown) formatMarkdown(markdown, snapshot, true, toolEnv)
+    // Apply only the class-order rule, including its unsafe fix, to staged files.
+    if (sortClasses) {
+      for (let i = 0; i < regularFiles.length; i += 100) {
+        run(
+          [
+            biome,
+            'lint',
+            '--write',
+            '--unsafe',
+            '--only=lint/nursery/useTailwindSortedClasses',
+            '--no-errors-on-unmatched',
+            '--files-ignore-unknown=true',
+            ...regularFiles.slice(i, i + 100).map(file => `./${file}`),
+          ],
+          snapshot,
+          toolEnv,
+        )
+      }
+    }
     const batches = fullTree
       ? [['.']]
       : Array.from({ length: Math.ceil(files.length / 100) }, (_, i) =>
@@ -156,8 +182,8 @@ export function checkStaged(cwd = process.cwd(), fixMarkdown = false): void {
       false,
       toolEnv,
     )
-    if (fixMarkdown) {
-      const formatted = markdown.filter(
+    if (fixMarkdown || sortClasses) {
+      const formatted = regularFiles.filter(
         file => !originals.get(file)?.equals(readFileSync(join(snapshot, file))),
       )
       if (formatted.length) {
@@ -174,7 +200,7 @@ export function checkStaged(cwd = process.cwd(), fixMarkdown = false): void {
           repository,
           gitEnv,
         )
-        const patchFile = join(temporary, 'markdown.patch')
+        const patchFile = join(temporary, 'staged-fixes.patch')
         writeFileSync(patchFile, patch)
         run(['git', 'apply', '--cached', '--', patchFile], repository, process.env)
         // Update a working file only when it still exactly matches the original staged bytes.
@@ -184,7 +210,7 @@ export function checkStaged(cwd = process.cwd(), fixMarkdown = false): void {
             writeFileSync(path, readFileSync(join(snapshot, file)))
           }
         }
-        console.log(`Formatted ${formatted.length} staged Markdown file(s).`)
+        console.log(`Fixed ${formatted.length} staged file(s).`)
       }
     }
   } finally {
@@ -194,7 +220,11 @@ export function checkStaged(cwd = process.cwd(), fixMarkdown = false): void {
 
 if (import.meta.main) {
   try {
-    checkStaged(process.cwd(), process.argv.includes('--fix-markdown'))
+    checkStaged(
+      process.cwd(),
+      process.argv.includes('--fix-markdown'),
+      process.argv.includes('--sort-classes'),
+    )
     console.log('Staged lint checks passed.')
   } catch (error) {
     console.error(error instanceof Error ? error.message : error)

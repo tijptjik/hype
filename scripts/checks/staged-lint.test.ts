@@ -182,4 +182,26 @@ describe('staged lint snapshot', () => {
     checkStaged(root, true)
     expect(readFileSync(join(root, 'llms.txt'), 'utf8')).toBe('# Title\n')
   })
+
+  test('sorts staged Tailwind classes without overwriting unstaged changes', () => {
+    const root = fixture()
+    write(
+      root,
+      'biome.json',
+      JSON.stringify({
+        formatter: { enabled: false },
+        html: { experimentalFullSupportEnabled: true },
+        linter: { rules: { nursery: { useTailwindSortedClasses: 'error' } } },
+      }),
+    )
+    write(root, 'item.svelte', '<div class="py-2 flex"></div>\n')
+    git(root, ['add', 'biome.json', 'item.svelte'])
+    write(root, 'item.svelte', '<div class="py-2 flex">unstaged</div>\n')
+    checkStaged(root, false, true)
+    expect(readFileSync(join(root, 'item.svelte'), 'utf8')).toBe(
+      '<div class="py-2 flex">unstaged</div>\n',
+    )
+    const staged = Bun.spawnSync(['git', 'show', ':item.svelte'], { cwd: root })
+    expect(staged.stdout.toString()).toBe('<div class="flex py-2"></div>\n')
+  })
 })
