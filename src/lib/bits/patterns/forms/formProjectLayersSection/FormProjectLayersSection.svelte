@@ -143,7 +143,7 @@ function handleDrop(state: DragDropState, targetLayerId: string): void {
                   class="bits-form__parent-resource-default"
                 >
                   <span class="text-xs"
-                    >Included<span class="sr-only"> · {item.layerName}</span></span
+                    >Include<span class="sr-only"> · {item.layerName}</span></span
                   >
                   <Switch
                     id={`${instanceId}-${item.id}-included`}

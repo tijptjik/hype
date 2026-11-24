@@ -11,10 +11,12 @@ it('includes all eligible layers, chooses the first by name, and preserves exclu
   const db = new DatabaseSync(':memory:')
   try {
     db.exec(`CREATE TABLE layer(id TEXT,projectId TEXT,organisationId TEXT,isArchived INTEGER,historicalSourceLayerId TEXT);
+      CREATE TABLE layerProperty(layerId TEXT,propertyId TEXT,isVisible INTEGER);
       CREATE TABLE layerI18n(layerId TEXT,locale TEXT,name TEXT);
       CREATE TABLE fieldResearchSession(id TEXT PRIMARY KEY,layerId TEXT);
       CREATE TABLE fieldResearchSessionLayer(sessionId TEXT,layerId TEXT,isDefault INTEGER,overrides TEXT);
       INSERT INTO layer VALUES('z','p','o',0,NULL),('a','p','o',0,NULL),('archived','p','o',1,NULL),('historic','p','o',0,'old'),('other','other','o',0,NULL);
+      INSERT INTO layerProperty VALUES('z','brand',1),('a','brand',0);
       INSERT INTO layerI18n VALUES('z','en','Donors'),('a','en','Dropoff Points');`)
     const dialect = new SQLiteSyncDialect()
     const first = dialect.sqlToQuery(firstResearchLayerSQL('p', 'o'))
@@ -28,6 +30,17 @@ it('includes all eligible layers, chooses the first by name, and preserves exclu
       )
     }
     create()
+    expect(
+      JSON.parse(
+        (
+          db
+            .prepare(
+              "SELECT overrides FROM fieldResearchSessionLayer WHERE layerId='z'",
+            )
+            .get() as { overrides: string }
+        ).overrides,
+      ).properties.brand,
+    ).toEqual({ isVisible: true, isRecordable: true })
     expect(
       db
         .prepare(

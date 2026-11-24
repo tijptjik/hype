@@ -23,7 +23,11 @@ export function initialResearchLayersSQL(
   organisationId: string,
 ): SQL {
   return sql`SELECT ${sessionId},l.id,l.id=(SELECT layerId FROM fieldResearchSession WHERE id=${sessionId}),
-    '{"defaults":{},"fieldVisibility":{},"properties":{}}'
+    json_object('defaults',json('{}'),'fieldVisibility',json('{}'),'properties',json(
+      COALESCE((SELECT json_group_object(lp.propertyId,json_object(
+        'isVisible',json(CASE WHEN lp.isVisible THEN 'true' ELSE 'false' END),
+        'isRecordable',json(CASE WHEN lp.isVisible THEN 'true' ELSE 'false' END)))
+        FROM layerProperty lp WHERE lp.layerId=l.id),'{}')))
     FROM layer l WHERE changes()>0 AND l.projectId=${projectId} AND l.organisationId=${organisationId}
     AND l.isArchived=0 AND l.historicalSourceLayerId IS NULL`
 }

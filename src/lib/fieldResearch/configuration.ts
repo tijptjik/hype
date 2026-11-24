@@ -15,7 +15,7 @@ const featureDefaultFields = {
 }
 export const researchFeatureDefaultsSchema = z.object(featureDefaultFields).default({
   featureType: 'object',
-  isVisitable: false,
+  isVisitable: true,
   isIntangible: false,
   isDraft: true,
   isPendingReview: true,
@@ -151,4 +151,43 @@ export function resolveResearchConfiguration(
     ),
     titleTemplate: overrides?.titleTemplate ?? session.titleTemplate,
   }
+}
+
+/** Fill missing session field choices from the project layers while preserving explicit choices.
+ * @param properties Project field identities. @param layers Copied layer field settings.
+ * @param existing Saved session choices. @returns Session defaults, included when active on any layer.
+ */
+export function initialResearchProperties(
+  properties: readonly { id: string }[],
+  layers: Record<string, Record<string, { isVisible: boolean; isRecordable: boolean }>>,
+  existing: ResearchConfiguration['properties'] = {},
+): ResearchConfiguration['properties'] {
+  return Object.fromEntries(
+    properties.map(property => {
+      const included = Object.values(layers).some(
+        layer => layer[property.id]?.isVisible,
+      )
+      return [
+        property.id,
+        existing[property.id] ?? { isVisible: included, isRecordable: included },
+      ]
+    }),
+  )
+}
+
+/** Suggest the most-used currently allowed Feature type for one layer.
+ * @param types Ordered layer policy types. @param counts Existing non-archived Feature counts.
+ * @returns Most common eligible type, resolving ties by policy order; null when none is enabled.
+ */
+export function suggestResearchFeatureType(
+  types: readonly { id: string; enabled?: boolean }[],
+  counts: readonly { featureType: string; count: number }[],
+): string | null {
+  const usage = new Map(counts.map(row => [row.featureType, row.count]))
+  return (
+    types
+      .filter(type => type.enabled !== false)
+      .sort((left, right) => (usage.get(right.id) ?? 0) - (usage.get(left.id) ?? 0))[0]
+      ?.id ?? null
+  )
 }

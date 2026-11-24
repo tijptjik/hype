@@ -4,13 +4,17 @@ import { onDestroy, onMount, untrack } from 'svelte'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
 // CONTEXT
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // ICONS
 import FieldResearchIcon from '#lib/bits/custom/icon/FieldResearchIcon.svelte'
+import FilterIcon from 'virtual:icons/proicons/filter'
+import FilterOffIcon from 'virtual:icons/lucide/funnel-x'
 import ProjectIcon from 'virtual:icons/lucide/layout-grid'
 // API
 import {
   createResearchSession,
+  archiveResearchSessions,
   getResearchProjects,
   getResearchLayers,
   getResearchSession,
@@ -18,6 +22,7 @@ import {
 } from '#lib/api/fieldResearch.remote.js'
 import { refreshRemoteQuery } from '#lib/remote/index.js'
 // COMPONENTS
+import ResearchSessionFilterBar from '#lib/bits/patterns/fieldResearch/ResearchSessionFilterBar.svelte'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import ResearchConfiguration from '#lib/bits/patterns/fieldResearch/ResearchConfiguration.svelte'
 import ResearchLocations from '#lib/bits/patterns/fieldResearch/ResearchLocations.svelte'
@@ -25,6 +30,14 @@ import { researchConfigurationVersion } from '#lib/fieldResearch/configuration.j
 // TYPES
 import type { ResearchSession } from '#lib/fieldResearch/model.js'
 let projects = $state<Awaited<ReturnType<typeof getResearchProjects>>>([])
+let archived = $state<boolean | null>(false)
+let filtersVisible = $state(false)
+let sorting = $state<{ sortBy: 'createdAt' | 'name'; sortOrder: 'asc' | 'desc' }>({
+  sortBy: 'createdAt',
+  sortOrder: 'desc',
+})
+const adminCtx = getAdminCtx()
+const isSuperAdmin = $derived(Boolean(adminCtx.view.user?.superAdmin))
 let sessions = $state<Awaited<ReturnType<typeof getResearchSessions>>>([])
 let layers = $state<Awaited<ReturnType<typeof getResearchLayers>>>([])
 let current = $state<ResearchSession | null>(null)
@@ -82,6 +95,10 @@ function selectFacet(ref: string): void {
 }
 
 $effect(() => {
+  adminCtx.setResourceRef(sessionId || false)
+})
+
+$effect(() => {
   const detail = Boolean(sessionId)
   const isNew = creating
   const active = facet
@@ -92,7 +109,11 @@ $effect(() => {
         isNew ? 'New field session' : title || 'Field Sessions',
         FieldResearchIcon,
         facets,
-        { showFacets: detail, showFormActions: detail && active !== 'locations' },
+        {
+          showFacets: detail,
+          showViewActions: false,
+          showFormActions: detail && active !== 'locations',
+        },
       )
       if (detail) header.setFacets(facets, { active, onFacetChange: selectFacet })
       header.setCrumbs([{ name: 'Field Sessions', href: indexPath }])
@@ -102,7 +123,7 @@ $effect(() => {
         showNew: true,
         showFilter: false,
         showFacets: false,
-        showViewActions: false,
+        showViewActions: true,
         showLayoutToggle: false,
         showControlBarToggle: false,
       })
@@ -111,12 +132,99 @@ $effect(() => {
   })
 })
 onDestroy(() => header.setCreateAction(null))
+/** Archive or restore the current session without deleting its records. @returns Once refreshed. */
+async function toggleArchive(): Promise<void> {
+  if (!current || busy || (current.isArchived && !isSuperAdmin)) return
+  busy = true
+  try {
+    await archiveResearchSessions({
+      sessions: [{ id: current.id, revision: current.revision }],
+      archived: !current.isArchived,
+    })
+    await goto(indexPath)
+    await load()
+  } catch (error) {
+    failure = error instanceof Error ? error.message : String(error)
+  } finally {
+    busy = false
+  }
+}
+$effect(() => {
+  header.setFormActions({
+    showDeleteAction: Boolean(current) && (!current?.isArchived || isSuperAdmin),
+    isDeleted: Boolean(current?.isArchived),
+    isDeleting: busy,
+    toggleDelete: toggleArchive,
+  })
+})
+$effect(() => {
+  header.setViewActions(
+    !sessionId && !creating
+      ? [
+          {
+            text: filtersVisible ? 'Hide filters' : 'Show filters',
+            icon: filtersVisible ? FilterOffIcon : FilterIcon,
+            color: 'neutral',
+            style: 'ghost',
+            class: 'px-4',
+            alwaysHideLabel: true,
+            hideLabelInstantly: true,
+            onClick: () => {
+              filtersVisible = !filtersVisible
+            },
+          },
+        ]
+      : [],
+  )
+})
+/** Apply the selected session ordering. @param value Sort selection. @returns Nothing. */
+function changeSorting(value: { sortBy: string; sortOrder: 'asc' | 'desc' }): void {
+  if (value.sortBy !== 'createdAt' && value.sortBy !== 'name') return
+  sorting = { sortBy: value.sortBy, sortOrder: value.sortOrder }
+  void load()
+}
+/** Apply the shared status filter and refresh the index. @param value Archive state. @returns Nothing. */
+function filterArchive(value: boolean | null): void {
+  archived = isSuperAdmin ? value : false
+  void load()
+}
+$effect(() => {
+  if (!sessionId && !creating) {
+    header.setControlBar(
+      ResearchSessionFilterBar,
+      {
+        archived,
+        count: sessions.length,
+        onChange: filterArchive,
+        showArchive: isSuperAdmin,
+        sorting,
+        onSortingChange: changeSorting,
+      },
+      { isVisible: filtersVisible },
+    )
+  } else header.clearControlBar()
+})
+onDestroy(() => {
+  header.clearControlBar()
+  header.setViewActions([])
+  header.setFormActions({ showDeleteAction: false, toggleDelete: () => {} })
+})
 /** Load authorized project and session choices. @returns Once the list is ready. */
 async function load(): Promise<void> {
   try {
     ;[projects, sessions] = await Promise.all([
       getResearchProjects({}),
-      refreshRemoteQuery(getResearchSessions({})),
+      refreshRemoteQuery(
+        getResearchSessions({
+          ...sorting,
+          archive:
+            !isSuperAdmin || archived === false
+              ? 'active'
+              : archived === true
+                ? 'archived'
+                : 'all',
+        }),
+      ),
     ])
     ready = true
   } catch (error) {

@@ -31,10 +31,12 @@ import type { HeaderCtrl } from '#lib/context/header.svelte.js'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // DOMAIN
+import { validResearchPropertyDefault } from '#lib/fieldResearch/configurationMigration.js'
 import {
   researchConfigurationVersion,
   researchConfigurationSchema,
   researchPropertyIncluded,
+  initialResearchProperties,
   researchFeatureDefaultsSchema,
   researchFieldVisibilitySchema,
   researchLayerOverridesSchema,
@@ -96,7 +98,6 @@ $effect(() => {
     isSubmitting: busy,
     canPublish: false,
     showPublishAction: false,
-    showDeleteAction: false,
     submit: save,
     reset: restore,
   })
@@ -153,13 +154,56 @@ async function load(cacheRevision = revision): Promise<void> {
           defaults: {
             ...researchFeatureDefaultsSchema.parse(undefined),
             featureType:
-              data.types.find(type => type.enabled !== false)?.id ?? 'object',
+              layers.find(
+                layer =>
+                  layer.id ===
+                  data?.configuredLayers.find(item => item.isDefault)?.layerId,
+              )?.suggestedFeatureType ??
+              layers[0]?.suggestedFeatureType ??
+              data.types.find(type => type.enabled !== false)?.id ??
+              'object',
           },
           titleTemplate: '{{session.code}}-{{000}}',
         }
+    const savedProperties = data.settings?.properties ?? {}
+    settings.properties = initialResearchProperties(
+      data.properties,
+      Object.fromEntries(
+        data.configuredLayers.map(layer => [
+          layer.layerId,
+          data!.layerPropertyDefaults[layer.layerId] ?? {},
+        ]),
+      ),
+      settings.properties,
+    )
     configured = data.configuredLayers.map(layer => ({
       ...layer,
-      overrides: researchLayerOverridesSchema.parse(layer.overrides),
+      overrides: researchLayerOverridesSchema.parse({
+        ...layer.overrides,
+        defaults: {
+          ...(!data!.settings &&
+          layers.find(item => item.id === layer.layerId)?.suggestedFeatureType
+            ? {
+                featureType: layers.find(item => item.id === layer.layerId)!
+                  .suggestedFeatureType!,
+              }
+            : {}),
+          ...layer.overrides.defaults,
+        },
+        properties: {
+          ...Object.fromEntries(
+            data!.properties
+              .filter(property => !savedProperties[property.id])
+              .map(property => {
+                const included =
+                  data!.layerPropertyDefaults[layer.layerId]?.[property.id]
+                    ?.isVisible ?? false
+                return [property.id, { isVisible: included, isRecordable: included }]
+              }),
+          ),
+          ...layer.overrides.properties,
+        },
+      }),
     }))
     baseline = JSON.stringify([settings, configured])
   } catch (error) {
@@ -176,7 +220,21 @@ function toggleLayer(id: string, include: boolean): void {
       {
         layerId: id,
         isDefault: false,
-        overrides: researchLayerOverridesSchema.parse({}),
+        overrides: researchLayerOverridesSchema.parse({
+          defaults: layers.find(layer => layer.id === id)?.suggestedFeatureType
+            ? {
+                featureType: layers.find(layer => layer.id === id)!
+                  .suggestedFeatureType!,
+              }
+            : {},
+          properties: Object.fromEntries(
+            (data?.properties ?? []).map(property => {
+              const included =
+                data?.layerPropertyDefaults[id]?.[property.id]?.isVisible ?? false
+              return [property.id, { isVisible: included, isRecordable: included }]
+            }),
+          ),
+        }),
       },
     ]
   else {
@@ -218,16 +276,28 @@ function setProperty(id: string, value: boolean | null): void {
  */
 function setPropertyDefault(
   id: string,
-  value: string | number | boolean | string[] | null,
+  value: string | number | boolean | string[] | null | undefined,
 ): void {
   if (!settings) return
   if (selected) {
     selected.overrides.properties[id] ??= {}
-    selected.overrides.properties[id].defaultValue = value
+    if (value === undefined) delete selected.overrides.properties[id].defaultValue
+    else selected.overrides.properties[id].defaultValue = value
   } else {
     settings.properties[id] ??= { isVisible: false, isRecordable: false }
     settings.properties[id].defaultValue = value
   }
+}
+/** Count explicit value overrides, excluding inherited layer inclusion settings. @param overrides Layer choices. @returns Override count. */
+function countOverrides(overrides: ResearchLayerOverrides): number {
+  return (
+    Object.keys(overrides.defaults).length +
+    Number(overrides.titleTemplate !== undefined) +
+    Object.values(overrides.properties).reduce(
+      (count, property) => count + Number(property.defaultValue !== undefined),
+      0,
+    )
+  )
 }
 /** Save one coherent session revision.
  * @returns Once the server accepts the configuration and refreshes session state.
@@ -238,6 +308,25 @@ async function save(): Promise<void> {
   failure = ''
   try {
     const nextRevision = revision + 1
+    for (const choices of [
+      settings.properties,
+      ...configured.map(layer => layer.overrides.properties),
+    ]) {
+      for (const [id, choice] of Object.entries(choices)) {
+        const property = data?.properties.find(property => property.id === id)
+        if (property && !validResearchPropertyDefault(property, choice.defaultValue))
+          throw new Error(
+            `Choose a valid default for ${property.i18n?.en?.label || property.key}.`,
+          )
+      }
+    }
+    const checked = researchConfigurationSchema.safeParse(settings)
+    if (!checked.success)
+      throw new Error(
+        checked.error.issues
+          .map(issue => `${issue.path.join('.')}: ${issue.message}`)
+          .join('; '),
+      )
     await saveResearchConfiguration({
       sessionId,
       revision,
@@ -298,6 +387,7 @@ onDestroy(() => {
   {#if configured.length}
     <Select
       variant="ghost"
+      class="min-w-56 [&_span]:visible! [&_span]:opacity-100!"
       triggerAttrs={{ 'aria-label': 'Settings scope' }}
       value={active}
       items={[
@@ -308,7 +398,26 @@ onDestroy(() => {
         })),
       ]}
       onValueChange={value => (active = value)}
-    />
+    >
+      {#snippet itemLabel(value: string)}
+        {@const layer = configured.find(item => item.layerId === value)}
+        {@const count = layer ? countOverrides(layer.overrides) : 0}
+        <span class="inline-flex items-center gap-2">
+          <span
+            >{value === 'session'
+              ? 'Session defaults'
+              : (layers.find(item => item.id === value)?.name ?? value)}</span
+          >
+          {#if count > 0}
+            <span
+              class="bg-base-300 inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1 text-xs font-semibold tabular-nums"
+              title={count + ' value overrides'}
+              >{count}</span
+            >
+          {/if}
+        </span>
+      {/snippet}
+    </Select>
   {/if}
 {/snippet}
 
@@ -590,28 +699,35 @@ onDestroy(() => {
                     : 'Free form field'}
                 />
                 <div class="flex min-w-0 flex-col gap-1 px-4 text-xs">
-                  {#if selected}
-                    <label
-                      ><input
-                        type="checkbox"
-                        {disabled}
-                        checked={own?.defaultValue !== undefined}
-                        onchange={event => {
-                          if (selected) {
-                            selected.overrides.properties[property.id] ??= {}
-                            if (event.currentTarget.checked)
-                              selected.overrides.properties[property.id].defaultValue =
-                                settings?.properties[property.id]?.defaultValue ?? null
-                            else
-                              delete selected.overrides.properties[property.id]
-                                .defaultValue
-                          }
-                        }}
-                      >
-                      Override value</label
-                    >
+                  {#if selected &&
+                    !(property.values?.length && property.cardinality !== 'many') &&
+                    property.dataType !== 'boolean'}
+                    <Select
+                      variant="ghost"
+                      class={defaultSelectClass}
+                      isEditing={editing}
+                      {disabled}
+                      triggerAttrs={{
+                        'aria-label':
+                          (property.i18n?.en?.label || property.key) +
+                          ' default source',
+                      }}
+                      value={own?.defaultValue === undefined ? 'session' : 'custom'}
+                      items={[
+                        { value: 'session', label: 'Session default' },
+                        { value: 'custom', label: 'Custom default' },
+                      ]}
+                      onValueChange={value =>
+                        setPropertyDefault(
+                          property.id,
+                          value === 'session' ? undefined : null,
+                        )}
+                    />
                   {/if}
-                  {#if !selected || own?.defaultValue !== undefined}
+                  {#if !selected ||
+                    own?.defaultValue !== undefined ||
+                    (property.values?.length && property.cardinality !== 'many') ||
+                    property.dataType === 'boolean'}
                     <label
                       for={`${inputId}-property-default-${property.id}`}
                       class="grid min-w-0 grid-cols-[3rem_minmax(0,1fr)] items-center gap-3"
@@ -673,13 +789,23 @@ onDestroy(() => {
                           {disabled}
                           allowDeselect={true}
                           placeholder="No default"
-                          items={property.values.map(value => ({
-                            value: value.id,
-                            label: value.i18n?.en?.value || value.value || value.id,
-                          }))}
-                          value={String(own?.defaultValue ?? '')}
+                          items={[
+                            ...(selected
+                              ? [{ value: '__session__', label: 'Session default' }]
+                              : []),
+                            ...property.values.map(value => ({
+                              value: value.id,
+                              label: value.i18n?.en?.value || value.value || value.id,
+                            })),
+                          ]}
+                          value={selected && own?.defaultValue === undefined
+                            ? '__session__'
+                            : String(own?.defaultValue ?? '')}
                           onValueChange={value =>
-                            setPropertyDefault(property.id, value || null)}
+                            setPropertyDefault(
+                              property.id,
+                              value === '__session__' ? undefined : value || null,
+                            )}
                         />
                       {:else if property.dataType === 'boolean'}
                         <Select
@@ -698,18 +824,31 @@ onDestroy(() => {
                           allowDeselect={true}
                           placeholder="No default"
                           items={[
+                            ...(selected
+                              ? [{ value: '__session__', label: 'Session default' }]
+                              : []),
                             { value: 'true', label: 'Yes' },
                             { value: 'false', label: 'No' },
                           ]}
-                          value={own?.defaultValue == null
-                            ? ''
-                            : String(own.defaultValue)}
+                          value={selected && own?.defaultValue === undefined
+                            ? '__session__'
+                            : own?.defaultValue == null
+                              ? ''
+                              : String(own.defaultValue)}
                           onValueChange={value =>
                             setPropertyDefault(
                               property.id,
-                              value === '' ? null : value === 'true',
+                              value === '__session__'
+                                ? undefined
+                                : value === ''
+                                  ? null
+                                  : value === 'true',
                             )}
                         />
+                      {:else if property.type === 'classifier'}
+                        <span class="text-muted-foreground py-3 text-sm"
+                          >No options configured</span
+                        >
                       {:else}
                         <input
                           id={`${inputId}-property-default-${property.id}`}

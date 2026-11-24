@@ -56,6 +56,9 @@ async function fixture() {
   const f = lifecycleFixture(false, false, 100)
   stores.push(f)
   f.sqlite.exec('DROP TABLE featureOrigin')
+  f.sqlite.exec(
+    'CREATE TABLE IF NOT EXISTS layerProperty(layerId TEXT,propertyId TEXT,isVisible INTEGER,isUserContributable INTEGER)',
+  )
   f.sqlite.exec(readFileSync('migrations/0242_field_research.sql', 'utf8'))
   f.sqlite.exec(
     readFileSync('migrations/0244_field_research_stack_details.sql', 'utf8'),
@@ -184,7 +187,7 @@ describe('mobile provisional Feature creation', () => {
       title: 'TEST-001',
       isDraft: 1,
       isPendingReview: 1,
-      isVisitable: 0,
+      isVisitable: 1,
       isIntangible: 1,
       isPublished: 0,
       featureType: 'object',

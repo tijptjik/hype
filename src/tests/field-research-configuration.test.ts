@@ -15,6 +15,8 @@ import {
 import {
   researchConfigurationSchema,
   researchPropertyIncluded,
+  initialResearchProperties,
+  suggestResearchFeatureType,
   researchLayerOverridesSchema,
   resolveResearchConfiguration,
 } from '#lib/fieldResearch/configuration.js'
@@ -192,7 +194,7 @@ it('migrates compatible false values, sparse overrides, removed keys and newly r
   const result = migrateResearchSettings(source, 0, 1, 'session', catalogue)
   expect(result.settings.defaults).toMatchObject({
     isDraft: false,
-    isVisitable: false,
+    isVisitable: true,
     isPendingReview: true,
   })
   expect(result.settings.properties).toEqual({
@@ -213,4 +215,42 @@ it('migrates compatible false values, sparse overrides, removed keys and newly r
   )
   expect(result.defaulted).toContain('session.defaults.isPendingReview')
   expect(() => migrateResearchSettings(source, 2, 1, 'session', catalogue)).toThrow()
+})
+
+it('copies active layer fields and retains explicit session exclusions', () => {
+  const layers = {
+    donors: { brand: { isVisible: true, isRecordable: true } },
+    dropoff: { grade: { isVisible: false, isRecordable: false } },
+  }
+  expect(initialResearchProperties([{ id: 'brand' }, { id: 'grade' }], layers)).toEqual(
+    {
+      brand: { isVisible: true, isRecordable: true },
+      grade: { isVisible: false, isRecordable: false },
+    },
+  )
+  expect(
+    initialResearchProperties([{ id: 'brand' }], layers, {
+      brand: { isVisible: false, isRecordable: false },
+    }).brand.isVisible,
+  ).toBe(false)
+})
+
+it('starts with affirmative feature flags and suggests the most-used allowed type', () => {
+  const settings = researchConfigurationSchema.parse({ code: 'NEW', properties: {} })
+  expect(settings.defaults).toMatchObject({
+    isVisitable: true,
+    isIntangible: false,
+    isDraft: true,
+    isPendingReview: true,
+  })
+  const types = [{ id: 'object' }, { id: 'place' }, { id: 'retired', enabled: false }]
+  expect(
+    suggestResearchFeatureType(types, [
+      { featureType: 'place', count: 20 },
+      { featureType: 'object', count: 2 },
+      { featureType: 'retired', count: 100 },
+    ]),
+  ).toBe('place')
+  expect(suggestResearchFeatureType(types, [])).toBe('object')
+  expect(suggestResearchFeatureType([{ id: 'retired', enabled: false }], [])).toBeNull()
 })

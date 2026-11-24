@@ -19,6 +19,7 @@ import {
 } from '#lib/fieldResearch/access.js'
 import {
   researchConfigurationVersion,
+  suggestResearchFeatureType,
   researchConfigurationSchema,
   researchLayerOverridesSchema,
 } from '#lib/fieldResearch/configuration.js'
@@ -102,12 +103,30 @@ export const getResearchLayers = guardedQuery(
     const rows = await ctx.db.all<{ id: string; name: string }>(
       sql`SELECT l.id,COALESCE((SELECT name FROM layerI18n WHERE layerId=l.id ORDER BY locale='en' DESC LIMIT 1),l.id) name FROM layer l WHERE l.projectId=${session.projectId} AND l.organisationId=${session.organisationId} AND l.isArchived=0 AND l.historicalSourceLayerId IS NULL ORDER BY name,l.id`,
     )
+    // Count only this project's retained Features; historical layers and disabled types cannot win the suggestion.
+    const counts = await ctx.db.all<{
+      layerId: string
+      featureType: string
+      count: number
+    }>(
+      sql`SELECT layerId,featureType,count(*) count FROM feature WHERE projectId=${session.projectId}
+        AND organisationId=${session.organisationId} AND isArchived=0 AND featureType IS NOT NULL
+        GROUP BY layerId,featureType`,
+    )
     return Promise.all(
-      rows.map(async row => ({
-        ...row,
-        types: (await readFeatureIntentPolicy(ctx.db, { type: 'layer', id: row.id }))
-          .types,
-      })),
+      rows.map(async row => {
+        const types = (
+          await readFeatureIntentPolicy(ctx.db, { type: 'layer', id: row.id })
+        ).types
+        return {
+          ...row,
+          types,
+          suggestedFeatureType: suggestResearchFeatureType(
+            types,
+            counts.filter(count => count.layerId === row.id),
+          ),
+        }
+      }),
     )
   },
 )
@@ -129,6 +148,8 @@ export const getResearchSessions = guardedQuery(
   }),
   async (input, ctx) => {
     requireResearch(ctx)
+    if (input.archive !== 'active' && !ctx.user.superAdmin)
+      error(403, 'Only super admins can view archived sessions.')
     const column = input.sortBy === 'name' ? sessions.name : sessions.createdAt
     const cursorColumn = sql.raw(input.sortBy === 'name' ? 'name' : 'createdAt')
     const direction = input.sortOrder === 'asc' ? asc : desc
@@ -242,6 +263,8 @@ export const archiveResearchSessions = guardedCommand(
   }),
   async (input, ctx) => {
     requireResearch(ctx)
+    if (!input.archived && !ctx.user.superAdmin)
+      error(403, 'Only super admins can restore archived sessions.')
     const changed = await setResearchSessionsArchived(
       ctx,
       input.sessions,
@@ -335,6 +358,7 @@ export const getResearchConfiguration = guardedQuery(
         configuredLayers: [],
         properties: [],
         types: [],
+        layerPropertyDefaults: {},
       }
     const stored = await ctx.db
       .select({ code: sessions.code, configuration: sessions.configuration })
@@ -349,6 +373,28 @@ export const getResearchConfiguration = guardedQuery(
       listResolvedProjectProperties(ctx.db, session.projectId),
       readFeatureIntentPolicy(ctx.db, { type: 'project', id: session.projectId }),
     ])
+    // Read active field assignments from the project's layers, without conflating public contribution permissions.
+    const assignments = await ctx.db.all<{
+      layerId: string
+      propertyId: string
+      isVisible: number
+    }>(
+      sql`SELECT lp.layerId,lp.propertyId,lp.isVisible FROM layerProperty lp JOIN layer l ON l.id=lp.layerId
+        WHERE l.projectId=${session.projectId} AND l.organisationId=${session.organisationId}
+        AND l.isArchived=0 AND l.historicalSourceLayerId IS NULL`,
+    )
+    const layerPropertyDefaults: Record<
+      string,
+      Record<string, { isVisible: boolean; isRecordable: boolean }>
+    > = {}
+    for (const assignment of assignments) {
+      if (!properties.some(property => property.id === assignment.propertyId)) continue
+      layerPropertyDefaults[assignment.layerId] ??= {}
+      layerPropertyDefaults[assignment.layerId][assignment.propertyId] = {
+        isVisible: Boolean(assignment.isVisible),
+        isRecordable: Boolean(assignment.isVisible),
+      }
+    }
     return {
       version,
       currentVersion: researchConfigurationVersion,
@@ -356,6 +402,7 @@ export const getResearchConfiguration = guardedQuery(
         stored?.code && stored.configuration
           ? { ...stored.configuration, code: stored.code }
           : null,
+      layerPropertyDefaults,
       configuredLayers,
       properties,
       types: policy.types,
