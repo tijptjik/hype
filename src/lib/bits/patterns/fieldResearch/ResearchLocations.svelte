@@ -5,6 +5,12 @@ import { onMount } from 'svelte'
 import { buildingSourceHref } from '#lib/locations/buildingSource.js'
 import { getLocale, m } from '#lib/i18n.js'
 import { buildingNameLabel } from '#lib/locations/kinds.i18n.js'
+// FIELD RESEARCH
+import {
+  groupResearchLocations,
+  type LocationGrouping,
+  type LocationSort,
+} from '#lib/fieldResearch/locationStreets.js'
 // API
 import {
   getResearchLocations,
@@ -63,6 +69,12 @@ const added = $derived(
     }))
     .sort((a, b) => a.name.localeCompare(b.name, getLocale())),
 )
+let grouping = $state<LocationGrouping>('street')
+let sorting = $state<LocationSort>('number-asc')
+let districtsReady = $state(false)
+let districtFailure = $state('')
+let loadVersion = 0
+const groups = $derived(groupResearchLocations(added, grouping, sorting))
 let physicalId = $state<string | null>(null)
 const physicalTarget = $derived(
   active === 'building'
@@ -82,8 +94,31 @@ const kinds = [
 ] as const
 /** Load persisted vetted Locations. @returns Once the list is refreshed. */
 async function load(): Promise<void> {
-  rows = await refreshRemoteQuery(getResearchLocations({ sessionId, revision }))
+  const version = ++loadVersion
+  const includeDistricts = grouping === 'district'
+  const result = await refreshRemoteQuery(
+    getResearchLocations({ sessionId, revision, includeDistricts }),
+  )
+  if (version !== loadVersion) return
+  rows = result
+  districtsReady = includeDistricts
+  districtFailure = ''
   loaded = true
+}
+
+/** Load district memberships on first use while keeping street and flat views available.
+ * @param next Selected grouping.
+ * @returns Once any required district lookup has completed.
+ */
+async function changeGrouping(next: LocationGrouping): Promise<void> {
+  grouping = next
+  if (next !== 'district' || districtsReady) return
+  districtFailure = ''
+  try {
+    await load()
+  } catch (error) {
+    districtFailure = error instanceof Error ? error.message : String(error)
+  }
 }
 /** Persist a single vetted choice or a relationship expansion. @param locationId Selected Location. @param mode Expansion mode. @returns Once refreshed. */
 async function add(
@@ -124,34 +159,65 @@ async function remove(locationId: string): Promise<void> {
 }
 onMount(() => void load().catch(error => (failure = String(error))))
 </script>
-<section aria-label="Vetted Locations">
+<section aria-label="Vetted Locations" class="@container/locations">
   <SectionHeader
-    class="relative z-10 shadow-sm"
+    class="relative z-10 h-auto! grid-cols-1! gap-y-2 py-3! shadow-sm @min-[44rem]/locations:grid-cols-[minmax(0,1fr)_auto]! [&>div:last-child]:[container-type:normal]"
     title="Locations for this session"
     icon={LocationIcon}
     description="Choose the Locations that can be used during recording."
   >
     {#snippet right()}
       <fieldset
-        aria-label="Location selection method"
-        class="border-border inline-flex rounded-lg border p-1"
+        aria-label="Location view controls"
+        class="flex w-full min-w-0 flex-wrap items-end gap-2 @min-[44rem]/locations:justify-end"
       >
-        {#each [
-          { value: 'search', label: 'Search', icon: SearchIcon },
-          { value: 'map', label: 'Map based', icon: MapIcon },
-        ] as option}
-          <button
-            type="button"
-            aria-label={option.label}
-            title={option.label}
-            aria-pressed={mode === option.value}
-            class="text-muted-foreground hover:bg-muted aria-pressed:bg-background aria-pressed:text-primary rounded-md p-2 aria-pressed:shadow-sm"
-            disabled={busy}
-            onclick={() => (mode = option.value as 'search' | 'map')}
+        <label class="text-muted-foreground min-w-0 space-y-1 text-xs">
+          <span>Group by</span>
+          <select
+            class="border-border bg-background text-foreground block h-9 w-full rounded-md border px-2 text-sm"
+            value={grouping}
+            onchange={event =>
+              void changeGrouping(event.currentTarget.value as LocationGrouping)}
+            disabled={!loaded}
           >
-            <option.icon class="size-5" />
-          </button>
-        {/each}
+            <option value="street">Street</option>
+            <option value="district">District</option>
+            <option value="none">None</option>
+          </select>
+        </label>
+        <label class="text-muted-foreground min-w-0 space-y-1 text-xs">
+          <span>Sort by</span>
+          <select
+            class="border-border bg-background text-foreground block h-9 w-full rounded-md border px-2 text-sm"
+            bind:value={sorting}
+          >
+            <option value="number-asc">Street number ↑</option>
+            <option value="number-desc">Street number ↓</option>
+            <option value="name-asc">Name A–Z</option>
+            <option value="name-desc">Name Z–A</option>
+          </select>
+        </label>
+        <fieldset
+          aria-label="Location selection method"
+          class="border-border inline-flex rounded-lg border p-1"
+        >
+          {#each [
+            { value: 'search', label: 'Search', icon: SearchIcon },
+            { value: 'map', label: 'Map based', icon: MapIcon },
+          ] as option}
+            <button
+              type="button"
+              aria-label={option.label}
+              title={option.label}
+              aria-pressed={mode === option.value}
+              class="text-muted-foreground hover:bg-muted aria-pressed:bg-background aria-pressed:text-primary rounded-md p-2 aria-pressed:shadow-sm"
+              disabled={busy}
+              onclick={() => (mode = option.value as 'search' | 'map')}
+            >
+              <option.icon class="size-5" />
+            </button>
+          {/each}
+        </fieldset>
       </fieldset>
     {/snippet}
   </SectionHeader>
@@ -244,7 +310,7 @@ onMount(() => void load().catch(error => (failure = String(error))))
       aria-label="Included Locations"
       class="border-border bg-panel text-foreground overflow-hidden rounded-xl border xl:sticky xl:top-4"
     >
-      <div class="border-border flex items-center gap-2 border-b px-4 py-4">
+      <header class="border-border flex items-center gap-2 border-b p-4">
         <LocationIcon class="size-5" />
         <h3 class="font-semibold">Included Locations</h3>
         {#if loaded}
@@ -254,13 +320,25 @@ onMount(() => void load().catch(error => (failure = String(error))))
         {:else}
           <span class="bg-muted ml-auto h-5 w-6 animate-pulse rounded-full"></span>
         {/if}
-      </div>
-      {#if !loaded}
+      </header>
+      {#if grouping === 'district' && districtFailure}
+        <div role="alert" class="space-y-2 p-4 text-sm">
+          <p>{districtFailure}</p>
+          <button
+            type="button"
+            class={control}
+            onclick={() => void changeGrouping('district')}
+          >
+            Retry
+          </button>
+        </div>
+      {:else if !loaded || (grouping === 'district' && !districtsReady)}
         <div
           role="status"
           aria-label="Loading included Locations"
           class="space-y-3 p-4"
         >
+          <div class="bg-muted h-5 w-32 animate-pulse rounded"></div>
           <div class="flex animate-pulse gap-3">
             <div class="bg-muted mt-1 size-5 shrink-0 rounded"></div>
             <div class="min-w-0 flex-1 space-y-2">
@@ -283,172 +361,195 @@ onMount(() => void load().catch(error => (failure = String(error))))
           No Locations yet. Select a search result or a building on the map to add it.
         </p>
       {:else}
-        <ul class="divide-border divide-y">
-          {#each added as item (item.id)}
-            {@const type = kinds.find(kind => kind.id === item.kind)}
-            {@const Icon = type?.icon ?? LocationIcon}
-            {@const detailUrl =
-              '/admin/locations/' +
-              encodeURIComponent(item.id) +
-              '?organisation=' +
-              encodeURIComponent(organisationId)}
-            {@const removeLabel = `Remove ${item.name} from session`}
-            {@const exteriorStatus = item.hasExteriorMap ? 'available' : 'unavailable'}
-            {@const interiorStatus = item.hasInteriorMap ? 'available' : 'unavailable'}
-            <li class="space-y-3 p-4">
-              <div class="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-3">
-                <Icon class="text-primary mt-1 size-5" />
-                <div class="min-w-0">
-                  <div class="flex items-center justify-between gap-2">
-                    <p class="text-muted-foreground text-xs">
-                      {item.kind === 'building_part'
-                        ? 'Building part'
-                        : item.kind === 'premises'
-                          ? 'Premises'
-                          : item.members.length
-                            ? 'Physical building'
-                            : 'Building'}
-                    </p>
-                    <SimpleTooltip
-                      triggerClass="focus-visible:outline-ring h-6 shrink-0 cursor-help items-center gap-1.5 rounded px-1 focus-visible:outline-2"
-                      triggerProps={{
-                        role: 'button',
-                        'aria-label': `Interior map ${interiorStatus}, exterior map ${exteriorStatus}`,
-                      }}
-                      contentProps={{ align: 'end' }}
-                    >
-                      {#snippet trigger()}
-                        {#each [item.hasInteriorMap, item.hasExteriorMap] as available}
-                          <span
-                            aria-hidden="true"
-                            class={`size-2 rounded-full border ${available ? 'border-success bg-success' : 'border-muted-foreground/60'}`}
-                          ></span>
-                        {/each}
-                      {/snippet}
-                      <p>Interior {interiorStatus}</p>
-                      <p>Exterior {exteriorStatus}</p>
-                    </SimpleTooltip>
+        {#each groups as group (group.key)}
+          {@const heading =
+            group.key ||
+            (grouping === 'district' ? 'District unknown' : 'Street unknown')}
+          <section aria-label={grouping === 'none' ? undefined : heading}>
+            {#if grouping !== 'none'}
+              <h4
+                class="border-border bg-muted/50 border-y px-4 py-2 text-sm font-semibold break-words"
+              >
+                {heading}
+              </h4>
+            {/if}
+            <ul class="divide-border divide-y">
+              {#each group.rows as { item, addresses } (item.id)}
+                {@const type = kinds.find(kind => kind.id === item.kind)}
+                {@const Icon = type?.icon ?? LocationIcon}
+                {@const detailUrl =
+                  '/admin/locations/' +
+                  encodeURIComponent(item.id) +
+                  '?organisation=' +
+                  encodeURIComponent(organisationId)}
+                {@const removeLabel = `Remove ${item.name} from session`}
+                {@const exteriorStatus = item.hasExteriorMap
+                  ? 'available'
+                  : 'unavailable'}
+                {@const interiorStatus = item.hasInteriorMap
+                  ? 'available'
+                  : 'unavailable'}
+                <li class="space-y-3 p-4">
+                  <div class="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-3">
+                    <Icon class="text-primary mt-1 size-5" />
+                    <div class="min-w-0">
+                      <div class="flex items-center justify-between gap-2">
+                        <p class="text-muted-foreground text-xs">
+                          {item.kind === 'building_part'
+                            ? 'Building part'
+                            : item.kind === 'premises'
+                              ? 'Premises'
+                              : item.members.length
+                                ? 'Physical building'
+                                : 'Building'}
+                        </p>
+                        <SimpleTooltip
+                          triggerClass="focus-visible:outline-ring h-6 shrink-0 cursor-help items-center gap-1.5 rounded px-1 focus-visible:outline-2"
+                          triggerProps={{
+                            role: 'button',
+                            'aria-label': `Interior map ${interiorStatus}, exterior map ${exteriorStatus}`,
+                          }}
+                          contentProps={{ align: 'end' }}
+                        >
+                          {#snippet trigger()}
+                            {#each [
+                              item.hasInteriorMap,
+                              item.hasExteriorMap,
+                            ] as available}
+                              <span
+                                aria-hidden="true"
+                                class={`size-2 rounded-full border ${available ? 'border-success bg-success' : 'border-muted-foreground/60'}`}
+                              ></span>
+                            {/each}
+                          {/snippet}
+                          <p>Interior {interiorStatus}</p>
+                          <p>Exterior {exteriorStatus}</p>
+                        </SimpleTooltip>
+                      </div>
+                      <a
+                        href={detailUrl}
+                        class="font-semibold break-words whitespace-normal hover:underline"
+                        >{item.name}</a
+                      >
+                      {#each addresses as { label } (label)}
+                        {#if label && label !== item.name}
+                          <p
+                            class="text-muted-foreground mt-1 text-sm break-words whitespace-normal"
+                          >
+                            {label}
+                          </p>
+                        {/if}
+                      {/each}
+                      {#if item.members.length}
+                        <details class="mt-2 text-sm">
+                          <summary>
+                            {item.members.length} SaanSeoi
+                            {item.members.length === 1 ? 'building' : 'buildings'}
+                          </summary>
+                          <ul class="mt-2 space-y-3">
+                            {#each item.members as member (member.source.id)}
+                              <li>
+                                <a
+                                  class="font-mono text-xs break-words underline"
+                                  href={member.locationId
+                                    ? '/admin/locations/' +
+                                      encodeURIComponent(member.locationId) +
+                                      '?organisation=' +
+                                      encodeURIComponent(organisationId) +
+                                      '#relationships'
+                                    : buildingSourceHref(member.source)}
+                                  >{member.source.id}</a
+                                >
+                              </li>
+                            {/each}
+                          </ul>
+                        </details>
+                      {/if}
+                    </div>
                   </div>
-                  <a
-                    href={detailUrl}
-                    class="font-semibold break-words whitespace-normal hover:underline"
-                    >{item.name}</a
-                  >
-                  {#if item.address && item.address !== item.name}
-                    <p
-                      class="text-muted-foreground mt-1 text-sm break-words whitespace-normal"
-                    >
-                      {item.address}
-                    </p>
-                  {/if}
-                  {#if item.members.length}
-                    <details class="mt-2 text-sm">
-                      <summary>
-                        {item.members.length} SaanSeoi
-                        {item.members.length === 1 ? 'building' : 'buildings'}
-                      </summary>
-                      <ul class="mt-2 space-y-3">
-                        {#each item.members as member (member.source.id)}
-                          <li>
-                            <a
-                              class="font-mono text-xs break-words underline"
-                              href={member.locationId
-                                ? '/admin/locations/' +
-                                  encodeURIComponent(member.locationId) +
-                                  '?organisation=' +
-                                  encodeURIComponent(organisationId) +
-                                  '#relationships'
-                                : buildingSourceHref(member.source)}
-                              >{member.source.id}</a
-                            >
-                          </li>
-                        {/each}
-                      </ul>
-                    </details>
-                  {/if}
-                </div>
-              </div>
-              <div class="flex flex-wrap items-center gap-2">
-                {#if item.canEditPhysicalBuilding && !disabled}
-                  <button
-                    type="button"
-                    class={control}
-                    disabled={busy}
-                    onclick={() => {
-                      active = 'building'
-                      physicalId = item.id
-                    }}
-                  >
-                    Add SaanSeoi building
-                  </button>
-                {/if}
-                {#if item.kind === 'premises' || item.kind === 'building'}
-                  {@const targets =
-                    item.kind === 'premises'
-                      ? 'related buildings and building parts'
-                      : 'related building parts'}
-                  {@const { included, total } = item.inclusion}
-                  {@const complete = total > 0 && included === total}
-                  {@const addLabel = complete
-                    ? `All ${total} ${targets} included for ${item.name}`
-                    : included
-                      ? `Add remaining ${targets} for ${item.name} (${included} of ${total} included)`
-                      : total
-                        ? `Add ${targets} for ${item.name}`
-                        : `No ${targets} for ${item.name}`}
-                  <button
-                    type="button"
-                    class={`${rowAction} hover:bg-muted gap-1 px-3 ${included ? 'text-success' : ''}`}
-                    aria-label={addLabel}
-                    title={addLabel}
-                    aria-disabled={complete || !total}
-                    disabled={busy || disabled}
-                    onclick={() =>
-                      !complete &&
-                      total > 0 &&
-                      add(
-                        item.id,
+                  <div class="flex flex-wrap items-center gap-2">
+                    {#if item.canEditPhysicalBuilding && !disabled}
+                      <button
+                        type="button"
+                        class={control}
+                        disabled={busy}
+                        onclick={() => {
+                          active = 'building'
+                          physicalId = item.id
+                        }}
+                      >
+                        Add SaanSeoi building
+                      </button>
+                    {/if}
+                    {#if item.kind === 'premises' || item.kind === 'building'}
+                      {@const targets =
                         item.kind === 'premises'
-                          ? 'buildings_and_parts'
-                          : 'building_and_parts',
-                      ).catch(() => {})}
-                  >
-                    {#if !included}
-                      <PlusIcon class="size-4" aria-hidden="true" />
+                          ? 'related buildings and building parts'
+                          : 'related building parts'}
+                      {@const { included, total } = item.inclusion}
+                      {@const complete = total > 0 && included === total}
+                      {@const addLabel = complete
+                        ? `All ${total} ${targets} included for ${item.name}`
+                        : included
+                          ? `Add remaining ${targets} for ${item.name} (${included} of ${total} included)`
+                          : total
+                            ? `Add ${targets} for ${item.name}`
+                            : `No ${targets} for ${item.name}`}
+                      <button
+                        type="button"
+                        class={`${rowAction} hover:bg-muted gap-1 px-3 ${included ? 'text-success' : ''}`}
+                        aria-label={addLabel}
+                        title={addLabel}
+                        aria-disabled={complete || !total}
+                        disabled={busy || disabled}
+                        onclick={() =>
+                          !complete &&
+                          total > 0 &&
+                          add(
+                            item.id,
+                            item.kind === 'premises'
+                              ? 'buildings_and_parts'
+                              : 'building_and_parts',
+                          ).catch(() => {})}
+                      >
+                        {#if !included}
+                          <PlusIcon class="size-4" aria-hidden="true" />
+                        {/if}
+                        {#if item.kind === 'premises'}
+                          <BuildingIcon class="size-5" aria-hidden="true" />
+                        {/if}
+                        <PartIcon class="size-5" aria-hidden="true" />
+                      </button>
                     {/if}
-                    {#if item.kind === 'premises'}
-                      <BuildingIcon class="size-5" aria-hidden="true" />
+                    {#if item.kind === 'building' && !disabled}
+                      {@const relationshipLabel = item.hasRelationships
+                        ? m.location_relationships_recorded()
+                        : m.location_record_relationships()}
+                      <a
+                        class={`${rowAction} hover:bg-muted w-11 ${item.hasRelationships ? 'text-success' : ''}`}
+                        href={detailUrl + '&edit=true#relationships'}
+                        title={relationshipLabel}
+                      >
+                        <RelationshipsIcon class="size-5" aria-hidden="true" />
+                        <span class="sr-only">{relationshipLabel}</span>
+                      </a>
                     {/if}
-                    <PartIcon class="size-5" aria-hidden="true" />
-                  </button>
-                {/if}
-                {#if item.kind === 'building' && !disabled}
-                  {@const relationshipLabel = item.hasRelationships
-                    ? m.location_relationships_recorded()
-                    : m.location_record_relationships()}
-                  <a
-                    class={`${rowAction} hover:bg-muted w-11 ${item.hasRelationships ? 'text-success' : ''}`}
-                    href={detailUrl + '&edit=true#relationships'}
-                    title={relationshipLabel}
-                  >
-                    <RelationshipsIcon class="size-5" aria-hidden="true" />
-                    <span class="sr-only">{relationshipLabel}</span>
-                  </a>
-                {/if}
-                <button
-                  type="button"
-                  class={`${rowAction} text-muted-foreground hover:text-error ml-auto w-11`}
-                  disabled={busy || disabled}
-                  aria-label={removeLabel}
-                  title={removeLabel}
-                  onclick={() => remove(item.id)}
-                >
-                  <TrashIcon class="size-5" aria-hidden="true" />
-                </button>
-              </div>
-            </li>
-          {/each}
-        </ul>
+                    <button
+                      type="button"
+                      class={`${rowAction} text-muted-foreground hover:text-error ml-auto w-11`}
+                      disabled={busy || disabled}
+                      aria-label={removeLabel}
+                      title={removeLabel}
+                      onclick={() => remove(item.id)}
+                    >
+                      <TrashIcon class="size-5" aria-hidden="true" />
+                    </button>
+                  </div>
+                </li>
+              {/each}
+            </ul>
+          </section>
+        {/each}
       {/if}
     </aside>
   </div>
