@@ -86,7 +86,7 @@ if (existsSync('.research/indoor/kennedy-town/manifest.json')) {
     expect(contains([2, 2], polygon)).toBe(false)
     expect(contains([5, 2], polygon)).toBe(false)
   })
-  it('returns no route when the evidenced Exit A lift is missing', async () => {
+  it('uses the evidenced Exit A stairs when the lift is missing, and stops without vertical access', async () => {
     const entrance = data.amenity_point.features.find(
       f =>
         f.properties.amenity_name_en === 'Exit A' && f.properties.level_ordinal === 0,
@@ -102,7 +102,24 @@ if (existsSync('.research/indoor/kennedy-town/manifest.json')) {
         ),
       },
     }
-    expect(await findIndoorRoute(disconnected, entrance, shop)).toBeNull()
+    const alternate = await findIndoorRoute(disconnected, entrance, shop)
+    expect(alternate?.connectionIds).toContain(
+      '5799db70-7b2e-460d-8594-07debcdf7a99:5996f457-508e-415a-beaf-cdf4161c8678',
+    )
+    const noVerticalAccess = {
+      ...disconnected,
+      unit_polygon: {
+        ...disconnected.unit_polygon,
+        features: disconnected.unit_polygon.features.filter(
+          f =>
+            f.properties.level_id !== '697cda56-d0f1-45f2-922e-28d64bc9abaf' ||
+            !['stairs', 'escalator', 'elevator'].includes(
+              String(f.properties.unit_category),
+            ),
+        ),
+      },
+    }
+    expect(await findIndoorRoute(noVerticalAccess, entrance, shop)).toBeNull()
   })
 
   it('exposes the reviewed Exit C stair as stairs, without assuming escalator direction', () => {
