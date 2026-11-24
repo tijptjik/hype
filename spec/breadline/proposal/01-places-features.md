@@ -1960,6 +1960,16 @@ existing HYPE Building as current, unranked address relationships in the editor'
 Field Research finds the same Location when a researcher searches for a linked address.
 The Building card shows its display address.
 
+In **Field Research → Locations → Buildings**, **Use Building** includes the selected
+record. **Create Physical Building** creates a separate HYPE identity and imports or
+reuses the selected SaanSeoi Building as its first constituent. **Add to Physical
+Building** adds subsequent constituents. Migration 0271 records these edges in
+`locationMembership` with the parent and child Location IDs and their reviewed revision
+IDs. **Physical membership** on either record links to the other. The Location editor
+can create a parent from an imported Building or search the SaanSeoi building catalogue
+to add children. The session card shows one building address, with a range per street
+for a physical parent. Address choices remain available in the editor. Refs #194.
+
 Migration 0153 extends reviewed identity consolidation with dependency snapshots,
 immutable relationship alias resolution and explicit lineage; it adds atomic address
 ordering receipts and removes address coverage. Migration 0154 applies the v1

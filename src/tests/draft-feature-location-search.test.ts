@@ -625,6 +625,70 @@ it('offers the local physical target separately from establishment evidence and 
   )
 })
 
+it('offers one imported building for its linked address and clears it when the query is erased', async () => {
+  vi.useRealTimers()
+  const address = emptyFeatureAddress()
+  address.coordinates = [114.19, 22.33]
+  const names = { en: 'Tat Tak Building' }
+  const linkedAddresses = ['32', '34', '34A'].map(
+    number => `${number} Tak Ku Ling Road`,
+  )
+  mocks.targetLocations.mockResolvedValueOnce({
+    data: [
+      {
+        id: 'imported-building',
+        kind: 'building',
+        state: 'unresolved',
+        revisionId: 'revision',
+        linkedAddresses,
+        catalogueBuildingId: 'footprint',
+        facts: {
+          names,
+          location: {
+            geometry: { coordinates: address.coordinates },
+            address: address.source,
+          },
+        },
+      },
+    ],
+  })
+  mocks.buildings.mockResolvedValueOnce(
+    linkedAddresses.map((label, index) => ({
+      id: `building:footprint:${index}`,
+      kind: 'building',
+      names,
+      address,
+      buildingSource: { id: 'footprint', release: 'release', addressId: label },
+    })),
+  )
+  const onSelect = vi.fn()
+  render(DraftSearch, {
+    active: true,
+    focusRequest: 0,
+    projectId: 'project',
+    preferredKind: 'building',
+    preferExistingBuildings: true,
+    selectExistingImmediately: true,
+    onSelect,
+  })
+  const input = screen.getByRole('textbox')
+  await fireEvent.input(input, { target: { value: '34A Tak Ku Ling Road' } })
+  const result = await screen.findByRole('button', {
+    name: /Tat Tak Building.*34A Tak Ku Ling Road/,
+  })
+  expect(document.querySelectorAll('[data-result-kind="building"]')).toHaveLength(1)
+  await fireEvent.click(result)
+  expect(onSelect).toHaveBeenCalledWith(
+    expect.objectContaining({
+      identity: { locationId: 'imported-building', revisionId: 'revision' },
+    }),
+  )
+  await fireEvent.input(input, { target: { value: '' } })
+  await waitFor(() =>
+    expect(document.querySelectorAll('[data-result-id]')).toHaveLength(0),
+  )
+})
+
 it('keeps singleton results and map numbers visible without a back button or refetch', async () => {
   vi.useRealTimers()
   mocks.places.mockResolvedValue({ rows: [], partial: false })

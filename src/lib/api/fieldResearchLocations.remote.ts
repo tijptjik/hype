@@ -22,6 +22,8 @@ import {
 } from '#lib/addresses/featureAddress.js'
 import { LocationFootprintSchema } from '#lib/locations/footprint.js'
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
+import { physicalBuildingMembers } from '#lib/db/services/physicalBuilding.js'
+import type { PhysicalBuildingMember } from '#lib/locations/physicalBuilding.js'
 import { listLocationResources } from '#lib/db/services/locationDirectory.js'
 import { executeRevisionBatch } from '#lib/db/services/revisionBatch.js'
 import {
@@ -70,6 +72,18 @@ export const getResearchLocations = guardedQuery(
       sql`scope.organisationId`,
       sql`r.id`,
     )
+    // Read retained selections on databases that predate the membership backfill.
+    // Once migrated, only effective membership assertions can expose a member.
+    const members = sql`CASE WHEN EXISTS(
+      SELECT 1 FROM sqlite_master WHERE type='trigger' AND name='location_composition_member'
+    ) THEN ${physicalBuildingMembers(sql`l.id`, session.organisationId)}
+    WHEN l.ownerOrganisationId=scope.organisationId THEN (
+      SELECT json_group_array(json(member)) FROM (
+        SELECT v.rawSource->'$.member' member FROM locationRevision v
+        WHERE v.locationId=l.id AND json_extract(v.rawSource,'$.kind')='physical-building-member'
+        ORDER BY v.version
+      )
+    ) ELSE '[]' END`
     const rows = await ctx.db.all<{
       id: string
       kind: string
@@ -77,6 +91,8 @@ export const getResearchLocations = guardedQuery(
       confirmedUnnamed: number | null
       footprint: string | null
       location: string
+      members: string
+      editableParent: number
       hasExteriorMap: number
       hasInteriorMap: number
     }>(
@@ -90,7 +106,17 @@ export const getResearchLocations = guardedQuery(
             SELECT 1 FROM premisesMapUnit unit JOIN premisesMap m ON m.id=unit.mapId
             WHERE unit.locationId=l.id AND m.publishedHash IS NOT NULL
           ) hasInteriorMap,
-          coalesce(json_extract(r.facts,'$.common.footprint'),json_extract(r.facts,'$.footprint')) footprint,${fields.names} names,${fields.confirmedUnnamed} confirmedUnnamed,${fields.location} location FROM scope CROSS JOIN fieldResearchSessionLocation sl JOIN location l ON l.id=sl.locationId LEFT JOIN locationRevisionContent r ON r.locationId=l.id AND r.version=(SELECT max(version) FROM locationRevisionContent WHERE locationId=l.id AND (l.state!='linked' OR origin='saanseoi')) WHERE sl.sessionId=${input.sessionId} AND l.state!='redirect' AND (l.state!='manual' OR l.ownerOrganisationId=${session.organisationId}) ORDER BY l.id`,
+          (l.ownerOrganisationId=scope.organisationId AND l.state='unresolved' AND l.matchingType='building'
+           AND EXISTS(SELECT 1 FROM locationRevision seed WHERE seed.locationId=l.id AND seed.version=1
+            AND json_extract(seed.rawSource,'$.kind')='physical-building-member')) editableParent,
+          CASE WHEN l.matchingType='building' THEN ${members} ELSE '[]' END members,
+          coalesce(json_extract(r.facts,'$.common.footprint'),json_extract(r.facts,'$.footprint')) footprint,
+          ${fields.names} names,${fields.confirmedUnnamed} confirmedUnnamed,${fields.location} location
+        FROM scope CROSS JOIN fieldResearchSessionLocation sl JOIN location l ON l.id=sl.locationId
+        LEFT JOIN locationRevisionContent r ON r.locationId=l.id AND r.version=(
+          SELECT max(version) FROM locationRevisionContent WHERE locationId=l.id AND (l.state!='linked' OR origin='saanseoi'))
+        WHERE sl.sessionId=${input.sessionId} AND l.state!='redirect'
+          AND (l.state!='manual' OR l.ownerOrganisationId=${session.organisationId}) ORDER BY l.id`,
     )
     return rows.map(row => {
       const names: Record<string, string> = JSON.parse(row.names ?? '{}')
@@ -104,14 +130,22 @@ export const getResearchLocations = guardedQuery(
       const footprint = LocationFootprintSchema.safeParse(
         JSON.parse(row.footprint ?? 'null'),
       )
+      const members = JSON.parse(row.members) as PhysicalBuildingMember[]
       return {
         id: row.id,
         kind: row.kind,
         names,
         confirmedUnnamed: row.confirmedUnnamed === 1,
         address,
+        canEditPhysicalBuilding: Boolean(row.editableParent),
         hasExteriorMap: Boolean(row.hasExteriorMap),
         hasInteriorMap: Boolean(row.hasInteriorMap),
+        members: members.map(member => ({
+          locationId: member.childLocationId,
+          source: member.source,
+          coordinates: member.coordinates,
+          addresses: member.addresses.map(({ id, display }) => ({ id, display })),
+        })),
         coordinates: location.geometry?.coordinates ?? null,
         footprint:
           footprint.success && footprint.data.mode === 'inline'

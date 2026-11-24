@@ -383,6 +383,7 @@ async function create(): Promise<void> {
         {#if facet === 'locations' &&
           current.configurationVersion === researchConfigurationVersion}
           <ResearchLocations
+            organisationId={current.organisationId}
             projectId={current.projectId}
             sessionId={current.id}
             revision={current.revision}

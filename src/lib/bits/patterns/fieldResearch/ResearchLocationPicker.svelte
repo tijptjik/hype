@@ -5,7 +5,10 @@ import { onDestroy, untrack } from 'svelte'
 import DraftFeatureLocationSearch from '#lib/bits/patterns/forms/featureLocation/DraftFeatureLocationSearch.svelte'
 import MapPrimitive from '#lib/bits/patterns/forms/formMapSection/components/MapPrimitive.svelte'
 // API
-import { createBuildingFromEvidence } from '#lib/api/buildingEvidence.remote.js'
+import {
+  attachPhysicalBuildingMember,
+  createBuildingFromEvidence,
+} from '#lib/api/buildingEvidence.remote.js'
 import type { BuildingEvidence } from '#lib/locations/buildingEvidence.js'
 import {
   createLocalLocation,
@@ -15,6 +18,7 @@ import { searchDraftAssociationLocations } from '#lib/api/locationAssociation.re
 import { importBuildingLocation } from '#lib/api/buildingLocation.remote.js'
 import { geocodeBuilding } from '#lib/api/external/buildingGeocoding.js'
 // DOMAIN
+import { submissionErrorMessage } from '#lib/forms/submissionError.js'
 import { containsBuildingPoint } from '#lib/map/buildingAddress.js'
 import { localIdentityFromAddress } from '#lib/locations/addressIdentity.js'
 import {
@@ -38,6 +42,9 @@ let {
   kind,
   disabled,
   onSelect,
+  physicalTarget,
+  onPhysicalTarget,
+  onMembersChanged,
 }: {
   projectId: string
   included?: Array<{
@@ -49,11 +56,20 @@ let {
     coordinates: [number, number] | null
     footprint: import('geojson').Polygon | import('geojson').MultiPolygon | null
   }>
+  physicalTarget: {
+    id: string
+    address: string
+    members: { source: { id: string } }[]
+  } | null
+  onPhysicalTarget: (id: string | null) => void
+  onMembersChanged: () => Promise<void>
   mode: 'search' | 'map'
   kind: 'premises' | 'building' | 'building_part'
   disabled: boolean
   onSelect: (id: string) => Promise<void>
 } = $props()
+// Retain a creation token until both the building and its session inclusion are saved.
+const creationRequests = new Map<string, string>()
 let combining = $state(false)
 let evidence = $state<Array<{ key: string; label: string; value: BuildingEvidence }>>(
   [],
@@ -64,6 +80,17 @@ let combinedIdentity = $state<string | null>(null)
 let picked = $state<Result | null>(null)
 let footprint = $state<SelectedBuilding | null>(null)
 let candidates = $state<Result[]>([])
+const visibleCandidates = $derived(
+  combining
+    ? candidates
+    : candidates.filter(
+        candidate =>
+          !candidate.buildingSource ||
+          !candidates.some(
+            local => local.catalogueBuildingId === candidate.buildingSource?.id,
+          ),
+      ),
+)
 // Center once when the picker opens; later selections should not move the map.
 const initialCenter: [number, number] = untrack(() => {
   const points = included.flatMap(item => (item.coordinates ? [item.coordinates] : []))
@@ -84,6 +111,41 @@ let cleanup: (() => void) | undefined
 let version = 0
 const control = 'border-border rounded-lg border px-3 py-2 text-sm disabled:opacity-50'
 
+/** Create or extend a HYPE physical building from one explicit published building choice.
+ * @param result Selected catalogue result or its existing HYPE import. @returns Once the sidebar is current.
+ */
+async function attachMember(result: Result): Promise<void> {
+  const sourceId = result.buildingSource?.id || result.catalogueBuildingId
+  const source =
+    result.buildingSource ??
+    (result.identity && { importedLocationId: result.identity.locationId })
+  if (busy || disabled || !sourceId || !source) return
+  busy = true
+  failure = ''
+  const parent = physicalTarget
+  try {
+    const requestId = creationRequests.get(sourceId) ?? crypto.randomUUID()
+    if (!parent) creationRequests.set(sourceId, requestId)
+    const { locationId } = await attachPhysicalBuildingMember({
+      projectId,
+      source,
+      target: parent ? { parentId: parent.id } : { requestId },
+    })
+    if (!parent) {
+      await onSelect(locationId)
+      creationRequests.delete(sourceId)
+      onPhysicalTarget(locationId)
+    } else await onMembersChanged()
+    picked = null
+    footprint = null
+    candidates = []
+    pickerKey++
+  } catch (error) {
+    failure = submissionErrorMessage(error) ?? 'Could not save the physical building.'
+  } finally {
+    busy = false
+  }
+}
 /** Retain an explicitly selected piece without claiming identity equivalence.
  * @param value Source reference or map geometry. @param label Review label. @returns Nothing.
  */
@@ -221,6 +283,8 @@ async function pickFootprint(point: [number, number]): Promise<void> {
           id: `location:${row.locationId}`,
           kind: 'building' as const,
           names: row.facts.names,
+          catalogueBuildingId: row.catalogueBuildingId,
+          linkedAddresses: row.linkedAddresses,
           identity: { locationId: row.locationId, revisionId: row.revisionId },
           address: {
             version: 1 as const,
@@ -366,19 +430,68 @@ onDestroy(() => {
   cleanup?.()
 })
 </script>
+{#snippet memberActions(result: Result)}
+  {@const linked = physicalTarget?.members.some(
+    row => row.source.id === (result.buildingSource?.id || result.catalogueBuildingId),
+  )}
+  <div class="flex flex-wrap gap-2">
+    {#if !physicalTarget}
+      <button
+        type="button"
+        class={control}
+        disabled={busy || disabled}
+        onclick={() => accept(result)}
+      >
+        Use Building
+      </button>
+    {/if}
+    <button
+      type="button"
+      class={control}
+      disabled={busy || disabled || linked}
+      onclick={() => attachMember(result)}
+    >
+      {physicalTarget
+        ? linked
+          ? 'Already added'
+          : 'Add to Physical Building'
+        : 'Create Physical Building'}
+    </button>
+  </div>
+{/snippet}
 <div class="space-y-4">
-  <button
-    type="button"
-    class={control}
-    aria-pressed={combining}
-    disabled={busy || disabled || Boolean(combinedIdentity)}
-    onclick={() => {
-      combining = !combining
-    }}
-  >
-    {combining ? 'Exit combine evidence' : 'Combine evidence into one building'}
-  </button>
-  {#if combining}
+  {#if physicalTarget}
+    <section
+      aria-label="Editing physical building"
+      class="border-border space-y-2 rounded-lg border p-4"
+    >
+      <h3 class="font-semibold">{physicalTarget.address || 'Physical building'}</h3>
+      <p class="text-muted-foreground text-sm">
+        Select a SaanSeoi building to add to this physical building.
+      </p>
+      <button
+        type="button"
+        class={control}
+        disabled={busy || disabled}
+        onclick={() => onPhysicalTarget(null)}
+      >
+        Done adding buildings
+      </button>
+    </section>
+  {:else}
+    <button
+      type="button"
+      class={control}
+      aria-pressed={combining}
+      disabled={busy || disabled || Boolean(combinedIdentity)}
+      onclick={() => {
+        combining = !combining
+      }}
+    >
+      {combining ? 'Exit combine evidence' : 'Combine evidence into one building'}
+    </button>
+  {/if}
+  {#if combining && !physicalTarget}
     <section
       aria-label="Combined building evidence"
       class="border-border bg-panel text-foreground space-y-3 rounded-lg border p-4"
@@ -447,6 +560,9 @@ onDestroy(() => {
       <DraftFeatureLocationSearch
         active={true}
         selectExistingImmediately
+        preferExistingBuildings={!combining}
+        buildingActions={kind === 'building' && !combining ? memberActions : undefined}
+        onlySourceBuildings={Boolean(physicalTarget)}
         {projectId}
         preferredKind={kind}
         initialSearchKinds={['building', 'address']}
@@ -493,18 +609,34 @@ onDestroy(() => {
         class="bg-muted h-20 animate-pulse rounded-lg"
       ></div>
     {/if}
-    {#each candidates as candidate (candidate.id)}
-      <button
-        type="button"
-        class={`${control} w-full text-left`}
-        disabled={busy || disabled}
-        onclick={() => accept(candidate)}
-      >
-        {combining ? 'Add evidence from' : 'Use'}
-        {candidate.identity ? 'HYPE' : 'SaanSeoi'} building:
-        {candidate.names.en ?? Object.values(candidate.names)[0]} ·
-        {getAddressDisplay(candidate.address, 'en')}
-      </button>
+    {#each visibleCandidates as candidate (candidate.id)}
+      {#if kind === 'building' &&
+        !combining &&
+        (candidate.buildingSource || candidate.catalogueBuildingId)}
+        <div
+          class="border-border flex items-center justify-between gap-3 border-b py-2"
+        >
+          <p class="min-w-0 break-words">
+            {candidate.names.en || Object.values(candidate.names)[0]}
+            {getAddressDisplay(candidate.address, 'en') ||
+              candidate.buildingSource?.id ||
+              candidate.catalogueBuildingId}
+          </p>
+          {@render memberActions(candidate)}
+        </div>
+      {:else if !physicalTarget}
+        <button
+          type="button"
+          class={`${control} w-full text-left`}
+          disabled={busy || disabled}
+          onclick={() => accept(candidate)}
+        >
+          {combining ? 'Add evidence from' : 'Use'}
+          {candidate.identity ? 'HYPE' : 'SaanSeoi'} building:
+          {candidate.names.en ?? Object.values(candidate.names)[0]} ·
+          {getAddressDisplay(candidate.address, 'en')}
+        </button>
+      {/if}
     {/each}
   {/if}
   {#if combining && footprint}
@@ -530,7 +662,7 @@ onDestroy(() => {
       Add selected footprint to evidence
     </button>
   {/if}
-  {#if picked && !combining}
+  {#if picked && !combining && !physicalTarget}
     <div class="border-border space-y-3 rounded-lg border p-4">
       {#if footprint}
         <label class="grid gap-1 text-sm"

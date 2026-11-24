@@ -2,7 +2,8 @@
 // SVELTE
 import { onMount } from 'svelte'
 // I18N
-import { getLocale } from '#lib/i18n.js'
+import { buildingSourceHref } from '#lib/locations/buildingSource.js'
+import { getLocale, m } from '#lib/i18n.js'
 import { buildingNameLabel } from '#lib/locations/kinds.i18n.js'
 // API
 import {
@@ -21,17 +22,22 @@ import LocationIcon from 'virtual:icons/proicons/location'
 import PremisesIcon from 'virtual:icons/lucide/building'
 import BuildingIcon from 'virtual:icons/lucide/building-2'
 import PartIcon from 'virtual:icons/lucide/door-open'
+import PlusIcon from 'virtual:icons/lucide/plus'
+import RelationshipsIcon from 'virtual:icons/lucide/network'
+import TrashIcon from 'virtual:icons/lucide/trash-2'
 import EstablishmentIcon from 'virtual:icons/lucide/store'
 import OperationalIcon from 'virtual:icons/lucide/settings'
 // COMPONENTS
 import ResearchLocationPicker from './ResearchLocationPicker.svelte'
 let {
   sessionId,
+  organisationId,
   projectId,
   revision,
   disabled = false,
   onSaved,
 }: {
+  organisationId: string
   sessionId: string
   projectId: string
   revision: number
@@ -57,10 +63,18 @@ const added = $derived(
     }))
     .sort((a, b) => a.name.localeCompare(b.name, getLocale())),
 )
+let physicalId = $state<string | null>(null)
+const physicalTarget = $derived(
+  active === 'building'
+    ? (rows.find(row => row.id === physicalId && row.canEditPhysicalBuilding) ?? null)
+    : null,
+)
 let busy = $state(false)
 let loaded = $state(false)
 let failure = $state('')
 const control = 'rounded-lg border border-border/60 bg-transparent px-3 py-2 text-sm'
+const rowAction =
+  'border-border/60 focus-visible:ring-ring inline-flex h-11 items-center justify-center rounded-lg border focus-visible:ring-2 disabled:opacity-50'
 const kinds = [
   { id: 'premises', label: 'Premises', icon: PremisesIcon },
   { id: 'building', label: 'Buildings', icon: BuildingIcon },
@@ -158,6 +172,7 @@ onMount(() => void load().catch(error => (failure = String(error))))
             disabled={busy}
             onclick={() => {
               active = item.id
+              physicalId = null
             }}
           >
             <item.icon class="mr-1 inline size-4" />{item.label}
@@ -181,13 +196,16 @@ onMount(() => void load().catch(error => (failure = String(error))))
         </button>
       </fieldset>
       {#if loaded}
-        {#key `${active}-${mode}`}
+        {#key `${active}-${mode}-${physicalTarget?.id ?? ''}`}
           <ResearchLocationPicker
             {projectId}
             included={added}
             {mode}
             kind={active}
             disabled={busy || disabled}
+            {physicalTarget}
+            onPhysicalTarget={id => (physicalId = id)}
+            onMembersChanged={load}
             onSelect={id => add(id, 'single')}
           />
         {/key}
@@ -269,6 +287,12 @@ onMount(() => void load().catch(error => (failure = String(error))))
           {#each added as item (item.id)}
             {@const type = kinds.find(kind => kind.id === item.kind)}
             {@const Icon = type?.icon ?? LocationIcon}
+            {@const detailUrl =
+              '/admin/locations/' +
+              encodeURIComponent(item.id) +
+              '?organisation=' +
+              encodeURIComponent(organisationId)}
+            {@const removeLabel = `Remove ${item.name} from session`}
             {@const exteriorStatus = item.hasExteriorMap ? 'available' : 'unavailable'}
             {@const interiorStatus = item.hasInteriorMap ? 'available' : 'unavailable'}
             <li class="space-y-3 p-4">
@@ -281,7 +305,9 @@ onMount(() => void load().catch(error => (failure = String(error))))
                         ? 'Building part'
                         : item.kind === 'premises'
                           ? 'Premises'
-                          : 'Building'}
+                          : item.members.length
+                            ? 'Physical building'
+                            : 'Building'}
                     </p>
                     <SimpleTooltip
                       triggerClass="focus-visible:outline-ring h-6 shrink-0 cursor-help items-center gap-1.5 rounded px-1 focus-visible:outline-2"
@@ -304,7 +330,7 @@ onMount(() => void load().catch(error => (failure = String(error))))
                     </SimpleTooltip>
                   </div>
                   <a
-                    href={'/admin/locations/' + item.id}
+                    href={detailUrl}
                     class="font-semibold break-words whitespace-normal hover:underline"
                     >{item.name}</a
                   >
@@ -315,13 +341,57 @@ onMount(() => void load().catch(error => (failure = String(error))))
                       {item.address}
                     </p>
                   {/if}
+                  {#if item.members.length}
+                    <details class="mt-2 text-sm">
+                      <summary>
+                        {item.members.length} SaanSeoi
+                        {item.members.length === 1 ? 'building' : 'buildings'}
+                      </summary>
+                      <ul class="mt-2 space-y-3">
+                        {#each item.members as member (member.source.id)}
+                          <li>
+                            <a
+                              class="font-mono text-xs break-words underline"
+                              href={member.locationId
+                                ? '/admin/locations/' +
+                                  encodeURIComponent(member.locationId) +
+                                  '?organisation=' +
+                                  encodeURIComponent(organisationId) +
+                                  '#relationships'
+                                : buildingSourceHref(member.source)}
+                              >{member.source.id}</a
+                            >
+                          </li>
+                        {/each}
+                      </ul>
+                    </details>
+                  {/if}
                 </div>
               </div>
-              <div class="flex flex-wrap gap-2">
-                {#if item.kind === 'premises' || item.kind === 'building'}
+              <div class="flex flex-wrap items-center gap-2">
+                {#if item.canEditPhysicalBuilding && !disabled}
                   <button
                     type="button"
                     class={control}
+                    disabled={busy}
+                    onclick={() => {
+                      active = 'building'
+                      physicalId = item.id
+                    }}
+                  >
+                    Add SaanSeoi building
+                  </button>
+                {/if}
+                {#if item.kind === 'premises' || item.kind === 'building'}
+                  {@const addLabel =
+                    item.kind === 'premises'
+                      ? `Add related buildings and building parts for ${item.name}`
+                      : `Add related building parts for ${item.name}`}
+                  <button
+                    type="button"
+                    class={`${rowAction} hover:bg-muted gap-1 px-3`}
+                    aria-label={addLabel}
+                    title={addLabel}
                     disabled={busy || disabled}
                     onclick={() =>
                       add(
@@ -331,17 +401,32 @@ onMount(() => void load().catch(error => (failure = String(error))))
                           : 'building_and_parts',
                       ).catch(() => {})}
                   >
-                    Add related buildings and parts
+                    <PlusIcon class="size-4" aria-hidden="true" />
+                    {#if item.kind === 'premises'}
+                      <BuildingIcon class="size-5" aria-hidden="true" />
+                    {/if}
+                    <PartIcon class="size-5" aria-hidden="true" />
                   </button>
+                {/if}
+                {#if item.kind === 'building' && !disabled}
+                  <a
+                    class={`${rowAction} hover:bg-muted w-11`}
+                    href={detailUrl + '&edit=true#relationships'}
+                    title={m.location_record_relationships()}
+                  >
+                    <RelationshipsIcon class="size-5" aria-hidden="true" />
+                    <span class="sr-only">{m.location_record_relationships()}</span>
+                  </a>
                 {/if}
                 <button
                   type="button"
-                  class={control}
+                  class={`${rowAction} text-muted-foreground hover:text-error ml-auto w-11`}
                   disabled={busy || disabled}
-                  aria-label={'Remove ' + item.name + ' from session'}
+                  aria-label={removeLabel}
+                  title={removeLabel}
                   onclick={() => remove(item.id)}
                 >
-                  Remove
+                  <TrashIcon class="size-5" aria-hidden="true" />
                 </button>
               </div>
             </li>

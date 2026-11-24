@@ -107,6 +107,9 @@ let {
   onReturnToResults,
   onSelectionStart,
   selectExistingImmediately = false,
+  preferExistingBuildings = false,
+  buildingActions,
+  onlySourceBuildings = false,
   onResultsChange,
   onResultsEnd,
   onScrollEndChange,
@@ -151,6 +154,10 @@ let {
   onReturnToResults?: () => void
   /** Add known identities directly when used as a session picker. */
   selectExistingImmediately?: boolean
+  /** Present the existing import once while selecting a physical building. */
+  preferExistingBuildings?: boolean
+  buildingActions?: Snippet<[Result]>
+  onlySourceBuildings?: boolean
   onSelectionStart?: () => void
   onResolutionPendingChange?: (pending: boolean) => void
   onResultsChange?: (hasResults: boolean) => void
@@ -272,8 +279,6 @@ function applyFilters(value: PlaceSearchFilters): void {
 function clearSearch(): void {
   query = ''
   nearbyFilter = ''
-  if (localRows.length) localRows = []
-  localSearchFailed = false
   schedule(false, false)
   previousRows = []
   previousQuery = ''
@@ -428,8 +433,20 @@ let cachedKinds = new Set<Result['kind']>()
 const rows = $derived(
   [
     ...localRows,
-    ...receivedRows.filter(row => !localRows.some(local => local.id === row.id)),
+    ...receivedRows.filter(
+      row =>
+        !localRows.some(
+          local =>
+            local.id === row.id ||
+            (preferExistingBuildings &&
+              row.buildingSource &&
+              local.catalogueBuildingId === row.buildingSource.id),
+        ),
+    ),
   ]
+    .filter(
+      row => !onlySourceBuildings || row.buildingSource || row.catalogueBuildingId,
+    )
     .filter(row => !suggestionKinds || suggestionKinds.includes(row.kind))
     .filter(row =>
       row.kind === 'establishment'
@@ -604,6 +621,9 @@ async function filterMatches(request: number, text: string): Promise<void> {
  * @returns Nothing.
  */
 function schedule(retainMatches = false, runSearch = true): void {
+  // Local matches belong to the previous literal query, including when typing clears the input.
+  if (localRows.length) localRows = []
+  localSearchFailed = false
   fallbackSeeds = []
   fallbackStatus = ''
   associationOpen = false
@@ -822,6 +842,8 @@ async function search(nearby = false, onlyKind?: Result['kind']): Promise<void> 
                       id: `location:${row.id}`,
                       kind: row.kind,
                       names: row.facts.names,
+                      linkedAddresses: row.linkedAddresses,
+                      catalogueBuildingId: row.catalogueBuildingId,
                       identity: {
                         locationId: row.id,
                         revisionId: row.revisionId,
@@ -1447,6 +1469,7 @@ $effect(publishMarkers)
 function choose(result: Result): void {
   if (
     selectExistingImmediately &&
+    !(buildingActions && result.catalogueBuildingId) &&
     result.identity?.locationId &&
     (!allowedLocationKinds || allowedLocationKinds.includes(result.kind))
   ) {
@@ -2557,6 +2580,9 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
         {/if}
         {#each visibleRows as result, index (result.id)}
           {@const labels = resultLabels(result)}
+          {@const sourceBuilding = Boolean(
+            buildingActions && (result.buildingSource || result.catalogueBuildingId),
+          )}
           {#if preferredKind &&
             (index === 0 ||
               (visibleRows[index - 1].kind === preferredKind) !==
@@ -2579,11 +2605,17 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
               if (!event.currentTarget.contains(event.relatedTarget as Node | null))
                 focusedResult = null
             }}
-            class="border-border/50 data-[highlighted=true]:bg-primary/10 relative flex items-center gap-3 rounded-md border-b transition-colors last:border-0"
+            class={[
+              'border-border/50 data-[highlighted=true]:bg-primary/10 relative items-center gap-x-3 rounded-md border-b transition-colors last:border-0',
+              sourceBuilding ? 'grid grid-cols-[minmax(0,1fr)_auto]' : 'flex',
+            ]}
           >
             <button
               type="button"
-              class="group flex min-h-20 min-w-0 flex-1 basis-64 items-center gap-3 rounded-md px-3 py-6 text-left outline-none"
+              class={[
+                'group flex min-h-20 min-w-0 flex-1 basis-64 items-center gap-3 rounded-md px-3 text-left outline-none',
+                sourceBuilding ? 'col-start-1 row-start-1 py-3' : 'py-6',
+              ]}
               aria-describedby={result.identity
                 ? `${sourceDescriptionId}-hype`
                 : result.source
@@ -2637,27 +2669,48 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                 {locationKindLabel(result.kind)}
               </SimpleTooltip>
               <span class="relative min-w-0 flex-1">
-                <AddressSearchParts
-                  address={result.address}
-                  numberSummary={currentGroup
-                    ? undefined
-                    : groups.find(group => group.representative.id === result.id)
-                        ?.numberRange}
-                  establishmentTitle={result.kind === 'establishment'
-                    ? labels.title
-                    : undefined}
-                  taxonomyLabel={result.taxonomyLabel}
-                  primaryName={result.kind !== 'address' &&
-                  result.kind !== 'establishment'
-                    ? labels.title
-                    : undefined}
-                  collapsed={!currentGroup &&
-                    result.kind === 'address' &&
-                    Boolean(
-                      groups.find(group => group.representative.id === result.id)
-                        ?.expandable,
-                    )}
-                />
+                {#if result.linkedAddresses?.length && !buildingActions}
+                  <span class="block font-semibold break-words">{labels.title}</span>
+                  {#each result.linkedAddresses as address}
+                    <span class="text-muted-foreground block text-sm break-words"
+                      >{address}</span
+                    >
+                  {/each}
+                {:else}
+                  {#if sourceBuilding}
+                    <span class="block font-semibold break-words whitespace-normal"
+                      >{labels.title}</span
+                    >
+                    <span
+                      class="text-muted-foreground block text-sm break-words whitespace-normal"
+                      >{labels.detail ||
+                        result.buildingSource?.id ||
+                        result.catalogueBuildingId}</span
+                    >
+                  {:else}
+                    <AddressSearchParts
+                      address={result.address}
+                      numberSummary={currentGroup
+                        ? undefined
+                        : groups.find(group => group.representative.id === result.id)
+                            ?.numberRange}
+                      establishmentTitle={result.kind === 'establishment'
+                        ? labels.title
+                        : undefined}
+                      taxonomyLabel={result.taxonomyLabel}
+                      primaryName={result.kind !== 'address' &&
+                      result.kind !== 'establishment'
+                        ? labels.title
+                        : undefined}
+                      collapsed={!currentGroup &&
+                        result.kind === 'address' &&
+                        Boolean(
+                          groups.find(group => group.representative.id === result.id)
+                            ?.expandable,
+                        )}
+                    />
+                  {/if}
+                {/if}
                 {#if !currentGroup &&
                   groups.find(
                     group => group.representative.id === result.id && group.expandable,
@@ -2673,7 +2726,16 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                 {/if}
               </span>
             </button>
-            {#if selected?.id === result.id &&
+            {#if buildingActions &&
+              (result.buildingSource || result.catalogueBuildingId) &&
+              (currentGroup ||
+                !groups.some(
+                  group => group.representative.id === result.id && group.expandable,
+                ))}
+              <div class="col-span-2 row-start-2 px-3 pb-2">
+                {@render buildingActions(result)}
+              </div>
+            {:else if selected?.id === result.id &&
               (currentGroup ||
                 !groups.some(
                   group => group.representative.id === result.id && group.expandable,
@@ -2733,6 +2795,7 @@ function handleResultTab(event: KeyboardEvent, index: number): void {
                   : m.feature_search_source_saanseoi()}
                 aria-hidden="true"
                 class={[
+                  sourceBuilding && 'col-start-2 row-start-1',
                   'text-muted-foreground/55 mr-3 ml-2 block size-5 shrink-0 bg-current [mask-position:center] [mask-repeat:no-repeat]',
                   result.identity
                     ? "[mask-image:url('/logos/hype-mark.svg')] [mask-size:160%]"
