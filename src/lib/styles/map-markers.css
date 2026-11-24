@@ -145,7 +145,7 @@
 
 .marker-fade-in {
   /* Release animation layers after entry instead of retaining one per thumbnail. */
-  animation: markerFadeIn 0.3s ease-in-out;
+  animation: markerFadeIn 0.3s linear;
 }
 
 .marker-fade-out {
@@ -172,7 +172,7 @@
 
 /* Move scale transform to inner container */
 .marker-fade-in .marker-inner {
-  animation: markerScaleIn 0.3s ease-in-out;
+  animation: markerScaleIn 0.3s ease-out;
 }
 
 .marker-fade-out .marker-inner {
@@ -181,7 +181,7 @@
 
 @keyframes markerScaleIn {
   from {
-    transform: scale(0.8);
+    transform: scale(0.94);
   }
   to {
     transform: scale(1);
