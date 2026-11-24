@@ -774,6 +774,11 @@ Organisation customizations, even for SuperAdmin. The edit destination does not 
 Location visibility. Internal Locations cannot receive community writes. Both commands
 recheck authority and displayed revisions on the server.
 
+Deleting an Organisation-owned manual or unresolved Location requires management
+authority over its persisted owner Organisation or SuperAdmin. Ownerless canonical
+drafts require SuperAdmin. Source-linked Locations are ineligible. The command checks
+the reviewed baseline and current dependencies before writing the deletion receipt.
+
 Staff may accept a subset of a third-party proposal's fields. The server accepts only
 fields present in the retained proposal and checks each field's destination authority.
 The immutable merge receipt records the selected patch and reviewer. Unchecked fields

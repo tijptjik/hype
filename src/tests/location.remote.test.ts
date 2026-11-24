@@ -5,6 +5,7 @@ import type { UserRoleDisco } from '#lib/types.js'
 import { DEFAULT_PROJECT_LOCATION_POLICY } from '#lib/locations/model.js'
 
 const mocks = vi.hoisted(() => ({
+  archiveLocal: vi.fn(),
   retryRematch: vi.fn(),
   presentationPolicy: vi.fn(),
   directory: vi.fn(),
@@ -1308,7 +1309,81 @@ vi.mock('#lib/db/services/locationCurationLocks.js', () => ({
 vi.mock('#lib/db/services/locationDirectory.js', () => ({
   listLocationResources: mocks.directory,
 }))
-import { getLocations, getLocation } from '#lib/api/locationDirectory.remote.js'
+vi.mock('#lib/db/services/locationDeletion.js', () => ({
+  archiveLocalLocation: mocks.archiveLocal,
+}))
+import {
+  deleteLocation,
+  getLocations,
+  getLocation,
+} from '#lib/api/locationDirectory.remote.js'
+
+describe('standalone Location deletion authority', () => {
+  const input = { locationId: 'location', revisionId: 'revision' }
+  it('checks private ownership and records the authenticated actor', async () => {
+    mocks.archiveLocal.mockResolvedValue('deleted')
+    await expect(deleteLocation(input)).resolves.toBe('deleted')
+    expect(mocks.archiveLocal).toHaveBeenCalledWith(mocks.context.db, {
+      ...input,
+      state: 'manual',
+      ownerOrganisationId: 'p',
+      actorId: 'u',
+    })
+    mocks.authorizeOrganisation.mockReturnValue({ allowed: false })
+    await expect(deleteLocation(input)).rejects.toMatchObject({ status: 403 })
+    expect(mocks.archiveLocal).toHaveBeenCalledTimes(1)
+  })
+  it('lets the owning Organisation clean up its unresolved physical building', async () => {
+    mocks.probeIdentity.mockResolvedValue({
+      id: 'location',
+      state: 'unresolved',
+      ownerOrganisationId: 'p',
+      ssId: null,
+    })
+    mocks.archiveLocal.mockResolvedValue('deleted')
+    await expect(deleteLocation(input)).resolves.toBe('deleted')
+    expect(mocks.archiveLocal).toHaveBeenCalledWith(mocks.context.db, {
+      ...input,
+      state: 'unresolved',
+      ownerOrganisationId: 'p',
+      actorId: 'u',
+    })
+  })
+  it('reserves ownerless drafts for SuperAdmin and excludes source-linked identities', async () => {
+    mocks.probeIdentity.mockResolvedValue({
+      state: 'unresolved',
+      ownerOrganisationId: null,
+      ssId: null,
+    })
+    await expect(deleteLocation(input)).rejects.toMatchObject({ status: 403 })
+    Object.assign(mocks.context.user, { superAdmin: true })
+    try {
+      mocks.archiveLocal.mockResolvedValue('deleted')
+      await expect(deleteLocation(input)).resolves.toBe('deleted')
+      mocks.probeIdentity.mockResolvedValue({
+        state: 'linked',
+        ownerOrganisationId: null,
+        ssId: 'source',
+      })
+      await expect(deleteLocation(input)).rejects.toMatchObject({ status: 409 })
+      expect(mocks.archiveLocal).toHaveBeenCalledTimes(1)
+    } finally {
+      Reflect.deleteProperty(mocks.context.user, 'superAdmin')
+    }
+  })
+  it('denies ordinary shared editors and anonymous callers', async () => {
+    mocks.probeIdentity.mockResolvedValue({
+      state: 'unresolved',
+      ownerOrganisationId: 'p',
+      ssId: null,
+    })
+    mocks.authorizeOrganisation.mockReturnValue({ allowed: false })
+    await expect(deleteLocation(input)).rejects.toMatchObject({ status: 403 })
+    mocks.context.user.isAnonymous = true
+    await expect(deleteLocation(input)).rejects.toMatchObject({ status: 403 })
+    expect(mocks.archiveLocal).not.toHaveBeenCalled()
+  })
+})
 
 describe('standalone Location reads', () => {
   it('restricts draft browsing and direct detail reads to SuperAdmins', async () => {
@@ -1390,6 +1465,7 @@ describe('standalone Location reads', () => {
       id: 'location',
       canEditAddress: true,
       canEditShared: false,
+      canDelete: false,
       canManageCommunityLocks: false,
       communityLocks: { revision: null, openFields: {}, available: true },
       sharedFacts: undefined,

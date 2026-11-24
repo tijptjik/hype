@@ -43,6 +43,8 @@ export type LocationResource = {
   canEditShared?: boolean
   sharedFacts?: LocationFacts
   sharedRevision?: string | null
+  /** Permission to delete this local identity, subject to a fresh dependency check. */
+  canDelete?: boolean
   canEditAddress?: boolean
   editingOrganisationId?: string | null
   organisationRevision?: string | null

@@ -35,6 +35,7 @@ import { LocalLocationFootprintSchema } from '#lib/locations/footprint.js'
 // DB
 import { readLocationCurationLocks } from '#lib/db/services/locationCurationLocks.js'
 import { probeLocationIdentityScope } from '#lib/db/services/locationIdentityReview.js'
+import { archiveLocalLocation } from '#lib/db/services/locationDeletion.js'
 import { listLocationResources } from '#lib/db/services/locationDirectory.js'
 import { listLocationLinkedFeatures } from '#lib/db/services/locationFeatures.js'
 import { authorizeFeatureAdminReadForProbe } from '#lib/api/services/authz/feature.js'
@@ -139,10 +140,12 @@ export const getLocation = guardedQuery(
         : input.organisationId,
     )
     let editingOrganisationId = input.organisationId ?? null
-    if (!editingOrganisationId && identity.ssId === null && scope.ownerOrganisationId) {
+    let managesOwner = false
+    if (identity.ssId === null && scope.ownerOrganisationId) {
       try {
         await requireLocationOrganisationManager(ctx, scope.ownerOrganisationId)
-        editingOrganisationId = scope.ownerOrganisationId
+        managesOwner = true
+        editingOrganisationId ??= scope.ownerOrganisationId
       } catch {
         /* Shared reads do not grant the curator's authority. */
       }
@@ -175,6 +178,11 @@ export const getLocation = guardedQuery(
           ...resource,
           editingOrganisationId,
           canEditShared,
+          canDelete: Boolean(
+            resource.revisionId &&
+              (identity.state === 'manual' || identity.state === 'unresolved') &&
+              (ctx.user.superAdmin || managesOwner),
+          ),
           canManageCommunityLocks: Boolean(
             ctx.user.superAdmin &&
               !isCanonicalLocationDraft(identity) &&
@@ -189,6 +197,36 @@ export const getLocation = guardedQuery(
             identity.state !== 'redirect',
         }
       : null
+  },
+)
+
+/** Delete a local Location using the ownership and identity currently in storage.
+ * @param input Identity and baseline revision reviewed in the confirmation dialog.
+ * @returns Deletion outcome for the editor.
+ * @remarks Organisation-owned records require management authority over the persisted owner. Ownerless drafts require SuperAdmin.
+ */
+export const deleteLocation = guardedCommand(
+  z.strictObject({
+    locationId: z.string().min(1).max(200),
+    revisionId: z.string().min(1).max(200),
+    draftVersion: z.string().min(1).max(200).nullable().optional(),
+  }),
+  async (input, ctx) => {
+    if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
+    const identity = await probeLocationIdentityScope(ctx.db, input.locationId)
+    if (!identity || identity.state === 'redirect') error(404, 'LOCATION_NOT_FOUND')
+    if (!ctx.user.superAdmin) {
+      if (!identity.ownerOrganisationId) error(403, 'SUPER_ADMIN_REQUIRED')
+      await requireLocationOrganisationManager(ctx, identity.ownerOrganisationId)
+    }
+    if (identity.state !== 'manual' && identity.state !== 'unresolved')
+      error(409, 'SOURCE_LINKED_LOCATION')
+    return archiveLocalLocation(ctx.db, {
+      ...input,
+      ownerOrganisationId: identity.ownerOrganisationId,
+      state: identity.state,
+      actorId: ctx.user.id,
+    })
   },
 )
 
