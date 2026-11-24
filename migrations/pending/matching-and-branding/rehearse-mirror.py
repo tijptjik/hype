@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import donor_phones
 
 from scope import read_db
 
@@ -76,6 +77,12 @@ def rehearse(package, source, output):
         replayOperations=0,
         integrity="ok",
         foreignKeys=0,
+        donorPhones=donor_phones.verify(
+            restored,
+            donor_phones.read_overlay(
+                package, donor_phones.independent_enrollment(restored)
+            ),
+        ),
     )
     (output / "verification.json").write_text(json.dumps(receipt, indent=2) + "\n")
     print(json.dumps(receipt))
