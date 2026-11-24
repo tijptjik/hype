@@ -85,6 +85,11 @@ export function preserveFeatureLocationBaseline(
     if (correction) names[locale] = correction
   }
   if (Object.keys(names).length) overrides.names = names
+  if (
+    baseline.confirmedUnnamed !== undefined &&
+    baseline.confirmedUnnamed !== facts.confirmedUnnamed
+  )
+    overrides.confirmedUnnamed = { mode: 'override', value: baseline.confirmedUnnamed }
   // Legacy Features have no extent to preserve and should inherit a newly linked footprint.
   if (baseline.footprint !== undefined) {
     const footprint = preserveField(baseline.footprint, facts.footprint ?? null)

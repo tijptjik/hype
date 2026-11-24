@@ -8,6 +8,13 @@ import { locationFactsFieldSql } from './locationFactsSql'
 import { sharedLocationFacts } from './locationShared'
 import type { Database } from '#lib/types.js'
 
+type ProjectedLocationField =
+  | 'names'
+  | 'location'
+  | 'operatingStatus'
+  | 'buildingStatus'
+  | 'confirmedUnnamed'
+
 /** Build effective search expressions before pagination, using the same layer order as display.
  * @param db Database. @param id Trusted Location identity expression. @param facts Source facts column.
  * @param organisationId Authorized Organisation scope, or null for shared-only reads.
@@ -20,7 +27,7 @@ export async function locationReadFields(
   facts: SQLWrapper,
   organisationId: SQLWrapper,
   revisionId: SQLWrapper,
-): Promise<Record<'names' | 'location' | 'operatingStatus' | 'buildingStatus', SQL>> {
+): Promise<Record<ProjectedLocationField, SQL>> {
   const storage = await db.get<{ n: number }>(
     sql`SELECT 1 n FROM sqlite_master WHERE name='locationSharedRevision' AND type='table' LIMIT 1`,
   )
@@ -29,9 +36,7 @@ export async function locationReadFields(
   )
   const overrides = sql`(SELECT overrides FROM organisationLocationHead WHERE locationId=${id} AND organisationId=${organisationId})`
   /** Resolve a fixed field below Organisation overrides. @param field Known field. @returns Hype effective value. */
-  const shared = (
-    field: 'names' | 'location' | 'operatingStatus' | 'buildingStatus',
-  ): SQL => {
+  const shared = (field: ProjectedLocationField): SQL => {
     const source =
       field === 'names' && translations?.n
         ? sql`(SELECT json_group_object(locale,name) FROM locationRevisionI18n WHERE revisionId=${revisionId} AND name IS NOT NULL)`
@@ -45,13 +50,15 @@ export async function locationReadFields(
     sql`CASE WHEN json_extract(${overrides},${`$.freshness.${field}.mode`})='follow' AND json_extract(${overrides},${`$.freshness.${field}.original`}) IS NOT ${value} THEN NULL ELSE json_extract(${overrides},${`$.${field}`}) END`
   const names = shared('names'),
     choices = applicable('names', names)
-  const result = {} as Record<
-    'names' | 'location' | 'operatingStatus' | 'buildingStatus',
-    SQL
-  >
+  const result = {} as Record<ProjectedLocationField, SQL>
   // Union locale keys first so removed source names cannot remain searchable behind an override.
   result.names = sql`(SELECT json_group_object(locale,value) FROM (SELECT locale,CASE json_extract(${choices},'$.'||json_quote(locale)||'.mode') WHEN 'override' THEN json_extract(${choices},'$.'||json_quote(locale)||'.value') WHEN 'clear' THEN NULL ELSE json_extract(${names},'$.'||json_quote(locale)) END value FROM (SELECT key locale FROM json_each(${names}) UNION SELECT key locale FROM json_each(${choices}))) WHERE value IS NOT NULL)`
-  for (const field of ['location', 'operatingStatus', 'buildingStatus'] as const) {
+  for (const field of [
+    'location',
+    'operatingStatus',
+    'buildingStatus',
+    'confirmedUnnamed',
+  ] as const) {
     const value = shared(field),
       choice = applicable(field, value)
     result[field] =

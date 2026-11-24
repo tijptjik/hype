@@ -9,7 +9,9 @@ import type { LocationFacts } from './model'
 
 /** Address and marker are independently lockable even though their corrections share a position envelope. */
 export const CurationLockFieldSchema = z.enum([
-  ...SharedCorrectionFieldSchema.options.filter(field => field !== 'location'),
+  ...SharedCorrectionFieldSchema.options.filter(
+    field => field !== 'location' && field !== 'confirmedUnnamed',
+  ),
   'location.geometry',
   'location.address',
 ])
@@ -104,7 +106,8 @@ export function assertCurationFieldsOpen(
     throw new Error('BRANCH_ID_INTERNAL_ONLY')
   const touched = new Set<CurationLockField>()
   for (const field of Object.keys(patch) as Array<keyof SharedCorrectionPatch>) {
-    if (field !== 'location') touched.add(field)
+    if (field === 'confirmedUnnamed') touched.add('names')
+    else if (field !== 'location') touched.add(field)
     else {
       const choice = patch.location
       for (const key of ['geometry', 'address'] as const)

@@ -140,6 +140,10 @@ export function createLocationFactsSnapshot(
   } else if (facts.brands.length || facts.operatingStatus != null)
     throw new Error('Establishment facts require an establishment snapshot')
   if (kind === 'building') {
+    // Only the dedicated name decision can confirm that a building has no name.
+    delete details.confirmedUnnamed
+    if (facts.confirmedUnnamed !== undefined)
+      details.confirmedUnnamed = facts.confirmedUnnamed
     if (facts.buildingStatus !== undefined)
       details.buildingStatus = facts.buildingStatus
   } else if (facts.buildingStatus != null)
@@ -282,6 +286,9 @@ export function readLocationFacts(value: unknown): LocationFacts {
       : {}),
     ...('operatingStatus' in details && details.operatingStatus !== undefined
       ? { operatingStatus: details.operatingStatus }
+      : {}),
+    ...('confirmedUnnamed' in details && details.confirmedUnnamed !== undefined
+      ? { confirmedUnnamed: details.confirmedUnnamed }
       : {}),
     ...('buildingStatus' in details && details.buildingStatus !== undefined
       ? { buildingStatus: details.buildingStatus }

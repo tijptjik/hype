@@ -22,7 +22,8 @@ import { getLocation } from '#lib/api/locationDirectory.remote.js'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // I18N
-import { getLocaleKey, m } from '#lib/i18n.js'
+import { buildingNameLabel } from '#lib/locations/kinds.i18n.js'
+import { getLocale, m } from '#lib/i18n.js'
 // ICONS
 import MapPin from 'virtual:icons/proicons/location'
 // BITS COMPONENTS
@@ -87,19 +88,17 @@ $effect(() => {
 })
 $effect(() => {
   const place = request.current
-  const locale =
-    getLocaleKey() === 'zhHant'
-      ? 'zh-hant'
-      : getLocaleKey() === 'zhHans'
-        ? 'zh-hans'
-        : 'en'
+  const locale = getLocale().toLowerCase()
   // Match the community record displayed by the standalone editor, even with Organisation context.
-  const facts = place?.sharedFacts ?? place?.facts
+  const facts =
+    place?.state === 'manual' ? place.facts : (place?.sharedFacts ?? place?.facts)
   const title =
-    facts?.names[locale] ||
-    facts?.names.en ||
-    Object.values(facts?.names ?? {}).find(Boolean) ||
-    m.location_policy_tab()
+    place?.kind === 'building'
+      ? buildingNameLabel(facts?.names ?? {}, facts?.confirmedUnnamed, locale)
+      : facts?.names[locale] ||
+        facts?.names.en ||
+        Object.values(facts?.names ?? {}).find(Boolean) ||
+        m.location_policy_tab()
   untrack(() => {
     if (place && place.id === page.params.id)
       admin.view.cache.location.set(place.id, place)

@@ -117,6 +117,7 @@ export async function relinkFeatureLocation(
       ...current.effective,
       // A footprint describes the old physical entity, never its replacement.
       footprint: undefined,
+      confirmedUnnamed: undefined,
       operatingStatus: undefined,
       buildingStatus: undefined,
       successorLocationId: undefined,

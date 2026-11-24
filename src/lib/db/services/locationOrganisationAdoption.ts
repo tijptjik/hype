@@ -33,6 +33,7 @@ import type { LocationAdoptionApplyResult } from './locationAdoptionApply'
 /** Existing review groups remain atomic until the grouped policy migration is applied. */
 const factFields = [
   'names',
+  'confirmedUnnamed',
   'brands',
   ...CURATION_IDENTITY_FIELDS,
   'phoneNumber',

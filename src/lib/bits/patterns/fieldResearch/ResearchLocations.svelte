@@ -1,6 +1,9 @@
 <script lang="ts">
 // SVELTE
 import { onMount } from 'svelte'
+// I18N
+import { getLocale } from '#lib/i18n.js'
+import { buildingNameLabel } from '#lib/locations/kinds.i18n.js'
 // API
 import {
   getResearchLocations,
@@ -36,7 +39,23 @@ let {
 } = $props()
 let mode = $state<'search' | 'map'>('search')
 let active = $state<'premises' | 'building' | 'building_part'>('premises')
-let added = $state<Awaited<ReturnType<typeof getResearchLocations>>>([])
+let rows = $state<Awaited<ReturnType<typeof getResearchLocations>>>([])
+const added = $derived(
+  rows
+    .map(row => ({
+      ...row,
+      name:
+        row.kind === 'building'
+          ? buildingNameLabel(row.names, row.confirmedUnnamed)
+          : row.names.en?.trim() ||
+            Object.values(row.names).find(name => name.trim()) ||
+            row.address ||
+            (row.kind === 'building_part'
+              ? 'Unnamed building part'
+              : 'Unnamed premises'),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, getLocale())),
+)
 let busy = $state(false)
 let loaded = $state(false)
 let failure = $state('')
@@ -48,7 +67,7 @@ const kinds = [
 ] as const
 /** Load persisted vetted Locations. @returns Once the list is refreshed. */
 async function load(): Promise<void> {
-  added = await refreshRemoteQuery(getResearchLocations({ sessionId, revision }))
+  rows = await refreshRemoteQuery(getResearchLocations({ sessionId, revision }))
   loaded = true
 }
 /** Persist a single vetted choice or a relationship expansion. @param locationId Selected Location. @param mode Expansion mode. @returns Once refreshed. */

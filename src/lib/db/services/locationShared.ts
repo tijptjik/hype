@@ -209,15 +209,30 @@ export async function prepareSharedLocationCorrection(
     patch.brandId = { mode: 'inherit' }
   const facts = readLocationFacts(source.facts)
   const locks = await readLocationCurationLocks(db, input.locationId)
-  assertCurationFieldsOpen(
-    patch,
-    resolveSharedCorrections(
-      facts,
-      previous ? JSON.parse(previous.corrections) : {},
-      false,
-    ).facts,
-    locks.openFields,
-  )
+  const current = resolveSharedCorrections(
+    facts,
+    previous ? JSON.parse(previous.corrections) : {},
+    false,
+  ).facts
+  // Name changes and an explicit unnamed decision share one lock and revision fence.
+  if (patch.confirmedUnnamed && source.kind !== 'building')
+    throw new Error('Only buildings can be marked unnamed')
+  let nextNames = current.names
+  if (patch.names?.mode === 'override')
+    nextNames = patch.names.value as Record<string, string>
+  if (patch.names?.mode === 'clear') nextNames = {}
+  if (patch.names?.mode === 'inherit') nextNames = facts.names
+  if (Object.values(nextNames).some(value => value.trim())) {
+    const confirming =
+      patch.confirmedUnnamed?.mode === 'inherit'
+        ? facts.confirmedUnnamed
+        : patch.confirmedUnnamed?.mode === 'override' && patch.confirmedUnnamed.value
+    if (confirming)
+      throw new Error('Clear the recorded building names before marking it unnamed')
+    if (patch.names && current.confirmedUnnamed && !patch.confirmedUnnamed)
+      patch.confirmedUnnamed = { mode: 'override', value: false }
+  }
+  assertCurationFieldsOpen(patch, current, locks.openFields)
   const id = crypto.randomUUID(),
     editedAt = new Date().toISOString()
   const corrections = amendSharedCorrections(

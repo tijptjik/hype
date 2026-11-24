@@ -132,10 +132,14 @@ export const LocalLocationInputSchema = z
       input.kind = LocationKindSchema.parse(locationMatchingType(pair.data))
     }
     // Buildings may be unnamed; their identity and geometry remain independently required.
-    if (
-      input.kind !== 'building' &&
-      !Object.values(input.facts.names).some(name => name.trim().length > 0)
-    ) {
+    const hasName = Object.values(input.facts.names).some(name => name.trim())
+    if (input.facts.confirmedUnnamed && (input.kind !== 'building' || hasName))
+      context.addIssue({
+        code: 'custom',
+        path: ['facts', 'confirmedUnnamed'],
+        message: 'Only a building without a recorded name can be marked unnamed',
+      })
+    if (input.kind !== 'building' && !hasName) {
       context.addIssue({
         code: 'custom',
         path: ['facts', 'names'],

@@ -34,6 +34,7 @@ export type EffectiveLocationFacts = {
   accessibility?: LocationFacts['accessibility']
   footprint?: LocationFacts['footprint']
   entity?: LocationFacts['entity']
+  confirmedUnnamed?: boolean
   operatingStatus?: LocationFacts['operatingStatus']
   buildingStatus?: LocationFacts['buildingStatus']
   successorLocationId?: LocationFacts['successorLocationId']
@@ -100,6 +101,15 @@ export function resolveFeatureLocation(
       : {}),
     ...(facts.footprint !== undefined || overrides.footprint
       ? { footprint: resolveLocationField(facts.footprint, overrides.footprint) }
+      : {}),
+    ...(facts.confirmedUnnamed !== undefined || overrides.confirmedUnnamed
+      ? {
+          confirmedUnnamed:
+            resolveLocationField(
+              facts.confirmedUnnamed ?? false,
+              overrides.confirmedUnnamed,
+            ) === true,
+        }
       : {}),
     ...(facts.entity ? { entity: facts.entity } : {}),
     ...(overrides.operatingStatus?.mode === 'override'

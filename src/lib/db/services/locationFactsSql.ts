@@ -11,6 +11,7 @@ const paths = {
   location: '$.common.location',
   operatingStatus: '$.details.operatingStatus',
   buildingStatus: '$.details.buildingStatus',
+  confirmedUnnamed: '$.details.confirmedUnnamed',
   successorLocationId: '$.common.successorLocationId',
 } as const
 

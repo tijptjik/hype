@@ -24,6 +24,7 @@ import LocalAddressParseReview from './LocalAddressParseReview.svelte'
 import LocationRecordDetails from './LocationRecordDetails.svelte'
 import LocationLocaleField from './LocationLocaleField.svelte'
 import { TextInput } from '#lib/bits/custom/form/index.js'
+import BuildingUnnamedField from './BuildingUnnamedField.svelte'
 import DraftLocationNameFields from '../featureLocation/DraftLocationNameFields.svelte'
 import LocaleToolbar from '#lib/bits/custom/localeControls/LocaleToolbar.svelte'
 import { normalizeContentLocales } from '#lib/content-locales/model.js'
@@ -52,8 +53,8 @@ import {
   searchDirectoryLocationPlaces,
 } from '#lib/api/locationDirectory.remote.js'
 import { discoverLocationKind } from '#lib/locations/combinedDiscovery.js'
-import { LocationNamesEditSchema } from '#lib/locations/validation.js'
-import { locationKindLabel } from '#lib/locations/kinds.i18n.js'
+import { locationNamesEditSchema } from '#lib/locations/validation.js'
+import { buildingNameLabel, locationKindLabel } from '#lib/locations/kinds.i18n.js'
 import { facilitySymbol } from '#lib/indoor/facilities.js'
 import { canonicalFacilityLabel } from '#lib/indoor/facilityLabels.js'
 import type { LocationKind } from '#lib/locations/kinds.js'
@@ -142,6 +143,9 @@ let lifecycle = $state<LocationLifecycleSummary>({})
 let successorLocationId = $state<string | null>(null)
 let initialLifecycleSignature = $state('')
 let kind = $state<LocationKind>('unknown')
+let unnamedChoice = $state(false)
+const hasDraftName = $derived(Object.values(names).some(value => value.trim()))
+const confirmedUnnamed = $derived(kind === 'building' && !hasDraftName && unnamedChoice)
 let expectedKind = $state<LocationKind>('unknown')
 let numberMapController = $state.raw<
   import('#lib/map/controller.js').MapController | null
@@ -180,9 +184,7 @@ const lifecycleInvalid = $derived.by(() => {
     return true
   }
 })
-const namesInvalid = $derived(
-  editing && !LocationNamesEditSchema.safeParse(names).success,
-)
+const editedNames = $derived(locationNamesEditSchema(kind).safeParse(names))
 onDestroy(() => {
   lookupVersion++
   onControlsChange({ content: null })
@@ -269,14 +271,7 @@ function edit(): void {
   names = Object.fromEntries(
     Object.entries(editableFacts.names).filter(([, name]) => name?.trim()),
   )
-  if (!Object.keys(names).length)
-    names = {
-      [getLocaleKey() === 'zhHant'
-        ? 'zh-hant'
-        : getLocaleKey() === 'zhHans'
-          ? 'zh-hans'
-          : 'en']: '',
-    }
+  unnamedChoice = editableFacts.confirmedUnnamed === true
   parseReview = undefined
   expectedRevisionId = place.revisionId
   expectedOrganisationRevision = place.organisationRevision ?? null
@@ -285,6 +280,7 @@ function edit(): void {
     draft,
     coordinates,
     names,
+    confirmedUnnamed,
     kind,
     lifecycle,
     successorLocationId,
@@ -433,7 +429,7 @@ async function save(): Promise<void> {
     busy ||
     lookingUp ||
     coordinateInvalid ||
-    namesInvalid ||
+    !editedNames.success ||
     lifecycleInvalid ||
     !draft
   )
@@ -441,12 +437,18 @@ async function save(): Promise<void> {
   busy = true
   failed = false
   try {
+    const namingChange =
+      confirmedUnnamed !== Boolean(editableFacts?.confirmedUnnamed)
+        ? confirmedUnnamed
+        : undefined
     if (communityRecord) {
       if (!place.canEditShared || !editableFacts)
         throw new Error('Shared editing unavailable')
       const patch: SharedCorrectionPatch = {}
+      if (namingChange !== undefined)
+        patch.confirmedUnnamed = { mode: 'override', value: namingChange }
       if (JSON.stringify(names) !== initialNamesSignature)
-        patch.names = { mode: 'override', value: $state.snapshot(names) }
+        patch.names = { mode: 'override', value: editedNames.data }
       if (
         JSON.stringify(draft) !== initialAddressSignature ||
         JSON.stringify(coordinates) !==
@@ -520,6 +522,7 @@ async function save(): Promise<void> {
         expectedRevisionId,
         kind: kind !== expectedKind ? kind : undefined,
         expectedKind,
+        confirmedUnnamed: namingChange,
         ...(JSON.stringify(lifecycle) !== initialLifecycleSignature
           ? $state.snapshot(lifecycle)
           : {}),
@@ -538,7 +541,7 @@ async function save(): Promise<void> {
         branchId: branchId !== (editableFacts?.branchId ?? '') ? branchId : undefined,
         names:
           JSON.stringify(names) !== initialNamesSignature
-            ? $state.snapshot(names)
+            ? editedNames.data
             : undefined,
         address:
           JSON.stringify(draft) !== initialAddressSignature
@@ -566,16 +569,21 @@ async function save(): Promise<void> {
   }
 }
 const title = $derived(
-  place.facts?.names[
-    getLocaleKey() === 'zhHant'
-      ? 'zh-hant'
-      : getLocaleKey() === 'zhHans'
-        ? 'zh-hans'
-        : 'en'
-  ] ||
-    place.facts?.names.en ||
-    Object.values(place.facts?.names ?? {}).find(Boolean) ||
-    place.id,
+  activeKind === 'building'
+    ? buildingNameLabel(
+        editing ? names : (place.facts?.names ?? {}),
+        editing ? confirmedUnnamed : place.facts?.confirmedUnnamed,
+      )
+    : place.facts?.names[
+        getLocaleKey() === 'zhHant'
+          ? 'zh-hant'
+          : getLocaleKey() === 'zhHans'
+            ? 'zh-hans'
+            : 'en'
+      ] ||
+        place.facts?.names.en ||
+        Object.values(place.facts?.names ?? {}).find(Boolean) ||
+        place.id,
 )
 
 // Keep every stored language reachable from the shared names/address toolbar.
@@ -641,12 +649,14 @@ $effect(() => {
           draft,
           coordinates,
           names,
+          confirmedUnnamed,
           kind,
           lifecycle,
           successorLocationId,
         ]) !== initialSignature),
     isSubmitting: busy || lookingUp,
-    hasIssues: coordinateInvalid || namesInvalid || lifecycleInvalid,
+    hasIssues:
+      coordinateInvalid || (editing && !editedNames.success) || lifecycleInvalid,
     canEdit: Boolean(canEditRecord && place.state !== 'redirect' && place.facts),
     content: place.canManageCommunityLocks ? lockControls : null,
     canPublish: false,
@@ -757,14 +767,25 @@ $effect(() => {
                   translations={localeState.expanded}
                   isEditing={!busy && !communityClosed('names')}
                   recordKey={place.id}
-                  onChange={next =>
-                    (names = Object.fromEntries(
+                  onChange={next => {
+                    if (Object.values(next).some(value => value.trim()))
+                      unnamedChoice = false
+                    names = Object.fromEntries(
                       Object.entries(next).map(([tag, value]) => [
                         tag.toLowerCase(),
                         value,
                       ]),
-                    ))}
+                    )
+                  }}
                 />
+                {#if activeKind === 'building'}
+                  <BuildingUnnamedField
+                    checked={confirmedUnnamed}
+                    hasName={hasDraftName}
+                    disabled={busy || communityClosed('names')}
+                    onChange={checked => (unnamedChoice = checked)}
+                  />
+                {/if}
                 {#if activeKind === 'establishment'}
                   <div
                     class="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] items-start gap-8"

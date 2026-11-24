@@ -51,6 +51,8 @@ export type LocationFacts = {
   footprint?: LocationFootprint | null
   /** Additional typed facts survive editing without becoming generic Feature properties. */
   entity?: LocationEntity
+  /** Explicit confirmation that a building has no name; omission means unreviewed. */
+  confirmedUnnamed?: boolean
   /** Absent in legacy snapshots means unknown; never rewrite immutable history. */
   operatingStatus?: OperatingStatus | null
   buildingStatus?: BuildingStatus | null
@@ -84,6 +86,7 @@ export type FeatureLocationOverrides = {
   accessibility?: LocationOverride<import('./accessibility').Accessibility>
 
   address?: import('./placement').AddressCorrection
+  confirmedUnnamed?: LocationOverride<boolean>
   footprint?: LocationOverride<LocationFootprint>
   operatingStatus?:
     | { mode: 'inherit' }

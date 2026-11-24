@@ -67,53 +67,44 @@ export const getResearchLocations = guardedQuery(
       ctx.db,
       sql`l.id`,
       sql`r.facts`,
-      sql`${session.organisationId}`,
+      sql`scope.organisationId`,
       sql`r.id`,
     )
     const rows = await ctx.db.all<{
       id: string
       kind: string
       names: string
+      confirmedUnnamed: number | null
       footprint: string | null
       location: string
     }>(
-      sql`SELECT l.id,l.matchingType kind,coalesce(json_extract(r.facts,'$.common.footprint'),json_extract(r.facts,'$.footprint')) footprint,${fields.names} names,${fields.location} location FROM fieldResearchSessionLocation sl JOIN location l ON l.id=sl.locationId LEFT JOIN locationRevisionContent r ON r.locationId=l.id AND r.version=(SELECT max(version) FROM locationRevisionContent WHERE locationId=l.id AND (l.state!='linked' OR origin='saanseoi')) WHERE sl.sessionId=${input.sessionId} AND l.state!='redirect' AND (l.state!='manual' OR l.ownerOrganisationId=${session.organisationId}) ORDER BY l.id`,
+      sql`WITH scope(organisationId) AS (VALUES (${session.organisationId})) SELECT l.id,l.matchingType kind,coalesce(json_extract(r.facts,'$.common.footprint'),json_extract(r.facts,'$.footprint')) footprint,${fields.names} names,${fields.confirmedUnnamed} confirmedUnnamed,${fields.location} location FROM scope CROSS JOIN fieldResearchSessionLocation sl JOIN location l ON l.id=sl.locationId LEFT JOIN locationRevisionContent r ON r.locationId=l.id AND r.version=(SELECT max(version) FROM locationRevisionContent WHERE locationId=l.id AND (l.state!='linked' OR origin='saanseoi')) WHERE sl.sessionId=${input.sessionId} AND l.state!='redirect' AND (l.state!='manual' OR l.ownerOrganisationId=${session.organisationId}) ORDER BY l.id`,
     )
-    return rows
-      .map(row => {
-        const names: Record<string, string> = JSON.parse(row.names ?? '{}')
-        const location: {
-          address?: FeatureAddress['source']
-          geometry?: { coordinates?: [number, number] }
-        } = JSON.parse(row.location ?? '{}')
-        const addressValue = emptyFeatureAddress()
-        if (location.address) addressValue.source = location.address
-        const address = getAddressDisplay(addressValue, 'en', [], row.kind)
-        const name =
-          names.en?.trim() ||
-          Object.values(names).find(value => value.trim()) ||
-          address ||
-          (row.kind === 'building'
-            ? 'Unnamed building'
-            : row.kind === 'building_part'
-              ? 'Unnamed building part'
-              : 'Unnamed premises')
-        const footprint = LocationFootprintSchema.safeParse(
-          JSON.parse(row.footprint ?? 'null'),
-        )
-        return {
-          id: row.id,
-          kind: row.kind,
-          name,
-          address,
-          coordinates: location.geometry?.coordinates ?? null,
-          footprint:
-            footprint.success && footprint.data.mode === 'inline'
-              ? footprint.data.geometry
-              : null,
-        }
-      })
-      .sort((a, b) => a.name.localeCompare(b.name))
+    return rows.map(row => {
+      const names: Record<string, string> = JSON.parse(row.names ?? '{}')
+      const location: {
+        address?: FeatureAddress['source']
+        geometry?: { coordinates?: [number, number] }
+      } = JSON.parse(row.location ?? '{}')
+      const addressValue = emptyFeatureAddress()
+      if (location.address) addressValue.source = location.address
+      const address = getAddressDisplay(addressValue, 'en', [], row.kind)
+      const footprint = LocationFootprintSchema.safeParse(
+        JSON.parse(row.footprint ?? 'null'),
+      )
+      return {
+        id: row.id,
+        kind: row.kind,
+        names,
+        confirmedUnnamed: row.confirmedUnnamed === 1,
+        address,
+        coordinates: location.geometry?.coordinates ?? null,
+        footprint:
+          footprint.success && footprint.data.mode === 'inline'
+            ? footprint.data.geometry
+            : null,
+      }
+    })
   },
 )
 

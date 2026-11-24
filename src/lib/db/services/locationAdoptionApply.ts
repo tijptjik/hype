@@ -196,6 +196,7 @@ export async function applyLocationAdoptionGroup(
     for (const key of [
       'footprint',
       'names',
+      'confirmedUnnamed',
       'phoneNumber',
       'websites',
       'socials',

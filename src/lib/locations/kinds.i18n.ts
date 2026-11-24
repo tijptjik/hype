@@ -2,7 +2,7 @@
 import { locationTaxonomyLabel } from './taxonomy.i18n'
 import { targetContextLabel } from '#lib/features/locationPolicy.i18n.js'
 // I18N
-import { m } from '#lib/i18n.js'
+import { getLocale, m } from '#lib/i18n.js'
 // TYPES
 import type { LocationKind } from './kinds'
 
@@ -25,4 +25,21 @@ export function locationKindLabel(kind: LocationKind): string {
   if (kind === 'address') return m.location_type_address()
   if (kind === 'natural') return locationTaxonomyLabel('geographic')
   return m.location_type_unknown()
+}
+
+/** Display a building identity without interpreting authored names as status labels.
+ * @param names Recorded translations. @param confirmedUnnamed Explicit naming decision.
+ * @param locale Preferred storage locale. @returns A name or the localized naming status.
+ */
+export function buildingNameLabel(
+  names: Record<string, string>,
+  confirmedUnnamed: boolean | undefined,
+  locale = getLocale().toLowerCase(),
+): string {
+  return (
+    names[locale]?.trim() ||
+    names.en?.trim() ||
+    Object.values(names).find(name => name.trim()) ||
+    (confirmedUnnamed ? m.building_name_unnamed() : m.building_name_unknown())
+  )
 }

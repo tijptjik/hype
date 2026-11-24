@@ -195,6 +195,16 @@ it('locks address separately from marker and protects reset-to-inherit', async (
     ),
   ).toThrow('location.address')
 })
+it('uses the names lock for an explicit building naming decision', () => {
+  expect(() =>
+    assertCurationFieldsOpen(
+      { confirmedUnnamed: { mode: 'override', value: true } },
+      facts,
+      { names: false },
+    ),
+  ).toThrow('COMMUNITY_CURATION_FIELD_LOCKED: names')
+})
+
 it('does not allow nested establishment details to bypass identity field locks', () => {
   expect(() =>
     assertCurationFieldsOpen(

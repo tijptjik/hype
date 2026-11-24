@@ -22,9 +22,10 @@ import { locationTaxonomy } from '#lib/locations/taxonomy.js'
 import LocalLocationAddressFields from '#lib/bits/patterns/forms/localLocationAddress/LocalLocationAddressFields.svelte'
 import { createLocalLocationAddress } from '#lib/addresses/localLocationAddress.js'
 import { LocalLocationInputSchema } from '#lib/locations/local.js'
-import { LocationNamesEditSchema } from '#lib/locations/validation.js'
+import { locationNamesEditSchema } from '#lib/locations/validation.js'
 import BuildingPartParents from '../localLocationAddress/BuildingPartParents.svelte'
 import LocationKindField from '../localLocationAddress/LocationKindField.svelte'
+import BuildingUnnamedField from '../localLocationAddress/BuildingUnnamedField.svelte'
 import LocationNameFields from '../localLocationAddress/LocationNameFields.svelte'
 import type { LocationKind } from '#lib/locations/kinds.js'
 // TYPES
@@ -99,7 +100,9 @@ let names = $state<Record<string, string>>(
 let kind = $state<LocationKind>(initialKind)
 let buildingId = $state('')
 let parentPartId = $state('')
-const namesValid = $derived(LocationNamesEditSchema.safeParse(names).success)
+let confirmedUnnamed = $state(false)
+const hasName = $derived(Object.values(names).some(name => name.trim()))
+const editedNames = $derived(locationNamesEditSchema(kind).safeParse(names))
 let address = $state(createLocalLocationAddress())
 let parseReview = $state.raw<AddressParseResult | undefined>()
 let parseSource = $state<Record<string, string> | undefined>()
@@ -168,7 +171,7 @@ const kinds = $derived([
  * @returns Nothing; emits the created revision for explicit association.
  */
 async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<void> {
-  if (!allowed || busy || disabled || !namesValid) return
+  if (!allowed || busy || disabled || !editedNames.success) return
   busy = true
   failed = false
   try {
@@ -182,7 +185,10 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
       parseSource: parseReview ? undefined : parseSource,
       parseReview,
       facts: {
-        names: LocationNamesEditSchema.parse(names),
+        names: editedNames.data,
+        ...(kind === 'building' && confirmedUnnamed && !hasName
+          ? { confirmedUnnamed: true }
+          : {}),
         phoneNumber: [],
         brands: [],
         location: {
@@ -205,6 +211,7 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
     onCreated({ ...identity, facts: input.facts })
     open = false
     names = {}
+    confirmedUnnamed = false
     address = createLocalLocationAddress()
     parseReview = undefined
     parseSource = undefined
@@ -282,7 +289,10 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
         allowPartCreation
         value={kind}
         disabled={busy || disabled || preparing}
-        onChange={next => (kind = next)}
+        onChange={next => {
+          if (next !== kind) confirmedUnnamed = false
+          kind = next
+        }}
       />
       {#if kind === 'building_part'}
         <BuildingPartParents
@@ -295,9 +305,21 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
       {/if}
       <LocationNameFields
         {names}
+        required={kind !== 'building'}
         disabled={busy || disabled || preparing}
-        onChange={next => (names = next)}
+        onChange={next => {
+          names = next
+          if (Object.values(next).some(name => name.trim())) confirmedUnnamed = false
+        }}
       />
+      {#if kind === 'building'}
+        <BuildingUnnamedField
+          checked={confirmedUnnamed}
+          {hasName}
+          disabled={busy || disabled || preparing}
+          onChange={checked => (confirmedUnnamed = checked)}
+        />
+      {/if}
       <LocalLocationAddressFields
         locationKind={kind}
         bind:value={address}
@@ -319,7 +341,7 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
           disabled={busy ||
             disabled ||
             preparing ||
-            !namesValid ||
+            !editedNames.success ||
             (kind === 'building_part' && !buildingId)}
         />
         <Button
@@ -330,7 +352,7 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
           disabled={busy ||
             disabled ||
             preparing ||
-            !namesValid ||
+            !editedNames.success ||
             (kind === 'building_part' && !buildingId)}
         />
       </div>

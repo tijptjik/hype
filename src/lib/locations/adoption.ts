@@ -293,6 +293,8 @@ export function planLocationAdoption(input: {
       ) ||
       !equalLocationValue(oldFacts.entity ?? null, next.entity ?? null) ||
       !equalLocationValue(effectiveBefore.names, effectiveCandidate.names) ||
+      Boolean(effectiveBefore.confirmedUnnamed) !==
+        Boolean(effectiveCandidate.confirmedUnnamed) ||
       !equalLocationValue(effectiveBefore.brands, effectiveCandidate.brands) ||
       !equalLocationValue(
         effectiveBefore.group?.i18n ?? null,
@@ -333,6 +335,7 @@ export function planLocationAdoption(input: {
     for (const key of [
       'footprint',
       'names',
+      'confirmedUnnamed',
       'phoneNumber',
       'websites',
       'socials',

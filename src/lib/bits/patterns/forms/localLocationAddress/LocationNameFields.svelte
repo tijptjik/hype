@@ -9,10 +9,12 @@ import RemoveIcon from 'virtual:icons/lucide/x'
 let {
   names,
   disabled = false,
+  required = true,
   onChange,
 }: {
   names: Record<string, string>
   disabled?: boolean
+  required?: boolean
   onChange: (names: Record<string, string>) => void
 } = $props()
 const uid = $props.id()
@@ -72,7 +74,7 @@ function remove(locale: string): void {
         label={`${m.admin__forms_common_name_full()} · ${language.label}`}
         value={name}
         {disabled}
-        required={true}
+        {required}
         inputAttrs={{ maxlength: 1000 }}
         onValueChange={value => onChange({ ...names, [locale]: value })}
       />
@@ -105,7 +107,8 @@ function remove(locale: string): void {
       />
     {/key}
   {/if}
-  {#if !Object.values(names).length || Object.values(names).some(name => !name.trim())}
+  {#if required &&
+    (!Object.values(names).length || Object.values(names).some(name => !name.trim()))}
     <p role="alert" class="text-destructive text-sm">
       {m.admin__validation_name_is_required()}
     </p>

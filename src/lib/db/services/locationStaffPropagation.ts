@@ -158,6 +158,7 @@ export async function prepareStaffLocationPropagation(
             if (
               [
                 'names',
+                'confirmedUnnamed',
                 'brands',
                 'branch',
                 'format',

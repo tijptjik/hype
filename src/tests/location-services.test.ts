@@ -5402,6 +5402,109 @@ it.each([null, '', 'Use the side entrance'])(
 )
 
 describe('structured Location address editor writes', () => {
+  it('clears the last building name and saves later address edits on the unnamed record', async () => {
+    const { db } = setup()
+    const building = await createLocalLocation(
+      db,
+      'p',
+      { state: 'manual', kind: 'building', facts },
+      'actor',
+    )
+    const input = {
+      locationId: building.locationId,
+      organisationId: 'p',
+      expectedRevisionId: building.revisionId,
+      actorId: 'actor',
+    }
+    const cleared = await updateLocalLocationAddress(db, {
+      ...input,
+      names: { en: ' ' },
+    })
+    expect(cleared).not.toBeNull()
+    const address = parseAddressContent({ en: '30 Tak Ku Ling Road' }).content
+    const saved = await updateLocalLocationAddress(db, {
+      ...input,
+      expectedRevisionId: cleared!.revisionId,
+      expectedOrganisationRevision: cleared!.organisationRevision,
+      address,
+    })
+    expect(saved).not.toBeNull()
+    const updated = (
+      await listLocationResources(db, { id: building.locationId, organisationId: 'p' })
+    ).data[0]
+    expect(updated.facts?.names).toEqual({})
+    expect(updated.facts?.location.address.authored?.i18n.en.streetName).toBe(
+      address.i18n.en.streetName,
+    )
+    await expect(
+      updateLocalLocationAddress(db, {
+        ...input,
+        expectedRevisionId: saved!.revisionId,
+        expectedOrganisationRevision: saved!.organisationRevision,
+        kind: 'establishment',
+        names: {},
+      }),
+    ).rejects.toThrow('Keep at least one name')
+  })
+
+  it('stores an explicit unnamed decision independently of the building name and address', async () => {
+    const { db } = setup()
+    const building = await createLocalLocation(
+      db,
+      'p',
+      {
+        state: 'manual',
+        kind: 'building',
+        facts: { ...facts, names: { en: 'Unnamed' } },
+      },
+      'actor',
+    )
+    const input = {
+      locationId: building.locationId,
+      organisationId: 'p',
+      expectedRevisionId: building.revisionId,
+      actorId: 'actor',
+    }
+    const read = async () =>
+      (
+        await listLocationResources(db, {
+          id: building.locationId,
+          organisationId: 'p',
+        })
+      ).data[0].facts
+    const original = await read()
+    expect(original?.confirmedUnnamed).toBeUndefined()
+    await expect(
+      updateLocalLocationAddress(db, { ...input, confirmedUnnamed: true }),
+    ).rejects.toThrow('without a recorded name')
+    const edit = await updateLocalLocationAddress(db, {
+      ...input,
+      names: {},
+      confirmedUnnamed: true,
+    })
+    if (!edit) throw new Error('Expected the unnamed decision to be saved')
+    const unnamed = await read()
+    expect(unnamed?.confirmedUnnamed).toBe(true)
+    expect(unnamed?.location).toEqual(original?.location)
+    const renamed = await updateLocalLocationAddress(db, {
+      ...input,
+      expectedRevisionId: edit.revisionId,
+      expectedOrganisationRevision: edit.organisationRevision,
+      names: { en: 'Market Building' },
+    })
+    if (!renamed) throw new Error('Expected the new name to be saved')
+    expect((await read())?.confirmedUnnamed).toBe(false)
+    await updateLocalLocationAddress(db, {
+      ...input,
+      expectedRevisionId: renamed.revisionId,
+      expectedOrganisationRevision: renamed.organisationRevision,
+      names: {},
+    })
+    const unknown = await read()
+    expect(unknown?.names).toEqual({})
+    expect(unknown?.confirmedUnnamed).toBe(false)
+  })
+
   it('persists the accepted catalogue parse on creation and later address corrections', async () => {
     const { db, sqlite } = setup()
     const streets = [

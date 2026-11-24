@@ -209,15 +209,17 @@ export function resolveSharedCorrections(
     }
     status[key] = 'active'
     const empty =
-      key === 'branchId'
-        ? ''
-        : key === 'branch' || key === 'format'
-          ? {}
-          : key === 'phoneNumber' || key === 'brands' || key === 'websites'
-            ? []
-            : key === 'names' || key === 'socials'
-              ? {}
-              : null
+      key === 'confirmedUnnamed'
+        ? false
+        : key === 'branchId'
+          ? ''
+          : key === 'branch' || key === 'format'
+            ? {}
+            : key === 'phoneNumber' || key === 'brands' || key === 'websites'
+              ? []
+              : key === 'names' || key === 'socials'
+                ? {}
+                : null
     Object.assign(facts, {
       [key]: entry.choice.mode === 'clear' ? empty : entry.choice.value,
     })

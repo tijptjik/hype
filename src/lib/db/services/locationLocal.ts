@@ -38,7 +38,7 @@ import {
   type OperatingStatus,
   type BuildingStatus,
 } from '#lib/locations/lifecycle.js'
-import { LocationNamesEditSchema } from '#lib/locations/validation.js'
+import { locationNamesEditSchema } from '#lib/locations/validation.js'
 import { LocalLocationInputSchema } from '#lib/locations/local.js'
 import { LocalLocationFootprintSchema } from '#lib/locations/footprint.js'
 import {
@@ -250,6 +250,7 @@ export async function updateLocalLocationAddress(
     buildingStatus?: BuildingStatus | null
     successorLocationId?: string | null
     names?: Record<string, string>
+    confirmedUnnamed?: boolean
     branch?: Record<string, string>
     format?: Record<string, string>
     branchId?: string
@@ -269,8 +270,6 @@ export async function updateLocalLocationAddress(
   const footprint = LocalLocationFootprintSchema.nullable()
     .optional()
     .parse(input.footprint)
-  const names =
-    input.names === undefined ? undefined : LocationNamesEditSchema.parse(input.names)
   let address =
     input.address === undefined
       ? undefined
@@ -329,12 +328,22 @@ export async function updateLocalLocationAddress(
     ...(successorLocationId !== undefined ? { successorLocationId } : {}),
   }
   kind = classifyLocationFactsKind(kind, { ...status, brands: before.brands ?? [] })
+  const names =
+    input.names === undefined
+      ? undefined
+      : locationNamesEditSchema(kind).parse(input.names)
   if (
     kind !== baseline.location.kind &&
     (baseline.location.ssId !== null ||
       baseline.location.ownerOrganisationId !== input.organisationId)
   )
     return null
+  const hasName = Object.values(names ?? before.names).some(value => value?.trim())
+  if (input.confirmedUnnamed && (kind !== 'building' || hasName))
+    throw new Error('Only a building without a recorded name can be marked unnamed')
+  const confirmedUnnamed =
+    input.confirmedUnnamed ??
+    (before.confirmedUnnamed && (kind !== 'building' || hasName) ? false : undefined)
   // Creating or removing a physical part requires its dedicated membership flow.
   if (
     kind !== baseline.location.kind &&
@@ -349,6 +358,7 @@ export async function updateLocalLocationAddress(
     ...(footprint !== undefined ? { footprint } : {}),
     ...status,
     ...(names ? { names } : {}),
+    ...(confirmedUnnamed !== undefined ? { confirmedUnnamed } : {}),
     ...(input.branch !== undefined
       ? { branch: LocalizedCurationTextSchema.parse(input.branch) }
       : {}),

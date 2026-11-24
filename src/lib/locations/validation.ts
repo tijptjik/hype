@@ -22,17 +22,32 @@ import type {
   LocationPosition,
   LocationOverride,
 } from './model'
+import type { LocationKind } from './kinds'
 
 const names = z.record(z.string(), z.string())
-/** Complete authored name set; absent locales are explicitly removed by the correction writer. */
-export const LocationNamesEditSchema = contentLocaleMap(
-  z.string().trim().min(1).max(1000),
-)
+/** Bounded name fields before the writer resolves the effective Location kind. */
+export const LocationNameFieldsSchema = contentLocaleMap(z.string().trim().max(1000))
   .transform(value => adaptContentMap(value, contentStorageTag))
-  .refine(
-    value => Object.keys(value).length > 0 && Object.keys(value).length <= 100,
-    'Keep at least one name and no more than 100 languages',
-  )
+  .refine(value => Object.keys(value).length <= 100, 'Keep no more than 100 languages')
+
+/** Complete authored name set; absent locales are explicitly removed by the correction writer. */
+export const LocationNamesEditSchema = LocationNameFieldsSchema.refine(
+  value => Object.keys(value).length > 0 && Object.values(value).every(Boolean),
+  'Keep at least one name and fill each selected language',
+)
+const buildingNames = LocationNameFieldsSchema.transform(value =>
+  Object.fromEntries(Object.entries(value).filter(([, name]) => name)),
+)
+
+/** Select the name rules for a Location edit.
+ * @param kind Effective kind after applying any classification change.
+ * @returns A validator that omits blank building translations and permits an unnamed building.
+ */
+export function locationNamesEditSchema(
+  kind: LocationKind,
+): z.ZodType<Record<string, string>> {
+  return kind === 'building' ? buildingNames : LocationNamesEditSchema
+}
 const brands = z.array(
   z.strictObject({
     identifiers: names,
@@ -113,6 +128,7 @@ export const LocationFactsSchema = z.strictObject({
   }).optional(),
   footprint: LocationFootprintSchema.nullable().optional(),
   entity: LocationEntitySchema.optional(),
+  confirmedUnnamed: z.boolean().optional(),
   operatingStatus: OperatingStatusSchema.nullable().optional(),
   buildingStatus: BuildingStatusSchema.nullable().optional(),
   successorLocationId: z.string().trim().min(1).max(200).nullable().optional(),
@@ -172,6 +188,7 @@ export const FeatureLocationOverridesSchema = z.strictObject({
   socials: override(LocationFactsSchema.shape.socials.unwrap()).optional(),
   accessibility: override(AccessibilitySchema).optional(),
   address: AddressCorrectionSchema.optional(),
+  confirmedUnnamed: override(z.boolean()).optional(),
   footprint: override(LocationFootprintSchema).optional(),
   operatingStatus: z
     .discriminatedUnion('mode', [

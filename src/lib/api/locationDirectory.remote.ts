@@ -22,7 +22,7 @@ import {
   LocalAddressParseReviewSchema,
   LocalLocationAddressSchema,
 } from '#lib/addresses/localLocationAddress.js'
-import { LocationNamesEditSchema } from '#lib/locations/validation.js'
+import { LocationNameFieldsSchema } from '#lib/locations/validation.js'
 import { LocationKindSchema } from '#lib/locations/kinds.js'
 import { locationDiscoveryTypes } from '#lib/locations/kinds.js'
 import { searchSaanSeoiPlaces } from '#lib/locations/sourceClient.js'
@@ -237,7 +237,8 @@ export const saveLocalLocationAddress = guardedCommand(
     organisationId: z.string().min(1).optional(),
     expectedOrganisationRevision: z.string().min(1).nullable(),
     footprint: LocalLocationFootprintSchema.nullable().optional(),
-    names: LocationNamesEditSchema.optional(),
+    names: LocationNameFieldsSchema.optional(),
+    confirmedUnnamed: z.boolean().optional(),
     branch: LocalizedCurationTextSchema.optional(),
     format: LocalizedCurationTextSchema.optional(),
     branchId: z.string().max(200).optional(),

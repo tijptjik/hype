@@ -358,6 +358,7 @@ export async function listLocationResources(
                   (pair): pair is [string, string] => pair[1] !== null,
                 ),
               ),
+              confirmedUnnamed: effective.confirmedUnnamed,
               branch: effective.branch ?? undefined,
               format: effective.format ?? undefined,
               branchId: effective.branchId ?? undefined,

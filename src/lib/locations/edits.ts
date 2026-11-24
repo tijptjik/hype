@@ -43,6 +43,11 @@ export function applyFeatureLocationEdits(
       result.names[locale] = editedValue(value)
     }
   }
+  if (
+    after.confirmedUnnamed !== undefined &&
+    after.confirmedUnnamed !== before.confirmedUnnamed
+  )
+    result.confirmedUnnamed = { mode: 'override', value: after.confirmedUnnamed }
   // Omitted footprint is an unrelated form save; explicit null clears the inherited extent.
   if (
     after.footprint !== undefined &&

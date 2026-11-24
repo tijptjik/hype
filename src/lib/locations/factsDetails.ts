@@ -32,11 +32,12 @@ export const EstablishmentDetailsSchema = z.strictObject({
   operatingStatus: OperatingStatusSchema.nullable().optional(),
 })
 
-/** Building-specific lifecycle only. Optional footprint is a shared common fact.
+/** Building-specific naming and lifecycle facts. Optional footprint is a shared common fact.
  * Publisher identifiers and unneeded building attributes stay in SaanSeoi evidence;
  * address components already describe blocks, portions and floors.
  */
 export const BuildingDetailsSchema = z.strictObject({
+  confirmedUnnamed: z.boolean().optional(),
   buildingStatus: BuildingStatusSchema.nullable().optional(),
 })
 
