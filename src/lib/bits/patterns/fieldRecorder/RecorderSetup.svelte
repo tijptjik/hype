@@ -11,6 +11,9 @@ import FieldResearchIcon from '#lib/bits/custom/icon/FieldResearchIcon.svelte'
 import FilterIcon from 'virtual:icons/proicons/filter'
 import FilterOffIcon from 'virtual:icons/lucide/funnel-x'
 import ProjectIcon from 'virtual:icons/lucide/layout-grid'
+import ExteriorIcon from 'virtual:icons/lucide/box'
+import InteriorIcon from 'virtual:icons/lucide/layers-3'
+import ModelMapIcon from 'virtual:icons/lucide/map'
 // API
 import {
   createResearchSession,
@@ -27,6 +30,7 @@ import ResearchSessionFilterBar from '#lib/bits/patterns/fieldResearch/ResearchS
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import ResearchConfiguration from '#lib/bits/patterns/fieldResearch/ResearchConfiguration.svelte'
 import ResearchLocations from '#lib/bits/patterns/fieldResearch/ResearchLocations.svelte'
+import ResearchModelGallery from '#lib/bits/patterns/fieldResearch/ResearchModelGallery.svelte'
 import ResearchSessionSkeleton from '#lib/bits/patterns/fieldResearch/ResearchSessionSkeleton.svelte'
 import { researchConfigurationVersion } from '#lib/fieldResearch/configuration.js'
 // TYPES
@@ -86,6 +90,14 @@ const facets = new Map([
 const sessionId = $derived(page.url.searchParams.get('session'))
 const creating = $derived(!sessionId && page.url.searchParams.has('new'))
 const tabUrl = $derived(page.shallow?.url ?? page.url)
+const modelViews = [
+  { id: 'exterior', label: 'Exterior gallery', icon: ExteriorIcon },
+  { id: 'interior', label: 'Interior gallery', icon: InteriorIcon },
+  { id: 'map', label: '3D model map', icon: ModelMapIcon },
+] as const
+const modelView = $derived(
+  modelViews.find(view => view.id === tabUrl.searchParams.get('models')),
+)
 const facet = $derived(
   tabUrl.hash === '#fields'
     ? 'fields'
@@ -108,9 +120,27 @@ function selectFacet(ref: string): void {
   const url = new URL(tabUrl.href)
   if (url.hash === '#' + ref) return
   url.hash = ref
+  url.searchParams.delete('models')
   void goto(url, { shallow: true, state: page.state })
 }
 
+/** Toggle a read-only model view, retaining browser history and the active session.
+ * @param id Requested view, or null for location selection. @returns Nothing.
+ */
+function selectModels(id: string | null): void {
+  const url = new URL(tabUrl.href)
+  if (id && modelView?.id !== id) url.searchParams.set('models', id)
+  else url.searchParams.delete('models')
+  void goto(url, { shallow: true, state: page.state })
+}
+
+const showModelViews = $derived(
+  Boolean(
+    sessionId &&
+      facet === 'locations' &&
+      current?.configurationVersion === researchConfigurationVersion,
+  ),
+)
 $effect(() => {
   adminCtx.setResourceRef(sessionId || false)
 })
@@ -120,6 +150,7 @@ $effect(() => {
   const isNew = creating
   const active = facet
   const title = current?.name
+  const showModels = showModelViews
   untrack(() => {
     if (detail || isNew) {
       header.setHeaderForEntity(
@@ -128,7 +159,9 @@ $effect(() => {
         facets,
         {
           showFacets: detail,
-          showViewActions: false,
+          showViewActions: showModels,
+          showControlBarToggle: false,
+          showLayoutToggle: false,
           showFormActions: detail && active !== 'locations',
         },
       )
@@ -190,7 +223,19 @@ $effect(() => {
             },
           },
         ]
-      : [],
+      : showModelViews
+        ? modelViews.map(view => ({
+            id: view.id,
+            text: view.label,
+            icon: view.icon,
+            color: modelView?.id === view.id ? 'primary' : 'neutral',
+            style: modelView?.id === view.id ? 'soft' : 'ghost',
+            alwaysHideLabel: true,
+            hideLabelInstantly: true,
+            attrs: { 'aria-pressed': modelView?.id === view.id, title: view.label },
+            onClick: () => selectModels(view.id),
+          }))
+        : [],
   )
 })
 /** Apply the selected session ordering. @param value Sort selection. @returns Nothing. */
@@ -382,16 +427,27 @@ async function create(): Promise<void> {
         </div>
         {#if facet === 'locations' &&
           current.configurationVersion === researchConfigurationVersion}
-          <ResearchLocations
-            organisationId={current.organisationId}
-            projectId={current.projectId}
-            sessionId={current.id}
-            revision={current.revision}
-            disabled={busy ||
-              current.status === 'completed' ||
-              Boolean(current.isArchived)}
-            onSaved={refresh}
-          />
+          {#if modelView}
+            <ResearchModelGallery
+              view={modelView.id}
+              title={modelView.label}
+              icon={modelView.icon}
+              sessionId={current.id}
+              revision={current.revision}
+              onClose={() => selectModels(null)}
+            />
+          {:else}
+            <ResearchLocations
+              organisationId={current.organisationId}
+              projectId={current.projectId}
+              sessionId={current.id}
+              revision={current.revision}
+              disabled={busy ||
+                current.status === 'completed' ||
+                Boolean(current.isArchived)}
+              onSaved={refresh}
+            />
+          {/if}
         {/if}
       </FormSurface>
     {/key}

@@ -1,0 +1,154 @@
+<script lang="ts">
+// SVELTE
+import type { Component } from 'svelte'
+// API
+import { getResearchLocations } from '#lib/api/fieldResearchLocations.remote.js'
+// COMPONENTS
+import { SectionHeader } from '#lib/bits/custom/form/index.js'
+import ResearchModelPreview from './ResearchModelPreview.svelte'
+// ICONS
+import BuildingIcon from 'virtual:icons/lucide/building-2'
+// I18N
+import { buildingNameLabel, recordedBuildingName } from '#lib/locations/kinds.i18n.js'
+import { getLocale } from '#lib/i18n.js'
+
+let {
+  view,
+  title,
+  icon,
+  sessionId,
+  revision,
+  onClose,
+}: {
+  view: 'exterior' | 'interior' | 'map'
+  title: string
+  icon: Component
+  sessionId: string
+  revision: number
+  onClose: () => void
+} = $props()
+const query = $derived(getResearchLocations({ sessionId, revision }))
+const buildings = $derived(
+  (query.current ?? [])
+    .filter(row => row.kind === 'building')
+    .map(row => {
+      const name = recordedBuildingName(row.names)
+      const address =
+        row.address ||
+        row.streetAddresses
+          .map(line => line.label)
+          .filter(Boolean)
+          .join(' / ')
+      return {
+        ...row,
+        title: name || address || buildingNameLabel(row.names, row.confirmedUnnamed),
+        subtitle: name && address !== name ? address : '',
+      }
+    })
+    .sort((a, b) => a.title.localeCompare(b.title, getLocale(), { numeric: true })),
+)
+const columns =
+  'grid grid-cols-[repeat(auto-fill,minmax(min(100%,520px),1fr))] gap-4 p-4'
+</script>
+
+<section aria-label={title}>
+  <SectionHeader {title} {icon}>
+    {#snippet right()}
+      <button
+        type="button"
+        class="text-muted-foreground hover:text-foreground rounded-md px-3 py-2 text-sm"
+        onclick={onClose}
+      >
+        Back to locations
+      </button>
+    {/snippet}
+  </SectionHeader>
+  {#await query}
+    <div class={columns} role="status" aria-label={'Loading ' + title}>
+      {#each [1, 2, 3] as n (n)}
+        <div class="bg-muted aspect-[16/10] rounded-xl motion-safe:animate-pulse"></div>
+      {/each}
+    </div>
+  {:then}
+    {#if !buildings.length}
+      <p class="text-muted-foreground p-6 text-sm">
+        No buildings included in this session.
+      </p>
+    {:else if view === 'map'}
+      {#await import('./ResearchModelMap.svelte')}
+        <div
+          role="status"
+          aria-label="Loading building map"
+          class="bg-muted h-[max(28rem,70dvh)] motion-safe:animate-pulse"
+        ></div>
+      {:then { default: ModelMap }}
+        <ModelMap {buildings} />
+      {:catch}
+        <p role="alert" class="text-error p-6">Could not load the building map.</p>
+      {/await}
+    {:else}
+      <section class={columns} aria-label={`${title} cards`}>
+        {#each buildings as building (building.id)}
+          {@const previews =
+            view === 'exterior'
+              ? [{ url: building.exteriorUrl, name: '' }]
+              : building.interiorMaps.length
+                ? building.interiorMaps.map(map => ({
+                    url:
+                      '/api/premises-maps/' +
+                      encodeURIComponent(map.id) +
+                      '/releases/' +
+                      map.hash,
+                    name: building.interiorMaps.length > 1 ? map.name : '',
+                  }))
+                : [{ url: null, name: '' }]}
+          {#each previews as preview (view + ':' + (preview.url ?? ''))}
+            <article
+              aria-label={building.title}
+              class="border-border bg-panel min-w-0 overflow-hidden rounded-xl border"
+            >
+              <div class="bg-surface relative grid aspect-[16/9] place-items-center">
+                {#if preview.url}
+                  <ResearchModelPreview
+                    url={preview.url}
+                    title={building.title + ' ' + view}
+                    interior={view === 'interior'}
+                  />
+                {:else}
+                  <span
+                    role="img"
+                    aria-label={'No ' + view + ' model'}
+                    title={'No ' + view + ' model'}
+                    class="text-muted-foreground/60"
+                  >
+                    <BuildingIcon class="size-14" aria-hidden="true" />
+                  </span>
+                {/if}
+              </div>
+              <div class="border-border border-t px-4 py-3">
+                <h3 class="text-foreground font-semibold break-words">
+                  {building.title}
+                </h3>
+                {#if building.subtitle}
+                  <p class="text-muted-foreground text-sm break-words">
+                    {building.subtitle}
+                  </p>
+                {/if}
+                {#if preview.name}
+                  <p class="text-muted-foreground text-sm">{preview.name}</p>
+                {/if}
+              </div>
+            </article>
+          {/each}
+        {/each}
+      </section>
+    {/if}
+  {:catch}
+    <p role="alert" class="text-error p-6">
+      Could not load the session buildings.
+      <button type="button" class="underline" onclick={() => query.refresh()}>
+        Retry
+      </button>
+    </p>
+  {/await}
+</section>
