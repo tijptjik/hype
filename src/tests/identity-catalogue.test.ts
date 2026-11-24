@@ -42,9 +42,9 @@ afterEach(() => {
 function fixture(applyHierarchy = true) {
   const f = publicationSqlite({})
   connections.push(f)
-  f.sqlite.exec(`CREATE TABLE location(id TEXT PRIMARY KEY,kind TEXT,state TEXT,matchingType TEXT GENERATED ALWAYS AS(kind));
+  f.sqlite.exec(`CREATE TABLE location(id TEXT PRIMARY KEY,kind TEXT,state TEXT,ssId TEXT,ownerOrganisationId TEXT,matchingType TEXT GENERATED ALWAYS AS(kind));
     CREATE TABLE locationRevision(id TEXT PRIMARY KEY,locationId TEXT,version INTEGER,facts TEXT,rawSource TEXT);
-    INSERT INTO location(id,kind,state) VALUES('place','establishment','unresolved');`)
+    INSERT INTO location(id,kind,state) VALUES('place','establishment','linked');`)
   f.sqlite.exec(
     readFileSync('migrations/0209_shared_location_corrections.sql', 'utf8').split(
       '-- Adopt the latest',

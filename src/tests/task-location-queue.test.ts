@@ -28,9 +28,10 @@ function setup() {
  CREATE TABLE feature(id TEXT,organisationId TEXT,projectId TEXT,isDraft INTEGER,createdAt TEXT,modifiedAt TEXT);
  CREATE TABLE featureI18n(featureId TEXT,locale TEXT,title TEXT);
  CREATE TABLE featureLocation(featureId TEXT,locationId TEXT,factsRevisionId TEXT,locationRevisionId TEXT,factsOrganisationRevision TEXT,locationOrganisationRevision TEXT);
- CREATE TABLE location(id TEXT,state TEXT,ownerOrganisationId TEXT,ssId TEXT,sourceAvailability TEXT,kind TEXT DEFAULT 'unknown');
+ CREATE TABLE location(id TEXT,state TEXT,ownerOrganisationId TEXT,ssId TEXT,sourceAvailability TEXT,kind TEXT DEFAULT 'unknown',matchingType TEXT GENERATED ALWAYS AS (kind));
  CREATE TABLE locationRevision(id TEXT,locationId TEXT,version INTEGER,facts TEXT);
  CREATE TABLE organisationLocation(organisationId TEXT,locationId TEXT,revision TEXT); CREATE VIEW organisationLocationHead AS SELECT * FROM organisationLocation;
+ CREATE VIEW locationRevisionContent AS SELECT * FROM locationRevision;
  CREATE TABLE locationAdoptionProposal(id TEXT,featureId TEXT,projectId TEXT,locationId TEXT,candidateRevisionId TEXT,organisationRevision TEXT,evidence TEXT,factsDecision TEXT,locationDecision TEXT,createdAt TEXT,occupancyRevisionId TEXT,addressRevisionId TEXT);
  CREATE TABLE locationOccupancy(id TEXT,containerLocationId TEXT,relationshipId TEXT,scopeOrganisationId TEXT,assertionState TEXT); CREATE VIEW locationOccupancyHead AS SELECT * FROM locationOccupancy;
  CREATE TABLE locationMembership(id TEXT,childLocationId TEXT,parentLocationId TEXT);
@@ -317,7 +318,7 @@ it('hydrates Location names for an untitled Feature without replacing authored F
   proposal()
   sqlite.prepare("UPDATE locationRevision SET facts=? WHERE id='new'").run(
     JSON.stringify({
-      common: { names: { en: 'Harbour Bakery', 'zh-hant': '海港餅店' } },
+      i18n: { en: { name: 'Harbour Bakery' }, 'zh-hant': { name: '海港餅店' } },
     }),
   )
   const result = await listTaskQueue(

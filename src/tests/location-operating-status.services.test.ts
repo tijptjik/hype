@@ -82,6 +82,7 @@ function setup(includeScope = false, includeAddressKind = true) {
       '-- Exact imported station identities',
     )[0],
   )
+  sqlite.exec(readFileSync('migrations/0255_premises_map_releases.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0249_location_manual_match_attempt.sql', 'utf8'))
   sqlite.exec(
     readFileSync('migrations/0139_organisation_location_corrections.sql', 'utf8'),

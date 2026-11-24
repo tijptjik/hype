@@ -46,6 +46,7 @@ function setup() {
     schema.operatorI18n,
     schema.locationOperator,
     schema.locationPremisesMap,
+    schema.premisesMap,
     schema.locationRevisionInput,
     schema.feature,
     schema.featureRevision,

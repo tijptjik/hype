@@ -53,9 +53,10 @@ function setup() {
   const f = publicationSqlite({})
   stores.push(f)
   f.sqlite.exec(`PRAGMA foreign_keys=ON;
-    CREATE TABLE location(id TEXT PRIMARY KEY,state TEXT,kind TEXT,matchingType TEXT GENERATED ALWAYS AS(kind));
-    INSERT INTO location VALUES('place','linked','establishment'),('other','linked','establishment'),('internal','manual','establishment');
+    CREATE TABLE location(id TEXT PRIMARY KEY,state TEXT,kind TEXT,ssId TEXT,ownerOrganisationId TEXT,matchingType TEXT GENERATED ALWAYS AS(kind));
+    INSERT INTO location(id,state,kind) VALUES('place','linked','establishment'),('other','linked','establishment'),('internal','manual','establishment');
     CREATE TABLE locationRevision(id TEXT PRIMARY KEY,locationId TEXT,version INTEGER,facts TEXT,rawSource TEXT);
+    CREATE VIEW locationRevisionContent AS SELECT * FROM locationRevision;
     CREATE TABLE locationSharedRevision(id TEXT PRIMARY KEY,locationId TEXT,previousRevisionId TEXT,sourceRevisionId TEXT,corrections TEXT,actorId TEXT,provenance TEXT,createdAt TEXT);
     CREATE VIEW locationSharedHead AS SELECT r.* FROM locationSharedRevision r WHERE NOT EXISTS(SELECT 1 FROM locationSharedRevision n WHERE n.previousRevisionId=r.id);`)
   f.sqlite.exec(readFileSync('migrations/0232_community_curation_locks.sql', 'utf8'))

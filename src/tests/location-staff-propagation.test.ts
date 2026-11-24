@@ -58,6 +58,7 @@ async function setup(mode: 'manual' | 'unlinked' = 'unlinked') {
     ALTER TABLE project ADD COLUMN locationPolicyRevision INTEGER NOT NULL DEFAULT 0;
     UPDATE project SET locationPolicy='{"version":1,"coordinates":{"mode":"follow"},"address":"follow","unit":"follow","establishment":"follow","sameSources":true}';
     CREATE TABLE locationRevision(id TEXT PRIMARY KEY,locationId TEXT,facts TEXT,version INTEGER DEFAULT 1);
+    CREATE VIEW locationRevisionContent AS SELECT * FROM locationRevision;
     CREATE TABLE organisationLocation(id TEXT PRIMARY KEY,organisationId TEXT,locationId TEXT,previousRevisionId TEXT,overrides TEXT,provenance TEXT,actorId TEXT,createdAt TEXT);
     CREATE VIEW organisationLocationHead AS SELECT o.*,o.id AS revision FROM organisationLocation o WHERE NOT EXISTS(SELECT 1 FROM organisationLocation n WHERE n.previousRevisionId=o.id);
     CREATE TABLE locationRefreshItem(runId TEXT,locationId TEXT,origin TEXT,status TEXT);
