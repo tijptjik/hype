@@ -28,6 +28,7 @@ import {
   validResearchPropertyDefault,
 } from '#lib/fieldResearch/configurationMigration.js'
 import { listResolvedProjectProperties } from '#lib/db/services/property.js'
+import { researchProjectProperties } from '#lib/fieldResearch/propertyChoices.js'
 import { requireFeatureType } from '#lib/features/intents.js'
 // SERVICES
 import {
@@ -415,10 +416,16 @@ export const getResearchConfiguration = guardedQuery(
       .select()
       .from(sessionLayers)
       .where(eq(sessionLayers.sessionId, input.sessionId))
-    const [properties, policy] = await Promise.all([
+    const [resolvedProperties, projectAssignments, policy] = await Promise.all([
       listResolvedProjectProperties(ctx.db, session.projectId),
+      ctx.db.all<{ propertyId: string }>(
+        sql`SELECT propertyId FROM projectProperty WHERE projectId=${session.projectId}`,
+      ),
       readFeatureIntentPolicy(ctx.db, { type: 'project', id: session.projectId }),
     ])
+    // Only project-owned or explicitly added and enabled inherited fields belong in session configuration.
+    const assignedIds = new Set(projectAssignments.map(row => row.propertyId))
+    const properties = researchProjectProperties(resolvedProperties, assignedIds)
     // Read active field assignments from the project's layers, without conflating public contribution permissions.
     const assignments = await ctx.db.all<{
       layerId: string

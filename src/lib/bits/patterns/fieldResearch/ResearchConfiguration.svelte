@@ -24,6 +24,7 @@ import FeatureFieldLinks from '#lib/bits/patterns/forms/formFeatureField/compone
 import FeatureFieldInterval from '#lib/bits/patterns/forms/formFeatureField/components/FeatureFieldInterval.svelte'
 import FormProjectLayersSection from '#lib/bits/patterns/forms/formProjectLayersSection/FormProjectLayersSection.svelte'
 import DisplayTemplateEditor from '#lib/bits/patterns/forms/displayTemplate/DisplayTemplateEditor.svelte'
+import ResearchMultiSelectDefault from './ResearchMultiSelectDefault.svelte'
 import * as PropertyCard from '#lib/bits/patterns/cards/layerPropertyCard/components/index.js'
 import { Card, Switch } from '#lib/bits/custom/index.js'
 import { ResourceCard } from '#lib/bits/patterns/cards/resourceCard/index.js'
@@ -747,10 +748,14 @@ onDestroy(() => {
                     own?.defaultValue !== undefined ||
                     (property.values?.length && property.cardinality !== 'many') ||
                     property.dataType === 'boolean'}
-                    <label
-                      for={`${inputId}-property-default-${property.id}`}
+                    <div
                       class="grid min-w-0 grid-cols-[3rem_minmax(0,1fr)] items-center gap-3"
-                      ><span class="text-muted-foreground">Default</span>
+                    >
+                      <label
+                        for={`${inputId}-property-default-${property.id}`}
+                        class="text-muted-foreground"
+                        >Default</label
+                      >
                       {#if isRangeProperty(property)}
                         <FeatureFieldInterval
                           definition={property}
@@ -769,29 +774,19 @@ onDestroy(() => {
                         />
                       {:else if property.values?.length &&
                         property.cardinality === 'many'}
-                        <select
+                        <ResearchMultiSelectDefault
                           id={`${inputId}-property-default-${property.id}`}
-                          class={control}
-                          multiple
-                          {disabled}
+                          label={property.i18n?.en?.label || property.key}
+                          options={property.values.map(value => ({
+                            value: value.id,
+                            label: value.i18n?.en?.value || value.value || value.id,
+                          }))}
                           value={Array.isArray(own?.defaultValue)
                             ? own.defaultValue
                             : []}
-                          onchange={event =>
-                            setPropertyDefault(
-                              property.id,
-                              Array.from(
-                                event.currentTarget.selectedOptions,
-                                option => option.value,
-                              ),
-                            )}
-                        >
-                          {#each property.values as value}
-                            <option value={value.id}>
-                              {value.i18n?.en?.value || value.value}
-                            </option>
-                          {/each}
-                        </select>
+                          {disabled}
+                          onChange={value => setPropertyDefault(property.id, value)}
+                        />
                       {:else if property.values?.length}
                         <Select
                           variant="ghost"
@@ -890,7 +885,7 @@ onDestroy(() => {
                             )}
                         >
                       {/if}
-                    </label>
+                    </div>
                   {/if}
                 </div>
                 <div class="[&_label]:text-muted-foreground flex justify-end px-4 py-2">
