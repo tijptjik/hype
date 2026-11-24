@@ -1,0 +1,82 @@
+[
+  {
+    "key": "nga",
+    "locationId": "building:5ae946e9fd041cbe0d7bccb43b668180039afa8fbd8f0e62f03d2832fc611f41",
+    "file": "comparison-481522fab291598823ffbe4f558e793b85c1911d800af4f69a70c46fb0650f1e.glb",
+    "floors": 9,
+    "revision": 1,
+    "movingLines": [2, 3, 4, 5, 6, 7, 8]
+  },
+  {
+    "key": "26",
+    "locationId": "building:47caf70cb2f33863436d5d5c0082c1988457fa63385bc17d29a561b797da38c9",
+    "file": "comparison-9213225be3a1445afbae736a9e9cfc1daa8c85b356bee8868e7cbcf745f5d4a0.glb",
+    "floors": 6,
+    "revision": 1,
+    "movingLines": [2, 3, 4]
+  },
+  {
+    "key": "30",
+    "locationId": "building:aae68b97ccfcac0a2ecf3c0cbbbcaa58f6ef5169659b13adb2987811d2108474",
+    "file": "comparison-658f80853cd5199674cd61c3000320c7562be20e44b0318938e9f0759978c591.glb",
+    "floors": 6,
+    "revision": 1,
+    "movingLines": [4]
+  },
+  {
+    "key": "tat",
+    "locationId": "building:64b6bf79777a8eca00646a058d7286120ce2714e1e21805306468a59f97a1409",
+    "file": "comparison-2202bad101eb1735c21ff254d53b0cc06d81efb94d3113a65f59b178ee755817.glb",
+    "floors": 6,
+    "revision": 1,
+    "movingLines": [3, 4]
+  },
+  {
+    "key": "36",
+    "locationId": "T6QiBRPPuk0w",
+    "file": "comparison-36e9120203367720e371b957b719ce57100aa5e40a9ba5e180adbd4013d97aac.glb",
+    "floors": 8,
+    "revision": 1,
+    "movingLines": [2, 3, 4, 5, 6]
+  },
+  {
+    "key": "17",
+    "locationId": "building:4e231fde35f89c933f80a1b2d633816983af72027b0b512a6cf419ad8c9983bc",
+    "file": "comparison-19286ee28b043d00617f59d5db95a54585fd8381fa1e867f6b5f243708606f46.glb",
+    "floors": 6,
+    "revision": 1,
+    "movingLines": [2, 3, 4, 5]
+  },
+  {
+    "key": "wing",
+    "locationId": "building:33416288e9a3ec8d6459b9d3c85f64e80cb847a37c4f9fb75fe25264a59544b7",
+    "file": "comparison-bf7477800213b27d903cb7762e3798f81bf39439b063aa1fd745ab9c3066efbc.glb",
+    "floors": 9,
+    "revision": 1,
+    "movingLines": [2, 3, 4, 5, 6, 7, 8]
+  },
+  {
+    "key": "kai",
+    "locationId": "eA6QoM6LeMvR",
+    "file": "comparison-0187ebc064daadd2ff80f77392fc77546e8b8ed614248b024e7e17a8bbba54cb.glb",
+    "floors": 8,
+    "revision": 1,
+    "movingLines": [2, 3, 7]
+  },
+  {
+    "key": "south",
+    "locationId": "building:b9d25941b52020c0e9a8ecd4771ff342d1e1cd0dfa5d66c6a68596bfae23b7bf",
+    "file": "comparison-a137ec0d1117f41f5f0b8955eeb9db088d6bd6cd4757980571eada78548220fb.glb",
+    "floors": 6,
+    "revision": 1,
+    "movingLines": [3, 4]
+  },
+  {
+    "key": "unison",
+    "locationId": "0wZvOLTSnVg8",
+    "file": "comparison-1961aa874659700470cdc794f4b54645f6e98623ec0f12169703530c928e9a53.glb",
+    "floors": 8,
+    "revision": 2,
+    "movingLines": [2, 3, 4, 5, 6, 7]
+  }
+]
