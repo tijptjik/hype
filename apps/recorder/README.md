@@ -1,10 +1,29 @@
 # Hype Recorder
 
-Recorder is the Android field-recording client in HYPE’s Bun workspace. This first
-version connects a contributor’s HYPE account. Development is focused on this Android
-client; the separate web capture demo at `/recorder/:session` is paused and documented
-on the `feature/field-work` branch. The browser-based device
-sign-in flow remains part of Android Recorder.
+Recorder is the Android field-recording client in HYPE’s Bun workspace. After sign-in,
+it lists the contributor’s shared field sessions in most-recently-updated order.
+Development is focused on this Android client; the separate web capture demo at
+`/recorder/:session` is paused and documented on the `feature/field-work` branch. The
+browser-based device sign-in flow remains part of Android Recorder.
+
+## Sessions and records
+
+The welcome screen uses each session’s internal name. The server checks project
+contribution scope for every session read and record creation. Project owners and
+maintainers share their project’s sessions, organisation owners inherit access across
+their projects, and hub admins inherit access across their hub. Archived sessions are
+hidden. Completed sessions retain their record list.
+
+Tap a selector to open its choices, or swipe up or down to step through them. The
+location search includes the premises, buildings and building parts assigned in Field
+Sessions administration. Selecting a part also displays its known building or premises.
+Record creates an unpublished Feature using the selected layer's session defaults. See
+Records lists the resulting Feature titles. Each capture retains its session link and
+retry identity. Sessions with an older schema can be browsed while a manager reviews the
+upgrade in Field Sessions.
+
+Apply `0265_field_research_record.sql` and `0266_field_research_features.sql` to the
+target development database before testing Feature creation.
 
 ## Android development
 
@@ -38,5 +57,5 @@ The remote transport follows
 Keep the client declaration and web implementation at the same project-relative path,
 with matching export names, and use the same locked SvelteKit version. Recorder forwards
 generated requests under `/_app/remote/` through the scoped Tauri HTTP plugin. The web
-server hooks import the account query so SvelteKit includes its handler in the server
-manifest.
+server hooks import the Recorder account and session modules so SvelteKit includes their
+handlers in the server manifest.
