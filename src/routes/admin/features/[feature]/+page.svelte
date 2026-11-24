@@ -785,6 +785,10 @@ $effect(() => {
 })
 const setupQuestionsPending = $derived(isNewFeatureRef && setupStep < 3)
 const setupPending = $derived(isNewFeatureRef && setupStep < 4)
+// The search-stage progress belongs to Location, even when history returns to Profile.
+const setupVisible = $derived(
+  setupPending && (setupQuestionsPending || isLocationFacet),
+)
 let namingChosen = $state(false)
 let locationFocusRequest = $state(0)
 const DRAFT_MAP_CENTER: [number, number] = [114.17, 22.3]
@@ -4753,10 +4757,10 @@ async function refreshLocationSource(): Promise<void> {
         profileOrganisation?.settings,
         committedFeature?.data?.modifiedAt,
       ),
-      style: `--feature-preview-height:${visualSectionHeight}px;--feature-draft-offset:${setupPending ? setupProgressHeight : 0}px`,
+      style: `--feature-preview-height:${visualSectionHeight}px;--feature-draft-offset:${setupVisible ? setupProgressHeight : 0}px`,
     }}
     isReady={isNewFeatureRef || Boolean(currentFeatureId)}
-    class={`${FEATURE_EDITOR_FORM_CLASS} relative h-full min-h-0 ${setupPending ? 'flex flex-col overflow-hidden' : ''}`}
+    class={`${FEATURE_EDITOR_FORM_CLASS} relative h-full min-h-0 ${setupVisible ? 'flex flex-col overflow-hidden' : ''}`}
   >
     {#snippet fallback()}
       <div
@@ -4807,6 +4811,7 @@ async function refreshLocationSource(): Promise<void> {
     {#if setupPending}
       <FeatureSetup
         bind:step={setupStep}
+        visible={setupVisible}
         initialLayerId={page.url.searchParams.get('layerId') ?? undefined}
         initialScope={{
           organisationId: page.url.searchParams.get('organisationId') ?? undefined,

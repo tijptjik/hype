@@ -46,8 +46,10 @@ let {
   onContext,
   onSearch,
   onHeightChange,
+  visible = true,
 }: {
   step?: number
+  visible?: boolean
   layer: ParentSectionLayerItem | null
   sourceLayerId?: string
   initialScope?: FeatureSetupScope
@@ -346,7 +348,10 @@ async function selectLayer(next: ParentSectionLayerItem): Promise<void> {
 {/snippet}
 <section
   bind:clientHeight={measuredHeight}
-  class="flex w-full min-w-0 flex-col motion-safe:transition-[padding] motion-safe:duration-200 {step <
+  hidden={!visible}
+  class="{visible
+    ? 'flex'
+    : 'hidden'} w-full min-w-0 flex-col motion-safe:transition-[padding] motion-safe:duration-200 {step <
   3
     ? 'min-h-0 flex-1 overflow-y-auto p-4 sm:p-8'
     : 'shrink-0'}"
