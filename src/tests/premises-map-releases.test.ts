@@ -8,7 +8,7 @@ import {
   type MapBundle,
   type MapConnection,
 } from '../lib/indoor/releases'
-import { layerNames, type IndoorData } from '../lib/indoor/model'
+import { collection, type IndoorData } from '../lib/indoor/model'
 import { connectionCandidates } from '../lib/indoor/spatial'
 
 function fixture(): MapBundle & {
@@ -26,13 +26,16 @@ function fixture(): MapBundle & {
       ],
     ],
   }
-  const data = {
+  const data: IndoorData = {
     retrievedAt: '2026-01-01',
     connections: [],
-    ...Object.fromEntries(
-      layerNames.map(name => [name, { type: 'FeatureCollection', features: [] }]),
-    ),
-  } as IndoorData
+    venue_polygon: collection([]),
+    level_polygon: collection([]),
+    unit_polygon: collection([]),
+    opening_line: collection([]),
+    amenity_point: collection([]),
+    occupant_point: collection([]),
+  }
   data.venue_polygon.features = [
     { type: 'Feature', properties: { venue_id: 'venue' }, geometry: polygon },
   ]

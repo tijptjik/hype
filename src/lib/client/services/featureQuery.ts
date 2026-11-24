@@ -102,7 +102,7 @@ export function featureListMembershipKey(
  * remain included. Unknown descendant ancestry cannot establish an optimistic match.
  */
 export function matchesFeaturePrisms(
-  row: FeatureFromCollection,
+  row: Pick<FeatureFromCollection, 'organisationId' | 'projectId' | 'layerId'>,
   prisms: FeatureQueryInput['prisms'],
   context: FeatureQueryMatchContext,
 ): boolean {

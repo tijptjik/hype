@@ -1,7 +1,7 @@
 <script lang="ts">
 // DOMAIN
-import { catalogueQuality, LOGO_QUALITIES } from '#lib/locations/catalogueQuality'
-import type { CatalogueArtworkOwner } from '#lib/locations/catalogueArtwork'
+import { catalogueQuality, LOGO_QUALITIES } from '#lib/locations/catalogueQuality.js'
+import type { CatalogueArtworkOwner } from '#lib/locations/catalogueArtwork.js'
 let { record }: { record: CatalogueArtworkOwner } = $props()
 const quality = $derived(catalogueQuality(record))
 </script>

@@ -12,7 +12,7 @@ export const SelectionValueSchema = z
     'Selected options must be unique',
   )
 
-type Definition = { type?: string; component?: string; cardinality?: string }
+type Definition = { type?: string; component?: unknown; cardinality?: string }
 type Selection = { propertyValueId?: string | null; valueJson?: string | null }
 
 /** Identify a multi-select classifier from its persisted contract.

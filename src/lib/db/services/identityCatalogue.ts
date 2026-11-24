@@ -1,5 +1,5 @@
 import { catalogueQualitySql } from './catalogueQualitySql'
-import type { LogoQualityFilters } from '#lib/locations/catalogueQuality'
+import type { LogoQualityFilters } from '#lib/locations/catalogueQuality.js'
 import {
   identityCatalogue,
   identityCatalogueRevision,

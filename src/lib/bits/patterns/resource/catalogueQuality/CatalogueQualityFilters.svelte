@@ -6,7 +6,7 @@ import {
   LOGO_QUALITIES,
   type LogoQualityFilters,
   type LogoQualityKey,
-} from '#lib/locations/catalogueQuality'
+} from '#lib/locations/catalogueQuality.js'
 let {
   value,
   onChange,

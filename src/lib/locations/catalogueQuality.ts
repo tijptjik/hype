@@ -1,7 +1,7 @@
 // VALIDATION
 import { z } from 'zod'
 // DOMAIN
-import { THEMES } from '#lib/themes/themes'
+import { THEMES } from '#lib/themes/themes.js'
 import type { CatalogueArtworkOwner } from './catalogueArtwork'
 
 export const LOGO_QUALITIES = [

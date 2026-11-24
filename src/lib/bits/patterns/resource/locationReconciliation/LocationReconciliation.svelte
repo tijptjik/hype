@@ -1007,8 +1007,10 @@ onDestroy(() => {
                   {label(facts)}
                 </h2>
                 <p class="text-muted-foreground text-sm">
-                  {selected.facts.searchClassification?.taxonomyPrimary ||
-                    selected.facts.classification?.taxonomy?.primary ||
+                  {('searchClassification' in selected.facts &&
+                    selected.facts.searchClassification?.taxonomyPrimary) ||
+                    ('classification' in selected.facts &&
+                      selected.facts.classification?.taxonomy?.primary) ||
                     'Category unavailable'}
                   ·
                   {coordinates

@@ -1,11 +1,16 @@
 // SHARED FALLBACK ARTWORK
 import { getFeatureIdenticonUrl } from '#lib/utils/identicon.js'
 import { resolveBrandIdentity } from '#lib/features/brandIdentity.js'
-import { resolveCatalogueDisplayLogo } from './catalogueArtwork'
+import {
+  resolveCatalogueDisplayLogo,
+  type CatalogueArtworkOwner,
+} from './catalogueArtwork'
 // I18N
 import { resolveContentField } from '#lib/i18n/automatic.js'
 // TYPES
 import type { IdentityCatalogueRecord } from './identityCatalogue'
+
+type DisplayArtwork = CatalogueArtworkOwner & { kind?: IdentityCatalogueRecord['kind'] }
 
 const groupArtwork: Readonly<Record<string, string>> = {
   'bl-group-cra': 'cra',
@@ -44,7 +49,7 @@ export function catalogueDisplayName(record: IdentityCatalogueRecord): string {
  * @returns Approved display artwork, excluding research previews.
  */
 export function catalogueDisplayLogo(
-  record: IdentityCatalogueRecord,
+  record: DisplayArtwork,
   theme: string,
   mode: 'light' | 'dark',
 ): string | null {
@@ -65,7 +70,7 @@ export function catalogueDisplayLogo(
  * @param mode Theme luminance. @returns Reviewed artwork background or a contrast-safe neutral.
  */
 export function catalogueLogoBackground(
-  record: IdentityCatalogueRecord,
+  record: DisplayArtwork,
   theme: string,
   mode: 'light' | 'dark',
 ): string {

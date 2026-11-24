@@ -5,8 +5,8 @@ import {
   LOGO_QUALITIES,
   type LogoQualityFilters,
   type LogoQualityKey,
-} from '#lib/locations/catalogueQuality'
-import { THEMES } from '#lib/themes/themes'
+} from '#lib/locations/catalogueQuality.js'
+import { THEMES } from '#lib/themes/themes.js'
 /** Build bounded JSON predicates before pagination, keeping missing metadata false.
  * @param filters Explicit three-way choices. @returns SQL against the current revision alias r.
  */

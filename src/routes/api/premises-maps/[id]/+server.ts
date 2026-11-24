@@ -1,5 +1,6 @@
 // SVELTE
-import { json, error, type RequestHandler } from '@sveltejs/kit'
+import { json, error } from '@sveltejs/kit'
+import type { RequestHandler } from './$types'
 // DATABASE
 import { getDatabaseWithoutAuth } from '#lib/api/index.js'
 // DRIZZLE

@@ -2,6 +2,7 @@
 // TESTS
 import { expect, it } from 'vitest'
 import { sql } from 'drizzle-orm'
+import * as schema from '../lib/db/schema'
 import { publicationSqlite } from './fixtures/publicationSqlite'
 import {
   catalogueQuality,
@@ -47,7 +48,7 @@ it('requires both raster dimensions and explicit live coverage; SVGs scale', () 
   ).toBe(true)
 })
 it('keeps SQL yes/no predicates consistent with badges, including missing and candidate metadata', async () => {
-  const f = publicationSqlite({})
+  const f = publicationSqlite(schema)
   const records: CatalogueArtworkOwner[] = [
     {},
     { logo: asset.src },
@@ -105,7 +106,7 @@ it('filters catalogue provenance independently of feature origins and combines i
   const { searchIdentityCatalogue } = await import(
     '../lib/db/services/identityCatalogue'
   )
-  const f = publicationSqlite({})
+  const f = publicationSqlite(schema)
   try {
     f.sqlite.exec(`CREATE TABLE identityCatalogue(id TEXT,kind TEXT,version INTEGER,groupId TEXT);
       CREATE TABLE identityCatalogueRevisionContent(catalogueId TEXT,version INTEGER,content TEXT);
@@ -134,7 +135,7 @@ it('filters catalogue provenance independently of feature origins and combines i
     f.sqlite.exec(
       "INSERT INTO identityCatalogueSource VALUES('mtr','brand:mtr-business-label','source-1')",
     )
-    const db = f.db as import('../lib/types').Database
+    const db = f.db
     expect(
       (
         await searchIdentityCatalogue(db, 'brand', '', undefined, false, null, {

@@ -49,7 +49,7 @@ vi.mock('#lib/locations/sourceEndpoint.server.js', () => ({
 import evidence from '#lib/locations/mtrMatchEvidence.json'
 import * as module from '#lib/api/locationMatcher.remote.js'
 const remote = mockedRemoteModule(module)
-const meta = { isAdminRequest: true }
+const meta = { isAdminRequest: true } as const
 const input = {
   locationId: 'local-shop',
   expectedSourceHash: 'hash',

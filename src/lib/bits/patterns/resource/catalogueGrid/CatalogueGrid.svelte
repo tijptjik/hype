@@ -9,9 +9,9 @@ import {
   catalogueDisplayLogo,
   catalogueLogoBackground,
   catalogueLogoFallbacks,
-} from '#lib/locations/cataloguePresentation'
+} from '#lib/locations/cataloguePresentation.js'
 // TYPES
-import type { IdentityCatalogueRecord } from '#lib/locations/identityCatalogue'
+import type { IdentityCatalogueRecord } from '#lib/locations/identityCatalogue.js'
 let {
   records,
   compact,

@@ -91,12 +91,9 @@ it('keeps the complete previous preview until refreshed inputs arrive', async ()
 
 it('reorders blocks with the keyboard while preserving surrounding text', async () => {
   const view = render(Fixture)
-  await fireEvent.click(
-    view.getByRole('button', { name: 'Insert Property', exact: true }),
-  )
+  await fireEvent.click(view.getByRole('button', { name: 'Insert Property' }))
   const block = view.getByRole('button', {
     name: 'Select {{ source.name }}',
-    exact: true,
   })
   await fireEvent.keyDown(block, { key: 'ArrowLeft', altKey: true })
   expect(view.container.querySelector('output')?.textContent).toBe(
@@ -104,17 +101,15 @@ it('reorders blocks with the keyboard while preserving surrounding text', async 
   )
   expect(
     view
-      .getByRole('button', { name: 'Select {{ source.name }}', exact: true })
+      .getByRole('button', { name: 'Select {{ source.name }}' })
       .getAttribute('aria-pressed'),
   ).toBe('true')
 })
 
 it('accepts pasted expressions and switches back to selectable blocks', async () => {
   const view = render(Fixture)
-  await fireEvent.click(
-    view.getByRole('button', { name: 'Edit expression as text', exact: true }),
-  )
-  const input = view.getByRole('textbox', { name: 'Expression', exact: true })
+  await fireEvent.click(view.getByRole('button', { name: 'Edit expression as text' }))
+  const input = view.getByRole('textbox', { name: 'Expression' })
   await fireEvent.input(input, {
     target: { value: '{{ join(brand.name, branch, " / ") }}' },
   })
@@ -124,7 +119,7 @@ it('accepts pasted expressions and switches back to selectable blocks', async ()
   await fireEvent.input(input, { target: { value: '{{ unknown(brand.name) }}' } })
   expect(view.getByRole('alert').textContent).toContain('Unknown function')
   await fireEvent.input(input, { target: { value: '{{ source.name }}' } })
-  await fireEvent.click(view.getByRole('button', { name: 'Show blocks', exact: true }))
+  await fireEvent.click(view.getByRole('button', { name: 'Show blocks' }))
   expect(view.getByRole('button', { name: 'Select {{ source.name }}' })).toBeTruthy()
 })
 
@@ -138,5 +133,5 @@ it('provides the field catalogue and returns from LLM help to a pasteable expres
   expect(prompt.value).toContain('First ask how I would like')
   expect(prompt.value).toContain('not JavaScript')
   await fireEvent.click(view.getByRole('button', { name: 'Back to expression' }))
-  expect(view.getByRole('textbox', { name: 'Expression', exact: true })).toBeTruthy()
+  expect(view.getByRole('textbox', { name: 'Expression' })).toBeTruthy()
 })

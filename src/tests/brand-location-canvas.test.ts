@@ -39,7 +39,7 @@ it('clusters 600 points, generates proportional sprites on demand and zooms clus
     addImage: vi.fn((id: string) => images.add(id)),
     getSource: (id: string) =>
       installed && id === 'brand-location-results' ? source : undefined,
-    addSource: vi.fn(() => {
+    addSource: vi.fn((_id: string, _source: unknown) => {
       installed = true
     }),
     getLayer: (id: string) => layers.has(id),

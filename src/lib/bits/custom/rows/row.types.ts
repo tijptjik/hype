@@ -10,15 +10,23 @@ export type RowRootProps = {
   entityId?: string
   isSelected?: boolean
   selectionState?: ResourceIndexRowSelectionState | null
-  /** Whether the row itself is an action; nested buttons remain interactive. */
-  interactive?: boolean
   isFocusable?: boolean
   variant?: RowVariant
-  onclick: (event: MouseEvent) => void
-  onkeydown: (event: KeyboardEvent) => void
   class?: string
   children?: Snippet
-}
+} & /** An inert row can contain interactive descendants without its own handlers. */
+(
+  | {
+      interactive: false
+      onclick?: (event: MouseEvent) => void
+      onkeydown?: (event: KeyboardEvent) => void
+    }
+  | {
+      interactive?: boolean
+      onclick: (event: MouseEvent) => void
+      onkeydown: (event: KeyboardEvent) => void
+    }
+)
 
 export type RowThumbnailProps = {
   image?: unknown

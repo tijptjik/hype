@@ -1,5 +1,5 @@
 // SVELTE
-import { dev } from '$app/environment'
+import { dev } from '$app/env'
 import { error, type RequestHandler } from '@sveltejs/kit'
 // STORAGE
 import { getDerivedBucketForStage, toImageStage } from '#lib/images/storage.js'

@@ -1,4 +1,4 @@
-import { LogoQualityFiltersSchema } from '#lib/locations/catalogueQuality'
+import { LogoQualityFiltersSchema } from '#lib/locations/catalogueQuality.js'
 // SVELTE
 import { error } from '@sveltejs/kit'
 // VALIDATION

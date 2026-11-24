@@ -1,5 +1,6 @@
 // SVELTE
-import { error, type RequestHandler } from '@sveltejs/kit'
+import { error } from '@sveltejs/kit'
+import type { RequestHandler } from './$types'
 // DATABASE
 import { getDatabaseWithoutAuth } from '#lib/api/index.js'
 // DOMAIN
@@ -29,5 +30,5 @@ export const GET: RequestHandler = async ({ locals, params, request }) => {
     mapReleaseKey(params.id, params.hash),
   )
   if (!object) error(503, 'MAP_RELEASE_UNAVAILABLE')
-  return new Response(object.body as ReadableStream, { headers })
+  return new Response(object.body as unknown as ReadableStream<Uint8Array>, { headers })
 }

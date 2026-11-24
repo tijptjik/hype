@@ -11,7 +11,9 @@ export function isSuperAdmin(user: SessionUser): boolean {
 /**
  * Checks whether the user should see the admin analytics surface.
  */
-export function canViewAnalytics(user: SessionUser | null): boolean {
+export function canViewAnalytics(
+  user: Pick<SessionUser, 'superAdmin' | 'roles'> | null,
+): boolean {
   if (!user) return false
 
   return canAccessAnalytics({

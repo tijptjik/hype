@@ -7031,11 +7031,11 @@ describe('Feature-owned names on a linked Place', () => {
       snapshotId: 'snapshot',
       issues: [],
       rawSource: {},
-      facts: {
+      facts: LocationFactsSchema.parse({
         ...facts,
         names: { en: 'Local station shop' },
         phoneNumber: [],
-      },
+      }),
     })
     sqlite
       .prepare("UPDATE location SET state='unresolved',ssId=NULL WHERE id=?")
@@ -7102,11 +7102,11 @@ describe('Feature-owned names on a linked Place', () => {
         snapshotId: 'snapshot',
         issues: [],
         rawSource: {},
-        facts: {
+        facts: LocationFactsSchema.parse({
           ...facts,
           names: { en: 'Upstream shop' },
           phoneNumber: sourceHasPhone ? ['+85221111111'] : [],
-        },
+        }),
       })
       let expectedRevision: string | null = null
       if (alreadyLinked) {

@@ -1285,6 +1285,7 @@ onDestroy(() => {
   clearTimeout(autoAcceptTimer)
   for (const timer of Object.values(timers)) clearTimeout(timer)
 })
+const nameHelpId = $props.id()
 </script>
 
 {#snippet comparisonCell(
@@ -1939,9 +1940,7 @@ onDestroy(() => {
               </span>
               <input
                 aria-label={`${locationKindLabel(kind)} · ${m.field_name()}`}
-                aria-description={createNew && kind === 'service_point'
-                  ? m.location_service_name_help()
-                  : m.association_name_help()}
+                aria-describedby={nameHelpId}
                 aria-busy={lookups[kind] === 'checking'}
                 value={names[kind][tag] ?? ''}
                 placeholder={createNew && kind === 'service_point'
@@ -1973,12 +1972,18 @@ onDestroy(() => {
               {/if}
             </label>
             {#if !(createNew && kind === 'service_point')}
-              <p class="text-muted-foreground mx-auto w-full max-w-lg text-sm">
+              <p
+                id={nameHelpId}
+                class="text-muted-foreground mx-auto w-full max-w-lg text-sm"
+              >
                 {m.association_name_help()}
               </p>
             {/if}
             {#if createNew && kind === 'service_point'}
-              <p class="text-muted-foreground mx-auto w-full max-w-lg text-sm">
+              <p
+                id={nameHelpId}
+                class="text-muted-foreground mx-auto w-full max-w-lg text-sm"
+              >
                 {m.location_service_name_help()}
               </p>
             {/if}

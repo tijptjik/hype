@@ -33,6 +33,7 @@ let place = $state<LocationResource>({
     unavailable={0}
     onclick={() => {}}
     onmatched={() => {}}
+    onskipped={() => {}}
   />
   <LocationRecordDetails {place} />
 </main>

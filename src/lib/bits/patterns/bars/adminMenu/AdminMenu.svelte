@@ -37,7 +37,6 @@ import FieldResearchIcon from '#lib/bits/custom/icon/FieldResearchIcon.svelte'
 // CONTEXT
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // TYPES
-import type { SessionUser } from '#lib/types.js'
 import type { FeatureIndexQuery } from '#lib/features/indexQuery.js'
 import type { AdminMenuItem, AdminMenuProps } from './adminMenu.types'
 
@@ -48,7 +47,7 @@ const canListTasks = $derived(
   Boolean(
     adminCtx.view.user &&
       authorizeTaskListForContext({
-        user: adminCtx.view.user as SessionUser,
+        user: adminCtx.view.user,
         userRoles: adminCtx.view.user.roles ?? [],
         isAdminRequest: true,
         resourceHubId: adminCtx.view.hub?.id,
@@ -139,7 +138,7 @@ $effect(() => {
 
 // Index navigation preserves prisms; empty selections show all server-permitted resources.
 const adminMenuItems = $derived.by((): AdminMenuItem[] => {
-  const actor = adminCtx.view.user as SessionUser | null
+  const actor = adminCtx.view.user
   const directoryAllowed =
     actor &&
     canBrowseUsers({
@@ -211,7 +210,7 @@ const adminMenuItems = $derived.by((): AdminMenuItem[] => {
     onClick: () => navigateOnAdmin(adminCtx, FirstClassResource.location),
   })
 
-  if (canViewAnalytics(adminCtx.view.user as SessionUser)) {
+  if (canViewAnalytics(adminCtx.view.user)) {
     items.push({
       href: `${ADMIN_PATH}/analytics`,
       label: 'Analytics',

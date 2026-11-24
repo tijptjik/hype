@@ -98,7 +98,7 @@ export function useOmnibarModel(
   /** Leaves the temporary walk while retaining the current premises. @returns Nothing. */
   function closeStationWalk(): void {
     omniCtx.resetToSearch(false)
-    const url = new URL(page.url)
+    const url = new URL(page.url.href)
     url.searchParams.delete('walk')
     void goto(url)
   }

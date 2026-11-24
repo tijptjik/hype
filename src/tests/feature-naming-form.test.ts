@@ -183,36 +183,32 @@ it('syncs linked languages, isolates custom edits and reconnects them', async ()
   await fireEvent.input(view.getByRole('textbox', { name: 'Template name' }), {
     target: { value: 'Shared names' },
   })
-  await fireEvent.input(view.getByRole('textbox', { name: 'Text 1', exact: true }), {
+  await fireEvent.input(view.getByRole('textbox', { name: 'Text 1' }), {
     target: { value: 'Shared ' },
   })
   await fireEvent.click(view.getByRole('tab', { name: '繁體中文' }))
   expect(
-    (view.getByRole('textbox', { name: 'Text 1', exact: true }) as HTMLInputElement)
-      .value,
+    (view.getByRole('textbox', { name: 'Text 1' }) as HTMLInputElement).value,
   ).toBe('Shared ')
   await fireEvent.click(view.getByRole('button', { name: 'Customize this language' }))
-  await fireEvent.input(view.getByRole('textbox', { name: 'Text 1', exact: true }), {
+  await fireEvent.input(view.getByRole('textbox', { name: 'Text 1' }), {
     target: { value: 'Custom ' },
   })
   await fireEvent.click(view.getByRole('tab', { name: 'English' }))
-  await fireEvent.input(view.getByRole('textbox', { name: 'Text 1', exact: true }), {
+  await fireEvent.input(view.getByRole('textbox', { name: 'Text 1' }), {
     target: { value: 'Updated ' },
   })
   await fireEvent.click(view.getByRole('tab', { name: '简体中文' }))
   expect(
-    (view.getByRole('textbox', { name: 'Text 1', exact: true }) as HTMLInputElement)
-      .value,
+    (view.getByRole('textbox', { name: 'Text 1' }) as HTMLInputElement).value,
   ).toBe('Updated ')
   await fireEvent.click(view.getByRole('tab', { name: '繁體中文' }))
   expect(
-    (view.getByRole('textbox', { name: 'Text 1', exact: true }) as HTMLInputElement)
-      .value,
+    (view.getByRole('textbox', { name: 'Text 1' }) as HTMLInputElement).value,
   ).toBe('Custom ')
   await fireEvent.click(view.getByRole('button', { name: 'Use shared expression' }))
   expect(
-    (view.getByRole('textbox', { name: 'Text 1', exact: true }) as HTMLInputElement)
-      .value,
+    (view.getByRole('textbox', { name: 'Text 1' }) as HTMLInputElement).value,
   ).toBe('Updated ')
   await fireEvent.click(view.getByRole('button', { name: 'Save template' }))
   await waitFor(() =>

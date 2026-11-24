@@ -3,7 +3,7 @@ import CatalogueFilterBar from '#lib/bits/patterns/resource/catalogueQuality/Cat
 import {
   qualityFiltersFromUrl,
   type LogoQualityKey,
-} from '#lib/locations/catalogueQuality'
+} from '#lib/locations/catalogueQuality.js'
 // TRANSLATION REVIEW
 import { MultilingualReview } from '#lib/forms/multilingualReview.svelte.js'
 import MultilingualReviewPanel from '#lib/bits/patterns/forms/translationReview/MultilingualReviewPanel.svelte'
@@ -198,7 +198,7 @@ $effect(() => {
  * @param origin Source namespace or empty for all sources. @returns Nothing.
  */
 function setCatalogueOrigin(origin: string): void {
-  const url = new URL(page.url)
+  const url = new URL(page.url.href)
   if (origin) url.searchParams.set('catalogue-origin', origin)
   else url.searchParams.delete('catalogue-origin')
   void goto(url, { replace: true, reset: false })
@@ -208,7 +208,7 @@ const qualityFilters = $derived(qualityFiltersFromUrl(page.url.searchParams))
  * @param key Quality dimension. @param value Yes, no or either. @returns Nothing.
  */
 function setQualityFilter(key: LogoQualityKey, value: boolean | null): void {
-  const url = new URL(page.url)
+  const url = new URL(page.url.href)
   if (value === null) url.searchParams.delete(`logo-${key}`)
   else url.searchParams.set(`logo-${key}`, value ? 'yes' : 'no')
   void goto(url, { replace: true, reset: false })
@@ -217,7 +217,7 @@ function setQualityFilter(key: LogoQualityKey, value: boolean | null): void {
  * @returns Nothing.
  */
 function resetQualityFilters(): void {
-  const url = new URL(page.url)
+  const url = new URL(page.url.href)
   url.searchParams.delete('catalogue-origin')
   for (const key of Object.keys(qualityFilters)) url.searchParams.delete(`logo-${key}`)
   void goto(url, { replace: true, reset: false })
@@ -622,7 +622,7 @@ $effect(() => {
           active: activeKind,
           onFacetChange: value => {
             if (value === 'brand' || value === 'group') {
-              const url = new URL(page.url)
+              const url = new URL(page.url.href)
               url.pathname = '/admin/catalogue'
               url.searchParams.set('kind', value)
               void goto(url)
@@ -932,7 +932,11 @@ async function upload(
     content = {
       ...content,
       logo: result.logo,
-      logoAttribution: sourceLogo?.attribution,
+      logoAttribution: sourceLogo && {
+        sourceUrl: sourceLogo.sourceUrl,
+        license: sourceLogo.license,
+        attribution: sourceLogo.attribution,
+      },
       artwork: {
         ...content.artwork,
         logo: {

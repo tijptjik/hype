@@ -13,7 +13,7 @@ import TriStateToggle from '../resourceControlBar/components/ResourceControlBarT
 import type {
   LogoQualityFilters,
   LogoQualityKey,
-} from '#lib/locations/catalogueQuality'
+} from '#lib/locations/catalogueQuality.js'
 let {
   quality,
   isArchived = false,

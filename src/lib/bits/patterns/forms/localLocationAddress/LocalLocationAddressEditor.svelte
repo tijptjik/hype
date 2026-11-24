@@ -1059,12 +1059,13 @@ $effect(() => {
       }}
     >
       {#snippet map()}
+        {@const indoorSource = place.indoorSource}
         <div
           class="grid h-full min-h-0 min-w-0"
           class:grid-cols-2={Boolean(place.indoorSource?.href)}
           data-location-profile-maps
         >
-          {#if place.indoorSource?.href}
+          {#if indoorSource?.href}
             <div
               class="border-border relative min-h-0 min-w-0 overflow-hidden border-r"
               data-location-indoor-map
@@ -1073,7 +1074,7 @@ $effect(() => {
                 {#snippet children(expanded)}
                   <LocationIndoorMap
                     {expanded}
-                    source={place.indoorSource}
+                    source={indoorSource}
                     contextMap={numberMapController}
                   />
                 {/snippet}

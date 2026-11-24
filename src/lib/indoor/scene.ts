@@ -167,10 +167,13 @@ export function stationProjection(
     aspect = 0.75,
     padding = 0.76,
   ): string => {
-    flat ??= stationProjection(data, false, { bearing: 0, tilt: 0 })
+    const projection = (flat ??= stationProjection(data, false, {
+      bearing: 0,
+      tilt: 0,
+    }))
     // Compare both footprint orientations before aligning the winning fit to the viewing heading.
     const candidates = [false, true].flatMap(swapped => {
-      const fitted = flat.logo(feature, swapped ? 1 / aspect : aspect, padding)
+      const fitted = projection.logo(feature, swapped ? 1 / aspect : aspect, padding)
       if (!fitted) return []
       const matrix = fitted.slice(7, -1).split(' ').map(Number)
       const [a, b, c, d] = matrix
