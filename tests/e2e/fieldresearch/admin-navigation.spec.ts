@@ -1,3 +1,4 @@
+import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
 
 test('keeps Field Sessions accessible after Field Entries is moved', async ({
@@ -17,7 +18,8 @@ test('keeps Field Sessions accessible after Field Entries is moved', async ({
   )
   await expect(menu.getByRole('link', { name: 'Field Entries' })).toHaveCount(0)
   await menu.getByRole('link', { name: 'Field Sessions' }).click()
-  const editor = page.getByRole('heading', { name: 'Existing sessions' })
+  const editor = page.getByRole('region', { name: 'Field sessions' })
+  const session = editor.getByRole('link').first()
   await expect(editor).toBeVisible({ timeout: 60_000 })
 
   const toolbarTitle = page
@@ -26,7 +28,66 @@ test('keeps Field Sessions accessible after Field Entries is moved', async ({
   await expect(toolbarTitle).toBeVisible()
   await expect(
     page.getByRole('heading', { level: 1, name: 'Field Sessions', exact: true }),
-  ).toBeVisible()
+  ).toHaveCount(0)
+  await expect(session).toBeVisible({ timeout: 60_000 })
+  await expect(session).toContainText(/\d+\s+records?/)
+  await expect(session).toContainText(/Created by .+/)
+  await expect(session.locator('time')).toHaveAttribute('datetime', /\d{4}-\d{2}-\d{2}/)
+
+  // Check the actual rendered row against its column headings in the dark palette.
+  await page.evaluate(() =>
+    document.documentElement.setAttribute('data-theme', 'hype-dark'),
+  )
+  const heading = editor.getByText('Session', { exact: true }).first()
+  await expect(heading).toBeVisible()
+  const starts = (element: Element) =>
+    Array.from(element.children, child =>
+      Math.round(child.getBoundingClientRect().left),
+    )
+  expect(await session.evaluate(starts)).toEqual(
+    await heading.locator('..').evaluate(starts),
+  )
+  const contrast = await session.evaluate(row => {
+    const ctx = document.createElement('canvas').getContext('2d')!
+    const luminance = (color: string) => {
+      ctx.fillStyle = color
+      ctx.fillRect(0, 0, 1, 1)
+      const rgb = Array.from(ctx.getImageData(0, 0, 1, 1).data)
+        .slice(0, 3)
+        .map(v => v / 255)
+        .map(v => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+      return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722
+    }
+    const background = luminance(getComputedStyle(row).backgroundColor)
+    return Array.from(
+      row.querySelectorAll('span, time'),
+      cell => (luminance(getComputedStyle(cell).color) + 0.05) / (background + 0.05),
+    )
+  })
+  expect(Math.min(...contrast)).toBeGreaterThanOrEqual(4.5)
+  const artifacts = process.env.DEV_RUNNER_ARTIFACTS
+  if (artifacts)
+    await page.screenshot({ path: join(artifacts, 'field-sessions-dark-desktop.png') })
+
+  // Lengthen the displayed title without changing the persisted session.
+  const title = session.locator(':scope > span').first().locator('span').first()
+  const original = await title.innerText()
+  await title.evaluate(el => {
+    el.textContent = 'A long field session title '.repeat(8)
+  })
+  expect(await session.evaluate(starts)).toEqual(
+    await heading.locator('..').evaluate(starts),
+  )
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(heading).toBeHidden()
+  await expect(session.locator('time')).toBeInViewport()
+  expect(await session.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+  if (artifacts)
+    await page.screenshot({ path: join(artifacts, 'field-sessions-dark-mobile.png') })
+  await title.evaluate((el, value) => {
+    el.textContent = value
+  }, original)
+  await page.setViewportSize({ width: 1600, height: 1000 })
 
   await expect(page.getByLabel('Session name')).toHaveCount(0)
   await page.getByRole('button', { name: 'New', exact: true }).click()

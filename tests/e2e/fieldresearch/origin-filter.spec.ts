@@ -15,6 +15,11 @@ test.use({
 test('offers session filtering only for field research origin', async ({ page }) => {
   test.setTimeout(120000)
   page.setDefaultTimeout(20000)
+  let sessionRequests = 0
+  page.on('request', request => {
+    if (new URL(request.url()).pathname.endsWith('/getResearchSessions'))
+      sessionRequests++
+  })
   await page.goto('/admin/features')
   const session = await (await page.request.get('/api/auth/get-session')).json()
   expect(session.user.id).toBe('hype-local-agent-admin')
@@ -28,21 +33,25 @@ test('offers session filtering only for field research origin', async ({ page })
   } catch {
     await page.getByRole('button', { name: 'Filters', exact: true }).click()
   }
-  const createdVia = page.getByRole('button', { name: 'Created via', exact: true })
-  if (!(await createdVia.isVisible())) await filter.click({ timeout: 60000 })
-  await createdVia.click()
+  const originSection = page.getByRole('button', { name: 'Origin', exact: true })
+  if (!(await originSection.isVisible())) await filter.click({ timeout: 60000 })
+  await originSection.click()
   const origin = page.getByRole('combobox', { name: 'Any origin' })
   const sessions = page.getByRole('combobox', { name: 'Any session' })
   await expect(sessions).toHaveCount(0)
+  expect(sessionRequests).toBe(0)
   await origin.click()
   await page.getByRole('option', { name: 'Field research', exact: true }).click()
   await expect(sessions).toBeVisible()
+  await expect.poll(() => sessionRequests).toBeGreaterThan(0)
   await sessions.click()
   const option = page
     .getByRole('option')
-    .filter({ hasText: /\[Test\] Field research/ })
+    .filter({ hasNotText: /^Any session$/ })
     .first()
+  const selectedSession = await option.innerText()
   await option.click()
+  await expect(sessions).toHaveText(selectedSession)
   await origin.click()
   await page.getByRole('option', { name: 'Admin contribution', exact: true }).click()
   await expect(sessions).toHaveCount(0)
