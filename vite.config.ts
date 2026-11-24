@@ -127,6 +127,21 @@ export default defineConfig(async ({ command }) => ({
       // Group dev translations by locale to avoid Firefox linking a module per message.
       outputStructure: command === 'serve' ? 'locale-modules' : 'message-modules',
     }),
+    {
+      // These generated ES modules are already browser source. Vite would otherwise
+      // append an inline identity map several times larger than each translation file.
+      name: 'generated-message-source-maps',
+      apply: 'serve',
+      applyToEnvironment: environment => environment.name === 'client',
+      transform: {
+        filter: {
+          id: /[/\\]generated[/\\]paraglide-dev[/\\]messages[/\\][^/\\]+\.js$/,
+        },
+        handler(code) {
+          return { code, map: { mappings: '' } }
+        },
+      },
+    },
     // seedDrizzle(),
     sveltekit({
       outDir: getDevOutput(process.argv, command).outDir,
