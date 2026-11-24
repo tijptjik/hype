@@ -30,7 +30,9 @@ afterEach(() => {
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'lifecycle-schema-'))
   roots.push(root)
-  const d = openSqliteDomain(join(root, 'before.sqlite')),
+  const path = join(root, 'before.sqlite')
+  new Database(path).close()
+  const d = openSqliteDomain(path),
     after = new Database(':memory:')
   for (const db of [d.sqlite, after])
     db.exec(`PRAGMA foreign_keys=ON;
