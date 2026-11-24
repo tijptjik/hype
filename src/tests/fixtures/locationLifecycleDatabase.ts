@@ -6,11 +6,31 @@ import { feature as featureTable } from '#lib/db/schema/feature.js'
 import type { Database } from '#lib/types.js'
 import type { D1Database } from '@cloudflare/workers-types'
 
+/** Install the Location translation storage used by current service writers.
+ * @param sqlite Fixture with the desired historical taxonomy already in place.
+ * @returns Nothing.
+ */
+export function installLocationContent(sqlite: DatabaseSync): void {
+  // Current writers use locale-first content; these fixtures do not install Feature naming views.
+  sqlite.exec(
+    readFileSync('migrations/0238_location_i18n.sql', 'utf8').split(
+      'DROP VIEW featureAcceptedNamingLocation;',
+    )[0],
+  )
+  sqlite.exec(
+    readFileSync(
+      'migrations/0241_authoritative_revision_translations.sql',
+      'utf8',
+    ).split('DROP TRIGGER identity_catalogue_i18n_revision;')[0],
+  )
+}
+
 /** Build a transactional D1 adapter over the real lifecycle migration chain. */
 export function setupLifecycleDatabase(
   includeScope = false,
   includeAddressKind = true,
   beforeCorrections?: (db: DatabaseSync) => void,
+  stage: 'legacy-kinds' | 'current-taxonomy' | 'historical' = 'legacy-kinds',
 ) {
   const sqlite = new DatabaseSync(':memory:')
   sqlite.exec(`PRAGMA foreign_keys=ON;
@@ -62,12 +82,6 @@ export function setupLifecycleDatabase(
     '0148_location_relationships.sql',
   ])
     sqlite.exec(readFileSync('migrations/' + migration, 'utf8'))
-  // Current writers use locale-first content; these fixtures do not install Feature naming views.
-  sqlite.exec(
-    readFileSync('migrations/0238_location_i18n.sql', 'utf8').split(
-      'DROP VIEW featureAcceptedNamingLocation;',
-    )[0],
-  )
   beforeCorrections?.(sqlite)
   for (const migration of [
     '0149_location_correction_rows.sql',
@@ -78,13 +92,6 @@ export function setupLifecycleDatabase(
   ])
     sqlite.exec(readFileSync('migrations/' + migration, 'utf8'))
   sqlite.exec(readFileSync('migrations/0157_location_rematching.sql', 'utf8'))
-  sqlite.exec(
-    readFileSync(
-      'migrations/0241_authoritative_revision_translations.sql',
-      'utf8',
-    ).split('DROP TRIGGER identity_catalogue_i18n_revision;')[0],
-  )
-
   // Scope-focused cases explicitly install their guards after arranging legacy input.
   if (!includeScope)
     sqlite.exec(`DROP TRIGGER feature_location_scope_insert;
@@ -92,8 +99,30 @@ export function setupLifecycleDatabase(
     DROP TRIGGER feature_location_owner_scope;`)
 
   // This historical placement fixture retains old kind values but exposes current read columns.
-  sqlite.exec(`ALTER TABLE location ADD COLUMN class TEXT;
+  if (stage === 'current-taxonomy') {
+    sqlite.exec(readFileSync('migrations/0155_location_accessibility.sql', 'utf8'))
+    const guard = readFileSync(
+      'migrations/0144_location_address_contract.sql',
+      'utf8',
+    ).match(/CREATE TRIGGER location_revision_unknown_details[\s\S]*?END;/)![0]
+    sqlite.exec(guard)
+    sqlite.exec(
+      'ALTER TABLE feature ADD COLUMN layerId TEXT; CREATE INDEX feature_target_context ON feature(layerId,targetContext)',
+    )
+    for (const migration of [
+      '0213_building_parts',
+      '0215_location_physical_kinds',
+      '0216_location_taxonomy',
+      '0217_location_thoroughfare',
+      '0218_location_address_service_classes',
+      '0219_address_location_classification',
+    ])
+      sqlite.exec(readFileSync(`migrations/${migration}.sql`, 'utf8'))
+  } else if (stage === 'legacy-kinds')
+    sqlite.exec(`ALTER TABLE location ADD COLUMN class TEXT;
     ALTER TABLE location ADD COLUMN matchingType TEXT GENERATED ALWAYS AS (coalesce(class,kind)) VIRTUAL;`)
+
+  if (stage !== 'historical') installLocationContent(sqlite)
 
   const prepare = (query: string, values: unknown[] = []) => ({
     bind: (...args: unknown[]) => {

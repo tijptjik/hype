@@ -174,7 +174,7 @@ describe('new feature location intent', () => {
     }
   })
   it('widens physical location storage without changing existing building-part membership', () => {
-    const f = setupLifecycleDatabase()
+    const f = setupLifecycleDatabase(false, true, undefined, 'historical')
     try {
       f.sqlite.exec(readFileSync('migrations/0155_location_accessibility.sql', 'utf8'))
       f.sqlite.exec(

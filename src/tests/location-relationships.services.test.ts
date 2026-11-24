@@ -288,14 +288,14 @@ describe('immutable Location lifecycle storage', () => {
     await appendLocationRelationship(db, membership('path', 'tower', 'mall'), 'editor')
     sqlite
       .prepare(
-        "INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) VALUES('shop-r','shop',1,'local','hash','{}',?)",
+        "INSERT INTO locationRevisionContent(id,locationId,version,origin,contentHash,rawSource,facts) VALUES('shop-r','shop',1,'local','hash','{}',?)",
       )
       .run(
         JSON.stringify({
           schemaVersion: 1,
           kind: 'establishment',
+          i18n: {},
           common: {
-            names: {},
             location: { geometry: { type: 'Point', coordinates: [114, 22] } },
           },
           details: { brands: [] },

@@ -1,7 +1,10 @@
 // @vitest-environment node
 import { readFileSync } from 'node:fs'
 import { afterEach, expect, it } from 'vitest'
-import { setupLifecycleDatabase } from './fixtures/locationLifecycleDatabase'
+import {
+  installLocationContent,
+  setupLifecycleDatabase,
+} from './fixtures/locationLifecycleDatabase'
 import { createLocalLocation } from '#lib/db/services/locationLocal.js'
 import { appendLocationRelationship } from '#lib/db/services/locationRelationships.js'
 import { listLocationLinkedFeatures } from '#lib/db/services/locationFeatures.js'
@@ -13,7 +16,7 @@ afterEach(() => {
   for (const s of stores.splice(0)) s.sqlite.close()
 })
 function setup() {
-  const s = setupLifecycleDatabase()
+  const s = setupLifecycleDatabase(false, true, undefined, 'historical')
   stores.push(s)
   s.sqlite.exec(readFileSync('migrations/0155_location_accessibility.sql', 'utf8'))
   s.sqlite.exec(
@@ -31,6 +34,7 @@ function setup() {
   )
   s.sqlite.exec(readFileSync('migrations/0215_location_physical_kinds.sql', 'utf8'))
   s.sqlite.exec(readFileSync('migrations/0216_location_taxonomy.sql', 'utf8'))
+  installLocationContent(s.sqlite)
   return s
 }
 function part(name: string, parentPartId?: string, buildingId = 'building') {
@@ -104,7 +108,7 @@ it('creates floor, named wing and direct room identities without occupants or co
   for (const name of ['3/F, Example Building', 'East Wing', 'Room 302']) {
     const created = await createLocalLocation(db, 'p', part(name), 'author')
     const row = sqlite
-      .prepare('SELECT facts FROM locationRevision WHERE id=?')
+      .prepare('SELECT facts FROM locationRevisionContent WHERE id=?')
       .get(created.revisionId)!
     expect(readLocationFacts(row.facts).names.en).toBe(name)
     expect(
@@ -299,7 +303,7 @@ it('retains floor-only authored address components without upstream identity and
   )
   const facts = readLocationFacts(
     sqlite
-      .prepare('SELECT facts FROM locationRevision WHERE id=?')
+      .prepare('SELECT facts FROM locationRevisionContent WHERE id=?')
       .get(created.revisionId)!.facts,
   )
   expect(facts.location.address.authored?.unit?.floorRef).toBe('3')

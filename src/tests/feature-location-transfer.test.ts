@@ -42,7 +42,7 @@ function setup(local = false) {
   }
   s.sqlite
     .prepare(
-      "INSERT INTO locationRevision(id,locationId,version,origin,ssId,apiVersion,releaseId,snapshotId,contentHash,rawSource,facts) VALUES('r','place',1,?,'shared','v1','release','snapshot','hash','{}',?)",
+      "INSERT INTO locationRevisionContent(id,locationId,version,origin,ssId,apiVersion,releaseId,snapshotId,contentHash,rawSource,facts) VALUES('r','place',1,?,'shared','v1','release','snapshot','hash','{}',?)",
     )
     .run(local ? 'local' : 'saanseoi', serializeLocationFacts(facts, 'establishment'))
   s.sqlite.exec(`INSERT INTO organisationLocation(id,organisationId,locationId,overrides,actorId,createdAt) VALUES('correction','p','place','{"names":{"en":{"mode":"override","value":"Custom name"}}}','author','now');
@@ -185,7 +185,7 @@ it('rejects a destination definition created after preparation', async () => {
 it('copies scoped occupancy and private containers while retaining accepted address evidence', async () => {
   const s = setup(true)
   s.sqlite.exec(`INSERT INTO location(id,kind,state,ownerOrganisationId) VALUES('building','building','manual','p');
-    INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) SELECT 'building-r','building',1,'local','building-hash',rawSource,facts FROM locationRevision WHERE id='r';
+    INSERT INTO locationRevisionContent(id,locationId,version,origin,contentHash,rawSource,facts) SELECT 'building-r','building',1,'local','building-hash',rawSource,facts FROM locationRevisionContent WHERE id='r';
     INSERT INTO address(id,sourceKey) VALUES('address','{"provider":"local","family":"address","id":"a"}');
     INSERT INTO addressRevision(id,addressId,scope,components,contentHash,sourceReferences,rawSource) VALUES('address-r','address','building','{}','address-hash','[]','{}');
     INSERT INTO locationOccupancy(id,relationshipId,scopeOrganisationId,assertionState,evidence,provenance,establishmentLocationId,containerLocationId,addressRevisionId,occupancyState) VALUES('occupancy','occupancy','p','asserted','[]','{}','place','building','address-r','current');

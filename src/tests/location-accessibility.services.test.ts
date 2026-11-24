@@ -42,19 +42,6 @@ function setup() {
   stores.push(s)
   s.sqlite.exec(readFileSync('migrations/0155_location_accessibility.sql', 'utf8'))
   s.sqlite.exec(readFileSync('migrations/0209_shared_location_corrections.sql', 'utf8'))
-  // This focused legacy harness uses the current localized snapshot envelope and matching adapter.
-  s.sqlite.exec(
-    'ALTER TABLE location ADD COLUMN matchingType TEXT GENERATED ALWAYS AS (kind) VIRTUAL',
-  )
-  const snapshotGuard = readFileSync(
-    'migrations/0142_location_facts_snapshots.sql',
-    'utf8',
-  ).split('CREATE TRIGGER location_revision_snapshot_insert')[1]
-  s.sqlite.exec(
-    'DROP TRIGGER location_revision_snapshot_insert; CREATE TRIGGER location_revision_snapshot_insert' +
-      snapshotGuard.replace('$.common.names', '$.i18n'),
-  )
-
   for (const [id, kind, state] of [
     ['shop', 'establishment', 'unresolved'],
     ['tower', 'building', 'unresolved'],
@@ -95,7 +82,7 @@ function revision(
   }
   s.sqlite
     .prepare(
-      "INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) VALUES (?,?,?,'local',?,'{}',?)",
+      "INSERT INTO locationRevisionContent(id,locationId,version,origin,contentHash,rawSource,facts) VALUES (?,?,?,'local',?,'{}',?)",
     )
     .run(
       `${id}-${version}`,
@@ -159,7 +146,7 @@ it('keeps four independent values, unknowns and immutable history; rejects stale
     values,
   )
   const source = s.sqlite
-    .prepare("SELECT facts FROM locationRevision WHERE id='shop-1'")
+    .prepare("SELECT facts FROM locationRevisionContent WHERE id='shop-1'")
     .get()
   const projected = await sharedLocationFacts(
     s.db,

@@ -18,10 +18,6 @@ afterEach(() => {
 function setup() {
   const s = setupLifecycleDatabase(true)
   stores.push(s)
-  // Legacy lifecycle fixtures store the matching discriminator directly in kind.
-  s.sqlite.exec(
-    'ALTER TABLE location ADD COLUMN matchingType TEXT GENERATED ALWAYS AS (kind) VIRTUAL',
-  )
   s.sqlite.exec(
     "INSERT INTO location(id,kind,state,ownerOrganisationId) VALUES('building','building','unresolved','p'),('other-building','building','unresolved','p'),('private','building','manual','other')",
   )
@@ -212,7 +208,7 @@ it('presents evidenced replacement lineage without redirecting either identity',
   )
   s.sqlite
     .prepare(
-      'INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) VALUES(?,?,?,?,?,?,?)',
+      'INSERT INTO locationRevisionContent(id,locationId,version,origin,contentHash,rawSource,facts) VALUES(?,?,?,?,?,?,?)',
     )
     .run(
       'building-label',
@@ -225,8 +221,8 @@ it('presents evidenced replacement lineage without redirecting either identity',
         schemaVersion: 1,
         kind: 'building',
         details: {},
+        i18n: { en: { name: 'Harbour House' } },
         common: {
-          names: { en: 'Harbour House' },
           location: { geometry: { type: 'Point', coordinates: [114.16, 22.3] } },
         },
       }),

@@ -40,7 +40,7 @@ beforeEach(() => {
   })
 })
 it('verifies exports and reuses one building identity across saves with immutable provenance', async () => {
-  const store = setupLifecycleDatabase()
+  const store = setupLifecycleDatabase(false, true, undefined, 'current-taxonomy')
   stores.push(store)
   const source = { id: 'gers', release: 'r1', addressId: 'a1' }
   const identity = await importBuildingLocation(
@@ -64,7 +64,7 @@ it('verifies exports and reuses one building identity across saves with immutabl
   ).toEqual(identity)
   expect(store.sqlite.prepare('SELECT count(*) AS n FROM location').get()?.n).toBe(1)
   const row = store.sqlite
-    .prepare('SELECT rawSource, facts FROM locationRevision')
+    .prepare('SELECT rawSource, facts FROM locationRevisionContent')
     .get()!
   expect(JSON.parse(row.rawSource as string)).toMatchObject({
     kind: 'building-export-baseline',
@@ -78,7 +78,7 @@ it('verifies exports and reuses one building identity across saves with immutabl
   expect(store.sqlite.prepare('SELECT ssId FROM location').get()?.ssId).toBeNull()
 })
 it('keeps exclusive buildings scoped and rejects unverified release or Address claims', async () => {
-  const store = setupLifecycleDatabase()
+  const store = setupLifecycleDatabase(false, true, undefined, 'current-taxonomy')
   stores.push(store)
   await expect(
     importBuildingLocation(
@@ -120,7 +120,7 @@ it('keeps exclusive buildings scoped and rejects unverified release or Address c
 })
 
 it('retains reviewed name edits without replacing the original verified export evidence', async () => {
-  const store = setupLifecycleDatabase()
+  const store = setupLifecycleDatabase(false, true, undefined, 'current-taxonomy')
   stores.push(store)
   const source = { id: 'gers', release: 'r1' }
   const result = await importBuildingLocation(
@@ -133,10 +133,10 @@ it('retains reviewed name edits without replacing the original verified export e
   )
   const revisions = store.sqlite
     .prepare(
-      'SELECT rawSource,facts FROM locationRevision WHERE locationId=? ORDER BY version',
+      'SELECT rawSource,facts FROM locationRevisionContent WHERE locationId=? ORDER BY version',
     )
     .all(result.locationId)
-  expect(revisions).toHaveLength(2)
+  expect(revisions).toHaveLength(1)
   expect(JSON.parse(revisions[0].rawSource as string)).toMatchObject({
     buildingSource: source,
     kind: 'building-export-baseline',
@@ -144,7 +144,14 @@ it('retains reviewed name edits without replacing the original verified export e
   expect(readLocationFacts(revisions[0].facts as string).names).toEqual({
     en: 'Hollywood Building',
   })
-  expect(readLocationFacts(revisions[1].facts as string).names).toEqual({
-    en: 'Reviewed Building Name',
+  const correction = store.sqlite
+    .prepare(
+      'SELECT actorId,overrides FROM organisationLocationHead WHERE organisationId=? AND locationId=?',
+    )
+    .get('p', result.locationId)!
+  expect(correction.actorId).toBe('actor')
+  expect(JSON.parse(String(correction.overrides)).names.en).toEqual({
+    mode: 'override',
+    value: 'Reviewed Building Name',
   })
 })

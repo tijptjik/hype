@@ -13,7 +13,7 @@ afterEach(() => {
 })
 
 it('finds matching kinds within 100 metres and excludes private records belonging to another owner', async () => {
-  const store = setupLifecycleDatabase(true)
+  const store = setupLifecycleDatabase(true, true, undefined, 'current-taxonomy')
   stores.push(store)
   const address = {
     ...emptyFeatureAddress(),
@@ -73,7 +73,7 @@ it('finds matching kinds within 100 metres and excludes private records belongin
 })
 
 it('links a custom Location without copying the Feature placement into shared corrections', async () => {
-  const store = setupLifecycleDatabase(true)
+  const store = setupLifecycleDatabase(true, true, undefined, 'current-taxonomy')
   stores.push(store)
   const address = {
     ...emptyFeatureAddress(),
@@ -136,7 +136,7 @@ it('links a custom Location without copying the Feature placement into shared co
 })
 
 it('preserves reviewed address components across a later save and reassociation', async () => {
-  const store = setupLifecycleDatabase(true)
+  const store = setupLifecycleDatabase(true, true, undefined, 'current-taxonomy')
   stores.push(store)
   const { getTableColumns } = await import('drizzle-orm')
   const { feature, featureI18n } = await import('#lib/db/schema/feature.js')
@@ -301,7 +301,7 @@ it('preserves reviewed address components across a later save and reassociation'
 })
 
 it('links a new Location to a historical Feature without changing its historical flag', async () => {
-  const store = setupLifecycleDatabase(true)
+  const store = setupLifecycleDatabase(true, true, undefined, 'current-taxonomy')
   stores.push(store)
   const address = {
     ...emptyFeatureAddress(),

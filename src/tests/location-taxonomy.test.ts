@@ -3,7 +3,10 @@
 import { readFileSync } from 'node:fs'
 // TESTS
 import { afterEach, expect, it } from 'vitest'
-import { setupLifecycleDatabase } from './fixtures/locationLifecycleDatabase'
+import {
+  installLocationContent,
+  setupLifecycleDatabase,
+} from './fixtures/locationLifecycleDatabase'
 // DOMAIN
 import {
   LocationTaxonomySchema,
@@ -28,7 +31,7 @@ afterEach(() => {
  * @returns Isolated D1-compatible database with the current taxonomy.
  */
 function setup(renameThoroughfare = true, correctAddressClasses = true) {
-  const store = setupLifecycleDatabase()
+  const store = setupLifecycleDatabase(false, true, undefined, 'historical')
   stores.push(store)
   store.sqlite.exec(readFileSync('migrations/0155_location_accessibility.sql', 'utf8'))
   const guard = readFileSync(
@@ -56,6 +59,7 @@ function setup(renameThoroughfare = true, correctAddressClasses = true) {
     store.sqlite.exec(
       readFileSync('migrations/0219_address_location_classification.sql', 'utf8'),
     )
+  if (renameThoroughfare && correctAddressClasses) installLocationContent(store.sqlite)
   return store
 }
 
@@ -122,7 +126,7 @@ it.each([
       .get(receipt.locationId),
   ).toEqual(locationTaxonomy(kind))
   const revision = sqlite
-    .prepare('SELECT facts FROM locationRevision WHERE id=?')
+    .prepare('SELECT facts FROM locationRevisionContent WHERE id=?')
     .get(receipt.revisionId)
   expect(readLocationFacts(revision?.facts).entity?.kind).toBe(kind)
   expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
@@ -279,7 +283,7 @@ it('imports a canonical place as an operational establishment without changing i
     matchingType: 'establishment',
   })
   const revision = sqlite
-    .prepare('SELECT facts FROM locationRevision WHERE id=?')
+    .prepare('SELECT facts FROM locationRevisionContent WHERE id=?')
     .get(result.revisionId)
   expect(readLocationFacts(revision?.facts).names).toEqual(source.facts.names)
 })
@@ -311,7 +315,12 @@ it('renames only the current street class while retaining matching and revision 
   sqlite
     .prepare(`INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts)
     VALUES('road-r1','road',1,'local','retained-hash','{}',?)`)
-    .run(retainedFacts)
+    .run(
+      JSON.stringify({
+        ...JSON.parse(retainedFacts),
+        common: { ...JSON.parse(retainedFacts).common, names: { en: 'Example path' } },
+      }),
+    )
   const before = sqlite
     .prepare('SELECT id,kind,class,matchingType FROM location ORDER BY id')
     .all()
