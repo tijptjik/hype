@@ -1,5 +1,4 @@
 <script lang="ts">
-import 'svelte-maplibre-gl/vite'
 // SVELTE
 import { onDestroy, untrack } from 'svelte'
 import { page } from '$app/state'

@@ -4,7 +4,7 @@ import { onMount } from 'svelte'
 // CONTEXT
 import { setResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // COMPONENTS
-import AppEntrance from '#lib/bits/patterns/layout/app/components/AppEntrance.svelte'
+import AppSurface from '#lib/bits/patterns/layout/app/components/AppSurface.svelte'
 import AppMain from '#lib/bits/patterns/layout/app/components/AppMain.svelte'
 import MapSurface from '#lib/bits/custom/map/MapSurface.svelte'
 import OmnibarRoot from '#lib/bits/patterns/bars/omnibar/components/OmnibarRoot.svelte'
@@ -30,7 +30,6 @@ let painted = $state(false)
 let readyAt = $state<number | null>(null)
 let selected = $state('Explore')
 let generation = $state(0)
-let hasCompletedIntro = $state(false)
 let fadeCurrentMap = $state(true)
 
 onMount(() => {
@@ -122,13 +121,7 @@ function watchFirstFrame(
 
 <main class="bits-theme bg-surface text-base-content h-dvh w-full overflow-hidden">
   {#key generation}
-    <AppEntrance
-      ready={painted}
-      enabled={!hasCompletedIntro}
-      onComplete={() => {
-        hasCompletedIntro = true
-      }}
-    >
+    <AppSurface intro="complete">
       <div
         data-intro-map
         data-generation={generation}
@@ -205,7 +198,7 @@ function watchFirstFrame(
               painted = false
               readyAt = null
               map = undefined
-              fadeCurrentMap = !hasCompletedIntro
+              fadeCurrentMap = false
               generation++
               return
             }
@@ -218,6 +211,6 @@ function watchFirstFrame(
           }}
         />
       </AppMain>
-    </AppEntrance>
+    </AppSurface>
   {/key}
 </main>

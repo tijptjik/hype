@@ -1,13 +1,18 @@
 // NODE
 import assert from 'node:assert/strict'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { writeFile } from 'node:fs/promises'
 // PLAYWRIGHT
-import { chromium, type Page } from 'playwright'
+import { chromium, type Page } from '@playwright/test'
 
-// biome-ignore lint/suspicious/noUndeclaredEnvVars: Manual browser check uses an existing dev server.
-const origin = process.env.HYPE_CHECK_ORIGIN ?? 'http://127.0.0.1:4173'
-const output = 'output/playwright'
-await mkdir(output, { recursive: true })
+const {
+  PLAYWRIGHT_BASE_URL: origin,
+  DEV_RUNNER_ARTIFACTS: output,
+  DEV_RUNNER_CHROME_CLASS: placement,
+} = process.env
+assert(
+  origin && output && placement,
+  'Run through dev-remote chrome against the development server',
+)
 
 type Box = {
   opacity: number
@@ -110,7 +115,7 @@ async function initialFrames(page: Page): Promise<Frame[]> {
 }
 
 /**
- * Checks visible ordering, directional movement and fixed horizontal anchors.
+ * Checks immediate controls, a fading map and stable horizontal anchors.
  * @param frames - Recorded normal-motion startup.
  * @param width - Current layout viewport width.
  * @returns Measured delay and movement diagnostics.
@@ -129,16 +134,17 @@ function verifyEntrance(frames: Frame[], width: number): Record<string, number> 
     frames.some(frame => frame.map && frame.map.opacity > 0 && frame.map.opacity < 1),
     'Map did not fade through intermediate opacity',
   )
-  assert.ok(
-    searchStart.at - mapStart.at >= 50 && navStart.at - mapStart.at >= 50,
-    'Controls did not wait for the map fade to begin',
-  )
   assert.ok(searchStart.search && settled.search && navStart.nav && settled.nav)
   assert.ok(
-    settled.search.y - searchStart.search.y > 2,
-    'Search did not enter from top',
+    frames.every(
+      frame =>
+        frame.search?.visibility === 'visible' &&
+        frame.search.opacity === 1 &&
+        frame.nav?.visibility === 'visible' &&
+        frame.nav.opacity === 1,
+    ),
+    'Map startup hid the controls',
   )
-  assert.ok(navStart.nav.y - settled.nav.y > 3, 'Navigation did not enter from bottom')
   for (const key of ['search', 'nav', 'overlay'] as const) {
     const boxes = frames.flatMap(frame => (frame[key] ? [frame[key]] : []))
     const centers = boxes.map(box => box.x + box.width / 2)
@@ -185,8 +191,9 @@ function verifyEntrance(frames: Frame[], width: number): Record<string, number> 
 }
 
 const browser = await chromium.launch({
-  headless: true,
-  args: ['--disable-web-security'],
+  channel: 'chrome',
+  headless: false,
+  args: ['--ozone-platform=x11', '--disable-web-security', `--class=${placement}`],
 })
 const report: Record<string, unknown>[] = []
 try {
@@ -205,6 +212,11 @@ try {
     page.on('pageerror', error => errors.push(error.message))
     await prepare(page)
     await page.goto(`${origin}/__map-intro-check.html`)
+    await page.locator('[data-map-visual-ready="true"]').waitFor()
+    await page.waitForFunction(() => {
+      const map = document.querySelector('[data-intro-map]')
+      return map && getComputedStyle(map).opacity === '1'
+    })
     const frames = await initialFrames(page)
     const diagnostics = verifyEntrance(frames, width)
     await page.getByRole('textbox', { name: 'Search places' }).fill('Hong Kong')
@@ -308,25 +320,16 @@ try {
   const fallback = await browser.newPage({ viewport: { width: 390, height: 844 } })
   await prepare(fallback)
   await fallback.goto(`${origin}/__map-intro-check.html?map=missing`)
-  await fallback.locator('[data-app-intro="waiting"]').waitFor({ state: 'attached' })
-  const hiddenCannotFocus = await fallback.evaluate(() => {
-    const input = document.querySelector<HTMLInputElement>('input')
-    input?.focus()
-    return document.activeElement !== input
-  })
-  assert.ok(hiddenCannotFocus, 'Pending search was still keyboard-focusable')
-  const fallbackFrames = await initialFrames(fallback)
-  const firstVisible = fallbackFrames.find(
-    frame => frame.nav?.visibility === 'visible' && frame.nav.opacity > 0.01,
-  )
-  assert.ok(firstVisible && firstVisible.elapsed >= 1100 && firstVisible.elapsed < 2000)
+  const pendingSearch = fallback.getByRole('textbox', { name: 'Search places' })
+  await pendingSearch.fill('Type while the map is unavailable')
+  assert.equal(await pendingSearch.inputValue(), 'Type while the map is unavailable')
   await fallback.getByRole('button', { name: 'Saved', exact: true }).click()
   assert.ok(
     (await fallback.locator('[data-selection]').textContent())?.includes('Saved'),
   )
   report.push({
     missingMap: true,
-    fallbackControlsMs: firstVisible.elapsed,
+    immediateControls: true,
     usable: true,
   })
   await fallback.close()

@@ -120,9 +120,6 @@ $effect(() => {
   }
 })
 
-// Reactive window width binding
-let windowWidth = $state(0)
-let windowHeight = $state(0)
 let responsiveSyncFrame = 0
 
 // Coalesce viewport and window measurements so resize bursts only fan out once per frame.
@@ -136,7 +133,7 @@ const scheduleResponsiveSync = (): void => {
 
     const visualViewport = window.visualViewport
 
-    responsive.setWindowDimensions(windowWidth, windowHeight)
+    responsive.setWindowDimensions(window.innerWidth, window.innerHeight)
 
     if (!visualViewport) {
       responsive.setViewportDimensions(window.innerWidth, window.innerHeight)
@@ -151,15 +148,6 @@ const scheduleResponsiveSync = (): void => {
     )
   })
 }
-
-// Update mobile state when window width changes
-$effect(() => {
-  if (typeof window === 'undefined') {
-    return
-  }
-
-  scheduleResponsiveSync()
-})
 
 async function initializeAuthenticatedApp(): Promise<void> {
   if (isEmbed) {
@@ -252,6 +240,11 @@ onMount(() => {
   // Shared lifecycle runs on every entry route; only the public surface loads map resources.
   hasMounted = true
   let disposed = false
+  // Measure on hydration and continue tracking the viewport during guest bootstrap.
+  scheduleResponsiveSync()
+  window.addEventListener('resize', scheduleResponsiveSync)
+  window.visualViewport?.addEventListener('resize', scheduleResponsiveSync)
+  window.visualViewport?.addEventListener('scroll', scheduleResponsiveSync)
 
   const handleUpgradeRequest = (event: Event): void => {
     const detail = (event as CustomEvent<{ reason?: UpgradeReason; returnTo?: string }>)
@@ -267,12 +260,7 @@ onMount(() => {
       await retryBootstrap()
     }
 
-    await handleRequestedUpgrade()
-    if (disposed) return
-
-    scheduleResponsiveSync()
-    window.visualViewport?.addEventListener('resize', scheduleResponsiveSync)
-    window.visualViewport?.addEventListener('scroll', scheduleResponsiveSync)
+    if (!disposed) await handleRequestedUpgrade()
   })()
 
   return () => {
@@ -284,6 +272,7 @@ onMount(() => {
       responsiveSyncFrame = 0
     }
 
+    window.removeEventListener('resize', scheduleResponsiveSync)
     window.visualViewport?.removeEventListener('resize', scheduleResponsiveSync)
     window.visualViewport?.removeEventListener('scroll', scheduleResponsiveSync)
     window.removeEventListener(UPGRADE_ACCOUNT_EVENT, handleUpgradeRequest)
@@ -412,8 +401,6 @@ watch(
 </script>
 
 <TooltipProvider />
-
-<svelte:window bind:innerWidth={windowWidth} bind:innerHeight={windowHeight} />
 
 {#if isShelllessRoute}
   <div class={shelllessClass}>{@render children()}</div>

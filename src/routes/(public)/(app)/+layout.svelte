@@ -35,7 +35,7 @@ import { toast } from 'svelte-sonner'
 import { ProductUsageObserver } from '#lib/analytics/clientProductUsage.js'
 // COMPONENTS
 import DeferredPanel from '#lib/bits/patterns/panels/DeferredPanel.svelte'
-import AppEntrance from '#lib/bits/patterns/layout/app/components/AppEntrance.svelte'
+import AppSurface from '#lib/bits/patterns/layout/app/components/AppSurface.svelte'
 import LoadScreen from '#lib/bits/custom/loading/LoadScreen.svelte'
 // I18N
 import { m } from '#lib/i18n.js'
@@ -51,20 +51,18 @@ import {
   getActiveMapStyleIdentity,
 } from '#lib/client/services/map.js'
 import MapCanvas from '#lib/bits/patterns/maps/LazyMapCanvas.svelte'
-import StationSurface from '#lib/bits/patterns/station/StationSurface.svelte'
+import MapLoading from '#lib/bits/patterns/maps/MapLoading.svelte'
 import { useResourcePanelModel } from '#lib/adapters/panels/useResourcePanelModel.svelte.js'
 // import Plan from '#lib/bits/patterns/planPanel/PlanPanel.svelte'
 // import Passport from '#lib/bits/patterns/passportPanel/PassportPanel.svelte'
 // import EventCompanion from '#lib/bits/patterns/eventCompanionPanel/EventCompanionPanel.svelte'
 // BITS
-import {
-  AppHubSubscriptionOverlay,
-  AppMapOverlayBar,
-  AppMain,
-  AppNav,
-  AppShell,
-  Omnibar,
-} from '#lib/bits/index.js'
+import AppHubSubscriptionOverlay from '#lib/bits/patterns/layout/app/components/AppHubSubscriptionOverlay.svelte'
+import AppMapOverlayBar from '#lib/bits/patterns/layout/app/components/AppMapOverlayBar.svelte'
+import AppMain from '#lib/bits/patterns/layout/app/components/AppMain.svelte'
+import AppNav from '#lib/bits/patterns/layout/app/components/AppNav.svelte'
+import AppShell from '#lib/bits/patterns/layout/app/components/AppShell.svelte'
+import Omnibar from '#lib/bits/patterns/bars/omnibar/Omnibar.svelte'
 // ENUMS
 import { PageState } from '#lib/enums.js'
 // BITS COMPONENTS
@@ -135,10 +133,24 @@ const isIndoorRoute = $derived(
 let hasRequestedOverworld = $state(false)
 // Retain the outdoor camera after its first use, including subsequent indoor visits.
 $effect(() => {
-  if (!isIndoorRoute || appCtx.station.returningToMap) hasRequestedOverworld = true
+  if (!isIndoorRoute || appCtx.station.returningToMap) {
+    hasRequestedOverworld = true
+    // Download the renderer while identity and layer defaults resolve. LazyMapCanvas owns retry.
+    void import('#lib/bits/patterns/maps/MapCanvas.svelte').catch(() => {})
+  }
 })
-let isMapVisualReady = $state(false)
-let hasCompletedMapIntro = $state(false)
+let hasPaintedMap = $state(false)
+// Mount controls once both the viewport and the available map area have real dimensions.
+const controlsReady = $derived(
+  responsiveCtx.visibleWindowWidth > 0 &&
+    responsiveCtx.visibleWindowHeight > 0 &&
+    surfaceLayout.main.width > 0 &&
+    surfaceLayout.main.height > 0,
+)
+// Account-scoped contents need their context even when the controls are already interactive.
+const dataReady = $derived(
+  Boolean($session.data && !$session.isPending && appCtx.view.isInitialised),
+)
 
 // Reapply the opening guard on viewport resize while preserving the newest panel.
 $effect(() => {
@@ -168,13 +180,13 @@ const starsModel = {
     appCtx.view,
     omniCtx,
     'wishlist',
-    () => starsShell.open,
+    () => dataReady && starsShell.open,
   ),
   visited: useSavedFeatureListModel(
     appCtx.view,
     omniCtx,
     'visited',
-    () => starsShell.open,
+    () => dataReady && starsShell.open,
   ),
   get isGuestAccount() {
     return $session.data?.user?.isAnonymous === true
@@ -185,7 +197,7 @@ const filtersModel = useFilterPanelModel(
   appCtx.view,
   omniCtx,
   appCtx.zoomToFilteredFeatures,
-  () => filtersShell.open,
+  () => dataReady && filtersShell.open,
 )
 const prismsModel = useResourcePanelModel(appCtx.view, 'prisms', undefined, omniCtx)
 const omnibarModel = useOmnibarModel(
@@ -329,7 +341,7 @@ $effect(() => {
 let hasRunInitialSync = $state(false)
 
 $effect(() => {
-  if (!browser || !appCtx.view.isInitialised || hasRunInitialSync) {
+  if (!browser || !controlsReady || hasRunInitialSync) {
     return
   }
 
@@ -572,19 +584,13 @@ $effect(() => {
 <svelte:window onkeydown={handleWindowKeydown}></svelte:window>
 
 <AppShell>
-  {#if !$session.isPending && $session.data && appCtx.view.isInitialised}
-    <AppEntrance
-      ready={isIndoorRoute || isMapVisualReady}
-      enabled={!hasCompletedMapIntro}
-      onComplete={() => {
-        hasCompletedMapIntro = true
-      }}
-    >
-      {#if hasRequestedOverworld}
+  {#if !appCtx.view.publicationPreview || dataReady}
+    <AppSurface intro={controlsReady ? 'complete' : undefined}>
+      {#if hasRequestedOverworld && dataReady}
         <MapCanvas
-          intro={!hasCompletedMapIntro}
+          intro={!hasPaintedMap}
           onVisualReady={() => {
-            isMapVisualReady = true
+            hasPaintedMap = true
           }}
           highlightedSegment={navigationModel.highlightedSegment}
           journey={navigationModel.state.phase === 'ready'
@@ -596,27 +602,54 @@ $effect(() => {
           }}
         />
       {/if}
-      <StationSurface />
+      <!-- Retain the indoor controller after first entry so it can finish a return to the world map. -->
+      <DeferredPanel
+        active={dataReady && (isIndoorRoute || appCtx.station.active)}
+        load={() => import('#lib/bits/patterns/station/StationSurface.svelte')}
+      >
+        {#snippet pending()}
+          <MapLoading />
+        {/snippet}
+        {#snippet children(StationSurface)}
+          <StationSurface />
+        {/snippet}
+      </DeferredPanel>
       <!-- Panels -->
       {#if appCtx.station.active}
-        <DeferredPanel active={prismsModel.open} load={publicPanelModules.station}>
+        <DeferredPanel
+          active={prismsModel.open}
+          ready={dataReady}
+          load={publicPanelModules.station}
+        >
           {#snippet children(StationPanel)}
             <StationPanel model={prismsModel} />
           {/snippet}
         </DeferredPanel>
       {:else}
-        <DeferredPanel active={prismsModel.open} load={publicPanelModules.prisms}>
+        <DeferredPanel
+          active={prismsModel.open}
+          ready={dataReady}
+          load={publicPanelModules.prisms}
+        >
           {#snippet children(ResourcePanel)}
             <ResourcePanel model={prismsModel} />
           {/snippet}
         </DeferredPanel>
       {/if}
-      <DeferredPanel active={starsShell.open} load={publicPanelModules.stars}>
+      <DeferredPanel
+        active={starsShell.open}
+        ready={dataReady}
+        load={publicPanelModules.stars}
+      >
         {#snippet children(Stars)}
           <Stars shell={starsShell} model={starsModel} />
         {/snippet}
       </DeferredPanel>
-      <DeferredPanel active={hubShell.open} load={publicPanelModules.hub}>
+      <DeferredPanel
+        active={hubShell.open}
+        ready={dataReady}
+        load={publicPanelModules.hub}
+      >
         {#snippet children(Hub)}
           <Hub
             shell={hubShell}
@@ -629,13 +662,18 @@ $effect(() => {
           />
         {/snippet}
       </DeferredPanel>
-      <DeferredPanel active={filtersShell.open} load={publicPanelModules.filters}>
+      <DeferredPanel
+        active={filtersShell.open}
+        ready={dataReady}
+        load={publicPanelModules.filters}
+      >
         {#snippet children(Filters)}
           <Filters shell={filtersShell} model={filtersModel} />
         {/snippet}
       </DeferredPanel>
       <DeferredPanel
         active={navigationShell.open}
+        ready={dataReady}
         load={() => import('#lib/bits/patterns/navigationPanel/NavigationPanel.svelte')}
       >
         {#snippet children(NavigationPanel)}
@@ -645,13 +683,18 @@ $effect(() => {
       <!-- <Plan /> -->
       <!-- <Passport /> -->
       <!-- <EventCompanion /> -->
-      <DeferredPanel active={settingsModel.open} load={publicPanelModules.settings}>
+      <DeferredPanel
+        active={settingsModel.open}
+        ready={dataReady}
+        load={publicPanelModules.settings}
+      >
         {#snippet children(SettingsPanel)}
           <SettingsPanel model={settingsModel} />
         {/snippet}
       </DeferredPanel>
       <DeferredPanel
         active={profileShell.open && Boolean(profileModel.username)}
+        ready={dataReady}
         load={() => import('#lib/bits/patterns/profilePanel/ProfilePanel.svelte')}
       >
         {#snippet children(ProfilePanel)}
@@ -663,70 +706,76 @@ $effect(() => {
         {/snippet}
       </DeferredPanel>
       <AppMain>
-        {#if navigationModel.showingMap && navigationModel.state.phase === 'ready'}
-          <div
-            class="border-border bg-panel pointer-events-auto absolute bottom-40 left-1/2 z-40 flex -translate-x-1/2 gap-2 rounded-xl border p-2 shadow-lg"
-          >
-            <button
-              type="button"
-              class="bg-primary text-primary-content rounded-lg px-4 py-3 text-sm font-medium whitespace-nowrap"
-              onclick={() => navigationModel.showDirections()}
+        {#if controlsReady}
+          {#if navigationModel.showingMap && navigationModel.state.phase === 'ready'}
+            <div
+              class="border-border bg-panel pointer-events-auto absolute bottom-40 left-1/2 z-40 flex -translate-x-1/2 gap-2 rounded-xl border p-2 shadow-lg"
             >
-              Show directions
-            </button>
-            <button
-              type="button"
-              class="hover:bg-base-content/10 rounded-lg px-3 py-3 text-sm whitespace-nowrap"
-              onclick={() => navigationModel.close()}
-            >
-              End route
-            </button>
-          </div>
-        {/if}
-        <AppHubSubscriptionOverlay
-          class="z-50"
-          isVisible={subscriptionVisibility.showHubSubscriptionOverlay ||
-            isHubSubscriptionOverlayOpen}
-          offsetX={subscriptionOffsetX}
-          subscriptionOverlayProps={hubSubscriptionOverlayProps}
-          {privacyPolicyDialogProps}
-          {termsOfServiceDialogProps}
-        />
-        <Omnibar {...omnibarProps}>
-          {#snippet below()}
-            {#if appCtx.view.publicationPreview}
-              <aside
-                aria-label={m.publication_preview__title()}
-                class="border-error/40 bg-panel text-error pointer-events-auto mx-auto mt-3 flex w-fit max-w-full items-center gap-3 rounded-full border px-3 py-1.5 text-xs shadow-lg"
+              <button
+                type="button"
+                class="bg-primary text-primary-content rounded-lg px-4 py-3 text-sm font-medium whitespace-nowrap"
+                onclick={() => navigationModel.showDirections()}
               >
-                <span class="min-w-0 leading-relaxed"
-                  >{m.publication_preview__banner()}</span
+                Show directions
+              </button>
+              <button
+                type="button"
+                class="hover:bg-base-content/10 rounded-lg px-3 py-3 text-sm whitespace-nowrap"
+                onclick={() => navigationModel.close()}
+              >
+                End route
+              </button>
+            </div>
+          {/if}
+          <AppHubSubscriptionOverlay
+            class="z-50"
+            isVisible={dataReady &&
+              (subscriptionVisibility.showHubSubscriptionOverlay ||
+                isHubSubscriptionOverlayOpen)}
+            offsetX={subscriptionOffsetX}
+            subscriptionOverlayProps={hubSubscriptionOverlayProps}
+            {privacyPolicyDialogProps}
+            {termsOfServiceDialogProps}
+          />
+          <Omnibar {...omnibarProps}>
+            {#snippet below()}
+              {#if appCtx.view.publicationPreview}
+                <aside
+                  aria-label={m.publication_preview__title()}
+                  class="border-error/40 bg-panel text-error pointer-events-auto mx-auto mt-3 flex w-fit max-w-full items-center gap-3 rounded-full border px-3 py-1.5 text-xs shadow-lg"
                 >
-                <a
-                  href={appCtx.publicationPreviewExitUrl}
-                  data-sveltekit-reload
-                  class="bg-error/15 text-error hover:bg-error/25 focus-visible:outline-error shrink-0 rounded-full px-3 py-1.5 font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
-                  >{m.publication_preview__exit()}</a
-                >
-              </aside>
-            {/if}
-          {/snippet}
-        </Omnibar>
-        {@render children()}
-        <AppMapOverlayBar />
-        <AppNav
-          {hub}
-          getMapCenter={appCtx.getMapCenter}
-          subscriptionItem={{
-            isVisible: subscriptionVisibility.showAppMenuSubscriptionItem,
-            label: appMenuSubscriptionItemProps.label ?? 'Subscribe',
-            onSelect:
-              appMenuSubscriptionItemProps.onSelect ?? handleOpenHubSubscriptionOverlay,
-          }}
-        />
+                  <span class="min-w-0 leading-relaxed"
+                    >{m.publication_preview__banner()}</span
+                  >
+                  <a
+                    href={appCtx.publicationPreviewExitUrl}
+                    data-sveltekit-reload
+                    class="bg-error/15 text-error hover:bg-error/25 focus-visible:outline-error shrink-0 rounded-full px-3 py-1.5 font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+                    >{m.publication_preview__exit()}</a
+                  >
+                </aside>
+              {/if}
+            {/snippet}
+          </Omnibar>
+          {#if dataReady}
+            {@render children()}
+          {/if}
+          <AppMapOverlayBar />
+          <AppNav
+            {hub}
+            getMapCenter={appCtx.getMapCenter}
+            subscriptionItem={{
+              isVisible: subscriptionVisibility.showAppMenuSubscriptionItem,
+              label: appMenuSubscriptionItemProps.label ?? 'Subscribe',
+              onSelect:
+                appMenuSubscriptionItemProps.onSelect ??
+                handleOpenHubSubscriptionOverlay,
+            }}
+          />
+        {/if}
       </AppMain>
-    </AppEntrance>
-  {:else if appCtx.view.publicationPreview}
+    </AppSurface>
+  {:else}
     <LoadScreen
       label={m.publication_preview__preparing()}
       hubCode={page.data.hub?.code}
