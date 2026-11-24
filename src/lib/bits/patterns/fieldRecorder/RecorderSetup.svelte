@@ -231,9 +231,10 @@ $effect(() => {
 // Refresh creator choices within the current authorized prism and record scope.
 $effect(() => {
   if (sessionId || creating || !filtersVisible) return
-  const options = { archive, prisms, hasRecords: hasRecords ?? undefined }
   let active = true
-  refreshRemoteQuery(getResearchSessionFilters(options))
+  refreshRemoteQuery(
+    getResearchSessionFilters({ archive, prisms, hasRecords: hasRecords ?? undefined }),
+  )
     .then(result => {
       if (active) creators = result.creators
     })

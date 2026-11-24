@@ -26,7 +26,7 @@ test('rejects archive redirects without asking Workers to use unsupported redire
       headers: { location: 'https://example.com/' },
     })
   })
-  globalThis.fetch = fetchMock as typeof fetch
+  globalThis.fetch = Object.assign(fetchMock, { preconnect: originalFetch.preconnect })
   await expect(lookupSheet([114.19, 22.33])).rejects.toThrow(
     'Could not inspect CSDI archive',
   )
@@ -46,7 +46,7 @@ test('rejects redirects on archive ranges', async () => {
       headers: { location: 'https://example.com/' },
     })
   })
-  globalThis.fetch = fetchMock as typeof fetch
+  globalThis.fetch = Object.assign(fetchMock, { preconnect: originalFetch.preconnect })
   await expect(lookupSheet([114.19, 22.33])).rejects.toThrow(
     'CSDI did not return the requested archive range',
   )
