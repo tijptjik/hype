@@ -145,8 +145,10 @@ result.
 
 The production database apply is complete and verified. The combined checklist item
 remains unchecked because live application acceptance has not passed. The repository's
-production-to-DEV restore command is also being exercised on a private copy; DEV itself
-has not been overwritten.
+production-to-DEV restore command passed on a private copy: all 172 expected tables and
+311 donor phones matched, with integrity OK and zero foreign-key violations
+(`post-apply/mirror-verification.json`). Its 4,737 search documents were rebuilt. DEV
+itself has not been overwritten.
 
 ### Recovery evidence
 
