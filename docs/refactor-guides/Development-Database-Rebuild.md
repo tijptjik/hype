@@ -7,6 +7,15 @@ Development and browser acceptance use the normal `hype-db-local` database in
 `.wrangler/state/v3/d1/miniflare-D1DatabaseObject`. Do not set `HYPE_DEV_STATE` or
 maintain a separate acceptance database for this workflow.
 
+For a production-only local mirror, stop the development server and run
+`bun run db:mirror:prod:to:local`. It exports HYPE and installs the verified SQLite
+restore, retaining a private backup of the previous local database in `sql/backup`. It
+does not apply local migrations, reconcile Breadline, or create development fixtures.
+Run `bun run db:mirror:post:local` separately if those local migrations, map styles,
+division preparation and reserved personas are needed. The mirror refuses installation
+when the export has foreign-key violations or the local database is open. The mirror
+replaces local data; save any local-only work before running it.
+
 Prerequisites: the configured Cloudflare read credentials and Breadline source
 connection in `.dev.vars`, plus the reviewed private inputs
 `.local/breadline/users/production/accepted-sync.json` and
@@ -69,7 +78,7 @@ Private exports, plans, input hashes, conflicts, counts and the before-image liv
 `.local/dev-rebuilds/<timestamp>-<id>/`. Keep these artifacts private. The identity seed
 and user decisions are inputs too: losing the seed can change imported IDs.
 
-User reconciliation is a required refresh stage, including when recovering a failed
+User reconciliation is a required rebuild stage, including when recovering a failed
 refresh manually. `receipt.userReconciliation.status` must be `passed`, with a
 zero-write replay, before the refreshed data is reported as ready. Its plan, original
 source baseline, accepted local source state and aggregate counts are retained with the

@@ -52,7 +52,7 @@
     "db:sync:map:styles:local": "bun run scripts/sync-map-styles.ts local",
     "db:sync:map:styles:preview": "bun run scripts/sync-map-styles.ts preview",
     "db:sync:map:styles:prod": "bun run scripts/sync-map-styles.ts prod",
-    "db:mirror:prod:to:local": "bun run db:prepare:local",
+    "db:mirror:prod:to:local": "bun run scripts/dev/export-d1.ts prod --mirror-local",
     "db:mirror:post:local": "bun run db:migration:run:local && bun run db:sync:map:styles:local && bun --env-file=.dev.vars run scripts/dev/prepare-mirror.ts",
     "db:mirror:local:to:preview": "bun run db:dump:local && bun run db:reset:preview && bun run db:restore:latest:local:to:preview",
     "db:mirror:prod:to:preview": "bun run db:dump:cf:prod && bun run db:reset:preview && bun run db:restore:latest:prod:to:preview",

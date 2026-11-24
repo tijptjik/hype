@@ -18,6 +18,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   renameSync,
   rmSync,
   writeFileSync,
@@ -141,6 +142,7 @@ export function planD1Export(response: unknown): ExportPlan {
  * @param canonicalPath Wrangler data-only export of the planned ordinary tables.
  * @param plan Validated schema and rebuild plan.
  * @param outputPath New staging SQL file; never overwrite an existing file.
+ * @param retainDatabase Keep the verified SQLite file for a local mirror installation.
  * @returns Number of rebuilt search documents and existing foreign-key violations.
  * @remarks The original SQL bytes and trigger bodies bypass the legacy reorder parser.
  * Foreign-key violations are reported, preserving the source rather than repairing it.
@@ -149,6 +151,7 @@ export function completeD1Export(
   canonicalPath: string,
   plan: ExportPlan,
   outputPath: string,
+  retainDatabase = false,
 ): { searchDocuments: number; foreignKeyViolations: number } {
   const sql = `PRAGMA defer_foreign_keys=ON;\n${plan.beforeDataSql}\n\n${readFileSync(canonicalPath, 'utf8')}\n\n-- Secondary schema and derived search; triggers must follow the data.\n${plan.afterDataSql}\n`
   writeFileSync(outputPath, sql, { flag: 'wx', mode: 0o600 })
@@ -196,7 +199,7 @@ export function completeD1Export(
     }
   } finally {
     db.close()
-    rmSync(verificationPath, { force: true })
+    if (!retainDatabase) rmSync(verificationPath, { force: true })
   }
 }
 
@@ -257,9 +260,46 @@ function schemaObjects(response: unknown): SchemaObject[] {
  */
 async function main(): Promise<void> {
   const [environment, ...args] = process.argv.slice(2)
-  if (!['prod', 'preview'].includes(environment) || args.some(arg => arg !== '--yes'))
-    throw new Error('Usage: export-d1.ts <prod|preview> [--yes]')
+  if (
+    !['prod', 'preview'].includes(environment) ||
+    args.some(arg => !['--yes', '--mirror-local'].includes(arg)) ||
+    (args.includes('--mirror-local') && environment !== 'prod')
+  )
+    throw new Error(
+      'Usage: export-d1.ts <prod|preview> [--yes] [--mirror-local (prod only)]',
+    )
   process.umask(0o077)
+  const mirrorLocal = args.includes('--mirror-local')
+  let destination: string | undefined
+  if (mirrorLocal) {
+    if (
+      process.env.HYPE_DEV_STATE ||
+      process.env.CLOUDFLARE_ENV ||
+      (process.env.ENVIRONMENT && process.env.ENVIRONMENT !== 'local')
+    )
+      throw new Error(
+        'Unset alternate state/environment: mirror targets normal local development only',
+      )
+    const config = Bun.TOML.parse(readFileSync('wrangler.local.toml', 'utf8')) as {
+      vars: { ENVIRONMENT?: string }
+      d1_databases: Array<{ binding: string; remote?: boolean; database_name: string }>
+    }
+    const bindings = config.d1_databases.filter(row => row.binding === 'DB')
+    if (
+      bindings.length !== 1 ||
+      bindings[0].remote ||
+      bindings[0].database_name !== 'hype-db-local' ||
+      config.vars.ENVIRONMENT !== 'local'
+    )
+      throw new Error('Expected the explicit local DB binding')
+    const namespace = resolve('.wrangler/state/v3/d1/miniflare-D1DatabaseObject')
+    const candidates = readdirSync(namespace).filter(name =>
+      /^[a-f0-9]{64}\.sqlite$/.test(name),
+    )
+    if (candidates.length !== 1)
+      throw new Error('Expected exactly one normal local D1 database')
+    destination = resolve(namespace, candidates[0])
+  }
   const name = `hype-db-${environment}`
   const target = [
     name,
@@ -305,7 +345,30 @@ async function main(): Promise<void> {
       )
     console.info('Rehearsing standalone SQL restore and rebuilding search locally…')
     const output = join(stage, 'complete.sql')
-    const verification = completeD1Export(canonical, plan, output)
+    const verification = completeD1Export(canonical, plan, output, mirrorLocal)
+
+    if (mirrorLocal) {
+      if (verification.foreignKeyViolations)
+        throw new Error(
+          'Production export has foreign-key violations; refusing local installation',
+        )
+      const backup = `${base}-before-local.sqlite`
+      console.info('Installing the verified mirror; the local database must be closed…')
+      const install = Bun.spawn(
+        [
+          'python3',
+          'scripts/dev/rebuild-database.py',
+          'install',
+          `${output}.verify.sqlite`,
+          destination!,
+          backup,
+        ],
+        { stdin: 'inherit', stdout: 'inherit', stderr: 'inherit' },
+      )
+      if ((await install.exited) !== 0)
+        throw new Error('Local mirror installation failed')
+      console.info(`Previous local database backed up: ${backup}`)
+    }
 
     // Publish the compatibility filename last so restore commands cannot select partial SQL.
     renameSync(join(stage, 'schema.json'), `${base}-schema.json`)

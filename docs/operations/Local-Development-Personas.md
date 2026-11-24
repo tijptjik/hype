@@ -25,11 +25,11 @@ session; the next document navigation signs the configured persona in again. Res
 with `user` or `admin` to switch personas.
 
 The launcher does not restore, reset, or migrate the database.
-`bun run db:mirror:prod:to:local` now runs `db:mirror:post:local` after restoring: it
-applies local migrations, syncs map styles, backfills missing H3 cells, and initializes
-both reserved agent users. The spatial backfill is temporary until production mirrors
-include populated cells; it remains idempotent when cells already exist.
-`db:prepare:local` uses the same complete mirror workflow.
+`bun run db:mirror:prod:to:local` restores a production-only mirror. Run
+`bun run db:mirror:post:local` separately to apply local migrations, sync map styles,
+verify spatial cells, prepare divisions and initialize both reserved agent users.
+`db:prepare:local` instead runs the full development rebuild, including Breadline
+reconciliation and development fixtures.
 
 For an already restored database, run `bun run db:mirror:post:local` without downloading
 or resetting the mirror. It also drains the division backfill through the refresh

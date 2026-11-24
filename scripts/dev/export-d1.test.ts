@@ -189,4 +189,34 @@ END;`)
       rmSync(directory, { recursive: true, force: true })
     }
   })
+
+  it('can retain the verified restore for installation without replaying the export', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'hype-d1-retained-'))
+    try {
+      const plan = planD1Export(
+        response([
+          {
+            type: 'table',
+            name: 'item',
+            sql: 'CREATE TABLE item(id INTEGER PRIMARY KEY)',
+          },
+        ]),
+      )
+      const canonical = join(directory, 'canonical.sql')
+      const output = join(directory, 'complete.sql')
+      writeFileSync(canonical, 'INSERT INTO item VALUES (42);')
+      completeD1Export(canonical, plan, output, true)
+      const db = new Database(`${output}.verify.sqlite`, { readonly: true })
+      try {
+        expect(db.query('SELECT id FROM item').get()).toEqual({ id: 42 })
+        expect(db.query('PRAGMA integrity_check').get()).toEqual({
+          integrity_check: 'ok',
+        })
+      } finally {
+        db.close()
+      }
+    } finally {
+      rmSync(directory, { recursive: true, force: true })
+    }
+  })
 })
