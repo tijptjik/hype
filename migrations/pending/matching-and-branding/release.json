@@ -1,10 +1,8 @@
 {
   "package": "matching-and-branding-20261124",
   "files": {
-    "donor-phones.json.gz": "5577a118d1454b6dab01ccfcbcf4ee3328830aac2e622c737d45e980c73acede",
     "curation.json": "8c3f643d97d2ff7a4ad0a6ad11a8a2e98fc7bee4138d1e58b1e2f6281508d7af",
     "records.jsonl.gz": "23d250355ded70319db595e7214b5b7abfb1f8d963a8f8e51bebc734842a4d53",
-    "media.json": "a34828e8d2806a7e597a6fc5742dca372a1da72d6a5ae4367f356253046a3397",
-    "production-baseline.json.gz": "7e76cda690cb8143d65a6e5f278d61d4ec168e354ec65cb1132ec3ba4cdd2de0"
+    "media.json": "a34828e8d2806a7e597a6fc5742dca372a1da72d6a5ae4367f356253046a3397"
   }
 }

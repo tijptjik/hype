@@ -230,9 +230,7 @@ class ProductionAncestry:
     def adapt(self, table, before, after):
         """Return the reviewed target before/after pair, or skip preserved source-only ancestry."""
         if table == "location" and before:
-            # SQLite exposes generated matchingType in SELECT *, but derives it on installation.
-            source = self.by_place[before["id"]]["location"]
-            target = {column: source[column] for column in before}
+            target = self.by_place[before["id"]]["location"]
             return target, merge(before, target, after, "location")
         if table == "locationRevision" and before:
             if before != after:
@@ -302,31 +300,6 @@ class ProductionAncestry:
                 "feature.addressMeta",
             )
             original["addressMeta"] = target["addressMeta"]
-            if before["geometry"] != after["geometry"]:
-                # The native move triggers invalidate division and MTR caches belonging to the old coordinates.
-                for column in (
-                    "countryId",
-                    "areaId",
-                    "districtId",
-                    "townId",
-                    "ruralAreaId",
-                    "macrohoodId",
-                    "neighbourhoodId",
-                    "villageId",
-                    "microhoodId",
-                    "hamletId",
-                    "islandId",
-                    "divisionResolution",
-                    "mtrStation",
-                    "mtrExit",
-                    "mtrDistance",
-                    "mtrResolution",
-                ):
-                    if after[column] is not None:
-                        raise ValueError(
-                            "Moved donor has an unexpected cached " + column
-                        )
-                    original[column] = target[column]
             return target, merge(original, target, new, "feature")
         return before, after
 

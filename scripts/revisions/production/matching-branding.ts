@@ -22,7 +22,6 @@ const inputs = [
   'curation.json',
   'media.json',
   'production-baseline.json.gz',
-  'donor-phones.json.gz',
 ] as const
 
 /** Pin the private release data for all preparations and retries in this run.

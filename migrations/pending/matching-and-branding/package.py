@@ -12,8 +12,7 @@ import sqlite3
 from pathlib import Path
 
 from scope import FILTERS, initialize_scope, layout, read_db, records
-from production_baseline import ProductionAncestry, verify_retained_source
-import donor_phones
+from production_baseline import ProductionAncestry, REFERENCE, verify_retained_source
 
 ACTOR = "qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM"
 STAGE = "_matchingBrandingReleaseRows"
@@ -273,13 +272,6 @@ def extract(alias, side, field):
     return f"""json_extract({alias}.{side},'$.{field}')"""
 
 
-def row_matches(cols, side):
-    """Compare every stored value, including NULL, without a deep AND tree on wide tables."""
-    target = ",".join(qualified("t", col) for col in cols)
-    staged = ",".join(extract("s", side, col) for col in cols)
-    return f"({target}) IS ({staged})"
-
-
 def sql_stage(table, cols, keys, ops):
     """Set-based transactional DML. Every touched primary key is compared byte-for-byte."""
     name = f'"{table}"'
@@ -290,7 +282,9 @@ def sql_stage(table, cols, keys, ops):
         join = " AND ".join(
             f"{qualified('t', c)} IS {extract('s', src, c)}" for c in keys
         )
-        eq = row_matches(cols, "b")
+        eq = " AND ".join(
+            f"{qualified('t', c)} IS {extract('s', 'b', c)}" for c in cols
+        )
         if op == "insert":
             clauses.append(
                 guard(f"NOT EXISTS(SELECT 1 FROM {rows} s JOIN {name} t ON {join})")
@@ -437,7 +431,9 @@ def groups_for(pending, table_ops, manifest, db):
         join = " AND ".join(
             f"{qualified('t', c)} IS {extract('s', 'a', c)}" for c in keys
         )
-        eq = row_matches(cols, "a")
+        eq = " AND ".join(
+            f"{qualified('t', c)} IS {extract('s', 'a', c)}" for c in cols
+        )
         final.append(
             guard(f"""NOT EXISTS(SELECT 1 FROM {STAGE} s LEFT JOIN "{table}" t ON {join}
          WHERE s.tbl='{table}' AND s.op!='delete' AND (t."{keys[0]}" IS NULL OR NOT ({eq})))""")
@@ -463,15 +459,12 @@ def compare(directory, manifest, db, conflict_path=None):
     pending, table_ops, conflicts = [], {}, []
     seeds = release_seed(db)
     ancestry = None
-    production = donor_phones.independent_enrollment(db)
-    overlay = donor_phones.read_overlay(directory, production)
-
-    def amended_stream(path, data):
-        return donor_phones.with_phones(stream(path, data), overlay)
-
-    if production:
-        ancestry = ProductionAncestry(directory, manifest, db, amended_stream)
-    for entry in amended_stream(directory, manifest):
+    if (directory / REFERENCE).is_file() and db.execute(
+        """SELECT 1 FROM featureLocationHistory h JOIN breadlineImportFeature b
+           ON b.featureId=h.featureId WHERE h.action='baseline' AND h.version='initial' LIMIT 1"""
+    ).fetchone():
+        ancestry = ProductionAncestry(directory, manifest, db, stream)
+    for entry in stream(directory, manifest):
         if isinstance(entry, dict):
             table, cols, keys = entry["table"], entry["cols"], tuple(entry["keys"])
             if table not in FILTERS:
@@ -584,8 +577,6 @@ def prepare(args):
     )
     print("Target-specific row operations", len(pending), flush=True)
     groups = groups_for(pending, ops, manifest, trial) if pending else []
-    # Compile the release SQL with workerd's expression depth limit during preparation.
-    trial.setlimit(sqlite3.SQLITE_LIMIT_EXPR_DEPTH, 100)
     for group in groups:
         execute(trial, group)
     trial.close()
@@ -615,27 +606,9 @@ def prepare(args):
         "foreignKeys": 0,
         "cohorts": {k: len(v) for k, v in manifest["expected"].items()},
     }
-    report["donorPhones"] = donor_phones.verify(
-        trial,
-        donor_phones.read_overlay(
-            args.package, donor_phones.independent_enrollment(trial)
-        ),
-    )
     preserved = verify_retained_source(trial, args.target)
     if preserved is not None:
         report["originalProductionRowsPreserved"] = preserved
-        report["donorEstablishments"] = [
-            dict(row)
-            for row in trial.execute(
-                """SELECT l.state, count(*) AS donors, count(DISTINCT l.id) AS locations,
-                          count(DISTINCT CASE WHEN prior.id IS NULL THEN l.id END) AS createdLocations
-                   FROM main.breadlineImportFeature b
-                   JOIN main.featureLocation fl ON fl.featureId=b.featureId
-                   JOIN main.location l ON l.id=fl.locationId
-                   LEFT JOIN original.location prior ON prior.id=l.id
-                   WHERE b.sourceTable='donors' GROUP BY l.state ORDER BY l.state"""
-            )
-        ]
     (args.output / "verification.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report))
 

@@ -162,3 +162,28 @@ it('includes explicitly entered rooms in building address previews in every lang
   expect(getAddressDisplay(value, 'zhHans', [], 'building')).toContain('6')
   expect(getAddressDisplay(value, 'en', [], 'building')).toContain('Rm 6')
 })
+
+it('uses building-name evidence when the catalogue has no name', () => {
+  const input = localIdentityFromAddress('building', {}, address())
+  expect(input.facts.names.en).toBe('C Wisdom Centre')
+})
+
+it('accepts an unnamed building without inventing a name from its address', () => {
+  const value = address()
+  value.overrides = {
+    en: { formattedAddress: '35 Hollywood Road', buildingName: null },
+    'zh-hant': { formattedAddress: '', buildingName: null },
+  }
+  const input = localIdentityFromAddress('building', {}, value)
+  expect(input.facts.names).toEqual({})
+  expect(input.facts.location.geometry.coordinates).toEqual(value.coordinates)
+})
+
+it('preserves explicit building names over address evidence', () => {
+  const input = localIdentityFromAddress(
+    'building',
+    { en: 'Reviewed Building' },
+    address(),
+  )
+  expect(input.facts.names.en).toBe('Reviewed Building')
+})

@@ -86,7 +86,17 @@ export function localIdentityFromAddress(
     state: visibility === 'exclusive' ? 'manual' : 'unresolved',
     sharingPreference: 'private',
     facts: {
-      names: kind === 'address' ? addressLocationNames(address) : names,
+      names:
+        kind === 'address'
+          ? addressLocationNames(address)
+          : kind === 'building'
+            ? {
+                ...addressBuildingNames(address),
+                ...Object.fromEntries(
+                  Object.entries(names).filter(([, name]) => name.trim()),
+                ),
+              }
+            : names,
       phoneNumber: [],
       brands: [],
       location: {

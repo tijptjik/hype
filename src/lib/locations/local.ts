@@ -56,13 +56,6 @@ export const LocalLocationInputSchema = z
           path: ['footprint'],
           message: 'Author local footprints as inline geometry',
         })
-      if (!Object.values(facts.names).some(name => name.trim().length > 0)) {
-        context.addIssue({
-          code: 'custom',
-          path: ['names'],
-          message: 'A Location name is required',
-        })
-      }
       const address = facts.location.address
       // Newly authored number fields must have valid syntax and ordered endpoints.
       for (const [locale, fields] of Object.entries(address.authored?.i18n ?? {})) {
@@ -135,6 +128,17 @@ export const LocalLocationInputSchema = z
         return
       }
       input.kind = LocationKindSchema.parse(locationMatchingType(pair.data))
+    }
+    // Buildings may be unnamed; their identity and geometry remain independently required.
+    if (
+      input.kind !== 'building' &&
+      !Object.values(input.facts.names).some(name => name.trim().length > 0)
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['facts', 'names'],
+        message: 'A Location name is required',
+      })
     }
     if (
       input.kind === 'building_part'
