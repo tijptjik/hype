@@ -366,7 +366,7 @@ onDestroy(() => {
   {#if combining}
     <section
       aria-label="Combined building evidence"
-      class="border-border space-y-3 rounded-lg border bg-white p-4"
+      class="border-border bg-panel text-foreground space-y-3 rounded-lg border p-4"
     >
       <h3 class="font-semibold">One physical building</h3>
       <p class="text-muted-foreground text-sm">
