@@ -47,8 +47,8 @@ let {
   disabled = false,
   onSaved,
 }: {
-  organisationId: string
   sessionId: string
+  organisationId: string
   projectId: string
   revision: number
   disabled?: boolean
@@ -417,8 +417,8 @@ onMount(() => void load().catch(error => (failure = String(error))))
             </div>
           </div>
           <div class="flex animate-pulse gap-2 pt-1">
-            <div class="bg-muted h-10 w-48 rounded-lg"></div>
-            <div class="bg-muted h-10 w-20 rounded-lg"></div>
+            <div class="bg-muted h-11 w-16 rounded-lg"></div>
+            <div class="bg-muted ml-auto size-11 rounded-lg"></div>
           </div>
         </div>
       {:else if !added.length}
