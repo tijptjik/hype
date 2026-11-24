@@ -112,12 +112,21 @@ test('opens the model facing its front and links its caption to the Location', a
   await expect(page).toHaveURL(url => url.pathname + url.search === href)
 })
 
-test('fills the session workspace with the building map', async ({ page }) => {
+test('fills the session workspace and lowers the camera to view facades', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1600, height: 940 })
   await page.goto(session + '&models=map#locations', {
     waitUntil: 'domcontentloaded',
   })
   const region = page.getByRole('region', { name: 'Session building map' })
+  const compass = region.locator('.maplibregl-ctrl-compass .maplibregl-ctrl-icon')
+  await expect(compass).toBeVisible({ timeout: 60_000 })
+  const pitch = () =>
+    compass.evaluate(el => {
+      const transform = new DOMMatrix(getComputedStyle(el).transform)
+      return (Math.acos(transform.m33) * 180) / Math.PI
+    })
   const canvas = region.locator('canvas').first()
   const main = page.locator('main[data-responsive-main]')
   await expect(region.getByRole('status')).toHaveText(
@@ -143,6 +152,18 @@ test('fills the session workspace with the building map', async ({ page }) => {
       })
       .toBeLessThan(3)
   }
+  await expect.poll(pitch).toBeCloseTo(60, 1)
+  const bounds = await canvas.boundingBox()
+  const x = bounds.x + bounds.width / 2
+  const y = bounds.y + bounds.height / 2
+  await page.mouse.move(x, y)
+  await page.mouse.down({ button: 'right' })
+  await page.mouse.move(x, y - 140, { steps: 10 })
+  await page.mouse.up({ button: 'right' })
+  await expect.poll(pitch).toBeCloseTo(85, 1)
+  await region.screenshot({
+    path: join(process.env.DEV_RUNNER_ARTIFACTS, 'session-map-facades.png'),
+  })
 })
 
 test('renders a published interior bundle in a read-only card', async ({ page }) => {

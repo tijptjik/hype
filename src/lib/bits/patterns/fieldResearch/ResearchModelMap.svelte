@@ -26,6 +26,7 @@ import { getThemeModel } from '#lib/themes/theme.svelte.js'
 import { getLocaleKey } from '#lib/i18n.js'
 
 let { buildings }: { buildings: SessionMapBuilding[] } = $props()
+const initialPitch = 60
 const located = $derived(
   buildings.filter((b): b is SessionMapBuilding & { coordinates: [number, number] } =>
     Boolean(b.coordinates),
@@ -56,7 +57,15 @@ $effect(() => {
   if (!instance || !points.length) return
   const bounds = new LngLatBounds()
   for (const b of points) bounds.extend(b.coordinates)
-  instance.fitBounds(bounds, { maxZoom: 18.5, padding: 85, pitch: 52, duration: 0 })
+  // fitBounds emits move synchronously. Camera reads in those listeners must not retrigger the fit.
+  untrack(() =>
+    instance.fitBounds(bounds, {
+      maxZoom: 18.5,
+      padding: 85,
+      pitch: initialPitch,
+      duration: 0,
+    }),
+  )
 })
 
 $effect(() => {
@@ -149,11 +158,12 @@ $effect(() => {
       {style}
       center={located[0].coordinates}
       zoom={17}
-      pitch={52}
+      pitch={initialPitch}
+      maxPitch={85}
       attributionControl={false}
       class="h-full w-full"
     >
-      <NavigationControl />
+      <NavigationControl visualizePitch />
       <AttributionControl position="bottom-left" />
     </MapSurface>
     <p
