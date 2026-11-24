@@ -1,23 +1,19 @@
 // TESTS
 import { afterEach, expect, test } from 'bun:test'
 // NODE
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 // SQLITE
 import { Database } from 'bun:sqlite'
 import { openSqliteDomain } from '../../locations/lib/sqlite-domain'
 // ROLLOUT
 import {
-  activate,
   applyGroups,
   digest,
   fingerprint,
   journal,
-  markVerified,
   pause,
-  rebaseUnstarted,
-  schemaMigrationBoundary,
   schemaFingerprint,
   verifyRows,
 } from './contract'
@@ -107,7 +103,6 @@ test('rolls back late failure including write permission and cursor, rejecting a
       value: 'before',
     })
     await expect(pause(d.binding, { ...plan, sourceHash: 'other' })).rejects.toThrow()
-    await expect(activate(d.binding, plan)).rejects.toThrow()
   } finally {
     d.close()
   }
@@ -177,98 +172,6 @@ test('resumes after lifecycle tables replace the original schema and detects a l
     d.close()
   }
 })
-
-test.each([false, true])(
-  'full-schema rehearsal enrolls, verifies and activates without imports (lifecycle=%s)',
-  async lifecycle => {
-    const { bootstrapLocalDatabase, seedLocalApplication } = await import(
-      '../../breadline/lib/local-bootstrap'
-    )
-    const { prepareRelease } = await import('./prepare')
-    const root = mkdtempSync(join(tmpdir(), 'revision-complete-'))
-    directories.push(root)
-    const source = join(root, 'source.sqlite')
-    const initial = new Database(source)
-    bootstrapLocalDatabase(initial, resolve('.'))
-    seedLocalApplication(initial)
-    // This synthetic production snapshot has no reviewed bookstore data to migrate.
-    initial
-      .query('INSERT INTO d1_migrations(name) VALUES (?)')
-      .run('0207_former_bookstore_occupancy.sql')
-    initial.exec(`DELETE FROM image;
- INSERT INTO user(id,name,createdAt,updatedAt) VALUES('author','Author',1,1);
- INSERT INTO layer(id,projectId,organisationId,isPublished) VALUES('layer1','breadlinePrj','hkfoodworks1',1);
- INSERT INTO feature(id,projectId,organisationId,layerId,contributorId,geometry,isPublished,isDraft,isPendingReview)
- VALUES('feature1','breadlinePrj','hkfoodworks1','layer1','author','{"type":"Point","coordinates":[114,22]}',1,0,0);`)
-    initial.close()
-    let plan = await prepareRelease(
-      source,
-      join(root, 'release'),
-      'production:test',
-      async (_db, media) => {
-        mkdirSync(media)
-        writeFileSync(join(media, 'receipt.json'), JSON.stringify({ evidence: [] }))
-        return { verified: 0, blocked: 0 }
-      },
-      lifecycle ? { featureLifecycle: 'current' } : {},
-    )
-    const d = openSqliteDomain(source)
-    try {
-      await pause(d.binding, plan)
-      await verifyRows(d.binding, plan.initial)
-      const boundary = schemaMigrationBoundary(plan)
-      if (boundary) {
-        await applyGroups(d.binding, plan, boundary)
-        const fresh = await prepareRelease(
-          source,
-          join(root, 'after-schema'),
-          'production:test',
-          async (_db, media) => {
-            mkdirSync(media)
-            writeFileSync(join(media, 'receipt.json'), JSON.stringify({ evidence: [] }))
-            return { verified: 0, blocked: 0 }
-          },
-          lifecycle ? { featureLifecycle: 'current' } : {},
-        )
-        fresh.parentHash = digest(plan)
-        fresh.parentCursor = boundary
-        await rebaseUnstarted(d.binding, fresh)
-        plan = fresh
-      }
-      await applyGroups(d.binding, plan)
-      await markVerified(d.binding, plan)
-      expect((await journal(d.binding))?.phase).toBe('verified')
-      expect(() =>
-        d.sqlite.exec("UPDATE user SET name='blocked' WHERE id='author'"),
-      ).toThrow('MAINTENANCE')
-      await activate(d.binding, plan)
-      expect((await journal(d.binding))?.phase).toBe('active')
-      expect(
-        d.sqlite
-          .query(
-            lifecycle
-              ? 'SELECT count(*) n FROM feature WHERE currentRevisionId IS NOT NULL'
-              : 'SELECT count(*) n FROM featureRevisionHead',
-          )
-          .get(),
-      ).toEqual({
-        n: 1,
-      })
-      expect(
-        d.sqlite.query('SELECT count(*) n FROM breadlineImportFeature').get(),
-      ).toEqual({ n: 0 })
-      expect(d.sqlite.query('PRAGMA foreign_key_check').all()).toEqual([])
-      d.sqlite.exec("UPDATE user SET name='allowed' WHERE id='author'")
-      if (!lifecycle)
-        expect(
-          d.sqlite.query('SELECT enabled FROM featureRevisionCreationPolicy').get(),
-        ).toEqual({ enabled: 1 })
-    } finally {
-      d.close()
-    }
-  },
-  60000,
-)
 
 test('cancels only before mutation and retains the irreversible boundary through schema replanning', async () => {
   const { abortBeforeMigration, rebaseUnstarted } = await import('./contract')

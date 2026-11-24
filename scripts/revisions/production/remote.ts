@@ -5,12 +5,10 @@ import { getPlatformProxy } from 'wrangler'
 // ROLLOUT
 import {
   abortBeforeMigration,
-  activate,
   rebaseUnstarted,
   applyGroups,
   digest,
   journal,
-  schemaMigrationBoundary,
   markVerified,
   pause,
   verifyRows,
@@ -27,17 +25,9 @@ import type { Plan } from './contract'
 async function main(): Promise<void> {
   const [operation, planPath, configPath, output] = process.argv.slice(2)
   if (
-    ![
-      'pause',
-      'apply',
-      'verify',
-      'activate',
-      'status',
-      'abort',
-      'rebase',
-      'source',
-      'migrate',
-    ].includes(operation) ||
+    !['pause', 'apply', 'verify', 'status', 'abort', 'rebase', 'source'].includes(
+      operation,
+    ) ||
     !output
   )
     throw new Error('Invalid rollout operation')
@@ -84,7 +74,7 @@ async function main(): Promise<void> {
     }
     if (operation === 'abort') await abortBeforeMigration(db, plan)
     if (operation === 'pause') await pause(db, plan)
-    if (operation === 'apply' || operation === 'migrate') {
+    if (operation === 'apply') {
       const state = await journal(db)
       if (!state || state.planHash !== digest(plan))
         throw new Error('Wrong rollout journal')
@@ -92,14 +82,9 @@ async function main(): Promise<void> {
         await verifySchema(db, plan.initialSchema)
         await verifyRows(db, plan.initial)
       }
-      await applyGroups(
-        db,
-        plan,
-        operation === 'migrate' ? schemaMigrationBoundary(plan) : plan.groups.length,
-      )
+      await applyGroups(db, plan)
     }
     if (operation === 'verify') await markVerified(db, plan)
-    if (operation === 'activate') await activate(db, plan)
     writeFileSync(
       output,
       JSON.stringify(

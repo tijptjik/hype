@@ -6,7 +6,7 @@ import type { D1Database } from '@cloudflare/workers-types'
 // TABLE OF CONTENTS
 // 1. Immutable release plan
 // 2. Database maintenance fence
-// 3. Journaled application and activation
+// 3. Journaled data changes and verification
 export type Statement = { sql: string; params: (string | number | null)[] }
 export type Group = {
   label: string
@@ -324,32 +324,6 @@ export async function markVerified(db: D1Database, plan: Plan): Promise<void> {
     { sql: `UPDATE ${CONTROL} SET phase='verified' WHERE singleton=1`, params: [] },
   ])
 }
-/** Reopen only after deployment and health verification. @param db Binding. @param plan Verified release. @returns Nothing. */
-export async function activate(db: D1Database, plan: Plan): Promise<void> {
-  await atomic(db, [
-    guard(
-      `EXISTS(SELECT 1 FROM ${CONTROL} WHERE planHash=? AND nextGroup=? AND phase='verified' AND writable=0)`,
-      [digest(plan), plan.groups.length],
-    ),
-    ...completeness(plan.featureLifecycle === 'current'),
-    fenceCoverage(plan.tables),
-    { sql: `UPDATE ${CONTROL} SET writable=1 WHERE singleton=1`, params: [] },
-    ...(plan.featureLifecycle === 'current'
-      ? []
-      : [
-          {
-            sql: 'UPDATE featureRevisionCreationPolicy SET enabled=1 WHERE singleton=1',
-            params: [],
-          },
-        ]),
-    { sql: 'UPDATE adminResourceRevisionRollout SET enabled=1', params: [] },
-    {
-      sql: `UPDATE ${CONTROL} SET writable=0,phase='active' WHERE singleton=1`,
-      params: [],
-    },
-  ])
-}
-
 /** Cancel only a rollout that has committed no migration/enrollment units. @param db Binding. @param plan Exact paused release. @returns Previous app write availability, preserving the journal. */
 export async function abortBeforeMigration(db: D1Database, plan: Plan): Promise<void> {
   await atomic(db, [

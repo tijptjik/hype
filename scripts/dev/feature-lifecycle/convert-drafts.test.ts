@@ -1,15 +1,13 @@
 import { afterEach, expect, test } from 'bun:test'
 import { Database } from 'bun:sqlite'
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { featureRevisionContentFixture } from '../../../src/tests/fixtures/featureRevisionContent'
 import { prepareLegacyDraftConversion } from './convert-drafts'
 import { openSqliteDomain } from '../../locations/lib/sqlite-domain'
-import { prepareRelease } from '../../revisions/production/prepare'
 import {
   applyGroups,
-  markVerified,
   pause,
   digest,
   fingerprint,
@@ -198,92 +196,3 @@ test('rolls back a late cleanup failure and restores immutable triggers', async 
     d.close()
   }
 })
-
-test('the managed planner detects current lifecycle storage and verifies its cleanup plan', async () => {
-  const { d, path, root } = fixture()
-  try {
-    for (const resource of ['organisation', 'project', 'layer', 'hub'])
-      d.sqlite.exec(
-        `CREATE TABLE ${resource}(id TEXT,imageId TEXT); CREATE TABLE ${resource}RevisionHead(${resource}Id TEXT); CREATE TABLE ${resource}RevisionWrite(id TEXT)`,
-      )
-    d.sqlite.exec(
-      'CREATE TABLE resourceLogoImageHead(imageId TEXT); CREATE TABLE propertyCatalogRevisionHead(scope TEXT,resourceId TEXT); CREATE TABLE propertyCatalogRevisionWrite(id TEXT); CREATE TABLE featureRevisionWriteScope(featureId TEXT); CREATE TABLE d1_migrations(name TEXT)',
-    )
-    // Model a converted target missing both the compatibility policy and a later numbered migration.
-    const retireRecorder = '0264_remove_web_field_recorder.sql'
-    d.sqlite.exec('CREATE TABLE fieldRecorderConfig(id TEXT)')
-    for (const name of readdirSync('migrations').filter(name => name.endsWith('.sql')))
-      if (!['0203_revision_edit_windows.sql', retireRecorder].includes(name))
-        d.sqlite.query('INSERT INTO d1_migrations(name) VALUES (?)').run(name)
-    for (const resource of ['organisation', 'project', 'layer', 'hub']) {
-      d.sqlite.exec(`CREATE TABLE ${resource}Revision(id TEXT PRIMARY KEY,${resource}Id TEXT,previousRevisionId TEXT,changeSetId TEXT,content TEXT,schemaVersion INTEGER);
-        ALTER TABLE ${resource}RevisionHead ADD COLUMN currentRevisionId TEXT;
-        ALTER TABLE ${resource}RevisionWrite ADD COLUMN ${resource}Id TEXT;
-        ALTER TABLE ${resource}RevisionWrite ADD COLUMN revisionId TEXT;
-        CREATE TRIGGER ${resource}_revision_immutable_update BEFORE UPDATE ON ${resource}Revision BEGIN SELECT RAISE(ABORT,'immutable'); END;`)
-      if (resource !== 'layer')
-        d.sqlite.exec(`CREATE TABLE ${resource}RevisionLogo(revisionId TEXT,imageId TEXT,imageRevisionId TEXT);
-        CREATE TRIGGER ${resource}_revision_logo_no_delete BEFORE DELETE ON ${resource}RevisionLogo BEGIN SELECT RAISE(ABORT,'immutable'); END;`)
-    }
-    d.sqlite.exec(`CREATE TABLE propertyCatalogRevision(id TEXT,scope TEXT,resourceId TEXT,previousRevisionId TEXT,changeSetId TEXT,content TEXT);
-      ALTER TABLE propertyCatalogRevisionHead ADD COLUMN currentRevisionId TEXT;
-      ALTER TABLE propertyCatalogRevisionWrite ADD COLUMN scope TEXT;
-      ALTER TABLE propertyCatalogRevisionWrite ADD COLUMN resourceId TEXT;
-      ALTER TABLE propertyCatalogRevisionWrite ADD COLUMN token TEXT;
-      CREATE TRIGGER property_catalog_revision_update BEFORE UPDATE ON propertyCatalogRevision BEGIN SELECT RAISE(ABORT,'immutable'); END;
-      CREATE TABLE imageIntentPolicyRevision(id TEXT,scopeType TEXT,scopeId TEXT,actorId TEXT,createdAt TEXT,previous TEXT,current TEXT);
-      CREATE TRIGGER image_intent_history_no_update BEFORE UPDATE ON imageIntentPolicyRevision BEGIN SELECT RAISE(ABORT,'immutable'); END;
-      CREATE TABLE featureIdentityOperationMember(revisionId TEXT);
-      CREATE TRIGGER feature_revision_no_update BEFORE UPDATE ON featureRevision BEGIN SELECT RAISE(ABORT,'immutable'); END;
-      CREATE TRIGGER feature_review_no_update BEFORE UPDATE ON featureRevisionReview BEGIN SELECT RAISE(ABORT,'immutable'); END;
-      CREATE TRIGGER featureRevisionImage_immutable_delete BEFORE DELETE ON featureRevisionImage BEGIN SELECT RAISE(ABORT,'immutable'); END;`)
-    for (const [table, columns] of Object.entries({
-      featureRevision: [
-        'previousRevisionId',
-        'mergedFromRevisionId',
-        'changeSetId',
-        'schemaVersion',
-        'legacyEvidence',
-        'baselineAttribution',
-      ],
-      featureRevisionReview: [
-        'proposalId',
-        'proposalVersion',
-        'changes',
-        'comparedRevisionId',
-        'resultingRevisionId',
-        'context',
-        'resolutions',
-        'action',
-        'changeSetId',
-      ],
-      featureRevisionImage: ['imageRevisionId', 'position', 'intent'],
-    }))
-      for (const column of columns)
-        d.sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} TEXT`)
-    const plan = await prepareRelease(path, join(root, 'release'), 'local:test')
-    expect(readFileSync(join(root, 'release', 'plan.json'), 'utf8')).toBe(
-      JSON.stringify(plan) + '\n',
-    )
-    const receipt = JSON.parse(
-      readFileSync(join(root, 'release', 'receipt.json'), 'utf8'),
-    )
-    expect(receipt.planHash).toBe(digest(plan))
-    expect(plan.featureLifecycle).toBe('current')
-    expect(plan.groups).toHaveLength(3)
-    expect(plan.groups[1].label).toBe(retireRecorder)
-    await pause(d.binding, plan)
-    await applyGroups(d.binding, plan)
-    expect(
-      d.sqlite
-        .query("SELECT 1 FROM sqlite_schema WHERE name='fieldRecorderConfig'")
-        .get(),
-    ).toBeNull()
-    await markVerified(d.binding, plan)
-    expect(
-      d.sqlite.query('SELECT phase,writable FROM _revisionDeployment').get(),
-    ).toEqual({ phase: 'verified', writable: 0 })
-  } finally {
-    d.close()
-  }
-}, 60_000)

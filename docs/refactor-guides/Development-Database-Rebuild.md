@@ -129,12 +129,11 @@ migrations alone do not enroll revision baselines or perform the current Feature
 lifecycle conversion. A successful rebuild receipt is therefore not revision-readiness
 evidence.
 
-Prepare revisions on a copy through `prepareRelease` in
-`scripts/revisions/production/prepare.ts`, selecting `featureLifecycle: 'current'`. This
-verifies exact R2 originals and metadata, enrolls Feature and resource baselines,
-converts lifecycle records and preserves unfinished contributions as creation proposals.
-Missing sidecars require explicit retained recovery evidence; do not fabricate original
-metadata or skip affected Features. The scoped recovery procedure is documented in
+For older exports the local rebuild calls `scripts/dev/prepare-local-revisions.ts` on
+its private database copy. It verifies original media, enrolls revision baselines and
+converts unfinished contributions into creation proposals. Missing sidecars require
+explicit retained recovery evidence; do not fabricate original metadata or skip affected
+Features. The scoped recovery procedure is documented in
 [Feature revision write boundaries](Feature-Revisions-Write-Boundaries.md).
 
 Run `dev-check bun scripts/dev/feature-lifecycle/smoke.ts PATH/TO/prepared.sqlite`
@@ -145,11 +144,8 @@ user reconciliation checkpoint alongside the converted candidate. Compare and ba
 the current development database before replacing it, including local-only Features,
 tasks and reviews.
 
-Do not use `db:mirror:post:local` as a revision cutover command: it runs ordinary
-numbered migrations and does not perform the managed lifecycle conversion. Follow
-[managed revision deployment](../operations/Revision-Deployment.md) for lifecycle-aware
-migration handling; its deployment commands target remote environments and must not be
-used to install a local candidate.
+Use the [application deployment workflow](../operations/Revision-Deployment.md) for
+numbered migrations and Worker deployments to preview and production.
 
 To recover, stop local writers and use SQLite's backup API to restore the retained
 `before-development.sqlite` to the receipt's exact destination. Check for subsequent

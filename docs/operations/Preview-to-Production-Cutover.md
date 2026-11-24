@@ -9,6 +9,10 @@ resumed and both scheduled refresh Workers completed a run. The local
 versions. The first cutover is closed. Breadline curation has a
 [separate acceptance checklist](../../migrations/pending/matching-and-branding/acceptance-checklist.md).
 
+The following sections are the historical plan. The operator and file paths refer to
+cutover commit `c0fb7f8b5`. For current deployment commands, see
+[Application deployment](Revision-Deployment.md).
+
 ## Starting point at planning time
 
 | Read-only observation                                                                                                                                                                                                                                                                                                          | Consequence                                                                                                                                                                       |
@@ -163,10 +167,9 @@ operations approaching the runner's batch budget **including** guard, fence and 
 statements. Review the changed, already-applied `0107` address JSON contract against
 real rows and use a guarded forward conversion for any outstanding differences.
 
-[Release runner](../../scripts/revisions/rollout.ts) ·
-[Schema planner](../../scripts/revisions/production/prepare-schema.py) ·
-[Enrollment planner](../../scripts/revisions/production/prepare.ts) ·
-[Journal and fences](../../scripts/revisions/production/contract.ts)
+Cutover sources are retained in Git at `c0fb7f8b5`, including
+`scripts/revisions/rollout.ts` and its `production/prepare-schema.py`,
+`production/prepare.ts` and `production/contract.ts` modules.
 
 ## 3. Put the data work in dependency order
 

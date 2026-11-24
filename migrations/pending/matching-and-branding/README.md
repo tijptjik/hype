@@ -41,14 +41,11 @@ managed desktop is `.local/curation-release/20261123T180818Z/release`.
    package already includes the captured donor naming and brand restoration outcomes.
    Check overlapping donor work against the target before selecting any separate donor
    migration. Revealing Arrow retains its own release package.
-2. Select the curation package during managed preparation. The runner copies and
-   verifies the five pinned inputs, rehearses on its private post-schema copy and
-   includes the resulting D1 groups and fingerprints in the retained plan. The selection
-   follows a fenced replan and resumes from the same run directory.
-
-   ```sh
-   bun run revisions:prepare:prod --local-backup --run-dir "$RUN" --curation-package "$PACKAGE"
-   ```
+2. Prepare this data package separately against a private copy of the schema-current
+   production export. `retainMatchingBranding` verifies the five pinned inputs. The
+   standalone `prepareRelease` planner in `scripts/revisions/production/prepare.ts`
+   accepts the reviewed package, rehearses it on the copy and records the D1 groups,
+   fingerprints and receipt. Application deployments only apply numbered migrations.
 
 3. Inspect `release/curation/verification.json` and `release/curation.log` in the
    selected snapshot. The planner requires each affected target row to match a recorded

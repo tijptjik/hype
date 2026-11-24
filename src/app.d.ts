@@ -45,8 +45,6 @@ declare global {
     }
     interface Platform {
       env: {
-        /** Immutable managed deployment identity; activation is recorded in D1. */
-        REVISION_RELEASE?: string
         ENVIRONMENT: string
         NODE_ENV: string
         // CLOUDFLARE BINDINGS

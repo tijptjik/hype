@@ -345,17 +345,13 @@ merged/split identity remains the mapping, even after its Location projection is
 removed. Source hash changes still require reviewed reconciliation. The existing SQL
 planner remains available for fresh rebuilds and refuses revision-enabled targets.
 
-The rollout commands accept explicit local files; none deploys or writes remote data:
+The local recovery commands accept explicit SQLite files:
 
 ```sh
 # Read exact originals and exact versioned metadata into a private, resumable cache.
 bun --env-file=.dev.vars --env-file=.dev.vars.production scripts/revisions/cache-media.ts SNAPSHOT.sqlite MEDIA_CACHE
 # Rehearse on a separate copy. Never pass a live database with active refreshers.
 bun scripts/revisions/enroll.ts COPY.sqlite MEDIA_CACHE ENROLLMENT_RECEIPT.json
-# Prove reviewed Location adoption on another disposable copy with labelled synthetic source evidence.
-dev-check bun scripts/revisions/rehearse-preservation.ts COPY.sqlite NEW_PRESERVATION_DIRECTORY
-# After coordinating local writers, compare the exact rehearsed snapshot and activate atomically.
-bun scripts/revisions/activate-local.ts LOCAL.sqlite MEDIA_CACHE ENROLLMENT_RECEIPT.json NEW_ACTIVATION_DIRECTORY
 # Subsequent offline Breadline imports use the attributed writer.
 bun scripts/breadline/features.ts --revisions --source SOURCE.sqlite --target LOCAL.sqlite --output PRIVATE_PLAN.sql
 ```
@@ -535,10 +531,9 @@ all admin resource activation had already been established for the refreshed DB.
 
 ### Deployment boundary
 
-[Managed revision deployment](../operations/Revision-Deployment.md) fences database
-writers while migrations and Feature/image baselines are enrolled. Activation requires
-complete resource coverage and exact release health. This workflow is independent of
-Breadline imports and does not substitute a local rebuilt database for production.
+[Application deployment](../operations/Revision-Deployment.md) applies numbered D1
+migrations and deploys the Workers. Revision baselines were enrolled during the November
+production transition.
 
 ## Review-owned task image changes
 

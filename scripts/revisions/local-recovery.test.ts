@@ -8,16 +8,15 @@ import { createHash } from 'node:crypto'
 import { afterEach, expect, test } from 'bun:test'
 import { sql } from 'drizzle-orm'
 // DOMAIN
+import { openSqliteDomain } from '../locations/lib/sqlite-domain'
+import { reviewInitialFeatureContribution } from '../../src/lib/db/services/featureInitialReview'
 import {
   bootstrapLocalDatabase,
   seedLocalApplication,
 } from '../breadline/lib/local-bootstrap'
 import { importBreadlineFeatureRevisions } from '../breadline/features'
 import { enrollLegacyRevisions } from './enroll'
-import { activateLocalRevisions } from './activate-local'
 import { mediaCacheKey } from './cache-media'
-import { openSqliteDomain } from '../locations/lib/sqlite-domain'
-import { reviewInitialFeatureContribution } from '../../src/lib/db/services/featureInitialReview'
 // TYPES
 import type { MediaLocator } from './cache-media'
 
@@ -29,7 +28,7 @@ afterEach(() => {
 
 /** Builds a full migrated isolated database with explicit reviewed importer scope. @returns Fixture paths and inspection connection. */
 function fixture() {
-  const directory = mkdtempSync(join(tmpdir(), 'hype-revision-rollout-'))
+  const directory = mkdtempSync(join(tmpdir(), 'hype-revision-recovery-'))
   directories.push(directory)
   const path = join(directory, 'target.sqlite'),
     target = new Database(path)
@@ -165,7 +164,7 @@ function media(f: ReturnType<typeof fixture>): void {
   )
 }
 
-test('enrollment preserves projections and pending photo authors, replays, and accepts initial review without publication', async () => {
+test('local recovery preserves photo authors and accepting an initial contribution keeps it unpublished', async () => {
   const f = fixture()
   try {
     f.target.exec(`INSERT INTO feature(id,projectId,organisationId,layerId,contributorId,geometry,isPublished,isDraft,isPendingReview) VALUES
@@ -176,51 +175,16 @@ test('enrollment preserves projections and pending photo authors, replays, and a
       INSERT INTO task(id,organisationId,projectId,featureId,contributorId,type,isDraft) VALUES ('task','hkfoodworks1','breadlinePrj','initial','author','newFeature',0);
       INSERT INTO taskImage(taskId,imageId) VALUES ('task','photo');`)
     media(f)
-    const activation = join(f.directory, 'activation.sqlite'),
-      rollback = join(f.directory, 'rollback.sqlite')
-    f.target.query('VACUUM INTO ?').run(activation)
-    f.target.query('VACUUM INTO ?').run(rollback)
-    const result = await enrollLegacyRevisions(f.path, f.cache, f.receipt)
-    if (result.blocked) console.log(readFileSync(f.receipt, 'utf8'))
-    expect(result).toEqual({ images: 1, features: 1, blocked: 0 })
-    expect(
-      await activateLocalRevisions(
-        activation,
-        f.cache,
-        f.receipt,
-        join(f.directory, 'activation'),
-      ),
-    ).toEqual(result)
-    const activated = new Database(activation)
-    expect(
-      activated.query('SELECT enabled FROM featureRevisionCreationPolicy').get(),
-    ).toEqual({ enabled: 1 })
-    expect(activated.query('SELECT count(*) n FROM featureRevisionHead').get()).toEqual(
-      { n: 1 },
+    // Bootstrap migrations already recorded catalogue changes. Enrollment owns only its new changesets.
+    const otherChanges = f.target.query(
+      "SELECT id,actorId FROM revisionChangeSet WHERE actorId IS NOT 'system:feature-revision-enrollment' ORDER BY id",
     )
-    activated.close()
-    const wrongReceipt = join(f.directory, 'wrong.json'),
-      expected = JSON.parse(readFileSync(f.receipt, 'utf8'))
-    writeFileSync(wrongReceipt, JSON.stringify({ ...expected, features: 2 }))
-    await expect(
-      activateLocalRevisions(
-        rollback,
-        f.cache,
-        wrongReceipt,
-        join(f.directory, 'rollback'),
-      ),
-    ).rejects.toThrow('Enrollment cohort changed')
-    const rolledBack = new Database(rollback)
-    expect(
-      rolledBack.query('SELECT enabled FROM featureRevisionCreationPolicy').get(),
-    ).toEqual({ enabled: 0 })
-    expect(
-      rolledBack.query('SELECT count(*) n FROM featureRevisionHead').get(),
-    ).toEqual({ n: 0 })
-    expect(rolledBack.query('SELECT count(*) n FROM imageRevision').get()).toEqual({
-      n: 0,
+    const existingChanges = otherChanges.all()
+    expect(await enrollLegacyRevisions(f.path, f.cache, f.receipt)).toEqual({
+      images: 1,
+      features: 1,
+      blocked: 0,
     })
-    rolledBack.close()
     expect(await enrollLegacyRevisions(f.path, f.cache, f.receipt)).toEqual({
       images: 1,
       features: 0,
@@ -229,13 +193,7 @@ test('enrollment preserves projections and pending photo authors, replays, and a
     expect(
       f.target.query('SELECT actorId FROM featureImageUploadRevision').get(),
     ).toEqual({ actorId: 'author' })
-    expect(
-      f.target
-        .query(
-          "SELECT count(*) n FROM revisionChangeSet WHERE actorId<>'system:feature-revision-enrollment'",
-        )
-        .get(),
-    ).toEqual({ n: 0 })
+    expect(otherChanges.all()).toEqual(existingChanges)
     expect(f.target.query('SELECT isPublished FROM featureImage').get()).toEqual({
       isPublished: 0,
     })
@@ -282,6 +240,8 @@ test('unverified task photos block the whole Feature without leaking an initial 
       INSERT INTO image(id,contributorId,cdn,env,publicId,version) VALUES ('photo','author','cloudflareR2','local','missing.jpg',1);
       INSERT INTO task(id,organisationId,projectId,featureId,contributorId,type,isDraft) VALUES ('task','hkfoodworks1','breadlinePrj','blocked','author','newPhoto',0);
       INSERT INTO taskImage(taskId,imageId) VALUES ('task','photo');`)
+    const changes = f.target.query('SELECT id FROM revisionChangeSet ORDER BY id')
+    const before = changes.all()
     expect(await enrollLegacyRevisions(f.path, f.cache, f.receipt)).toEqual({
       images: 0,
       features: 0,
@@ -290,9 +250,7 @@ test('unverified task photos block the whole Feature without leaking an initial 
     expect(f.target.query('SELECT count(*) n FROM featureRevision').get()).toEqual({
       n: 0,
     })
-    expect(f.target.query('SELECT count(*) n FROM revisionChangeSet').get()).toEqual({
-      n: 0,
-    })
+    expect(changes.all()).toEqual(before)
   } finally {
     f.target.close()
   }

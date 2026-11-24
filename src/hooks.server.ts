@@ -13,7 +13,6 @@ import '#lib/api/recorderEditor.remote.js'
 // I18N
 import { paraglideMiddleware } from '#lib/paraglide/server.js'
 // SECURITY
-import { handleRevisionDeployment } from '#lib/server/revisionDeployment.js'
 import { getDevelopmentHubOverride } from '#lib/server/developmentHub.js'
 import { isScannerProbePath } from '#lib/utils/scannerProbe.js'
 // DB
@@ -627,7 +626,6 @@ const handle_framing: Handle = async input => {
 const handle = sequence(
   handle_framing,
   handle_worker_bindings,
-  handleRevisionDeployment,
   handle_scanner_probe,
   handle_cors,
   handle_discovery_delivery,

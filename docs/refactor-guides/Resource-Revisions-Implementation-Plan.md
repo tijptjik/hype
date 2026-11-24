@@ -985,12 +985,9 @@ must be preserved/reconciled, Feature enrollment/activation must be re-establish
 writer coordination must precede installation. Production D1 migrations and application
 deployment were not performed.
 
-### Managed deployment workflow
+### Deployment workflow
 
-The deployment entry points now own schema migration, fenced baseline enrollment,
-verification and activation. See
-[Revision deployment](../operations/Revision-Deployment.md) for encrypted recovery,
-resume boundaries and first-deployment prerequisites. Breadline integration remains
-separate; existing production records are preserved, and no Breadline source import or
-reconciliation is part of this rollout. Implementation and offline verification do not
-imply production activation.
+[Application deployment](../operations/Revision-Deployment.md) applies numbered D1
+migrations before deploying the application. The
+[November cutover record](../operations/Preview-to-Production-Cutover.md) documents the
+initial revision enrollment.

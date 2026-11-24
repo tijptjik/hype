@@ -1,5 +1,3 @@
-// SQLITE
-import { Database as SQLite } from 'bun:sqlite'
 // NODE
 import {
   closeSync,
@@ -14,42 +12,18 @@ import {
 import { createHash, randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
-// DATABASE
-import { sql } from 'drizzle-orm'
+// CURATION
 import { openSqliteDomain } from '../../locations/lib/sqlite-domain'
-import { prepareOrganisationRevisionCapture } from '../../../src/lib/db/services/organisationRevision'
-import { prepareAdminResourceRevisionCapture } from '../../../src/lib/db/services/adminResourceRevision'
-import { preparePropertyCatalogCapture } from '../../../src/lib/db/services/propertyCatalogRevision'
-import { registerImageRevisionBaseline } from '../../../src/lib/db/services/imageRevisionBaseline'
-import { enrollResourceLogo } from '../../../src/lib/db/services/resourceLogoRevision'
-// ROLLOUT
-import { rehearseFeatureLifecycle } from '../../dev/feature-lifecycle/rehearse'
-import { prepareLifecycleSchemaGroup, stageLifecyclePayloads } from './lifecycle-schema'
 import { matchingBrandingHash, prepareMatchingBranding } from './matching-branding'
-import { prepareRevisionIdlePolicy } from './revision-idle-policy'
 import {
-  prepareLegacyDraftConversion,
-  applyLegacyDraftConversion,
-} from '../../dev/feature-lifecycle/convert-drafts'
-import { enrollLegacyRevisions } from '../enroll'
-import { prepareRevealingArrow } from './revealing-arrow'
-import { convertExistingLocations } from '../../dev/convert-locations'
-import { publishedSubmissions } from './published-submissions'
-import approvedImages from './approved-image-recovery.json'
-import { cacheRevisionMedia, mediaCacheKey } from '../cache-media'
-import { verifiedRetainedPin } from '../retained-media'
-import {
-  atomic,
   completeness,
   digest,
   fences,
   fingerprint,
   identifier,
   schemaFingerprint,
-  withinAtomicBudget,
 } from './contract'
-// TYPES
-import type { Group, Plan, Statement } from './contract'
+import type { Plan } from './contract'
 
 type Domain = ReturnType<typeof openSqliteDomain>
 
@@ -94,35 +68,6 @@ function persistPlan(directory: string, plan: Plan): string {
   } finally {
     unlinkSync(pending)
   }
-}
-
-/** Apply missing numbered migrations on the private rehearsal copy and capture D1 groups.
- * @param database Private SQLite snapshot. @param directory Private run artifacts.
- * @param phase Artifact prefix. @param deferLifecycle Whether a subsequent conversion pass owns lifecycle-dependent SQL.
- * @returns Transactions in the exact order applied to the copy.
- */
-function prepareNumberedMigrations(
-  database: string,
-  directory: string,
-  phase: string,
-  deferLifecycle = false,
-): Group[] {
-  const schemaFile = join(directory, phase + '-groups.json')
-  const migration = spawnSync(
-    'python3',
-    [
-      'scripts/revisions/production/prepare-schema.py',
-      database,
-      schemaFile,
-      ...(deferLifecycle ? ['--defer-lifecycle'] : []),
-    ],
-    { encoding: 'utf8' },
-  )
-  const log = join(directory, phase + '.log')
-  writeFileSync(log, migration.stdout + migration.stderr, { mode: 0o600 })
-  if (migration.status !== 0)
-    throw new Error(`Migration rehearsal failed; inspect ${log}`)
-  return JSON.parse(readFileSync(schemaFile, 'utf8')) as Group[]
 }
 
 /** Inventory executable source, migrations and lockfiles, including uncommitted release work. @returns Sorted repository-relative paths. */
@@ -171,42 +116,26 @@ export function tables(d: Domain): string[] {
     .map(r => r.name)
     .filter(n => !/^(sqlite_|_cf_|featureSearchFts|_revisionDeployment)/.test(n))
 }
-/** Preserve every non-journal projection through enrollment. @param d Offline database. @returns Hashes excluding only clocks for deterministic remote migration comparison. */
-function projections(d: Domain): Plan['expected'] {
-  return Object.fromEntries(
-    tables(d)
-      .filter(
-        t =>
-          !/^(revision|featureRevision|imageRevision|imageAssetVersion|featureBaselineAttribution|resourceLogoImageHead|featureInitialRevision|featureImageUploadRevision|organisationRevision|projectRevision|layerRevision|hubRevision|propertyCatalogRevision)/.test(
-            t,
-          ),
-      )
-      .map(t => [
-        t,
-        fingerprint(
-          d.sqlite.query(`SELECT * FROM ${identifier(t)}`).all() as Record<
-            string,
-            unknown
-          >[],
-          true,
-        ),
-      ]),
-  )
-}
-/** Record a complete release from an isolated production export. @param source Restored production snapshot. @param directory New private artifact directory. @param target Explicit environment/database identity. @param cacheMedia Exact media downloader, injectable for offline rehearsal tests. @param options Explicit accepted-lifecycle schema cutover after baseline enrollment. @returns Immutable plan. @remarks No Breadline imports, personas, fixtures, R2 writes or live database writes occur here. Missing media fails closed. */
+/** Rehearse the standalone matching and branding data package on a private database copy.
+ * @param source Restored production snapshot. @param directory New private artifact directory.
+ * @param target Explicit production database identity. @param _cacheMedia Reserved for existing package callers.
+ * @param options Reviewed package and required current Feature lifecycle.
+ * @returns The immutable data-only plan.
+ */
 export async function prepareRelease(
   source: string,
   directory: string,
   target: string,
-  cacheMedia: typeof cacheRevisionMedia = cacheRevisionMedia,
+  _cacheMedia: unknown = undefined,
   options: { featureLifecycle?: 'current'; matchingBranding?: string } = {},
 ): Promise<Plan> {
   if (
-    options.matchingBranding &&
-    (!target.startsWith('production:') || options.featureLifecycle !== 'current')
+    !options.matchingBranding ||
+    !target.startsWith('production:') ||
+    options.featureLifecycle !== 'current'
   )
     throw new Error(
-      'The matching and branding package requires the production lifecycle cutover',
+      'A reviewed matching and branding package and current production lifecycle are required',
     )
   mkdirSync(directory, { mode: 0o700 })
   const database = join(directory, 'prepared.sqlite')
@@ -221,29 +150,30 @@ export async function prepareRelease(
     { encoding: 'utf8' },
   )
   if (backup.status !== 0) throw new Error('Snapshot backup failed')
-  let d = openSqliteDomain(database)
-  const initialSchema = schemaFingerprint(
-    d.sqlite
-      .query('SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE sql IS NOT NULL')
-      .all() as Record<string, unknown>[],
-  )
-  const initial = Object.fromEntries(
-    tables(d).map(t => [
-      t,
-      fingerprint(
-        d.sqlite.query(`SELECT * FROM ${identifier(t)}`).all() as Record<
-          string,
-          unknown
-        >[],
-      ),
-    ]),
-  )
-  const currentLifecycle = (
-    d.sqlite.query("PRAGMA table_info('feature')").all() as { name: string }[]
-  ).some(column => column.name === 'currentRevisionId')
-  d.close()
-  if (currentLifecycle)
-    return prepareCurrentLifecycleRelease(
+  const d = openSqliteDomain(database)
+  try {
+    const currentLifecycle = (
+      d.sqlite.query("PRAGMA table_info('feature')").all() as { name: string }[]
+    ).some(column => column.name === 'currentRevisionId')
+    if (!currentLifecycle) throw new Error('Curation requires current Feature storage')
+    const initialSchema = schemaFingerprint(
+      d.sqlite
+        .query('SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE sql IS NOT NULL')
+        .all() as Record<string, unknown>[],
+    )
+    const initial = Object.fromEntries(
+      tables(d).map(t => [
+        t,
+        fingerprint(
+          d.sqlite.query(`SELECT * FROM ${identifier(t)}`).all() as Record<
+            string,
+            unknown
+          >[],
+        ),
+      ]),
+    )
+    return prepareCuration(
+      d,
       database,
       directory,
       target,
@@ -251,408 +181,103 @@ export async function prepareRelease(
       initialSchema,
       options.matchingBranding,
     )
-  const groups = prepareNumberedMigrations(
-    database,
-    directory,
-    'schema',
-    options.featureLifecycle === 'current',
-  )
-  const media = join(directory, 'media')
-  const firstProductionCutover =
-    target === 'production:7786af0e-3782-47f8-b70d-de645ba836ad' &&
-    options.featureLifecycle === 'current'
-  const mediaOptions = {
-    baselineOnly: true,
-    publishedSubmissions: firstProductionCutover ? publishedSubmissions : undefined,
-    approvedImages: target.startsWith('production:') ? approvedImages : undefined,
-  }
-  const cached = await cacheMedia(database, media, mediaOptions)
-  if (cached.blocked)
-    throw new Error(
-      `${cached.blocked} images require explicit source repair before rollout`,
-    )
-  d = openSqliteDomain(database)
-  try {
-    let capturingLocations = firstProductionCutover
-    // Capture actual domain batches, preserving their transaction boundaries for D1 replay.
-    const batch = d.db.batch.bind(d.db)
-    d.db.batch = (async (queries: Parameters<typeof d.db.batch>[0]) => {
-      const statements = queries.map(q =>
-        (q as unknown as { toSQL(): Statement }).toSQL(),
-      )
-      const result = await batch(queries)
-      groups.push({
-        label: `${capturingLocations ? 'location-split' : 'enrollment'}-${groups.length}`,
-        statements,
-      })
-      return result
-    }) as unknown as typeof d.db.batch
-    if (capturingLocations) {
-      await convertExistingLocations(database, directory, d)
-      capturingLocations = false
-    }
-    const expected = projections(d)
-    const gate: Statement = {
-      sql: 'UPDATE adminResourceRevisionRollout SET enabled=1',
-      params: [],
-    }
-    d.sqlite.exec(gate.sql)
-    groups.push({ label: 'admin-recording', statements: [gate] })
-    const enrollment = await enrollLegacyRevisions(
-      database,
-      media,
-      join(directory, 'feature-enrollment.json'),
-      d,
-      mediaOptions,
-    )
-    if (enrollment.blocked)
-      throw new Error(
-        'Feature enrollment is incomplete; deployment plan was not produced',
-      )
-    const evidence = JSON.parse(
-      readFileSync(join(media, 'receipt.json'), 'utf8'),
-    ).evidence
-    const logos = d.sqlite
-      .query(
-        'SELECT DISTINCT id FROM image WHERE id IN (SELECT imageId FROM organisation UNION SELECT imageId FROM project UNION SELECT imageId FROM hub)',
-      )
-      .all() as { id: string }[]
-    for (const { id } of logos) {
-      const row = evidence.find((r: { locator: { id: string } }) => r.locator.id === id)
-      if (!row || row.status !== 'verified')
-        throw new Error('Logo evidence unavailable')
-      const i = row.locator,
-        base = join(media, mediaCacheKey(i))
-      const pin =
-        verifiedRetainedPin(d.sqlite, i, {
-          contentHash: row.contentHash,
-          byteSize: readFileSync(base + '.image').length,
-          mediaType: row.mediaType,
-          metadata: JSON.parse(readFileSync(base + '.json', 'utf8')),
-        }) ??
-        (await registerImageRevisionBaseline(d.db, {
-          imageId: id,
-          actorId: 'system:revision-rollout',
-          origin: 'migration',
-          guard: sql`1`,
-          expectedModifiedAt: i.modifiedAt,
-          expectedVersion: i.version,
-          storageNamespace: i.env,
-          storageKey: i.publicId,
-          bytes: Uint8Array.from(readFileSync(base + '.image')).buffer,
-          mediaType: row.mediaType,
-          metadata: JSON.parse(readFileSync(base + '.json', 'utf8')),
-          captureCurrentPresentation: true,
-        }))
-      if (
-        !pin ||
-        !(await enrollResourceLogo(d.db, {
-          imageId: id,
-          imageRevisionId: pin.imageRevisionId,
-          guard: sql`1`,
-          actorId: 'system:revision-rollout',
-        }))
-      )
-        throw new Error('Logo enrollment failed')
-    }
-    const actor = {
-      actorId: 'system:revision-rollout',
-      origin: 'system' as const,
-      reason: 'Initial production revision baseline',
-    }
-    for (const resource of ['organisation', 'project', 'layer', 'hub'] as const) {
-      const ids = d.sqlite.query(`SELECT id FROM ${resource} ORDER BY id`).all() as {
-        id: string
-      }[]
-      for (const { id } of ids) {
-        const capture =
-          resource === 'organisation'
-            ? await prepareOrganisationRevisionCapture(
-                d.db,
-                sql`SELECT id FROM organisation WHERE id=${id}`,
-                actor,
-              )
-            : await prepareAdminResourceRevisionCapture(
-                d.db,
-                resource,
-                sql`SELECT id FROM ${sql.identifier(resource)} WHERE id=${id}`,
-                actor,
-              )
-        if (capture.before.length)
-          await d.db.batch([...capture.before, ...capture.after] as never)
-        if (resource !== 'layer') {
-          const catalog = await preparePropertyCatalogCapture(
-            d.db,
-            { scope: resource, id },
-            actor,
-          )
-          if (catalog.before.length)
-            await d.db.batch([...catalog.before, ...catalog.after] as never)
-        }
-      }
-    }
-    // Only explicit rollout switches may differ from migrated source projections.
-    delete expected.adminResourceRevisionRollout
-    const after = projections(d)
-    delete after.adminResourceRevisionRollout
-    if (digest(after) !== digest(expected))
-      throw new Error(
-        'Enrollment changed source projections: ' +
-          Object.keys(after)
-            .filter(t => digest(after[t]) !== digest(expected[t]))
-            .join(','),
-      )
-    for (const check of completeness()) d.sqlite.query(check.sql).all(...check.params)
-    if (options.featureLifecycle === 'current') {
-      // Rehearse first, then replay the portable D1 group with foreign keys enabled.
-      const converted = join(directory, 'lifecycle-schema.sqlite')
-      await rehearseFeatureLifecycle(database, converted, {
-        cleanupDrafts: false,
-        publishedSubmissions: mediaOptions.publishedSubmissions,
-      })
-      const targetSnapshot = new SQLite(converted, { readonly: true })
-      try {
-        const group = prepareLifecycleSchemaGroup(d.sqlite, targetSnapshot)
-        for (const unit of stageLifecyclePayloads(group, tables(d))) {
-          await atomic(d.binding, unit.statements)
-          groups.push(unit)
-        }
-        for (const table of tables(d)) {
-          const expectedRows = fingerprint(
-            targetSnapshot.query(`SELECT * FROM ${identifier(table)}`).all() as Record<
-              string,
-              unknown
-            >[],
-          )
-          const actualRows = fingerprint(
-            d.sqlite.query(`SELECT * FROM ${identifier(table)}`).all() as Record<
-              string,
-              unknown
-            >[],
-          )
-          if (digest(expectedRows) !== digest(actualRows))
-            throw new Error(`Lifecycle replay differs: ${table}`)
-        }
-      } finally {
-        targetSnapshot.close()
-      }
-      for (const group of prepareLegacyDraftConversion(d.sqlite)) {
-        await atomic(d.binding, group.statements)
-        groups.push(group)
-      }
-      // Revisit deferred numbered data only after accepted heads and draft conversion exist.
-      groups.push(...prepareNumberedMigrations(database, directory, 'post-lifecycle'))
-      for (const check of completeness(true))
-        d.sqlite.query(check.sql).all(...check.params)
-      if (firstProductionCutover) groups.push(await prepareRevealingArrow(d))
-      if (options.matchingBranding)
-        groups.push(
-          ...prepareMatchingBranding(
-            d.sqlite,
-            database,
-            directory,
-            options.matchingBranding,
-          ),
-        )
-      // Preserve the existing projection contract and add exact lifecycle/media evidence.
-      // Unrelated resource journals mint their own SQL IDs during enrollment replay;
-      // their completeness checks remain mandatory instead of comparing rehearsal IDs.
-      Object.assign(expected, projections(d))
-      const finalTables = tables(d)
-      for (const table of finalTables.filter(name =>
-        /^(featureRevision|featureIdentityOperation|featureUploadEvidence|revisionChangeSet|imageRevision|imageAssetVersion)/.test(
-          name,
-        ),
-      ))
-        expected[table] = fingerprint(
-          d.sqlite.query(`SELECT * FROM ${identifier(table)}`).all() as Record<
-            string,
-            unknown
-          >[],
-          true,
-        )
-      for (const table of Object.keys(expected))
-        if (!finalTables.includes(table)) delete expected[table]
-    }
-    for (const group of groups) {
-      const all = [
-        ...group.statements,
-        ...(group.tables ? fences(group.fenceTables ?? group.tables) : []),
-      ]
-      if (all.length + 4 > 950 || !withinAtomicBudget(all))
-        throw new Error(`Oversized atomic unit: ${group.label}`)
-    }
-    const plan: Plan = {
-      version: 1,
-      ...(options.matchingBranding
-        ? { matchingBrandingHash: matchingBrandingHash(options.matchingBranding) }
-        : {}),
-      ...(options.featureLifecycle
-        ? { featureLifecycle: options.featureLifecycle }
-        : {}),
-      target,
-      sourceHash: releaseSourceHash(),
-      initialSchema,
-      expectedSchema: schemaFingerprint(
-        d.sqlite
-          .query(
-            'SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE sql IS NOT NULL',
-          )
-          .all() as Record<string, unknown>[],
-      ),
-      initial,
-      expected,
-      groups,
-      tables: tables(d),
-      migrations: (
-        d.sqlite.query('SELECT name FROM d1_migrations ORDER BY name').all() as {
-          name: string
-        }[]
-      ).map(r => r.name),
-    }
-    const planHash = persistPlan(directory, plan)
-    writeFileSync(
-      join(directory, 'receipt.json'),
-      JSON.stringify(
-        {
-          planHash,
-          target,
-          features: enrollment.features,
-          images: enrollment.images,
-          groups: groups.length,
-          breadlineIntegration: false,
-          remoteWrites: false,
-        },
-        null,
-        2,
-      ) + '\n',
-      { mode: 0o600 },
-    )
-    return plan
   } finally {
     d.close()
   }
 }
 
-/** Prepare managed cleanup for an already converted lifecycle snapshot.
- * @param database Isolated snapshot. @param directory Private release artifacts.
- * @param target Explicit environment/database identity. @param initial Exact source fingerprints.
- * @param initialSchema Exact source schema. @returns Rehearsed, journal-compatible release plan.
- * @remarks Every cleanup group is atomic and preserves before-images; no live writes occur here.
+/** Apply the reviewed groups on the copy and fingerprint the resulting data.
+ * @param d Connection to the private copy. @param database Private copy. @param directory Artifact directory. @param target Production identity.
+ * @param initial Exact source rows. @param initialSchema Source schema. @param matchingBranding Reviewed package.
+ * @returns Verified data plan and receipts.
  */
-function prepareCurrentLifecycleRelease(
+function prepareCuration(
+  d: Domain,
   database: string,
   directory: string,
   target: string,
   initial: Plan['initial'],
   initialSchema: Plan['initialSchema'],
-  matchingBranding?: string,
+  matchingBranding: string,
 ): Plan {
-  const d = openSqliteDomain(database)
-  try {
-    if (
-      d.sqlite
-        .query("SELECT 1 FROM sqlite_master WHERE name='_revisionDeployment'")
-        .get()
-    )
-      d.sqlite.exec('UPDATE _revisionDeployment SET writable=1')
-    // Install the converted form of 0203 before generic discovery considers its ledger entry.
-    const policy = prepareRevisionIdlePolicy(d.sqlite)
-    for (const group of policy)
-      d.sqlite.transaction(() => applyLegacyDraftConversion(d.sqlite, [group]))()
-    const groups = [
-      ...policy,
-      ...prepareNumberedMigrations(database, directory, 'schema'),
+  if (
+    d.sqlite.query("SELECT 1 FROM sqlite_master WHERE name='_revisionDeployment'").get()
+  )
+    d.sqlite.exec('UPDATE _revisionDeployment SET writable=1')
+  const groups = prepareMatchingBranding(
+    d.sqlite,
+    database,
+    directory,
+    matchingBranding,
+  )
+  for (const group of groups) {
+    const statements = [
+      ...group.statements,
+      ...(group.tables ? fences(group.fenceTables ?? group.tables) : []),
     ]
-    const cleanup = prepareLegacyDraftConversion(d.sqlite)
-    for (const group of cleanup)
-      d.sqlite.transaction(() => applyLegacyDraftConversion(d.sqlite, [group]))()
-    groups.push(...cleanup)
-    if (matchingBranding)
-      groups.push(
-        ...prepareMatchingBranding(d.sqlite, database, directory, matchingBranding),
+    if (
+      statements.length + 4 > 950 ||
+      statements.some(
+        statement =>
+          Buffer.byteLength(statement.sql) > 95_000 || statement.params.length > 100,
       )
-    for (const group of groups) {
-      const statements = [
-        ...group.statements,
-        ...(group.tables ? fences(group.fenceTables ?? group.tables) : []),
-      ]
-      if (
-        statements.length + 4 > 950 ||
-        statements.some(
-          statement =>
-            Buffer.byteLength(statement.sql) > 95_000 || statement.params.length > 100,
-        )
-      )
-        throw new Error(`Oversized atomic unit: ${group.label}`)
-    }
-    for (const check of completeness(true)) {
-      try {
-        d.sqlite.query(check.sql).all(...check.params)
-      } catch {
-        throw new Error(
-          'Lifecycle cleanup requires completed resource baseline enrollment: ' +
-            check.sql,
-        )
-      }
-    }
-    const expected = Object.fromEntries(
-      tables(d).map(table => [
-        table,
-        fingerprint(
-          d.sqlite.query(`SELECT * FROM ${identifier(table)}`).all() as Record<
-            string,
-            unknown
-          >[],
-          true,
-        ),
-      ]),
     )
-    const plan: Plan = {
-      version: 1,
-      ...(matchingBranding
-        ? { matchingBrandingHash: matchingBrandingHash(matchingBranding) }
-        : {}),
-      featureLifecycle: 'current',
-      target,
-      sourceHash: releaseSourceHash(),
-      initial,
-      initialSchema,
-      expected,
-      expectedSchema: schemaFingerprint(
-        d.sqlite
-          .query(
-            'SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE sql IS NOT NULL',
-          )
-          .all() as Record<string, unknown>[],
-      ),
-      groups,
-      tables: tables(d),
-      migrations: (
-        d.sqlite.query('SELECT name FROM d1_migrations ORDER BY name').all() as {
-          name: string
-        }[]
-      ).map(row => row.name),
-    }
-    const planHash = persistPlan(directory, plan)
-    writeFileSync(
-      join(directory, 'receipt.json'),
-      JSON.stringify(
-        {
-          planHash,
-          target,
-          convertedLegacyDrafts: cleanup.length,
-          curationGroups: groups.filter(group => group.label.startsWith('curation/'))
-            .length,
-          remoteWrites: false,
-        },
-        null,
-        2,
-      ) + '\n',
-      { mode: 0o600, flag: 'wx' },
-    )
-    return plan
-  } finally {
-    d.close()
+      throw new Error(`Oversized atomic unit: ${group.label}`)
   }
+  for (const check of completeness(true)) {
+    try {
+      d.sqlite.query(check.sql).all(...check.params)
+    } catch {
+      throw new Error('Curation requires complete revision baselines: ' + check.sql)
+    }
+  }
+  const expected = Object.fromEntries(
+    tables(d).map(table => [
+      table,
+      fingerprint(
+        d.sqlite.query(`SELECT * FROM ${identifier(table)}`).all() as Record<
+          string,
+          unknown
+        >[],
+        true,
+      ),
+    ]),
+  )
+  const plan: Plan = {
+    version: 1,
+    matchingBrandingHash: matchingBrandingHash(matchingBranding),
+    featureLifecycle: 'current',
+    target,
+    sourceHash: releaseSourceHash(),
+    initial,
+    initialSchema,
+    expected,
+    expectedSchema: schemaFingerprint(
+      d.sqlite
+        .query('SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE sql IS NOT NULL')
+        .all() as Record<string, unknown>[],
+    ),
+    groups,
+    tables: tables(d),
+    migrations: [],
+  }
+  if (digest(plan.initialSchema) !== digest(plan.expectedSchema))
+    throw new Error('Curation changed the database schema')
+  const planHash = persistPlan(directory, plan)
+  writeFileSync(
+    join(directory, 'receipt.json'),
+    JSON.stringify(
+      {
+        planHash,
+        target,
+        curationGroups: groups.filter(group => group.label.startsWith('curation/'))
+          .length,
+        remoteWrites: false,
+      },
+      null,
+      2,
+    ) + '\n',
+    { mode: 0o600, flag: 'wx' },
+  )
+  return plan
 }
