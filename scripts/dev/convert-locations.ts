@@ -14,14 +14,16 @@ import { backupMirror } from '../breadline/lib/backup'
  * Preserve existing Feature facts in first-class Locations during a fresh local rebuild.
  * @param path Prepared local database, never a remote target.
  * @param directory Private manifests and independent preservation verification.
+ * @param existing Connection instrumented by the deployment planner to retain each atomic batch.
  * @returns Planned and explicitly excluded counts after successful application and replay.
  */
 export async function convertExistingLocations(
   path: string,
   directory: string,
+  existing?: ReturnType<typeof openSqliteDomain>,
 ): Promise<Record<string, number>> {
   const before = backupMirror(path)
-  const connection = openSqliteDomain(path)
+  const connection = existing ?? openSqliteDomain(path)
   const manifestPath = resolve(directory, 'location-split.json')
   const counts: Record<string, number> = { planned: 0 }
   try {
@@ -91,7 +93,7 @@ export async function convertExistingLocations(
       }
     }
   } finally {
-    connection.close()
+    if (!existing) connection.close()
   }
   const child = Bun.spawn(
     ['bun', 'scripts/locations/verify-feature-split.ts', manifestPath, before, path],

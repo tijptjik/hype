@@ -47,28 +47,24 @@ further draft conversions. Migration `0207` then recorded 42 former-bookstore re
 All 42 had been excluded from the 1,018 Location splits. The local database passed
 SQLite integrity and foreign-key checks.
 
-Two additional packages require reconciliation on the production-derived database:
-
-- The first matching and branding comparison stopped on 3,639 differing keys across
-  eight tables. These include the 330 Breadline bindings and their independently
-  generated revision history. Verify the package against production's own ancestry and
-  replay the resulting plan before applying it.
-- The ten local Revealing Arrow media objects matched the package hashes and sizes. The
-  recording uses two historical option IDs missing from the production Ghost Signs
-  catalogue. The seven existing records that used the old condition now carry
-  Stratigraphy = Revealed. The old Material = Tiles has no matching example among the
-  production records. Retain the authored history and resolve the current classification
-  against the production catalogue before importing the recording.
-
-Select the matching and branding package with `--curation-package` during managed
-preparation. Its original inputs and 769 local media objects matched their manifests.
-The production ancestry file pins the donor import used to reconcile the histories.
-Read-only production inspection found five matching media objects and 764 required
-uploads. Recheck all pinned inputs and production media at release freeze.
+**Breadline reconciliation is deferred until after activation.** Prepare this cutover
+in a fresh run directory with `--local-backup` and omit `--curation-package`. Enroll
+the existing production records and links as the starting revision history. The
+combined matching and branding package includes Breadline, MTR and catalogue work, so
+its database changes follow in a subsequent release. The approved R2 upload has
+completed. All 769 required objects passed SHA-256 readback. Use the frozen dev
+curation for matches and branding and the Breadline production export for donor phones.
+Retain unrelated production domains, authentication records and existing identity
+references. Generate a new post-cutover target plan and verify the resulting current
+values, relationship history and zero-write replay.
 [Matching and branding runbook](../../migrations/pending/matching-and-branding/README.md)
 
-The revision rehearsal starts from the locally split database. A complete deployment
-rehearsal must start at the original export and include every selected package.
+**Revealing Arrow is included in the first production lifecycle cutover.** The tiles
+formed the sign. The current record uses Material = Tiles and Stratigraphy = Revealed,
+and the four original Feature revisions retain their exact authored content. A fifth
+revision records the catalogue conversion. The ten required objects were missing in
+the production raw bucket at preflight. Stage them with create-only writes and verify
+their hashes and sizes before fencing production.
 
 ## 1. Freeze the candidate and control deployment
 
@@ -126,8 +122,8 @@ must be proven on the production snapshot.
 | Existing Hype Features without Locations   | Once the required Location schema exists, classify every Feature as already linked, eligible for an unresolved Location, explicitly excluded, or needing review. Prepare the split from the exact target and run the resolved plan before capturing baselines that depend on placement. Verify original geometry, ownership, effective names/addresses/properties, and one association history per split. Preserve existing Breadline links and intangible/draft exclusions. Resolve any overlap with later curated placements, including the former bookstores. [Places handoff](../../spec/breadline/proposal/places-migration-runbook.md)                                                                                                                       |
 | Revision and media enrollment              | Stage exact referenced originals and versioned metadata. Enroll Features, gallery/task image revisions and pins, resource logos, Organisation/Project/Layer/Hub heads, and the applicable property catalogues. Preserve contributor/reviewer attribution independently of the migration actor. A missing or ambiguous required object blocks its group. Verify actual bytes, references and hashes. [Revision deployment](Revision-Deployment.md)                                                                                                                                                                                                                                                                                                                  |
 | Feature lifecycle and subsequent SQL       | Convert accepted heads, visibility/private history and unfinished creation drafts. Retain task/proposal IDs, reviews, evidence, image pins, and before-images for removed provisional rows. Verify every current head and sequence. Install the schema-appropriate `0203` editing-window guards, and check title/translation guards against the final schema. Run `0207` and other dependent migrations only once their data and storage prerequisites pass.                                                                                                                                                                                                                                                                                                       |
-| Existing Breadline onboarding and curation | Preserve both private accepted-sync manifests and their referenced artifacts. Compare users and donor/drop-off crosswalks by stable ID. Rehearse a zero-write replay or a reviewed incremental delta using a writer adapted to the target Location/revision schema. For donor identity, naming and original-template reconciliation, regenerate snapshot-specific plans against the target, check all prerequisites including the catalogue seed, and compare every affected localized title and assignment. Keep authored overrides, claims and source history. Report unimplemented schedule/event imports separately. [Feature sync](../../spec/breadline/proposal/feature-sync.md) · [Donor naming](../../migrations/pending/breadline-donor-naming/README.md) |
-| Revealing Arrow                            | After lifecycle conversion, verify all ten manifest objects at their exact production R2 keys and sizes/hashes. Integrate the SQL as one fenced, journaled group before activation. Verify the expected Feature head, version 11, Location binding and both gallery originals. A conflicting existing object or identity requires reconciliation. [Package and expected IDs](../../migrations/pending/revealing-arrow/README.md)                                                                                                                                                                                                                                                                                                                                   |
+| Existing Breadline onboarding and curation | At cutover, enroll existing production identities and associations. After activation, prepare the combined package against that active schema using frozen dev values for Breadline-owned fields. Verify stable crosswalks, claims, affected names and assignments, and zero-write replay. [Curation package](../../migrations/pending/matching-and-branding/README.md) |
+| Revealing Arrow | Stage and verify all ten production R2 objects before fencing. After lifecycle conversion, apply the recording and catalogue update as one journaled group. Verify the four authored revisions through version 11, the version 12 head with Material = Tiles and Stratigraphy = Revealed, the Location binding and both gallery pins. [Package and expected IDs](../../migrations/pending/revealing-arrow/README.md) |
 | Catalogue, indoor and field data           | Verify the `0247` catalogue and the referenced logo assets in the production delivery path. Inventory reviewed Location kinds/policies, station/operator/shop drafts, premises releases and their R2 manifests, and Field Sessions data selected for publication. Record any approved local-only data that needs promotion with a source, owner and verifier. Retain unresolved station-shop matches as pending reviews. Local seeds, example personas and synthetic records belong outside the production manifest. Inventory rows and retain a before-image before `0264` drops the four retired web-recorder staging tables. Its SQL leaves audio objects in storage. [MTR shop onboarding](../maps/mtr-shop-onboarding.md)                                     |
 | Ghost Signs Stratigraphy                   | Preserve the existing single-select taxonomy and assignments through the cutover. Apply the pending cardinality package only after `0263` **and** the compatible application are deployed. Verify singleton reads and multi-select writes and history through the application. [Ordered package](../../migrations/pending/ghost-signs-stratigraphy/README.md)                                                                                                                                                                                                                                                                                                                                                                                                      |
 

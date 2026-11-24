@@ -17,12 +17,21 @@ authored revision content, IDs, attribution and timestamps are retained. Binding
 uses new destination integer row IDs while preserving its stable version IDs. The
 existing triggers rebuild membership, search, counts and background work.
 
+## Production catalogue
+
+The operator confirmed that tiles formed the sign. The first production lifecycle
+planner adds the original Tiles option ID to the project's Material catalogue. It
+maps the historical condition to Stratigraphy = Revealed. The recording keeps all four
+original Feature revisions, including their original labels. A fifth revision extends
+version 11 to version 12 and captures the current definitions. The production group
+replays the catalogue, recording and new head atomically.
+[Production adapter](../../../scripts/revisions/production/revealing-arrow.ts)
+
 ## Required release order
 
 This is a **pending post-lifecycle data migration**, not a numbered migration. The
 numbered migration stage runs before the managed lifecycle conversion and cannot read
-this recording's current revision schema. The normal deployment command does not
-currently discover or execute this directory automatically.
+this recording's current revision schema. The production planner selects this recording after lifecycle conversion.
 
 1. Retain `.local/revealing-arrow/media/` with the release handoff. It contains the
    hash-verified originals and metadata objects listed in `media-manifest.json`. Image
@@ -39,9 +48,8 @@ currently discover or execute this directory automatically.
    and before activation**, under the managed deployment write fence. Do not split its
    statements across batches or execute it against the old production schema. Include
    the data group in the release's expected-state fingerprints and recovery checkpoint.
-   This integration and target-specific rehearsal remain release work; this directory
-   alone does not add a group to the release planner.
-5. Verify the Feature head `ffc4084b-12bd-4a2f-9d0e-00c0fc73ea72`, version 11, its
+   The production adapter prepares and verifies the group on the rehearsal database.
+5. Verify the retained version 11 and the new `revealing-arrow:production-taxonomy-v1` head at version 12, its
    Location binding and both image originals/metadata in production before activation.
 
 The batch rejects existing Feature, Location, image and revision identities. Resume

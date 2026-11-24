@@ -32,6 +32,8 @@ import {
   applyLegacyDraftConversion,
 } from '../../dev/feature-lifecycle/convert-drafts'
 import { enrollLegacyRevisions } from '../enroll'
+import { prepareRevealingArrow } from './revealing-arrow'
+import { convertExistingLocations } from '../../dev/convert-locations'
 import { publishedSubmissions } from './published-submissions'
 import approvedImages from './approved-image-recovery.json'
 import { cacheRevisionMedia, mediaCacheKey } from '../cache-media'
@@ -255,13 +257,12 @@ export async function prepareRelease(
     options.featureLifecycle === 'current',
   )
   const media = join(directory, 'media')
+  const firstProductionCutover =
+    target === 'production:7786af0e-3782-47f8-b70d-de645ba836ad' &&
+    options.featureLifecycle === 'current'
   const mediaOptions = {
     baselineOnly: true,
-    publishedSubmissions:
-      target === 'production:7786af0e-3782-47f8-b70d-de645ba836ad' &&
-      options.featureLifecycle === 'current'
-        ? publishedSubmissions
-        : undefined,
+    publishedSubmissions: firstProductionCutover ? publishedSubmissions : undefined,
     approvedImages: target.startsWith('production:') ? approvedImages : undefined,
   }
   const cached = await cacheMedia(database, media, mediaOptions)
@@ -271,7 +272,7 @@ export async function prepareRelease(
     )
   d = openSqliteDomain(database)
   try {
-    const expected = projections(d)
+    let capturingLocations = firstProductionCutover
     // Capture actual domain batches, preserving their transaction boundaries for D1 replay.
     const batch = d.db.batch.bind(d.db)
     d.db.batch = (async (queries: Parameters<typeof d.db.batch>[0]) => {
@@ -279,9 +280,17 @@ export async function prepareRelease(
         (q as unknown as { toSQL(): Statement }).toSQL(),
       )
       const result = await batch(queries)
-      groups.push({ label: `enrollment-${groups.length}`, statements })
+      groups.push({
+        label: `${capturingLocations ? 'location-split' : 'enrollment'}-${groups.length}`,
+        statements,
+      })
       return result
     }) as unknown as typeof d.db.batch
+    if (capturingLocations) {
+      await convertExistingLocations(database, directory, d)
+      capturingLocations = false
+    }
+    const expected = projections(d)
     const gate: Statement = {
       sql: 'UPDATE adminResourceRevisionRollout SET enabled=1',
       params: [],
@@ -432,6 +441,7 @@ export async function prepareRelease(
       groups.push(...prepareNumberedMigrations(database, directory, 'post-lifecycle'))
       for (const check of completeness(true))
         d.sqlite.query(check.sql).all(...check.params)
+      if (firstProductionCutover) groups.push(await prepareRevealingArrow(d))
       if (options.matchingBranding)
         groups.push(
           ...prepareMatchingBranding(

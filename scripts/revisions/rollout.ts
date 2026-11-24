@@ -265,6 +265,21 @@ export async function main(args: string[]): Promise<void> {
   let release = digest(plan)
   console.info(`Prepared revision deployment ${release}: ${directory}`)
   if (!apply && !abort) return
+  const includesRecording = plan.groups.some(group => group.label === 'revealing-arrow')
+  const checkReplannedRecording = async (next: Plan, snapshotDirectory: string) => {
+    if (next.groups.some(group => group.label === 'revealing-arrow') !== includesRecording)
+      throw new Error('Replanned recording scope differs from the staged release')
+    if (includesRecording)
+      await run(
+        ['bun', 'migrations/pending/revealing-arrow/media.ts', '--verify'],
+        join(snapshotDirectory, 'revealing-arrow-media.json'),
+      )
+  }
+  if (apply && !abort && includesRecording)
+    await run(
+      ['bun', 'migrations/pending/revealing-arrow/media.ts', '--stage'],
+      join(directory, 'revealing-arrow-media.json'),
+    )
   if (apply && curation)
     await run(
       [
@@ -404,6 +419,7 @@ export async function main(args: string[]): Promise<void> {
       const parentHash = release
       selected = 'fenced-' + Date.now()
       plan = await snapshot(join(directory, selected))
+      await checkReplannedRecording(plan, join(directory, selected))
       plan.parentHash = parentHash
       plan.parentCursor = 0
       planPath = join(directory, selected, 'release', 'plan.json')
@@ -428,6 +444,7 @@ export async function main(args: string[]): Promise<void> {
         parentCursor = migrated.nextGroup
       selected = 'migrated-' + Date.now()
       plan = await snapshot(join(directory, selected))
+      await checkReplannedRecording(plan, join(directory, selected))
       plan.parentHash = parentHash
       plan.parentCursor = parentCursor
       planPath = join(directory, selected, 'release', 'plan.json')

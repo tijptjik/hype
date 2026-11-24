@@ -113,6 +113,16 @@ def main():
                     raise RuntimeError('Historical dependency changed retained evidence')
                 db.row_factory = None
             sql = helper.local_migration_sql(db, path.name, path.read_text())
+            if path.name == bookstores:
+                # Retain the recording time of the 84 new relationship receipts in the replayed transaction.
+                stamp = db.execute("SELECT strftime('%Y-%m-%dT%H:%M:%fZ','now')").fetchone()[0]
+                sql, count = re.subn(
+                    r'(INSERT INTO location(?:Address|Occupancy) )\((id,[^)]*)\) SELECT ',
+                    lambda m: f"{m[1]}(recordedAt,{m[2]}) SELECT '{stamp}',",
+                    sql,
+                )
+                if count != 84:
+                    raise ValueError("Former bookstore relationship scope changed")
             # The audited rebuild rejects unknown triggers. Our reserved maintenance
             # triggers are verified/reinstalled atomically by the rollout contract.
             if path.name == '0169_audit_column_order.sql':
