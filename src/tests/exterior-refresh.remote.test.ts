@@ -162,11 +162,16 @@ it('rebuilds from retained files and unlinks the final slice only for the select
       : { body: value, json: async () => JSON.parse(value) }
   })
   mocks.put.mockImplementation(async (key, value) => assets.set(key, value))
-  await remote.removeLocationExteriorSlice(removal)
+  const retained = await remote.removeLocationExteriorSlice(removal)
   const assetId = sqlite
     .prepare("SELECT assetId FROM locationExteriorModel WHERE locationId='building'")
     .get()?.assetId as string
   const prefix = 'location-exteriors/' + assetId + '/'
+  expect(retained).toMatchObject({
+    assetId,
+    url: `/api/location-exterior/building/${assetId}/assembly.gltf`,
+    comparisonFile: null,
+  })
   expect(JSON.parse(assets.get(prefix + 'assembly.json')!).sources).toEqual([
     sources[1],
   ])
@@ -178,11 +183,13 @@ it('rebuilds from retained files and unlinks the final slice only for the select
   await expect(
     remote.removeLocationExteriorSlice({ ...removal, modelId: 'B2' }),
   ).rejects.toMatchObject({ status: 409 })
-  await remote.removeLocationExteriorSlice({
-    ...removal,
-    expectedAssetId: assetId,
-    modelId: 'B2',
-  })
+  await expect(
+    remote.removeLocationExteriorSlice({
+      ...removal,
+      expectedAssetId: assetId,
+      modelId: 'B2',
+    }),
+  ).resolves.toBeNull()
   expect(
     sqlite.prepare('SELECT locationId, assetId FROM locationExteriorModel').all(),
   ).toEqual([{ locationId: 'other', assetId: 'old' }])

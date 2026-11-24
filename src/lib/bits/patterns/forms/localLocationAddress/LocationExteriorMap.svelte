@@ -51,15 +51,17 @@ const displayAddress = $derived(
 )
 let result = $state<Awaited<ReturnType<typeof getLocationExterior>> | null>(null)
 const model = $derived(result?.model ?? null)
+let removalQueue = $state<string[]>([])
+const savedSlices = $derived(
+  (result?.slices ?? []).filter(slice => !removalQueue.includes(slice.modelId)),
+)
 const includedFootprints = $derived([
   ...new Set(
-    (result?.slices ?? []).flatMap(slice =>
-      slice.footprintId ? [slice.footprintId] : [],
-    ),
+    savedSlices.flatMap(slice => (slice.footprintId ? [slice.footprintId] : [])),
   ),
 ])
 const selectedAlreadyAdded = $derived(
-  Boolean(result?.slices.some(slice => slice.modelId === selected)),
+  savedSlices.some(slice => slice.modelId === selected),
 )
 let candidates = $state<Awaited<
   ReturnType<typeof findLocationExteriorCandidates>
@@ -114,13 +116,12 @@ let sliceLabel = $state('')
 let pendingSlices = $state<Omit<ExteriorSlice, 'sheet'>[]>([])
 let importing = $state(false)
 let refreshing = $state(false)
-let removingId = $state('')
 let deletionMode = $state(false)
 let pendingSaved = $state(false)
 let activeBatch = $state<Omit<ExteriorSlice, 'sheet'>[]>([])
 const selectedQueued = $derived(pendingSlices.some(slice => slice.modelId === selected))
 const displayedSlices = $derived([
-  ...(result?.slices ?? []).filter(
+  ...savedSlices.filter(
     slice => !pendingSlices.some(pending => pending.modelId === slice.modelId),
   ),
   ...pendingSlices,
@@ -249,30 +250,61 @@ async function refreshModels(): Promise<void> {
   }
 }
 
-/** Unlink one saved slice and refresh the map and viewer from the current association.
+/** Hide the slice immediately and save queued removals against successive assembly revisions.
  * @param modelId Source model selected in the Building slices list.
- * @returns Completion after the saved association has been reloaded.
+ * @returns Completion after enqueueing, or after draining the queue for its first caller.
  */
 async function removeSlice(modelId: string): Promise<void> {
-  if (!model || removingId || importing || refreshing || pendingSlices.length) return
-  removingId = modelId
+  if (
+    !savedSlices.some(slice => slice.modelId === modelId) ||
+    importing ||
+    refreshing ||
+    pendingSlices.length
+  )
+    return
+  removalQueue.push(modelId)
+  if (hoveredModelId === modelId) hoveredModelId = ''
+  if (focusedModelId === modelId) focusedModelId = ''
+  if (removalQueue.length > 1) return
+
   message = ''
-  try {
-    await removeLocationExteriorSlice({
-      locationId,
-      modelId,
-      expectedAssetId: model.assetId,
-    })
-  } catch (error) {
-    console.error('Exterior slice removal failed', error)
-    message = 'Could not remove the slice. Check the current list before retrying.'
-  }
-  try {
-    await refresh()
-  } catch {
-    message = 'Could not refresh the building slices. Reload to see the saved exterior.'
-  } finally {
-    removingId = ''
+  const failed: string[] = []
+  while (removalQueue.length && result?.model) {
+    const id = removalQueue[0]
+    const expectedAssetId: string = result.model.assetId
+    try {
+      const saved = await removeLocationExteriorSlice({
+        locationId,
+        modelId: id,
+        expectedAssetId,
+      })
+      result = {
+        ...result,
+        model: saved,
+        slices: result.slices.filter(slice => slice.modelId !== id),
+      }
+      if (!saved) deletionMode = false
+    } catch (error) {
+      console.error('Exterior slice removal failed', error)
+      // Confirm the current revision before applying any remaining clicks.
+      try {
+        await refresh()
+      } catch {
+        removalQueue = []
+        message =
+          'Could not verify the removals. Reload to see the saved building slices.'
+        return
+      }
+      if (result?.model?.assetId !== expectedAssetId) {
+        removalQueue = []
+        message =
+          'The exterior changed. Review the current slices before removing more.'
+        return
+      }
+      failed.push(id)
+      message = `Could not remove: ${failed.join(', ')}. You can retry those slices.`
+    }
+    removalQueue.shift()
   }
 }
 
@@ -472,7 +504,7 @@ async function importModel(): Promise<void> {
       {#if model}
         <Button
           text="View 3D model"
-          disabled={busy || !!removingId}
+          disabled={busy || removalQueue.length > 0}
           onClick={() => {
             viewMode = '3D'
             associating = false
@@ -537,7 +569,7 @@ async function importModel(): Promise<void> {
                       class="border-border aria-pressed:bg-primary/10 aria-pressed:border-primary rounded border px-3 py-2 text-sm"
                       onclick={() => (selected = candidate.id)}
                     >
-                      {candidate.id}{result.slices.some(
+                      {candidate.id}{savedSlices.some(
                         slice => slice.modelId === candidate.id,
                       )
                         ? ' · Added'
@@ -557,7 +589,7 @@ async function importModel(): Promise<void> {
                 <option value="">Choose a model</option>
                 {#each candidates.candidates as candidate (candidate.id)}
                   <option value={candidate.id}>
-                    {candidate.id}{result.slices.some(
+                    {candidate.id}{savedSlices.some(
                       slice => slice.modelId === candidate.id,
                     )
                       ? ' · Added'
@@ -606,7 +638,7 @@ async function importModel(): Promise<void> {
                   ? 'Queued'
                   : 'Add slice to building'}
               disabled={busy ||
-                !!removingId ||
+                removalQueue.length > 0 ||
                 refreshing ||
                 !selected ||
                 selectedAlreadyAdded ||
@@ -629,7 +661,7 @@ async function importModel(): Promise<void> {
                 >{displayedSlices.length}</span
               >
             </h3>
-            {#if result.canImport && result.slices.length}
+            {#if result.canImport && savedSlices.length}
               <Button
                 text="Slice deletion mode"
                 iconComponent={TrashIcon}
@@ -666,7 +698,7 @@ async function importModel(): Promise<void> {
                       focusedModelId = slice.modelId
                   }}
                   onfocusout={() => (focusedModelId = '')}
-                  aria-busy={(pending && importing) || removingId === slice.modelId}
+                  aria-busy={pending && importing}
                 >
                   <span
                     role="status"
@@ -727,10 +759,7 @@ async function importModel(): Promise<void> {
                       attrs={{
                         'aria-label': `Remove ${slice.label || slice.modelId} from this location`,
                       }}
-                      disabled={!!removingId ||
-                        refreshing ||
-                        importing ||
-                        pendingSlices.length > 0}
+                      disabled={refreshing || importing || pendingSlices.length > 0}
                       onClick={() => removeSlice(slice.modelId)}
                     />
                   {/if}

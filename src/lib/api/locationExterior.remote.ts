@@ -43,6 +43,7 @@ import type { GuardedCommandContext } from '#lib/api/guarded.types.js'
 // ═══════════════════════
 //
 // 1. EXTERIOR QUERIES
+// - exteriorModelUrl
 // - getLocationExterior
 // - findLocationExteriorCandidates
 //
@@ -74,6 +75,11 @@ const sliceSchema = z.object({
   evidenceKeys: z.array(z.string().max(100)).max(30).default([]),
 })
 const inputSchema = z.object({ locationId: z.string().min(1).max(200) })
+
+/** @param model Confirmed exterior association. @returns Its authenticated viewer URL. */
+function exteriorModelUrl(model: ExteriorModel): string {
+  return `/api/location-exterior/${encodeURIComponent(model.locationId)}/${model.assetId}/${model.sourceModelId}.gltf`
+}
 
 /** Retrieve the assembled exterior and reviewed slice mappings. @param input Location ID. @returns Source metadata, retained evidence choices and the shared viewer asset URL. */
 export const getLocationExterior = guardedQuery(inputSchema, async (input, ctx) => {
@@ -185,7 +191,7 @@ export const getLocationExterior = guardedQuery(inputSchema, async (input, ctx) 
             ctx.event.locals.platform,
             model.assetId,
           ),
-          url: `/api/location-exterior/${encodeURIComponent(input.locationId)}/${model.assetId}/${model.sourceModelId}.gltf`,
+          url: exteriorModelUrl(model),
         }
       : null,
   }
@@ -349,7 +355,7 @@ export const importLocationExterior = guardedCommand(
 
 /** Remove a reviewed slice from this Location's exterior.
  * @param input Location, selected model ID and the asset the reviewer saw.
- * @returns Nothing once the retained assembly or final unlink has been saved.
+ * @returns The newly published model for the next edit, or null after the final unlink.
  */
 export const removeLocationExteriorSlice = guardedCommand(
   inputSchema.extend({
@@ -376,8 +382,15 @@ export const removeLocationExteriorSlice = guardedCommand(
       if (retained.length) {
         const assetId = crypto.randomUUID()
         await copyDependencies(bucket, current, assetId, retained)
-        await publishAssembly(ctx, bucket, locationId, current, assetId, retained)
-        return
+        const saved = await publishAssembly(
+          ctx,
+          bucket,
+          locationId,
+          current,
+          assetId,
+          retained,
+        )
+        return { ...saved, url: exteriorModelUrl(saved), comparisonFile: null }
       }
     } else if (current.sourceModelId !== modelId) error(404, 'Slice is not associated.')
 
@@ -387,6 +400,7 @@ export const removeLocationExteriorSlice = guardedCommand(
       .where(currentAssociation(current))
       .returning({ assetId: locationExteriorModel.assetId })
     if (!removed.length) error(409, 'Exterior changed. Reload before removing a slice.')
+    return null
   },
 )
 
