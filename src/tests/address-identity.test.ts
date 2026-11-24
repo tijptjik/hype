@@ -56,6 +56,22 @@ it('uses only building components for identity suggestions', () => {
   }
   expect(addressBuildingNames(value)).toEqual({})
 })
+it('fills only missing building names from exact address languages', () => {
+  const value = address()
+  value.overrides = {
+    en: { buildingName: 'Unison Building' },
+    'fr-ca': { buildingName: 'Édifice Unison' },
+    ja: { buildingName: null },
+  }
+  const explicit = { 'zh-hant': '自訂名稱', ja: '', de: 'Haus Unison' }
+  expect(addressBuildingNames(value, explicit)).toEqual({
+    ...explicit,
+    en: 'Unison Building',
+    'fr-CA': 'Édifice Unison',
+  })
+  value.overrides.en.buildingName = null
+  expect(addressBuildingNames(value, explicit)).not.toHaveProperty('en')
+})
 it('composes building support addresses while retaining estate context and full source components', () => {
   const value = address()
   const before = structuredClone(value)

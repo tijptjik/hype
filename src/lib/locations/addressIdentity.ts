@@ -9,23 +9,56 @@ import {
   localAddressContent,
   localAddressDisplayOverrides,
 } from '#lib/addresses/locationDraft.js'
+import { normalizeContentLocale } from '#lib/content-locales/model.js'
+import { contentStorageTag } from '#lib/i18n/contentRecords.js'
 // VALIDATION
 import { LocalLocationInputSchema, type LocalLocationInput } from './local.js'
 
 /** Read building names without treating a premises or estate name as a building identity.
  * @param address Accepted address evidence.
+ * @param explicitNames Reviewed Location names, including deliberate clears in the current draft.
  * @returns Available localized building names; no source identity is inferred.
  */
-export function addressBuildingNames(address: FeatureAddress): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(ADDRESS_LOCALES).flatMap(([locale, tag]) => {
-      const value = getAddressLocale(
-        address,
-        locale as keyof typeof ADDRESS_LOCALES,
-      ).buildingName
-      return typeof value === 'string' && value.trim() ? [[tag, value]] : []
-    }),
-  )
+export function addressBuildingNames(
+  address: FeatureAddress,
+  explicitNames: Record<string, string> = {},
+): Record<string, string> {
+  const names = { ...explicitNames }
+  for (const [locale, tag] of Object.entries(ADDRESS_LOCALES)) {
+    if (Object.hasOwn(names, tag)) continue
+    const value = getAddressLocale(
+      address,
+      locale as keyof typeof ADDRESS_LOCALES,
+    ).buildingName
+    if (typeof value === 'string' && value.trim()) names[tag] = value
+  }
+  // Additional authored languages have exact component rows and locale-specific overrides.
+  const content =
+    address.association?.content ??
+    address.canonical?.content ??
+    address.source.canonical?.content ??
+    address.source.authored
+  const rows = content?.i18n ?? {}
+  for (const tag of new Set([
+    ...Object.keys(rows),
+    ...Object.keys(address.overrides),
+  ])) {
+    const locale = normalizeContentLocale(tag)
+    if (!locale) continue
+    const key = contentStorageTag(locale)
+    if (
+      Object.hasOwn(names, key) ||
+      Object.values(ADDRESS_LOCALES).some(tag => tag === key)
+    )
+      continue
+    const changes = address.overrides[tag.toLowerCase()]
+    const value =
+      changes && Object.hasOwn(changes, 'buildingName')
+        ? changes.buildingName
+        : rows[tag]?.buildingName
+    if (typeof value === 'string' && value.trim()) names[key] = value
+  }
+  return names
 }
 
 /** Label an address-only Location from its effective localized address, without inventing a venue name.
@@ -90,12 +123,12 @@ export function localIdentityFromAddress(
         kind === 'address'
           ? addressLocationNames(address)
           : kind === 'building'
-            ? {
-                ...addressBuildingNames(address),
-                ...Object.fromEntries(
+            ? addressBuildingNames(
+                address,
+                Object.fromEntries(
                   Object.entries(names).filter(([, name]) => name.trim()),
                 ),
-              }
+              )
             : names,
       phoneNumber: [],
       brands: [],
