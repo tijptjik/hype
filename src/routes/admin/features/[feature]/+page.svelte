@@ -77,7 +77,7 @@ import type { RemoteQuery, RemoteQueryOverride } from '$app/server'
 // TRANSLATION PROVENANCE
 import type { AutomaticTranslation } from '#lib/i18n/automatic.js'
 // SVELTE
-import { goto, pushState, replaceState, snapshot } from '$app/navigation'
+import { goto, snapshot } from '$app/navigation'
 
 import { page } from '$app/state'
 import { untrack, tick, type Snippet } from 'svelte'
@@ -1353,7 +1353,10 @@ function selectDraftLocation(result: {
     return
   }
   draftResultHistoryId = crypto.randomUUID()
-  pushState(page.url.href, { ...page.state, draftLocationResult: draftResultHistoryId })
+  void goto(page.shallow?.url ?? page.url, {
+    shallow: true,
+    state: { ...page.state, draftLocationResult: draftResultHistoryId },
+  })
   // Capture only Location-owned draft fields; recovery must preserve unrelated edits.
   draftSelectionBefore = {
     geometry: structuredClone($state.snapshot(currentFeatureData.geometry)),
@@ -2250,9 +2253,9 @@ function restoreFeatureCheckpoint(
     saved.resultHistoryId &&
     page.state.draftLocationResult !== saved.resultHistoryId
   ) {
-    pushState(page.url.href, {
-      ...page.state,
-      draftLocationResult: saved.resultHistoryId,
+    void goto(page.shallow?.url ?? page.url, {
+      shallow: true,
+      state: { ...page.state, draftLocationResult: saved.resultHistoryId },
     })
   }
   pendingSearchRestore = { scope: navigationDraftScope, search: saved.search }
@@ -4198,7 +4201,11 @@ function resetNewFeatureFlow(): void {
   mapPartsSuggestion = null
   // Remove the discarded selection's history marker without traversing browser history.
   if (page.state.draftLocationResult) {
-    replaceState(page.url.href, { ...page.state, draftLocationResult: undefined })
+    void goto(page.shallow?.url ?? page.url, {
+      shallow: true,
+      replace: true,
+      state: { ...page.state, draftLocationResult: undefined },
+    })
   }
 }
 
