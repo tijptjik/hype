@@ -31,8 +31,10 @@ $effect(() => {
     const data = await decodeTelegramSticker(
       new Uint8Array(await response.arrayBuffer()),
     )
-    if (disposed || !stickerPlayer) return
-    animation = stickerPlayer.loadAnimation({
+    const renderer = await stickerPlayer
+    if (disposed) return
+    if (!renderer) throw new Error('Sticker preview unavailable')
+    animation = renderer.loadAnimation({
       container,
       renderer: 'svg',
       loop: true,
