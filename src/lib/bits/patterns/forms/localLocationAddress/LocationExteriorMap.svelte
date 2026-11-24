@@ -10,6 +10,7 @@ import {
   findLocationExteriorCandidates,
   getLocationExterior,
   importLocationExterior,
+  removeLocationExteriorSlice,
 } from '#lib/api/locationExterior.remote.js'
 // ICONS
 import BuildingIcon from 'virtual:icons/lucide/boxes'
@@ -17,6 +18,7 @@ import FacadeIcon from 'virtual:icons/lucide/building'
 import AddressIcon from 'virtual:icons/lucide/sparkles'
 import SearchIcon from 'virtual:icons/lucide/search'
 import SliceIcon from 'virtual:icons/lucide/box'
+import TrashIcon from 'virtual:icons/lucide/trash-2'
 // BITS COMPONENTS
 import { Button } from '#lib/bits/core/index.js'
 import type { ExteriorSlice } from '#lib/locations/exterior/assembly.js'
@@ -112,6 +114,8 @@ let sliceLabel = $state('')
 let pendingSlices = $state<Omit<ExteriorSlice, 'sheet'>[]>([])
 let importing = $state(false)
 let refreshing = $state(false)
+let removingId = $state('')
+let deletionMode = $state(false)
 let pendingSaved = $state(false)
 let activeBatch = $state<Omit<ExteriorSlice, 'sheet'>[]>([])
 const selectedQueued = $derived(pendingSlices.some(slice => slice.modelId === selected))
@@ -157,6 +161,7 @@ async function refresh(): Promise<void> {
   const query = getLocationExterior({ locationId })
   await query.refresh()
   result = await query
+  if (!result.slices.length) deletionMode = false
 }
 
 onMount(() => {
@@ -234,9 +239,37 @@ async function refreshModels(): Promise<void> {
   }
 }
 
+/** Unlink one saved slice and refresh the map and viewer from the current association.
+ * @param modelId Source model selected in the Building slices list.
+ * @returns Completion after the saved association has been reloaded.
+ */
+async function removeSlice(modelId: string): Promise<void> {
+  if (!model || removingId || importing || refreshing || pendingSlices.length) return
+  removingId = modelId
+  message = ''
+  try {
+    await removeLocationExteriorSlice({
+      locationId,
+      modelId,
+      expectedAssetId: model.assetId,
+    })
+  } catch (error) {
+    console.error('Exterior slice removal failed', error)
+    message = 'Could not remove the slice. Check the current list before retrying.'
+  }
+  try {
+    await refresh()
+  } catch {
+    message = 'Could not refresh the building slices. Reload to see the saved exterior.'
+  } finally {
+    removingId = ''
+  }
+}
+
 /** Search the CSDI sheet covering the Building. @returns Completion. */
 async function search(): Promise<void> {
   if (!associating) {
+    deletionMode = false
     footprintSearch = recordedBuildingName(facts.names) || displayAddress
     searchOpen = false
   }
@@ -333,7 +366,7 @@ async function importModel(): Promise<void> {
         }}
       />
     </div>
-  {:else if !result || (associating && !candidates && busy)}
+  {:else if !result || (associating && !candidates && busy && !model)}
     <div
       role="status"
       aria-label="Loading exterior workspace"
@@ -426,7 +459,7 @@ async function importModel(): Promise<void> {
       {#if model}
         <Button
           text="View 3D model"
-          disabled={busy}
+          disabled={busy || !!removingId}
           onClick={() => {
             viewMode = '3D'
             associating = false
@@ -434,8 +467,8 @@ async function importModel(): Promise<void> {
         />
       {/if}
     </header>
-    {#if candidates}
-      <div class="grid min-h-0 flex-1 md:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)]">
+    <div class="grid min-h-0 flex-1 md:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)]">
+      {#if candidates}
         <ExteriorFootprintPicker
           {coordinates}
           footprints={candidates.footprints}
@@ -444,7 +477,19 @@ async function importModel(): Promise<void> {
           onselect={selectFootprint}
           class="h-full min-h-[28rem] rounded-none border-0"
         />
-        <aside class="border-border flex min-h-0 flex-col border-l">
+      {:else if busy}
+        <div
+          role="status"
+          aria-label="Loading building footprints"
+          class="bg-muted min-h-80 animate-pulse"
+        ></div>
+      {:else}
+        <div class="flex flex-1 items-center justify-center p-8">
+          <Button text="Retry loading footprints" onClick={search} />
+        </div>
+      {/if}
+      <aside class="border-border flex min-h-0 flex-col border-l">
+        {#if candidates}
           <section
             aria-label="Associate model slice"
             class="max-h-[60vh] space-y-4 overflow-y-auto p-5"
@@ -545,100 +590,133 @@ async function importModel(): Promise<void> {
                 : selectedQueued
                   ? 'Queued'
                   : 'Add slice to building'}
-              disabled={busy || !selected || selectedAlreadyAdded || selectedQueued}
+              disabled={busy ||
+                !!removingId ||
+                refreshing ||
+                !selected ||
+                selectedAlreadyAdded ||
+                selectedQueued}
               onClick={() => {
                 queueSlice()
                 void importModel()
               }}
             />
           </section>
-          <section
-            aria-label="Building model slices"
-            class="border-border flex min-h-48 flex-1 flex-col border-t"
-          >
-            <h3 class="flex items-center justify-between px-5 py-4 font-semibold">
+        {/if}
+        <section
+          aria-label="Building model slices"
+          class="border-border flex min-h-48 flex-1 flex-col border-t"
+        >
+          <div class="flex items-center gap-2 px-5 py-4">
+            <h3 class="flex flex-1 items-center justify-between font-semibold">
               Building slices
               <span class="bg-muted rounded-full px-2 py-0.5 text-xs"
                 >{displayedSlices.length}</span
               >
             </h3>
-            <div class="min-h-0 flex-1 overflow-y-auto">
-              <ul class="divide-border divide-y">
-                {#each displayedSlices as slice (slice.modelId)}
-                  {@const pending = pendingSlices.some(
-                    item => item.modelId === slice.modelId,
-                  )}
-                  <li
-                    class="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-3 px-5 py-4"
-                    aria-busy={pending && importing}
+            {#if result.canImport && result.slices.length}
+              <Button
+                text="Slice deletion mode"
+                iconComponent={TrashIcon}
+                modifier="square"
+                size="sm"
+                color={deletionMode ? 'error' : 'neutral'}
+                style={deletionMode ? 'soft' : 'ghost'}
+                attrs={{
+                  title: deletionMode ? 'Exit deletion mode' : 'Remove building slices',
+                  'aria-pressed': deletionMode,
+                }}
+                onClick={() => (deletionMode = !deletionMode)}
+              />
+            {/if}
+          </div>
+          <div class="min-h-0 flex-1 overflow-y-auto">
+            <ul class="divide-border divide-y">
+              {#each displayedSlices as slice (slice.modelId)}
+                {@const pending = pendingSlices.some(
+                  item => item.modelId === slice.modelId,
+                )}
+                <li
+                  class="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] gap-3 px-5 py-4"
+                  aria-busy={(pending && importing) || removingId === slice.modelId}
+                >
+                  <span
+                    role="status"
+                    aria-label={pending && importing
+                      ? 'Importing model slice'
+                      : undefined}
                   >
-                    <span
-                      role="status"
-                      aria-label={pending && importing
-                        ? 'Importing model slice'
-                        : undefined}
-                    >
-                      <SliceIcon
-                        class={`text-primary mt-1 size-5 ${pending && importing ? 'motion-safe:animate-pulse' : ''}`}
-                      />
-                    </span>
-                    <div class="space-y-1 text-sm">
-                      <p class="font-medium break-words">
-                        {slice.label || slice.modelId}
+                    <SliceIcon
+                      class={`text-primary mt-1 size-5 ${pending && importing ? 'motion-safe:animate-pulse' : ''}`}
+                    />
+                  </span>
+                  <div class="space-y-1 text-sm">
+                    <p class="font-medium break-words">
+                      {slice.label || slice.modelId}
+                    </p>
+                    <p class="text-muted-foreground break-words">{slice.modelId}</p>
+                    {#if pending && !importing}
+                      <p class="text-destructive text-xs">
+                        {pendingSaved
+                          ? 'Saved · refresh needed'
+                          : 'Not saved · import failed'}
                       </p>
-                      <p class="text-muted-foreground break-words">{slice.modelId}</p>
-                      {#if pending && !importing}
-                        <p class="text-destructive text-xs">
-                          {pendingSaved
-                            ? 'Saved · refresh needed'
-                            : 'Not saved · import failed'}
-                        </p>
-                        <div class="flex flex-wrap items-center gap-2">
-                          <Button
-                            text={pendingSaved ? 'Refresh' : 'Retry'}
-                            onClick={importModel}
-                          />
-                          {#if !pendingSaved}
-                            <button
-                              type="button"
-                              class="px-3 py-2 text-sm"
-                              onclick={() => {
-                                pendingSlices = []
-                                message = ''
-                              }}
-                            >
-                              Discard
-                            </button>
-                          {/if}
-                        </div>
-                      {/if}
-                      {#each slice.evidenceKeys as key (key)}
-                        {@const evidence = result.evidence.find(
-                          item => item.key === key,
-                        )}
-                        {#if evidence}
-                          <p class="text-muted-foreground break-words">
-                            {evidence.label}
-                          </p>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <Button
+                          text={pendingSaved ? 'Refresh' : 'Retry'}
+                          onClick={importModel}
+                        />
+                        {#if !pendingSaved}
+                          <button
+                            type="button"
+                            class="px-3 py-2 text-sm"
+                            onclick={() => {
+                              pendingSlices = []
+                              message = ''
+                            }}
+                          >
+                            Discard
+                          </button>
                         {/if}
-                      {/each}
-                    </div>
-                  </li>
-                {:else}
-                  <li class="text-muted-foreground px-5 pb-5 text-sm">
-                    Added slices will appear here.
-                  </li>
-                {/each}
-              </ul>
-            </div>
-          </section>
-        </aside>
-      </div>
-    {:else}
-      <div class="flex flex-1 items-center justify-center p-8">
-        <Button text="Retry loading footprints" onClick={search} />
-      </div>
-    {/if}
+                      </div>
+                    {/if}
+                    {#each slice.evidenceKeys as key (key)}
+                      {@const evidence = result.evidence.find(item => item.key === key)}
+                      {#if evidence}
+                        <p class="text-muted-foreground break-words">
+                          {evidence.label}
+                        </p>
+                      {/if}
+                    {/each}
+                  </div>
+                  {#if deletionMode && result.canImport && !pending}
+                    <Button
+                      text="Remove"
+                      size="sm"
+                      style="ghost"
+                      color="error"
+                      class="self-start"
+                      attrs={{
+                        'aria-label': `Remove ${slice.label || slice.modelId} from this location`,
+                      }}
+                      disabled={!!removingId ||
+                        refreshing ||
+                        importing ||
+                        pendingSlices.length > 0}
+                      onClick={() => removeSlice(slice.modelId)}
+                    />
+                  {/if}
+                </li>
+              {:else}
+                <li class="text-muted-foreground px-5 pb-5 text-sm">
+                  Added slices will appear here.
+                </li>
+              {/each}
+            </ul>
+          </div>
+        </section>
+      </aside>
+    </div>
   {:else if model}
     <div
       class="border-border flex flex-wrap items-center justify-end gap-3 border-b px-5 py-3"
