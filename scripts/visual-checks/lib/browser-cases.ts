@@ -1,9 +1,9 @@
 // NODE
 import { mkdir } from 'node:fs/promises'
 // PLAYWRIGHT
-import { chromium, firefox } from 'playwright'
+import { chromium, firefox } from '@playwright/test'
 // TYPES
-import type { Browser, BrowserType } from 'playwright'
+import type { Browser, BrowserType } from '@playwright/test'
 
 type BrowserName = 'chromium' | 'firefox'
 type Engines = Readonly<Record<BrowserName, Pick<BrowserType, 'launch'>>>

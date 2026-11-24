@@ -1,7 +1,7 @@
 // TESTS
 import { expect, test } from 'bun:test'
 // TYPES
-import type { Browser, LaunchOptions } from 'playwright'
+import type { Browser, LaunchOptions } from '@playwright/test'
 // RUNNER
 import { browserCases } from './browser-cases'
 
