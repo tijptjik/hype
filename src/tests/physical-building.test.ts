@@ -351,6 +351,52 @@ db.execute('SELECT 1 FROM locationDeletionBlocker WHERE locationId=?', ('test',)
     })
     expect(await versions()).toEqual([...baseline, ...baseline, ...baseline])
   })
+  it('finds an earlier combined parent and saves only explicitly selected constituents under its existing identity', async () => {
+    const { db } = setupLocationServiceDatabase(true)
+    const placement = emptyFeatureAddress()
+    placement.coordinates = [114.19, 22.32]
+    placement.overrides.en = { formattedAddress: 'Corner entrance' }
+    const first = member('first', '57')
+    const second = member('second', '59')
+    const { locationId } = await createLocalLocation(
+      db,
+      'p',
+      localIdentityFromAddress('building', { en: 'Corner Building' }, placement),
+      'user',
+      undefined,
+      {
+        review: 'explicit-physical-building',
+        references: [
+          { type: 'saanseoi', source: first.source },
+          { type: 'saanseoi', source: second.source },
+        ],
+      },
+    )
+    const read = () =>
+      db.get<{ facts: string; members: string }>(sql`
+      SELECT facts,${physicalBuildingMembers(sql`r.locationId`, 'p')} members FROM locationRevisionContent r
+      WHERE r.locationId=${locationId} ORDER BY version DESC LIMIT 1`)
+    const before = await read()
+    expect(JSON.parse(before.members)).toEqual([])
+    expect(await readBuildingProfileRoles(db, locationId, 'p')).toEqual({
+      physical: true,
+      constituent: false,
+    })
+    for (const org of ['p', 'other']) {
+      const page = await listLocationResources(db, {
+        organisationId: org,
+        physicalParents: {},
+        q: 'Corner Building',
+        searchAddress: true,
+      })
+      expect(page.data.map(row => row.id)).toEqual(org === 'p' ? [locationId] : [])
+    }
+    for (const child of [first, second, first])
+      await savePhysicalBuildingMember(db, 'p', 'user', { parentId: locationId }, child)
+    const after = await read()
+    expect(JSON.parse(after.members)).toMatchObject([first, second])
+    expect(JSON.parse(after.facts)).toEqual(JSON.parse(before.facts))
+  })
   it('labels physical and constituent roles independently using effective scoped membership', async () => {
     const { db } = setupLocationServiceDatabase(true)
     const parent = await savePhysicalBuildingMember(

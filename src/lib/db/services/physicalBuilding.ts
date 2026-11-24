@@ -180,6 +180,20 @@ export async function savePhysicalBuildingMember(
     throw new Error('Physical building unavailable for editing.')
   if ('requestId' in target && (!member || (head && head.seed !== member.source.id)))
     throw new Error('This creation request already belongs to another building.')
+  // A reviewed parent has neither a seed member nor an imported source. Avoid importing a child before its edge can be saved.
+  if (
+    head &&
+    !head.seed &&
+    !head.importedSourceId &&
+    member &&
+    !(await db.get(
+      sql`SELECT 1 FROM sqlite_master WHERE type='view' AND name='reviewedPhysicalBuilding'`,
+    ))
+  )
+    error(
+      503,
+      'Adding constituents to a reviewed building requires database migration 0274.',
+    )
   if (head?.importedSourceId && member?.source.id === head.importedSourceId)
     error(409, 'A physical building cannot be its own constituent.')
   const members: PhysicalBuildingMember[] = head ? JSON.parse(head.members) : []
@@ -247,8 +261,8 @@ export async function savePhysicalBuildingMember(
   }
   // Update generated defaults and preserve the parent's independent corrections and geometry.
   const snapshot: LocationFactsSnapshot = JSON.parse(head.facts)
-  // Designated imports keep their own profile when constituents change.
-  if (!head.importedSourceId) {
+  // Designated imports and previously reviewed buildings retain their independently authored profiles.
+  if (head.seed) {
     const before = physicalBuildingProfile(members)
     for (const locale of new Set([
       ...Object.keys(before.names),

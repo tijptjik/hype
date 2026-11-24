@@ -146,6 +146,7 @@ export function setupLocationServiceDatabase(
       '0271_physical_building_membership',
       '0272_location_deletion',
       '0273_physical_building_designation',
+      '0274_reviewed_physical_buildings',
     ])
       sqlite.exec(readFileSync('migrations/' + name + '.sql', 'utf8'))
   }
