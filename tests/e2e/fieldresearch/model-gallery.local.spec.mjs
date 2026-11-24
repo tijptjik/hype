@@ -16,6 +16,32 @@ test.beforeEach(async ({ page }) => {
   )
 })
 
+test('keeps the read-only views available across all session tabs', async ({
+  page,
+}) => {
+  await page.goto(session)
+  const header = page.getByRole('banner')
+  const button = name => header.getByRole('button', { name, exact: true })
+  const views = ['Interior gallery', '3D model map', 'Exterior gallery']
+  for (const [index, tab] of ['Profile', 'Fields', 'Locations'].entries()) {
+    await button(tab).click()
+    await expect(button(tab)).toHaveAttribute('aria-current', 'page')
+    for (const view of views) await expect(button(view)).toBeVisible()
+    if (tab !== 'Locations') await button('Edit').click({ trial: true })
+
+    const view = views[index]
+    await button(view).click()
+    await expect(button(view)).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('region', { name: view, exact: true })).toBeVisible()
+    await expect(button(tab)).not.toHaveAttribute('aria-current', 'page')
+    if (index === 0) await page.getByRole('button', { name: 'Close gallery' }).click()
+    else if (index === 1) await button(view).click()
+    else await button(tab).click()
+    await expect(button(tab)).toHaveAttribute('aria-current', 'page')
+    await expect(page).not.toHaveURL(/models=/)
+  }
+})
+
 test('opens read-only session galleries and assembles the exterior models on the map', async ({
   page,
 }) => {

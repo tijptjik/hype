@@ -118,14 +118,14 @@ function startNew(): Promise<void> {
 function selectFacet(ref: string): void {
   if (!facets.has(ref)) return
   const url = new URL(tabUrl.href)
-  if (url.hash === '#' + ref) return
+  if (facet === ref && !modelView) return
   url.hash = ref
   url.searchParams.delete('models')
   void goto(url, { shallow: true, state: page.state })
 }
 
 /** Toggle a read-only model view, retaining browser history and the active session.
- * @param id Requested view, or null for location selection. @returns Nothing.
+ * @param id Requested view, or null to return to the previous tab. @returns Nothing.
  */
 function selectModels(id: string | null): void {
   const url = new URL(tabUrl.href)
@@ -134,14 +134,11 @@ function selectModels(id: string | null): void {
   void goto(url, { shallow: true, state: page.state })
 }
 
-const showModelViews = $derived(
-  Boolean(
-    sessionId &&
-      facet === 'locations' &&
-      current?.configurationVersion === researchConfigurationVersion,
-  ),
+const showModelMap = $derived(Boolean(sessionId) && modelView?.id === 'map')
+const showLocations = $derived(
+  facet === 'locations' &&
+    current?.configurationVersion === researchConfigurationVersion,
 )
-const showModelMap = $derived(showModelViews && modelView?.id === 'map')
 $effect(() => {
   adminCtx.setResourceRef(sessionId || false)
 })
@@ -149,9 +146,8 @@ $effect(() => {
 $effect(() => {
   const detail = Boolean(sessionId)
   const isNew = creating
-  const active = facet
+  const active = modelView?.id ?? facet
   const title = current?.name
-  const showModels = showModelViews
   untrack(() => {
     if (detail || isNew) {
       header.setHeaderForEntity(
@@ -160,10 +156,10 @@ $effect(() => {
         facets,
         {
           showFacets: detail,
-          showViewActions: showModels,
+          showViewActions: detail,
           showControlBarToggle: false,
           showLayoutToggle: false,
-          showFormActions: detail && active !== 'locations',
+          showFormActions: detail && (active === 'core' || active === 'fields'),
         },
       )
       if (detail) header.setFacets(facets, { active, onFacetChange: selectFacet })
@@ -181,6 +177,36 @@ $effect(() => {
       header.setCreateAction(startNew)
     }
   })
+  header.setViewActions(
+    !sessionId && !creating
+      ? [
+          {
+            text: filtersVisible ? 'Hide filters' : 'Show filters',
+            icon: filtersVisible ? FilterOffIcon : FilterIcon,
+            color: 'neutral',
+            style: 'ghost',
+            class: 'px-4',
+            alwaysHideLabel: true,
+            hideLabelInstantly: true,
+            onClick: () => {
+              filtersVisible = !filtersVisible
+            },
+          },
+        ]
+      : detail
+        ? modelViews.map(view => ({
+            id: view.id,
+            text: view.label,
+            icon: view.icon,
+            color: modelView?.id === view.id ? 'primary' : 'neutral',
+            style: modelView?.id === view.id ? 'soft' : 'ghost',
+            alwaysHideLabel: true,
+            hideLabelInstantly: true,
+            attrs: { 'aria-pressed': modelView?.id === view.id, title: view.label },
+            onClick: () => selectModels(view.id),
+          }))
+        : [],
+  )
 })
 onDestroy(() => header.setCreateAction(null))
 /** Archive or restore the current session without deleting its records. @returns Once refreshed. */
@@ -206,38 +232,6 @@ $effect(() => {
     isDeleting: busy,
     toggleDelete: toggleArchive,
   })
-})
-$effect(() => {
-  header.setViewActions(
-    !sessionId && !creating
-      ? [
-          {
-            text: filtersVisible ? 'Hide filters' : 'Show filters',
-            icon: filtersVisible ? FilterOffIcon : FilterIcon,
-            color: 'neutral',
-            style: 'ghost',
-            class: 'px-4',
-            alwaysHideLabel: true,
-            hideLabelInstantly: true,
-            onClick: () => {
-              filtersVisible = !filtersVisible
-            },
-          },
-        ]
-      : showModelViews
-        ? modelViews.map(view => ({
-            id: view.id,
-            text: view.label,
-            icon: view.icon,
-            color: modelView?.id === view.id ? 'primary' : 'neutral',
-            style: modelView?.id === view.id ? 'soft' : 'ghost',
-            alwaysHideLabel: true,
-            hideLabelInstantly: true,
-            attrs: { 'aria-pressed': modelView?.id === view.id, title: view.label },
-            onClick: () => selectModels(view.id),
-          }))
-        : [],
-  )
 })
 /** Apply the selected session ordering. @param value Sort selection. @returns Nothing. */
 function changeSorting(value: { sortBy: string; sortOrder: 'asc' | 'desc' }): void {
@@ -409,10 +403,7 @@ async function create(): Promise<void> {
   {:else if current}
     {#key current.id}
       <FormSurface class={showModelMap ? 'mb-0 flex min-h-0 flex-1 flex-col' : ''}>
-        <div
-          hidden={facet === 'locations' &&
-            current.configurationVersion === researchConfigurationVersion}
-        >
+        <div hidden={Boolean(modelView) || showLocations}>
           <ResearchConfiguration
             {header}
             section={facet === 'fields' ? 'fields' : 'core'}
@@ -426,30 +417,27 @@ async function create(): Promise<void> {
             onSaved={refresh}
           />
         </div>
-        {#if facet === 'locations' &&
-          current.configurationVersion === researchConfigurationVersion}
-          {#if modelView}
-            <ResearchModelGallery
-              view={modelView.id}
-              title={modelView.label}
-              icon={modelView.icon}
-              organisationId={current.organisationId}
-              sessionId={current.id}
-              revision={current.revision}
-              onClose={() => selectModels(null)}
-            />
-          {:else}
-            <ResearchLocations
-              organisationId={current.organisationId}
-              projectId={current.projectId}
-              sessionId={current.id}
-              revision={current.revision}
-              disabled={busy ||
-                current.status === 'completed' ||
-                Boolean(current.isArchived)}
-              onSaved={refresh}
-            />
-          {/if}
+        {#if modelView}
+          <ResearchModelGallery
+            view={modelView.id}
+            title={modelView.label}
+            icon={modelView.icon}
+            organisationId={current.organisationId}
+            sessionId={current.id}
+            revision={current.revision}
+            onClose={() => selectModels(null)}
+          />
+        {:else if showLocations}
+          <ResearchLocations
+            organisationId={current.organisationId}
+            projectId={current.projectId}
+            sessionId={current.id}
+            revision={current.revision}
+            disabled={busy ||
+              current.status === 'completed' ||
+              Boolean(current.isArchived)}
+            onSaved={refresh}
+          />
         {/if}
       </FormSurface>
     {/key}
