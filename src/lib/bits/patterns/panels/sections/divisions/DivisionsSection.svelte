@@ -50,23 +50,60 @@ let {
   persistentContent={selectedNeighbourhoods}
   {...panelProps}
 >
-  {#if model.visibleNeighbourhoodCount > 4 || model.searchTerm}
+  {#if model.divisionsLoading}
+    <div aria-busy="true" aria-label={m.resource_loading()} role="status">
+      <div
+        class="border-border bg-surface mx-3 mb-2 flex h-[42px] items-center gap-2 rounded-xl border px-3"
+        aria-hidden="true"
+      >
+        <span
+          class="bg-base-content/10 size-4 rounded motion-safe:animate-pulse"
+        ></span>
+        <span
+          class="bg-base-content/10 h-3 w-28 rounded motion-safe:animate-pulse"
+        ></span>
+      </div>
+      <div class="py-1" aria-hidden="true">
+        {#each [24, 32, 28, 36, 32, 28, 36] as width}
+          <div class="flex h-[56px] items-center gap-3 pr-7 pl-8">
+            <span
+              class="bg-base-content/10 size-5 shrink-0 rounded motion-safe:animate-pulse"
+            ></span>
+            <span class="flex flex-1 flex-col gap-1.5">
+              <span
+                class="bg-base-content/10 h-3 w-12 rounded motion-safe:animate-pulse"
+              ></span>
+              <span
+                class="bg-base-content/10 h-4 rounded motion-safe:animate-pulse"
+                style:width="{width * 4}px"
+              ></span>
+            </span>
+            <span
+              class="bg-base-content/10 size-8 shrink-0 rounded motion-safe:animate-pulse"
+            ></span>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {:else if model.visibleNeighbourhoodCount > 4 || model.searchTerm}
     <FilterBar
       bind:searchTerm={() => model.searchTerm, model.setSearchTerm}
       label={m.panel__search({ name: m.filters__divisions() })}
       onReset={model.resetDivisions}
     />
   {/if}
-  <ResourceContainer>
-    {#each model.neighbourhoods as row (row.id)}
-      <div animate:flip={{ duration: prefersReducedMotion.current ? 0 : 250 }}>
-        <FilteredNeighbourhood
-          {row}
-          loading={model.divisionCountsLoading}
-          onToggle={model.toggleDivision}
-          onPreview={model.previewDivision}
-        />
-      </div>
-    {/each}
-  </ResourceContainer>
+  {#if !model.divisionsLoading}
+    <ResourceContainer>
+      {#each model.neighbourhoods as row (row.id)}
+        <div animate:flip={{ duration: prefersReducedMotion.current ? 0 : 250 }}>
+          <FilteredNeighbourhood
+            {row}
+            loading={model.divisionCountsLoading}
+            onToggle={model.toggleDivision}
+            onPreview={model.previewDivision}
+          />
+        </div>
+      {/each}
+    </ResourceContainer>
+  {/if}
 </Section>

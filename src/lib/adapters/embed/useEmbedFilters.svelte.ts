@@ -152,6 +152,12 @@ export function useEmbedFilters(
     get divisionCountsLoading() {
       return model.loading
     },
+    get divisionsLoading() {
+      return model.loading && !model.payload
+    },
+    get categoriesLoading() {
+      return model.loading && !model.payload
+    },
     get neighbourhoods() {
       return divisions
         .filter(row => !hiddenClasses.includes(row.class ?? 'division'))

@@ -57,11 +57,13 @@ export function useFilterPanelModel(
 ) {
   let searchTerm = $state('')
   let groups = $state<ClassifierGroup[]>([])
+  let categoriesSettled = $state(false)
 
   // Refresh after definitions arrive as well as when the active selection changes.
   $effect(() => {
     if (!isOpen()) {
       groups = []
+      categoriesSettled = false
       return
     }
     const prismSignature = app.scope.getPrism(FirstClassResource.layer).join('|')
@@ -84,6 +86,9 @@ export function useFilterPanelModel(
         .catch(error => {
           if (!cancelled)
             console.error('[FiltersPanel] Could not load categories', error)
+        })
+        .finally(() => {
+          if (!cancelled) categoriesSettled = true
         })
     })
     return () => {
@@ -188,6 +193,15 @@ export function useFilterPanelModel(
     },
     get divisionCountsLoading() {
       return app.divisionCtx.countsLoading
+    },
+    get divisionsLoading() {
+      return (
+        app.divisionCtx.countsLoading &&
+        app.divisionCtx.divisionFeatureCounts.size === 0
+      )
+    },
+    get categoriesLoading() {
+      return isOpen() && !categoriesSettled && groups.length === 0
     },
     get neighbourhoods() {
       const counts = app.divisionCtx.divisionFeatureCounts

@@ -9,6 +9,7 @@ import GridIcon from 'virtual:icons/proicons/grid'
 // I18N
 import { m } from '#lib/i18n.js'
 // COMPONENTS
+import Section from '#lib/bits/patterns/panels/components/common/Section.svelte'
 import CategorySection from '#lib/bits/patterns/panels/sections/categorySection/CategorySection.svelte'
 import CategoryFilter from '#lib/bits/patterns/panels/components/controls/CategoryFilter.svelte'
 import RangeFilter from '#lib/bits/patterns/panels/components/controls/RangeFilter.svelte'
@@ -23,6 +24,38 @@ let {
   model: ReturnType<typeof useFilterPanelModel>
 } = $props()
 </script>
+
+{#if model.categoriesLoading}
+  <Section title={m.filters__categories()} icon={GridIcon} {...panelProps}>
+    <div aria-busy="true" aria-label={m.resource_loading()} role="status">
+      <div class="px-6 py-3" aria-hidden="true">
+        <div
+          class="bg-base-content/10 h-3 w-32 rounded motion-safe:animate-pulse"
+        ></div>
+      </div>
+      <div class="pb-4" aria-hidden="true">
+        {#each [24, 16, 20, 24] as width}
+          <div
+            class="border-base-content/10 mx-6 flex h-[68px] items-center justify-between border-b last:border-b-0"
+          >
+            <span class="flex flex-col gap-2">
+              <span
+                class="bg-base-content/10 h-3 rounded motion-safe:animate-pulse"
+                style:width="{width * 4}px"
+              ></span>
+              <span
+                class="bg-base-content/10 h-4 w-8 rounded motion-safe:animate-pulse"
+              ></span>
+            </span>
+            <span
+              class="bg-base-content/10 size-4 rounded motion-safe:animate-pulse"
+            ></span>
+          </div>
+        {/each}
+      </div>
+    </div>
+  </Section>
+{/if}
 
 {#each model.categories as group, index (group.hierarchy.layerId)}
   <!-- Animate the whole keyed layer group as its selection enters or leaves. -->
