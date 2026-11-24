@@ -147,7 +147,7 @@ export async function readRelationshipPage(
       ? sql`LEFT JOIN addressRevision a ON a.id=r.addressRevisionId`
       : sql``
   const rows = await db.all<Record<string, unknown>>(
-    sql`SELECT r.*,${sql.join(labels, sql`,`)}${addressFields} FROM ${sql.identifier(input.table + (input.history ? '' : 'Head'))} r ${addressJoin} WHERE (${subject}) AND ${scope} AND ${sql.join(visible, sql` AND `)} AND r.id>${input.afterId ?? ''} ORDER BY r.id LIMIT ${limit + 1}`,
+    sql`SELECT r.*,${sql.join(labels, sql`,`)}${addressFields} FROM ${sql.identifier(input.table + (input.history ? '' : 'Head'))} r ${addressJoin} WHERE ${visibleRelationshipSubject(input.table, input.locationId, input.scope)} AND ${scope} AND r.id>${input.afterId ?? ''} ORDER BY r.id LIMIT ${limit + 1}`,
   )
   return {
     rows: rows.slice(0, limit).map(({ evidence, provenance, actorId, ...row }) => row),
