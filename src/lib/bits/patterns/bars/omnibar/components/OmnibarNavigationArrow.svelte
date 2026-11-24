@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS
-import { Icon } from '#lib/bits/index.js'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
 // ICONS
 import ChevronLeft from 'virtual:icons/proicons/chevron-left'
 import ChevronRight from 'virtual:icons/proicons/chevron-right'

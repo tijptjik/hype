@@ -9,7 +9,7 @@ import {
   StatsImage,
   StatsStatus,
   StatsTranslation,
-} from '#lib/bits/custom/index.js'
+} from '#lib/bits/custom/featureStats/index.js'
 // TYPES
 import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { Feature } from '#lib/db/zod/schema/feature.types.js'

@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS
-import { Icon } from '#lib/bits/index.js'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
 // ENUMS
 import type { OmniSearchCollection } from '#lib/context/omni.types.js'
 // I18N

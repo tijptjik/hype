@@ -1,7 +1,7 @@
 <script lang="ts">
 import { slide } from 'svelte/transition'
 // BITS
-import { Button } from '#lib/bits/index.js'
+import Button from '#lib/bits/core/button/Button.svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // ICONS

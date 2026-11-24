@@ -1,4 +1,4 @@
-<script lang="ts" generics="T extends Resource">
+<script lang="ts" generics="T extends ResourceIndexEntity">
 // SVELTE
 import { untrack, type Snippet } from 'svelte'
 import { page } from '$app/state'
@@ -17,9 +17,9 @@ import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // ENUMS
 import { Panel } from '#lib/enums.js'
 // TYPES
-import type { Resource } from '#lib/types.js'
 import type { ResourceIndexRowSelectionState } from '#lib/client/services/bulkEdit.types.js'
 import type {
+  ResourceIndexEntity,
   ResourceIndexGridRow,
   ResourceIndexItem,
   ResourceIndexProps,
@@ -62,7 +62,9 @@ let lastKnownPanelOpenState = $state(
     : false,
 )
 
-const layoutMode = $derived(adminCtx.listUi.state.layoutMode[resource])
+const layoutMode = $derived(
+  resource ? adminCtx.listUi.state.layoutMode[resource] : 'table',
+)
 const isRowLayout = $derived(layoutMode === 'table' || layoutMode === 'list')
 const itemHeight = $derived(
   isRowLayout
@@ -269,7 +271,8 @@ $effect(() => {
           placeholder={scrollPlaceholder}
           getKey={item => item.id}
           height="100%"
-          {itemHeight}
+          canResize={!resource}
+          itemHeight={resource ? itemHeight : undefined}
           rowGap={isRowLayout ? TABLE_ROW_GAP_PX : GRID_ROW_GAP_PX}
           bufferBefore={8}
           bufferAfter={10}

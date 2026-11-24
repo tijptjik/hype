@@ -1,6 +1,6 @@
 <script lang="ts">
 // BITS
-import { Row } from '#lib/bits/custom/index.js'
+import Row from '#lib/bits/custom/rows/Row.svelte'
 import * as VirtualListPrimitive from '#lib/bits/custom/index/src/index.js'
 import StatsPips from '#lib/bits/custom/featureStats/components/StatsPips.svelte'
 import * as FeatureRowPrimitive from './components'

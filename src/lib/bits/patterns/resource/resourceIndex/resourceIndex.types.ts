@@ -1,9 +1,10 @@
 import type { Snippet } from 'svelte'
-import type { NavigableResource, Resource } from '#lib/types.js'
+import type { NavigableResource } from '#lib/types.js'
 import type { ResourceIndexRowSelectionState } from '#lib/client/services/bulkEdit.types.js'
 
-export type ResourceIndexProps<T extends Resource> = {
-  resource: NavigableResource
+export type ResourceIndexProps<T extends ResourceIndexEntity> = {
+  /** Omitting a layout preference renders a row-only index. */
+  resource?: NavigableResource
   entities: T[]
   card?: Snippet<[T, number]>
   row?: Snippet<[T, number, ResourceIndexRowSelectionState | null, boolean]>
@@ -17,13 +18,15 @@ export type ResourceIndexProps<T extends Resource> = {
   onRowSelectionToggle?: (entity: T) => void
 }
 
-export type ResourceIndexGridRow<T extends Resource> = {
+export type ResourceIndexGridRow<T extends ResourceIndexEntity> = {
   id: string
   entities: T[]
   startingIndex: number
 }
 
-export type ResourceIndexItem<T extends Resource> = T | ResourceIndexGridRow<T>
+export type ResourceIndexItem<T extends ResourceIndexEntity> =
+  | T
+  | ResourceIndexGridRow<T>
 
 export type GroupedResourceIndexGroup<
   T extends { id: string },
@@ -47,5 +50,5 @@ export type GroupedResourceIndexProps<
   scrollIndexByEntityId?: Map<string, number>
 }
 
-/** Minimal identity shared by Feature rows and system issue rows. */
+/** Minimal identity shared by all resource index rows. */
 export type ResourceIndexEntity = { id: string }

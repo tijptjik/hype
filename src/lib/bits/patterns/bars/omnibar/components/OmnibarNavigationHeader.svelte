@@ -1,6 +1,7 @@
 <script lang="ts">
 // BITS
-import { Icon, ScrollableText } from '#lib/bits/index.js'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
+import ScrollableText from '#lib/bits/custom/text/ScrollableText.svelte'
 // ICONS
 import XCircle from 'virtual:icons/proicons/cancel-circle'
 import QueueList from 'virtual:icons/proicons/bullet-list-square'

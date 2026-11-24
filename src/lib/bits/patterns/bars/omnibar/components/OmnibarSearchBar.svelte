@@ -9,7 +9,7 @@ import {
   selectOnEnter,
 } from '#lib/actions.js'
 // BITS
-import { Icon } from '#lib/bits/index.js'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
 // COMPONENTS
 import OmnibarNewFeature from './OmnibarNewFeature.svelte'
 import OmnibarResults from './OmnibarResults.svelte'

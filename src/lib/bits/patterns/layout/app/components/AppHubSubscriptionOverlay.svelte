@@ -1,6 +1,7 @@
 <script lang="ts">
 // BITS
-import { HubPolicyDialog, HubSubscriptionOverlay } from '#lib/bits/index.js'
+import HubPolicyDialog from '#lib/bits/patterns/policies/hubPolicyDialog/HubPolicyDialog.svelte'
+import HubSubscriptionOverlay from '#lib/bits/patterns/bars/hubSubscriptionOverlay/HubSubscriptionOverlay.svelte'
 import { cx } from '#lib/bits/utils.js'
 // TYPES
 import type { HubSubscriptionOverlayProps } from '#lib/bits/patterns/bars/index.js'

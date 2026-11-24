@@ -10,7 +10,9 @@ import {
 } from '#lib/context/surfaceLayout.svelte.js'
 import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // BITS
-import { Button, Icon, OverlayBar } from '#lib/bits/index.js'
+import Button from '#lib/bits/core/button/Button.svelte'
+import Icon from '#lib/bits/custom/icon/Icon.svelte'
+import OverlayBar from '#lib/bits/patterns/bars/overlayBar/OverlayBar.svelte'
 // ICONS
 import SwatchIcon from 'virtual:icons/proicons/color-palette'
 
