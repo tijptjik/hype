@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit'
 // VALIDATION
 import { z } from 'zod'
 // DRIZZLE
-import { eq, sql, desc } from 'drizzle-orm'
+import { eq, sql, desc, getTableColumns } from 'drizzle-orm'
 // API
 import { guardedCommand, guardedQuery } from './server/guarded.js'
 import { authorizeExteriorLocation } from '#lib/locations/exterior/authorize.server.js'
@@ -23,22 +23,69 @@ import {
   floorplanBundle,
 } from '#lib/indoor/floorplans/extraction.js'
 
+// +++ Table Of Contents
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. INTERIOR READS
+// - readBuildingMap
+// - getBuildingInteriorPreview
+// - getLocationInterior
+// 2. REVIEWED DRAFTS
+// - saveLocationInterior
+// 3. CANONICAL BUILDING PARTS
+// - interiorParts
+// - createLocationInteriorPart
+// ---
+/********************
+ *  1. INTERIOR READS
+ ************/
+// +++ Interior Reads
+
 const identity = z.object({ locationId: z.string().min(1).max(200) })
+
+/** Find the map explicitly linked to a building after its ownership check.
+ * @param db Authorized database. @param buildingId Building identity.
+ * @returns The map with its current draft and publication pointers, if present.
+ */
+function readBuildingMap(
+  db: Database,
+  buildingId: string,
+): Promise<typeof premisesMap.$inferSelect | undefined> {
+  return db
+    .select(getTableColumns(premisesMap))
+    .from(locationPremisesMap)
+    .innerJoin(premisesMap, eq(premisesMap.id, locationPremisesMap.mapId))
+    .where(eq(locationPremisesMap.locationId, buildingId))
+    .get()
+}
+
+/** Read only the viewable geometry for an embedded building-part profile.
+ * @param input Containing building and revision advertised by the profile.
+ * @returns The authorized interior data for the shared scene.
+ */
+export const getBuildingInteriorPreview = guardedQuery(
+  identity.extend({ hash: z.string().regex(/^[a-f0-9]{64}$/) }),
+  async (input, ctx) => {
+    await authorizeExteriorLocation(ctx, input.locationId)
+    // Pin the read to the advertised revision and recheck its visibility at fetch time.
+    const map = await readBuildingMap(ctx.db, input.locationId)
+    if (
+      !map ||
+      (input.hash !== map.publishedHash &&
+        !(ctx.user.superAdmin && input.hash === map.draftHash))
+    )
+      error(404, 'Interior revision unavailable.')
+    const bucket = premisesMapBucket(ctx.event.locals.platform)
+    return (await readMapBundle(bucket, map.id, input.hash)).data
+  },
+)
+
 /** Read the building's existing indoor draft for the shared viewer. @param input Building ID. @returns Map metadata and draft bundle. */
 export const getLocationInterior = guardedQuery(identity, async (input, ctx) => {
   await authorizeExteriorLocation(ctx, input.locationId)
-  const link = await ctx.db
-    .select()
-    .from(locationPremisesMap)
-    .where(eq(locationPremisesMap.locationId, input.locationId))
-    .get()
-  const map = link
-    ? await ctx.db
-        .select()
-        .from(premisesMap)
-        .where(eq(premisesMap.id, link.mapId))
-        .get()
-    : null
+  const map = (await readBuildingMap(ctx.db, input.locationId)) ?? null
   const hash = ctx.user.superAdmin
     ? (map?.draftHash ?? map?.publishedHash)
     : map?.publishedHash
@@ -96,6 +143,11 @@ export const getLocationInterior = guardedQuery(identity, async (input, ctx) => 
   }
 })
 
+// ---
+/********************
+ *  2. REVIEWED DRAFTS
+ ************/
+// +++ Reviewed Drafts
 /** Save reviewed extraction as an unpublished standard indoor-map draft.
  * @param input Building, extraction job, reviewed geometry and expected version. @returns Draft pointer.
  * @remarks No room becomes a canonical building part automatically; no publication or routing is inferred.
@@ -224,6 +276,11 @@ export const saveLocationInterior = guardedCommand(
   },
 )
 
+// ---
+/********************
+ *  3. CANONICAL BUILDING PARTS
+ ************/
+// +++ Canonical Building Parts
 /** List current building parts using explicit membership, retaining labels and nesting.
  * @param db Authorized database. @param buildingId Owning building. @param scope Private owner scope.
  * @returns Current parts and their current parent identities.

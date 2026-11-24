@@ -7,10 +7,26 @@ import {
   emptyFeatureAddress,
   getAddressDisplay,
 } from '#lib/addresses/featureAddress.js'
+import { relationshipScopeSql } from './locationRelationships'
 import { retryBusyRead } from './sqlite'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { LocationResource } from '#lib/locations/resource.js'
+
+// +++ Table Of Contents
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. BUILDING PART IDENTITY
+// - locationBuildingPartContext
+// 2. CONTAINING BUILDING INTERIOR
+// - buildingPartInterior
+// ---
+/********************
+ *  1. BUILDING PART IDENTITY
+ ************/
+// +++ Building Part Identity
 
 /** Read explicit current containment and retained indoor polygon identity.
  * @param db Authorized request database.
@@ -105,4 +121,45 @@ export async function locationBuildingPartContext(
         }
       : null
   return { parentLocation, indoorSource }
+}
+
+// ---
+/********************
+ *  2. CONTAINING BUILDING INTERIOR
+ ************/
+// +++ Containing Building Interior
+/** Resolve an interior independently of other parents such as the part's floor.
+ * @param db Authorized directory database.
+ * @param id Building-part identity.
+ * @param scope Authorized organisation or shared-only scope.
+ * @param allowDrafts Whether the viewer has super-admin access to unpublished maps.
+ * @returns The single containing building's readable map revision, when available.
+ */
+export async function buildingPartInterior(
+  db: Database,
+  id: string,
+  scope: string | null,
+  allowDrafts: boolean,
+): Promise<NonNullable<LocationResource['buildingInterior']> | null> {
+  // Count distinct current buildings before testing map availability to avoid guessing between parents.
+  const rows = await retryBusyRead(() =>
+    db.all<{ buildingId: string; mapId: string | null; hash: string | null }>(sql`
+      SELECT DISTINCT p.id buildingId, m.id mapId,
+        coalesce(${allowDrafts ? sql`m.draftHash` : sql`NULL`}, m.publishedHash) hash
+      FROM locationMembershipHead r JOIN location p ON p.id=r.parentLocationId
+      LEFT JOIN locationPremisesMap link ON link.locationId=p.id
+      LEFT JOIN premisesMap m ON m.id=link.mapId
+      WHERE r.childLocationId=${id} AND r.assertionState='asserted' AND r.membershipState='current'
+        AND ${relationshipScopeSql('locationMembership', scope)}
+        AND (r.effectiveFrom IS NULL OR r.effectiveFrom<=date('now'))
+        AND (r.effectiveTo IS NULL OR r.effectiveTo>date('now'))
+        AND p.kind='built' AND p.class='building' AND p.state!='redirect'
+        AND (p.state!='manual' OR p.ownerOrganisationId IS ${scope})
+        AND ${allowDrafts ? sql`1` : sql`NOT (p.state='unresolved' AND p.ssId IS NULL AND p.ownerOrganisationId IS NULL)`}
+      LIMIT 2`),
+  )
+  const parent = rows.length === 1 ? rows[0] : null
+  return parent?.mapId && parent.hash
+    ? { buildingId: parent.buildingId, mapId: parent.mapId, hash: parent.hash }
+    : null
 }

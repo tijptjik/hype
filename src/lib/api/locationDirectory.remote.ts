@@ -43,6 +43,7 @@ import { readBuildingStreets } from '#lib/db/services/buildingStreetAddresses.js
 import { readLocationCurationLocks } from '#lib/db/services/locationCurationLocks.js'
 import { probeLocationIdentityScope } from '#lib/db/services/locationIdentityReview.js'
 import { archiveLocalLocation } from '#lib/db/services/locationDeletion.js'
+import { buildingPartInterior } from '#lib/db/services/locationBuildingPart.js'
 import { listLocationResources } from '#lib/db/services/locationDirectory.js'
 import { listLocationLinkedFeatures } from '#lib/db/services/locationFeatures.js'
 import { authorizeFeatureAdminReadForProbe } from '#lib/api/services/authz/feature.js'
@@ -183,6 +184,15 @@ export const getLocation = guardedQuery(
     return resource
       ? {
           ...resource,
+          buildingInterior:
+            resource.kind === 'building_part' && !resource.indoorSource?.href
+              ? await buildingPartInterior(
+                  ctx.db,
+                  resource.id,
+                  editingOrganisationId,
+                  Boolean(ctx.user.superAdmin),
+                )
+              : null,
           ...(resource.kind === 'building'
             ? {
                 buildingConstituents: JSON.parse(

@@ -26,6 +26,8 @@ export type LocationResource = {
     mapId: string
     href: string | null
   } | null
+  /** The accessible interior of the unique containing building on a part profile. */
+  buildingInterior?: { buildingId: string; mapId: string; hash: string } | null
   premisesMapId?: string | null
   premisesMap?: { id: string; href: string } | null
   /** Explicit operating body; independent of brand identity and access ownership. */
