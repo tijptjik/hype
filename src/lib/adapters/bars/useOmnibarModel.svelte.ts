@@ -488,6 +488,8 @@ export function useOmnibarModel(
       const collectionItems = stationWalk ? stationWalkItems : getCollectionItems()
       const currentIndex = stationWalk ? stationWalkIndex : omniCtx.navIndex
       const collectionLength = collectionItems.length
+      // A closed tray only needs the input. Build result groups when they can be displayed.
+      const sections = omniCtx.state.isTrayOpen ? getSearchSections() : []
 
       return {
         mode: stationWalk ? OmniMode.navigation : omniCtx.state.mode,
@@ -510,9 +512,9 @@ export function useOmnibarModel(
           term: omniCtx.state.searchTerm,
           updating:
             omniCtx.state.searchTerm !== omniCtx.searchQueryTerm ||
-            getSearchSections().some(section => section.loading),
+            sections.some(section => section.loading),
           isTrayOpen: omniCtx.state.isTrayOpen,
-          sections: getSearchSections(),
+          sections,
           onSearchTermChange: handleSearchTermChange,
           onOpenTray: () => omniCtx.openTray(),
           onCloseTray: () => omniCtx.closeTray(),
