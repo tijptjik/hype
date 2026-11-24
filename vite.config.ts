@@ -141,7 +141,7 @@ export default defineConfig(async ({ command }) => ({
           return { code, map: { mappings: '' } }
         },
       },
-    },
+    } satisfies Plugin,
     // seedDrizzle(),
     sveltekit({
       outDir: getDevOutput(process.argv, command).outDir,
