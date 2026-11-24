@@ -38,6 +38,7 @@ function handleKeyDown(event: KeyboardEvent): void {
 >
   <button
     type="button"
+    data-omni-result
     class="focus-visible:text-primary grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 py-2 pl-1 text-left text-sm outline-none"
     aria-pressed={result.enabled}
     onclick={handleClick}

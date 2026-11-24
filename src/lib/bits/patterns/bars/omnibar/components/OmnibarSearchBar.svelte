@@ -1,4 +1,5 @@
 <script lang="ts">
+import { tick } from 'svelte'
 import { slide } from 'svelte/transition'
 // ACTIONS
 import { fitSearchTray } from '../fitSearchTray'
@@ -41,10 +42,51 @@ const resultsClasses = $derived(
 const surfaceClasses = $derived(
   getOmnibarSurfaceClasses({ hasElevatedChrome, effectiveAppMainWidth }),
 )
+
+/** Navigate only result buttons that the fitted tray currently displays. */
+function navigateResults(node: HTMLElement): { destroy: () => void } {
+  async function onKeyDown(event: KeyboardEvent): Promise<void> {
+    const target = event.target
+    if (!(target instanceof HTMLElement)) return
+    const input = node.querySelector<HTMLInputElement>('#omni-search-bar')
+    const isInput = target === input
+    if (!isInput && !target.matches('[data-omni-result]')) return
+
+    if (event.key === 'Escape' && !isInput) {
+      event.preventDefault()
+      event.stopPropagation()
+      input?.focus()
+      search.onClearSearchOrCloseTray()
+      return
+    }
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
+    event.preventDefault()
+    if (!search.isTrayOpen) {
+      search.onOpenTray()
+      await tick()
+    }
+    const results = [
+      ...node.querySelectorAll<HTMLButtonElement>('[data-omni-result]'),
+    ].filter(result => result.getClientRects().length > 0)
+    if (!results.length) return
+    const index = results.indexOf(target as HTMLButtonElement)
+    const next =
+      event.key === 'ArrowDown'
+        ? (results[index + 1] ?? input)
+        : index < 0
+          ? results.at(-1)
+          : (results[index - 1] ?? input)
+    next?.focus()
+  }
+  node.addEventListener('keydown', onKeyDown)
+  return { destroy: () => node.removeEventListener('keydown', onKeyDown) }
+}
 </script>
 
 <div
   class="relative flex min-h-0 flex-col"
+  use:navigateResults
   use:clickOutside={() => {
     if (search.isTrayOpen) {
       search.onCloseTray()
