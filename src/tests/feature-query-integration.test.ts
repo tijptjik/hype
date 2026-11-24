@@ -138,7 +138,12 @@ function controlledPage() {
 }
 
 function createApp(): AppCtx {
-  const app = new AppCtx(new DivisionCtx(), new AccountState(null), {} as ResponsiveCtx)
+  let app!: AppCtx
+  cleanups.push(
+    createFeatureQueryEffectRoot(() => {
+      app = new AppCtx(new DivisionCtx(), new AccountState(null), {} as ResponsiveCtx)
+    }),
+  )
   app.view.scope.prisms.layer = ['layer-a']
   return app
 }

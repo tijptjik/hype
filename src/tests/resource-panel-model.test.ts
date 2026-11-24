@@ -84,6 +84,7 @@ function setup(
     isInitialised: options.viewReady ?? true,
     panels: {
       isPanelOpen: () => options.open ?? true,
+      isPanelNarrow: () => false,
       isPanelOpenVisually: () => false,
     },
     account: {

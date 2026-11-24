@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { createFeatureQueryEffectRoot } from './fixtures/featureQueryHarness.svelte'
 import { AppCtx } from '#lib/context/app.svelte.js'
 import { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import { RootCTX } from '#lib/context/root.svelte.js'
@@ -14,7 +15,9 @@ vi.mock('#lib/navigation/index.js', async importOriginal => ({
   navigate: vi.fn(),
 }))
 
+const cleanups: Array<() => void> = []
 afterEach(() => {
+  while (cleanups.length) cleanups.pop()?.()
   vi.useRealTimers()
   vi.clearAllMocks()
 })
@@ -26,11 +29,11 @@ const feature = (id: string, title = id): FeatureFromCollection =>
   }) as unknown as FeatureFromCollection
 function setup() {
   const root = new RootCTX(new ResponsiveCtx())
-  const app = new AppCtx(
-    new DivisionCtx(),
-    root.account,
-    root.responsive,
-    root.cacheCtx,
+  let app!: AppCtx
+  cleanups.push(
+    createFeatureQueryEffectRoot(() => {
+      app = new AppCtx(new DivisionCtx(), root.account, root.responsive, root.cacheCtx)
+    }),
   )
   const a = feature('a')
   const b = feature('b')

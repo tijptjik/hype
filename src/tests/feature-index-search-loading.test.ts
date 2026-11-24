@@ -24,6 +24,8 @@ function create(getFeatureIndexPage) {
   } };
   let normalizedTextQuery = $state('tea');
   let searchSignature = $state('scope-a');
+  const locationScope = undefined;
+  const brandId = undefined;
   const ownerSignature = 'owner-a';
   let indexInitialised = $state(true);
   let matchingCount = $state(null);
