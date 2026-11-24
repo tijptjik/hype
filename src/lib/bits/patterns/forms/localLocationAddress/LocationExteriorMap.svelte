@@ -125,6 +125,16 @@ const displayedSlices = $derived([
   ),
   ...pendingSlices,
 ])
+let hoveredModelId = $state('')
+let focusedModelId = $state('')
+let mapHoverId = $state('')
+const previewModelId = $derived(hoveredModelId || (mapHoverId ? '' : focusedModelId))
+const highlightedFootprint = $derived(
+  (mapHoverId
+    ? displayedSlices.find(slice => slice.footprintId === mapHoverId)
+    : displayedSlices.find(slice => slice.modelId === previewModelId)
+  )?.footprintId ?? '',
+)
 let selectedFootprint = $state('')
 const footprint = $derived(
   candidates?.footprints.features.find(
@@ -270,6 +280,9 @@ async function removeSlice(modelId: string): Promise<void> {
 async function search(): Promise<void> {
   if (!associating) {
     deletionMode = false
+    hoveredModelId = ''
+    focusedModelId = ''
+    mapHoverId = ''
     footprintSearch = recordedBuildingName(facts.names) || displayAddress
     searchOpen = false
   }
@@ -474,6 +487,8 @@ async function importModel(): Promise<void> {
           footprints={candidates.footprints}
           {selectedFootprint}
           {includedFootprints}
+          {highlightedFootprint}
+          onhover={id => (mapHoverId = id)}
           onselect={selectFootprint}
           class="h-full min-h-[28rem] rounded-none border-0"
         />
@@ -637,7 +652,20 @@ async function importModel(): Promise<void> {
                   item => item.modelId === slice.modelId,
                 )}
                 <li
-                  class="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] gap-3 px-5 py-4"
+                  class="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] gap-3 px-5 py-4 data-highlighted:bg-amber-400/15 data-highlighted:inset-ring-2 data-highlighted:inset-ring-amber-400"
+                  data-highlighted={slice.modelId === previewModelId ||
+                    (!!mapHoverId && slice.footprintId === mapHoverId) ||
+                    undefined}
+                  onpointerenter={() => (hoveredModelId = slice.modelId)}
+                  onpointerleave={() => (hoveredModelId = '')}
+                  onfocusin={event => {
+                    if (
+                      event.target instanceof HTMLElement &&
+                      event.target.matches(':focus-visible')
+                    )
+                      focusedModelId = slice.modelId
+                  }}
+                  onfocusout={() => (focusedModelId = '')}
                   aria-busy={(pending && importing) || removingId === slice.modelId}
                 >
                   <span

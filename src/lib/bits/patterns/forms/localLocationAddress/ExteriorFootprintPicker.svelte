@@ -21,13 +21,15 @@ import { getThemeModel } from '#lib/themes/theme.svelte.js'
 import { getLocaleKey } from '#lib/i18n.js'
 // TYPES
 import type { FeatureCollection, Polygon, MultiPolygon } from 'geojson'
-import type { Map as MapLibreMap } from 'maplibre-gl'
+import type { Map as MapLibreMap, MapMouseEvent } from 'maplibre-gl'
 import type { ExteriorFootprintProperties } from '#lib/locations/exterior/footprints.server.js'
 
 let {
   coordinates,
   footprints,
   selectedFootprint,
+  highlightedFootprint = '',
+  onhover,
   includedFootprints = [],
   showAddress = false,
   onselect,
@@ -38,6 +40,8 @@ let {
   includedFootprints?: string[]
   showAddress?: boolean
   selectedFootprint: string
+  highlightedFootprint?: string
+  onhover?: (id: string) => void
   class?: string
   onselect: (id: string) => void
 } = $props()
@@ -127,26 +131,52 @@ $effect(() => {
         filter: ['==', ['get', 'csuid'], selectedFootprint],
         paint: { 'line-color': '#e14b26', 'line-width': 4 },
       })
+      if (onhover)
+        instance.addLayer({
+          id: 'exterior-footprints-hover',
+          type: 'line',
+          source: 'exterior-footprints',
+          filter: ['==', ['get', 'csuid'], highlightedFootprint],
+          paint: { 'line-color': '#fbbf24', 'line-width': 5 },
+        })
     }
   }
-  /** Select the source footprint clicked on the map. @param event Map pointer event. @returns Nothing. */
-  const click = (event: import('maplibre-gl').MapMouseEvent): void => {
-    if (!instance.getLayer('exterior-footprints-fill')) return
+  /** @param event Map pointer event. @returns The topmost footprint ID under the pointer, or an empty string. */
+  const footprintAt = (event: MapMouseEvent): string => {
+    if (!instance.getLayer('exterior-footprints-fill')) return ''
     const feature = instance.queryRenderedFeatures(event.point, {
       layers: ['exterior-footprints-fill'],
     })[0]
     const id = feature?.properties?.csuid
-    if (typeof id === 'string') onselect(id)
+    return typeof id === 'string' ? id : ''
   }
+  /** Select the source footprint clicked on the map. @param event Map pointer event. @returns Nothing. */
+  const click = (event: MapMouseEvent): void => {
+    const id = footprintAt(event)
+    if (id) onselect(id)
+  }
+  const move = (event: MapMouseEvent): void => onhover?.(footprintAt(event))
+  const leave = (): void => onhover?.('')
   instance.on('style.load', render)
   instance.on('load', render)
   instance.on('click', click)
+  if (onhover) {
+    instance.on('mousemove', move)
+    instance.on('mouseout', leave)
+  }
   untrack(render)
   return () => {
     instance.off('style.load', render)
     instance.off('load', render)
     instance.off('click', click)
+    instance.off('mousemove', move)
+    instance.off('mouseout', leave)
   }
+})
+$effect(() => {
+  const id = highlightedFootprint
+  if (map?.getLayer('exterior-footprints-hover'))
+    map.setFilter('exterior-footprints-hover', ['==', ['get', 'csuid'], id])
 })
 $effect(() => {
   // Read the selection even before layers exist, so subsequent clicks stay reactive.
