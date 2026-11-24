@@ -9,6 +9,7 @@ import {
 } from '#lib/api/locationExterior.remote.js'
 // ICONS
 import BuildingIcon from 'virtual:icons/lucide/boxes'
+import FacadeIcon from 'virtual:icons/lucide/building'
 import SearchIcon from 'virtual:icons/lucide/search'
 import SliceIcon from 'virtual:icons/lucide/box'
 // BITS COMPONENTS
@@ -36,6 +37,8 @@ const selectedAlreadyAdded = $derived(
 let candidates = $state<Awaited<
   ReturnType<typeof findLocationExteriorCandidates>
 > | null>(null)
+const viewModes = ['Facade', '3D'] as const
+let viewMode = $state<(typeof viewModes)[number]>('Facade')
 let associating = $state(false)
 let footprintSearch = $state('')
 let searchOpen = $state(false)
@@ -384,7 +387,10 @@ async function importModel(): Promise<void> {
         <Button
           text="View 3D model"
           disabled={busy}
-          onClick={() => (associating = false)}
+          onClick={() => {
+            viewMode = '3D'
+            associating = false
+          }}
         />
       {/if}
     </header>
@@ -597,8 +603,25 @@ async function importModel(): Promise<void> {
     <div
       class="border-border flex flex-wrap items-center justify-end gap-3 border-b px-5 py-3"
     >
+      <fieldset
+        aria-label="Exterior view mode"
+        class="border-border mr-auto inline-flex items-center gap-1 rounded-lg border p-1"
+      >
+        {#each viewModes as mode (mode)}
+          <Button
+            text={mode}
+            iconComponent={mode === 'Facade' ? FacadeIcon : SliceIcon}
+            modifier="square"
+            size="sm"
+            style={mode === viewMode ? 'soft' : 'ghost'}
+            color={mode === viewMode ? 'primary' : 'neutral'}
+            attrs={{ title: mode, 'aria-pressed': mode === viewMode }}
+            onClick={() => (viewMode = mode)}
+          />
+        {/each}
+      </fieldset>
       {#if comparisonFile && analysisViewer}
-        <div class="mr-auto w-full max-w-72">
+        <div class="w-full max-w-72">
           <ExteriorTextureSlider
             viewer={analysisViewer}
             onfailure={useGovernmentModel}
@@ -628,6 +651,7 @@ async function importModel(): Promise<void> {
       {#if analysisViewer && !modelLoading}
         {#key comparisonFile ?? model.assetId}
           <FacadeReview
+            active={viewMode === 'Facade'}
             viewer={analysisViewer}
             {locationId}
             sourceAssetId={model.assetId}

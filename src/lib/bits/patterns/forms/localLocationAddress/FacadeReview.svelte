@@ -30,6 +30,7 @@ import {
 import type { ModelViewerElement } from '@google/model-viewer'
 import type { FacadeAnalysis } from '#lib/locations/exterior/facades.js'
 let {
+  active,
   viewer,
   assetId,
   comparisonGeometry = false,
@@ -37,6 +38,7 @@ let {
   locationId,
   canSave,
 }: {
+  active: boolean
   viewer: ModelViewerElement
   assetId: string
   sourceAssetId: string
@@ -90,18 +92,13 @@ let worker: Worker | undefined
 
 /** Establish a straight-on camera and four world-space anchors for the interactive overlay. @returns Nothing. */
 function orient(): void {
-  if (!face || !anchors.length) return
+  if (!active || !face || !anchors.length) return
   projected = false
   const middle = (bounds[0] + bounds[1]) / 2
-  viewer.removeAttribute('auto-rotate')
-  viewer.removeAttribute('camera-controls')
-  viewer.setAttribute(
-    'camera-target',
-    `${face.centre[0]}m ${middle}m ${face.centre[2]}m`,
-  )
-  viewer.setAttribute('min-field-of-view', '10deg')
-  viewer.setAttribute('max-field-of-view', '10deg')
-  viewer.setAttribute('field-of-view', '10deg')
+  viewer.cameraTarget = `${face.centre[0]}m ${middle}m ${face.centre[2]}m`
+  viewer.minFieldOfView = '10deg'
+  viewer.maxFieldOfView = '10deg'
+  viewer.fieldOfView = '10deg'
   viewer.interpolationDecay = 0
   const aspect = Math.max(0.2, viewer.clientWidth / Math.max(1, viewer.clientHeight))
   const distance =
@@ -109,9 +106,9 @@ function orient(): void {
       (2 * Math.tan(Math.PI / 36))) *
     1.45
   const theta = (Math.atan2(face.normal[0], face.normal[2]) * 180) / Math.PI
-  viewer.setAttribute('min-camera-orbit', 'auto auto 0.01m')
-  viewer.setAttribute('max-camera-orbit', `auto auto ${distance * 2}m`)
-  viewer.setAttribute('camera-orbit', `${theta}deg 90deg ${distance}m`)
+  viewer.minCameraOrbit = 'auto auto 0.01m'
+  viewer.maxCameraOrbit = `auto auto ${distance * 2}m`
+  viewer.cameraOrbit = `${theta}deg 90deg ${distance}m`
   const positions = [
     [-1, bounds[1]],
     [1, bounds[1]],
@@ -129,10 +126,6 @@ function orient(): void {
   })
   void viewer.updateComplete.then(() => viewer.jumpCameraToGoal())
 }
-$effect(() => {
-  face
-  orient()
-})
 
 /** Map one model elevation to overlay pixels. @param elevation Model Y. @returns Canvas Y. */
 function lineY(elevation: number): number {
@@ -280,6 +273,16 @@ $effect(() => {
 onMount(() => {
   let disposed = false
   const controller = new AbortController()
+  const orbitSettings = {
+    cameraOrbit: viewer.cameraOrbit,
+    cameraTarget: viewer.cameraTarget,
+    minCameraOrbit: viewer.minCameraOrbit,
+    maxCameraOrbit: viewer.maxCameraOrbit,
+    fieldOfView: viewer.fieldOfView,
+    minFieldOfView: viewer.minFieldOfView,
+    maxFieldOfView: viewer.maxFieldOfView,
+    interpolationDecay: viewer.interpolationDecay,
+  }
   let animation = 0
   const materials = (viewer.model?.materials ?? [])
     .filter(material => material.isLoaded)
@@ -294,19 +297,17 @@ onMount(() => {
       mode: material.getAlphaMode(),
     }))
   const applyTransparency = () => {
+    const translucent = active && transparent
     for (const { material, color, mode } of materials) {
-      material.setAlphaMode(transparent ? 'BLEND' : mode)
+      material.setAlphaMode(translucent ? 'BLEND' : mode)
       material.pbrMetallicRoughness.setBaseColorFactor([
         color[0],
         color[1],
         color[2],
-        transparent ? color[3] * 0.5 : color[3],
+        translucent ? color[3] * 0.5 : color[3],
       ])
     }
   }
-  const stopTransparency = $effect.root(() => {
-    $effect(applyTransparency)
-  })
   anchors = [0, 1, 2, 3].map(index => {
     const element = document.createElement('span')
     element.slot = `hotspot-alignment-${index}`
@@ -344,9 +345,27 @@ onMount(() => {
     }
     animation = requestAnimationFrame(project)
   }
-  animation = requestAnimationFrame(project)
-  const resize = new ResizeObserver(() => orient())
-  resize.observe(viewer)
+  const stopReview = $effect.root(() => {
+    $effect(applyTransparency)
+    $effect(() => {
+      if (!active) return
+      // The editor owns the camera and projection loop only while the facade is visible.
+      viewer.autoRotate = false
+      viewer.cameraControls = false
+      viewer.resetTurntableRotation()
+      const resize = new ResizeObserver(orient)
+      resize.observe(viewer)
+      animation = requestAnimationFrame(project)
+      return () => {
+        cancelAnimationFrame(animation)
+        resize.disconnect()
+        Object.assign(viewer, orbitSettings)
+        viewer.cameraControls = true
+        viewer.autoRotate = true
+      }
+    })
+    $effect(orient)
+  })
   void (async () => {
     try {
       // Exporting KHR_materials_variants activates each variant on the live meshes.
@@ -494,20 +513,18 @@ onMount(() => {
     disposed = true
     controller.abort()
     worker?.terminate()
-    cancelAnimationFrame(animation)
-    resize.disconnect()
-    stopTransparency()
+    stopReview()
     for (const { material, color, mode } of materials) {
       material.setAlphaMode(mode)
       material.pbrMetallicRoughness.setBaseColorFactor(color)
     }
     for (const anchor of anchors) anchor.remove()
-    viewer.setAttribute('camera-controls', '')
   }
 })
 </script>
 
 <section
+  hidden={!active}
   aria-label="Visual façade floor alignment"
   class="pointer-events-none absolute inset-0 z-10"
 >
