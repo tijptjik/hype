@@ -39,7 +39,7 @@ async function rehearse(
   const plan: Plan = JSON.parse(readFileSync(planFile, 'utf8'))
   const install = plan.groups.findIndex(group => group.label === 'curation/install')
   if (install < 1) throw new Error('Expected a curation installation group')
-  const domain = openSqliteDomain(file)
+  const domain = openSqliteDomain(file, { releaseMemoryAfterBatch: true })
   try {
     await verifySchema(domain.binding, plan.initialSchema)
     await verifyRows(domain.binding, plan.initial)

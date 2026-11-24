@@ -12,14 +12,14 @@ afterEach(() => {
     rmSync(directory, { recursive: true, force: true })
 })
 /** Create an isolated constrained database. @returns Local adapter and cleanup operation. */
-function fixture() {
+function fixture(releaseMemoryAfterBatch = false) {
   const directory = mkdtempSync(join(tmpdir(), 'place-domain-adapter-'))
   directories.push(directory)
   const path = join(directory, 'db.sqlite')
   const sqlite = new Sqlite(path)
   sqlite.exec('CREATE TABLE item(id INTEGER PRIMARY KEY, value TEXT NOT NULL)')
   sqlite.close()
-  return openSqliteDomain(path)
+  return openSqliteDomain(path, { releaseMemoryAfterBatch })
 }
 
 test('rolls back an early successful write when a later batch statement fails', async () => {
@@ -67,6 +67,27 @@ test('nested domain batches preserve the outer transaction and roll back with it
     expect(sqlite.query('SELECT id FROM item').all()).toEqual([{ id: 1 }])
     sqlite.exec('ROLLBACK')
     expect(sqlite.query('SELECT * FROM item').all()).toEqual([])
+  } finally {
+    close()
+  }
+})
+
+test('bounded-memory batches retain returned rows and subsequent rollback semantics', async () => {
+  const { binding, sqlite, close } = fixture(true)
+  try {
+    const results = await binding.batch([
+      binding.prepare("INSERT INTO item VALUES(1,'retained') RETURNING *"),
+    ])
+    expect(results[0].results).toEqual([{ id: 1, value: 'retained' }])
+    await expect(
+      binding.batch([
+        binding.prepare("UPDATE item SET value='discard'"),
+        binding.prepare('INSERT INTO item VALUES(2,NULL)'),
+      ]),
+    ).rejects.toThrow()
+    expect(sqlite.query('SELECT * FROM item').all()).toEqual([
+      { id: 1, value: 'retained' },
+    ])
   } finally {
     close()
   }

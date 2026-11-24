@@ -20,11 +20,15 @@ type Statement = {
 /**
  * Open an explicit local SQLite build with D1-compatible atomic batch semantics.
  * @param path Existing offline SQLite database; never a remote binding or a live server file.
+ * @param options Optional bounded-memory mode for large offline release rehearsals.
  * @returns Domain database, raw inspection connection and required close operation.
  * @remarks Each statement is prepared/executed separately; failures roll back the batch.
  * This adapter supports offline rebuilds and migration checks, not deployed D1.
  */
-export function openSqliteDomain(path: string): {
+export function openSqliteDomain(
+  path: string,
+  options: { releaseMemoryAfterBatch?: boolean } = {},
+): {
   db: Database
   binding: D1Database
   sqlite: Sqlite
@@ -40,15 +44,19 @@ export function openSqliteDomain(path: string): {
     },
     raw: async () => sqlite.query(query).values(...(values as never[])),
     first: async () => sqlite.query(query).get(...(values as never[])) ?? null,
-    all: async () => ({
-      success: true,
-      results: sqlite.query(query).all(...(values as never[])),
-      meta: {
-        changes: Number(
-          (sqlite.query('SELECT changes() AS n').get() as { n: number }).n,
-        ),
-      },
-    }),
+    all: async () => {
+      // Large table readbacks also release the previous table's transient allocations.
+      if (options.releaseMemoryAfterBatch) Bun.gc(true)
+      return {
+        success: true,
+        results: sqlite.query(query).all(...(values as never[])),
+        meta: {
+          changes: Number(
+            (sqlite.query('SELECT changes() AS n').get() as { n: number }).n,
+          ),
+        },
+      }
+    },
     run: async () => ({
       success: true,
       meta: {
@@ -66,6 +74,12 @@ export function openSqliteDomain(path: string): {
       const results = []
       for (const statement of statements) results.push(await statement.all())
       sqlite.exec(nested ? `RELEASE ${savepoint}` : 'COMMIT')
+      if (options.releaseMemoryAfterBatch) {
+        // Release transient SQL and JSON allocations before the managed lane throttles.
+        sqlite.clearQueryCache()
+        sqlite.exec('PRAGMA shrink_memory')
+        Bun.gc(true)
+      }
       return results
     } catch (error) {
       sqlite.exec(nested ? `ROLLBACK TO ${savepoint}` : 'ROLLBACK')
