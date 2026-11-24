@@ -31,7 +31,10 @@ beforeEach(() => {
   mocks.context.user.isAnonymous = false
   mocks.get.mockResolvedValue(undefined)
   mocks.where.mockReturnValue({ get: mocks.get })
-  mocks.context.db = { select: () => ({ from: () => ({ where: mocks.where }) }) }
+  mocks.context.db = {
+    get: async () => undefined,
+    select: () => ({ from: () => ({ where: mocks.where }) }),
+  }
   mocks.names.mockResolvedValue({
     release: 'r1',
     records: [{ id: source.id, name: 'Garden Bakery', names: { en: 'Garden Bakery' } }],

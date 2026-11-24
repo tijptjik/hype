@@ -1029,6 +1029,7 @@ $effect(() => {
       {:else if view === 'relationships'}
         <div class="space-y-6 px-6 py-6">
           <LocationRelationships
+            onCompositionSaved={onSaved}
             locationId={place.id}
             kind={place.kind}
             organisationId={place.editingOrganisationId ?? null}

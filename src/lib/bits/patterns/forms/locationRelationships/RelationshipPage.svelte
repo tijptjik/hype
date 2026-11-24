@@ -221,11 +221,15 @@ async function saveOrder(clear = false): Promise<void> {
     >
       {#if table !== 'locationAddress'}
         <span class="text-muted-foreground text-xs"
-          >{table === 'locationMembership' ? 'Part of' : 'Operates in'}</span
+          >{table === 'locationMembership'
+            ? row.parentLocationId === locationId
+              ? 'Contains'
+              : 'Part of'
+            : 'Operates in'}</span
         >
       {/if}
       {#each table === 'locationMembership'
-        ? ['childLocationId', 'parentLocationId']
+        ? [row.parentLocationId === locationId ? 'childLocationId' : 'parentLocationId']
         : table === 'locationOccupancy'
           ? ['establishmentLocationId', 'containerLocationId']
           : ['locationId'] as endpoint, endpointIndex}

@@ -4,6 +4,8 @@ import { and, desc, eq } from 'drizzle-orm'
 import { location, locationRevision } from '../schema/location'
 // SOURCES
 import { loadBuildingNames, loadBuildingDetails } from '#lib/sources/saanseoi.js'
+import { sharedBuildingImportId } from './buildingImportIdentity'
+import { buildingLocationId } from '#lib/locations/buildingLocationId.js'
 // ADDRESS
 import { emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
 import { fillBuildingDetails } from '#lib/addresses/buildingSelection.js'
@@ -37,18 +39,10 @@ export async function importBuildingLocation(
   reviewedNames?: Record<string, string>,
 ): Promise<{ locationId: string; revisionId: string }> {
   source = BuildingSourceSchema.parse(source)
-  const digest = await crypto.subtle.digest(
-    'SHA-256',
-    new TextEncoder().encode(
-      JSON.stringify([
-        'building-export',
-        visibility === 'exclusive' ? organisationId : null,
-        visibility,
-        source.id,
-      ]),
-    ),
-  )
-  const locationId = `building:${Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('')}`
+  const locationId =
+    visibility === 'shared'
+      ? await sharedBuildingImportId(db, source.id)
+      : await buildingLocationId(source.id, visibility, organisationId)
   /** Preserve reviewed name edits through the existing Organisation correction writer.
    * @param identity Verified or reused building identity.
    * @returns Its corrected revision, without changing retained export provenance.

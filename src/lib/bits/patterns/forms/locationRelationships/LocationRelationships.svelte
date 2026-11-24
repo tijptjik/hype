@@ -13,6 +13,7 @@ import { Button } from '#lib/bits/core/button/index.js'
 import { SelectField, TextInput, TextArea } from '#lib/bits/custom/form/index.js'
 import RelationshipLocationPicker from './RelationshipLocationPicker.svelte'
 // COMPONENTS
+import BuildingComposition from './BuildingComposition.svelte'
 import BuildingAddressLinks from './BuildingAddressLinks.svelte'
 import RelationshipPage from './RelationshipPage.svelte'
 import LocationLineage from './LocationLineage.svelte'
@@ -26,12 +27,14 @@ let {
   organisationId = null,
   queryScope = '',
   canEdit = false,
+  onCompositionSaved,
 }: {
   locationId: string
   kind: LocationKind
   organisationId?: string | null
   queryScope?: string
   canEdit?: boolean
+  onCompositionSaved?: () => Promise<void>
 } = $props()
 let refreshVersion = $state(0)
 const uid = $props.id()
@@ -254,6 +257,26 @@ async function save(
           {/if}
         {/snippet}
         {#snippet editor()}
+          {#if table === 'locationMembership' &&
+            canEdit &&
+            organisationId &&
+            kind === 'building'}
+            <BuildingComposition
+              {locationId}
+              {organisationId}
+              onSaved={async () => {
+                await getRelationshipPage({
+                  locationId,
+                  organisationId,
+                  table: 'locationMembership',
+                  history: false,
+                  afterId: undefined,
+                }).refresh()
+                await onCompositionSaved?.()
+                refreshVersion++
+              }}
+            />
+          {/if}
           {#if canEdit &&
             table === 'locationAddress' &&
             kind === 'building' &&

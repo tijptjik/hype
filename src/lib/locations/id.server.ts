@@ -16,7 +16,8 @@ export function deriveLocationId(
     | 'breadline-dropoff'
     | 'feature-baseline'
     | 'saanseoi'
-    | 'canonical-draft',
+    | 'canonical-draft'
+    | 'physical-building',
   sourceId: string,
 ): string {
   if (!sourceId) throw new Error('Location identity requires a nonempty source ID')

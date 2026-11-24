@@ -139,6 +139,7 @@ export function setupLocationServiceDatabase(
       '0255_premises_map_releases',
       '0256_premises_map_draft_history',
       '0257_premises_map_correction',
+      '0271_physical_building_membership',
     ])
       sqlite.exec(readFileSync('migrations/' + name + '.sql', 'utf8'))
   }

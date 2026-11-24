@@ -6,7 +6,7 @@ import { guardedQuery } from '#lib/api/server/guarded.js'
 import { and, eq, ne } from 'drizzle-orm'
 // DOMAIN
 import { BuildingSourceSchema } from '#lib/locations/buildingSource.js'
-import { buildingLocationId } from '#lib/locations/buildingLocationId.js'
+import { sharedBuildingImportId } from '#lib/db/services/buildingImportIdentity.js'
 import { loadBuildingNames, loadBuildingDetails } from '#lib/sources/saanseoi.js'
 import { emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
 import { fillBuildingDetails } from '#lib/addresses/buildingSelection.js'
@@ -22,7 +22,7 @@ export const getBuildingLocationDetails = guardedQuery(
   BuildingSourceSchema,
   async (source, ctx) => {
     if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
-    const id = await buildingLocationId(source.id, 'shared')
+    const id = await sharedBuildingImportId(ctx.db, source.id)
     // Prefer the existing shared record, preserving its retained corrections and stable identity.
     const existing = await ctx.db
       .select({ id: location.id })

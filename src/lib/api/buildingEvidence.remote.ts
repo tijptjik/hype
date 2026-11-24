@@ -5,13 +5,22 @@ import { z } from 'zod'
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 // API
-import { guardedCommand } from './server/guarded.js'
+import { guardedCommand, guardedQuery } from './server/guarded.js'
 import { requireLocationOrganisationManager } from './services/locationOwnership.js'
 // SERVICES
 import { probeProjectQuery } from '#lib/db/services/project.js'
 import { createLocalLocation } from '#lib/db/services/locationLocal.js'
 import { loadBuildingNames, loadBuildingDetails } from '#lib/sources/saanseoi.js'
+import { savePhysicalBuildingMember } from '#lib/db/services/physicalBuilding.js'
 // DOMAIN
+import {
+  BuildingSourceSchema,
+  type BuildingSource,
+} from '#lib/locations/buildingSource.js'
+import { addressName } from '#lib/addresses/formatting.js'
+import { createLocalLocationAddress } from '#lib/addresses/localLocationAddress.js'
+import { proposeLocalAddressParse } from '#lib/addresses/localAddressParse.js'
+import { loadAddressNames } from '#lib/addresses/nameCatalogue.js'
 import {
   BuildingEvidenceSchema,
   combineBuildingOutlines,
@@ -98,5 +107,102 @@ export const createBuildingFromEvidence = guardedCommand(
         review: 'explicit-physical-building',
       },
     )
+  },
+)
+
+/** Attach a verified SaanSeoi building as a constituent of a separately authored HYPE Building.
+ * @param input Project, parent or creation retry key, and selected catalogue record or previous HYPE import.
+ * @returns Physical building identity ready for session inclusion and subsequent additions.
+ */
+export const attachPhysicalBuildingMember = guardedCommand(
+  z
+    .strictObject({
+      projectId: z.string().min(1).optional(),
+      organisationId: z.string().min(1).optional(),
+      target: z.union([
+        z.strictObject({ requestId: z.uuid() }),
+        z.strictObject({ parentId: z.string().min(1).max(100) }),
+      ]),
+      source: z.union([
+        BuildingSourceSchema,
+        z.strictObject({ importedLocationId: z.string().min(1).max(100) }),
+      ]),
+    })
+    .refine(value => Boolean(value.projectId) !== Boolean(value.organisationId)),
+  async (input, ctx) => {
+    if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
+    const organisationId =
+      input.organisationId ??
+      (await probeProjectQuery(ctx.db, { ref: input.projectId!, refKey: 'id' }))
+        ?.organisationId
+    if (!organisationId) error(404, 'ORGANISATION_NOT_FOUND')
+    await requireLocationOrganisationManager(ctx, organisationId)
+    let source: BuildingSource
+    if ('importedLocationId' in input.source) {
+      const row = await ctx.db.get<{
+        source: string
+      }>(sql`SELECT json_extract(v.rawSource,'$.buildingSource') source
+        FROM location l JOIN locationRevision v ON v.locationId=l.id WHERE l.id=${input.source.importedLocationId}
+        AND l.matchingType='building' AND l.state NOT IN ('manual','redirect')
+        AND json_extract(v.rawSource,'$.kind')='building-export-baseline' ORDER BY v.version LIMIT 1`)
+      if (!row) error(409, 'The imported building is unavailable.')
+      source = BuildingSourceSchema.parse(JSON.parse(row.source))
+    } else source = input.source
+    const details = await loadBuildingDetails(source.id, source.release)
+    if (source.addressId && !details.addresses.some(row => row.id === source.addressId))
+      error(409, 'The selected published address is unavailable.')
+    const streets = details.addresses.length ? await loadAddressNames('streets') : []
+    const addresses = details.addresses.map(address => {
+      const parsed = proposeLocalAddressParse(
+        { source: address.display, content: createLocalLocationAddress() },
+        streets,
+      )
+      return {
+        ...address,
+        streets: Object.fromEntries(
+          Object.entries(parsed.content.i18n).flatMap(([tag, row]) =>
+            row.streetName
+              ? [
+                  [
+                    tag,
+                    {
+                      name:
+                        tag === 'en'
+                          ? addressName(row.streetName, 'en')
+                          : row.streetName,
+                      number: row.buildingNumberExpression ?? '',
+                    },
+                  ],
+                ]
+              : [],
+          ),
+        ),
+      }
+    })
+    return {
+      locationId: await savePhysicalBuildingMember(
+        ctx.db,
+        organisationId,
+        ctx.user.id,
+        input.target,
+        { source, coordinates: details.coordinates, addresses },
+      ),
+    }
+  },
+)
+
+/** Determine which composition action applies to this Building in the current organisation.
+ * @param input Visible Location and editing organisation. @returns The editor role or null.
+ */
+export const getBuildingCompositionRole = guardedQuery(
+  z.strictObject({ locationId: z.string().min(1), organisationId: z.string().min(1) }),
+  async (input, ctx) => {
+    await requireLocationOrganisationManager(ctx, input.organisationId)
+    const row = await ctx.db.get<{ role: 'source' | 'parent' | null }>(sql`SELECT CASE
+      WHEN json_extract(v.rawSource,'$.kind')='building-export-baseline' THEN 'source'
+      WHEN json_extract(v.rawSource,'$.kind')='physical-building-member' AND l.ownerOrganisationId=${input.organisationId} THEN 'parent' END role
+      FROM location l JOIN locationRevision v ON v.locationId=l.id AND v.version=1
+      WHERE l.id=${input.locationId} AND l.matchingType='building' AND l.state='unresolved'`)
+    return row?.role ?? null
   },
 )

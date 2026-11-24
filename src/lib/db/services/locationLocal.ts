@@ -72,10 +72,15 @@ export async function createLocalLocation(
   organisationId: string,
   input: unknown,
   actorId: string,
-  verified?: {
-    locationId: string
-    buildingSource: import('#lib/locations/buildingSource.js').BuildingSource
-  },
+  verified?:
+    | {
+        locationId: string
+        physicalBuildingMember: import('#lib/locations/physicalBuilding.js').PhysicalBuildingMember
+      }
+    | {
+        locationId: string
+        buildingSource: import('#lib/locations/buildingSource.js').BuildingSource
+      },
   buildingEvidence?: { references: unknown[]; review: 'explicit-physical-building' },
 ): Promise<{ locationId: string; revisionId: string }> {
   const parsed = LocalLocationInputSchema.parse(input)
@@ -141,11 +146,18 @@ export async function createLocalLocation(
   const rawSource = {
     kind: buildingEvidence
       ? 'reviewed-building-evidence'
-      : verified
-        ? 'building-export-baseline'
-        : 'local-baseline',
+      : verified && 'physicalBuildingMember' in verified
+        ? 'physical-building-member'
+        : verified
+          ? 'building-export-baseline'
+          : 'local-baseline',
     ...(buildingEvidence ? { buildingEvidence } : {}),
-    ...(verified ? { buildingSource: verified.buildingSource } : {}),
+    ...(verified && 'buildingSource' in verified
+      ? { buildingSource: verified.buildingSource }
+      : {}),
+    ...(verified && 'physicalBuildingMember' in verified
+      ? { member: verified.physicalBuildingMember }
+      : {}),
     actorId,
     organisationId,
     input: parsed,

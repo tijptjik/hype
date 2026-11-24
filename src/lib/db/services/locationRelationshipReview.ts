@@ -93,7 +93,7 @@ export async function readRelationshipPage(
     : relationshipScopeSql(input.table, input.scope)
   const labels = keys.map(
     key =>
-      sql`(SELECT COALESCE(json_extract(v.facts,'$.i18n.en.name'),l.id) FROM location l LEFT JOIN locationRevisionContent v ON v.locationId=l.id WHERE l.id=${canonicalLocationSQL(sql`r.${sql.identifier(key)}`)} ORDER BY v.version DESC LIMIT 1) AS ${sql.identifier(key + 'Label')}`,
+      sql`(SELECT COALESCE(NULLIF(json_extract(v.facts,'$.i18n.en.name'),''),NULLIF(json_extract(v.facts,'$.i18n.en.displayAddressOverride'),''),NULLIF(json_extract(v.facts,'$.i18n.en.displayAddress'),''),NULLIF(json_extract(v.facts,'$.common.location.address.authored.i18n.en.formattedAddress'),''),trim(coalesce(json_extract(v.facts,'$.common.location.address.authored.i18n.en.buildingNumberExpression'),'')||' '||json_extract(v.facts,'$.common.location.address.authored.i18n.en.streetName')),l.id) FROM location l LEFT JOIN locationRevisionContent v ON v.locationId=l.id WHERE l.id=${canonicalLocationSQL(sql`r.${sql.identifier(key)}`)} ORDER BY v.version DESC LIMIT 1) AS ${sql.identifier(key + 'Label')}`,
   )
   // Read the street number separately so building names and unit numbers never affect ranking.
   const addressFields =
