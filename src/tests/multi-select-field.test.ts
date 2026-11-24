@@ -10,6 +10,7 @@ import { encodePropertySelection } from '#lib/properties/selection.js'
 afterEach(cleanup)
 
 it('adds and removes independent choices and retains both labels in read-only mode', async () => {
+  vi.useRealTimers()
   const onChange = vi.fn()
   const props = {
     id: 'stratigraphy',
