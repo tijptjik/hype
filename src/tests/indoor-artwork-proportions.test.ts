@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test'
+import { expect, test } from 'vitest'
 import { shopImagePlacement } from '../lib/indoor/artwork'
 
 test('logos keep uniform orthogonal axes under rotated and tilted placements', () => {

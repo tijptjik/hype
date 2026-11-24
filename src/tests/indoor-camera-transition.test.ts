@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, test } from 'vitest'
 import { cameraTravel, floorInViewport } from '../lib/indoor/cameraTransition'
 import type { IndoorFeature } from '../lib/indoor/model'
 import type { StationProjection } from '../lib/indoor/scene'
