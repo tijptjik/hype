@@ -1,8 +1,16 @@
 // @vitest-environment node
 import { publicationChanges } from '#lib/indoor/publicationChanges.js'
 import { expect, it } from 'vitest'
+import type { Geometry } from 'geojson'
+/** Narrow asserted polygon output for coordinate regression checks. */
+function coordinates(geometry: Geometry): number[][][] {
+  if (geometry.type !== 'Polygon') throw new Error('Expected polygon')
+  return geometry.coordinates
+}
 import {
   auditFloor,
+  editOutline,
+  alignFloorAnchors,
   drawnUnit,
   mergeUnits,
   splitUnit,
@@ -79,7 +87,7 @@ it('applies explicit alignment while retaining source coordinates and template p
     alignment: { x: 10, y: 20, scale: 2, rotation: 0 },
   }
   const bundle = floorplanBundle({ warnings: [], floors: [aligned] })
-  expect(bundle.data.level_polygon.features[0].geometry.coordinates[0][0]).toEqual([
+  expect(coordinates(bundle.data.level_polygon.features[0].geometry)[0][0]).toEqual([
     10, 20,
   ])
   expect(bundle.data.level_polygon.features[0].properties.source_floor_id).toBe(
@@ -106,4 +114,90 @@ it('surfaces geometry and category changes in publication review', () => {
   expect(
     publicationChanges(next, previous).find(change => change.label === 'Spaces')?.after,
   ).toContain('1 changed')
+})
+
+it('preserves true floor voids and rejects an external void', () => {
+  const next = structuredClone(floor)
+  editOutline(
+    next,
+    [
+      [10, 10],
+      [20, 10],
+      [20, 20],
+      [10, 20],
+    ],
+    'floor-hole',
+  )
+  const bundle = floorplanBundle({ warnings: [], floors: [next] })
+  expect(coordinates(bundle.data.level_polygon.features[0].geometry)).toHaveLength(2)
+  expect(() =>
+    editOutline(
+      next,
+      [
+        [90, 90],
+        [100, 90],
+        [110, 110],
+        [90, 100],
+      ],
+      'floor-hole',
+    ),
+  ).toThrow()
+})
+it('registers rotated anchors without changing original vertices', () => {
+  const next = structuredClone(floor)
+  next.alignment = alignFloorAnchors(
+    next,
+    [
+      [0, 0],
+      [100, 0],
+    ],
+    [
+      [10, 20],
+      [10, 220],
+    ],
+  )
+  expect(next.alignment.scale).toBe(2)
+  expect(next.alignment.rotation).toBe(90)
+  const bundle = floorplanBundle({ warnings: [], floors: [next] })
+  expect(
+    coordinates(bundle.data.level_polygon.features[0].geometry)[0][1][0],
+  ).toBeCloseTo(10)
+  expect(
+    coordinates(bundle.data.level_polygon.features[0].geometry)[0][1][1],
+  ).toBeCloseTo(220)
+  expect(() =>
+    alignFloorAnchors(
+      next,
+      [
+        [0, 0],
+        [0, 0],
+      ],
+      [
+        [0, 0],
+        [1, 1],
+      ],
+    ),
+  ).toThrow()
+})
+it('retains canonical Floor and Unit references, clearing a split new identity', () => {
+  const room = {
+    ...drawnUnit(floor, [
+      [0, 0],
+      [100, 0],
+      [100, 100],
+      [0, 100],
+    ]),
+    locationId: 'unit-identity',
+  }
+  const bundle = floorplanBundle({
+    warnings: [],
+    floors: [{ ...floor, locationId: 'floor-identity', units: [room] }],
+  })
+  expect(bundle.data.level_polygon.features[0].properties.canonical_location_id).toBe(
+    'floor-identity',
+  )
+  expect(bundle.data.unit_polygon.features[0].properties.canonical_location_id).toBe(
+    'unit-identity',
+  )
+  expect(splitUnit(room, 'x', 50)[1].locationId).toBeUndefined()
 })

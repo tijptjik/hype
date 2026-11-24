@@ -57,6 +57,8 @@ export const floorplanExtractionSchema = z
           width: z.number().positive().max(10000),
           height: z.number().positive().max(10000),
           boundary: ring,
+          holes: z.array(ring).max(100).optional(),
+          locationId: z.string().min(1).max(200).optional(),
           sourceFloorId: z.string().max(100).optional(),
           alignment: z
             .object({
@@ -88,6 +90,8 @@ export const floorplanExtractionSchema = z
                   'unknown',
                 ]),
                 polygon: ring,
+                holes: z.array(ring).max(100).optional(),
+                locationId: z.string().min(1).max(200).optional(),
                 confidence: z.number().min(0).max(1),
                 evidence: z.string().max(2000),
               }),
@@ -104,13 +108,35 @@ export const floorplanExtractionSchema = z
       if (ids.has(floor.id))
         ctx.addIssue({ code: 'custom', message: 'Duplicate floor identity' })
       ids.add(floor.id)
+      // Voids must be wholly enclosed; overlapping or external rings are not valid holes.
+      for (const shape of [
+        { polygon: floor.boundary, holes: floor.holes },
+        ...floor.units,
+      ]) {
+        for (const [index, hole] of (shape.holes ?? []).entries()) {
+          if (
+            polygonClipping.difference([hole], [shape.polygon]).length ||
+            (shape.holes ?? [])
+              .slice(0, index)
+              .some(other => polygonClipping.intersection([hole], [other]).length)
+          )
+            ctx.addIssue({
+              code: 'custom',
+              message: 'Void rings must be enclosed and must not overlap.',
+            })
+        }
+      }
       const units = new Set<string>()
       for (const unit of floor.units) {
         if (units.has(unit.id))
           ctx.addIssue({ code: 'custom', message: 'Duplicate unit identity' })
         units.add(unit.id)
       }
-      for (const polygon of [floor.boundary, ...floor.units.map(unit => unit.polygon)])
+      for (const polygon of [
+        floor.boundary,
+        ...(floor.holes ?? []),
+        ...floor.units.flatMap(unit => [unit.polygon, ...(unit.holes ?? [])]),
+      ])
         if (polygon.some(([x, y]) => x > floor.width || y > floor.height))
           ctx.addIssue({
             code: 'custom',
@@ -129,10 +155,10 @@ export function floorplanUnclassified(
 ): MultiPolygon {
   return floor.units.length
     ? polygonClipping.difference(
-        [floor.boundary],
-        ...floor.units.map(unit => [unit.polygon]),
+        [floor.boundary, ...(floor.holes ?? [])],
+        ...floor.units.map(unit => [unit.polygon, ...(unit.holes ?? [])]),
       )
-    : [[floor.boundary]]
+    : [[floor.boundary, ...(floor.holes ?? [])]]
 }
 
 /** Convert reviewed extraction to existing indoor layers, without fabricating routes or geographic positions.
@@ -161,15 +187,16 @@ export function floorplanBundle(input: unknown): MapBundle {
         dx * Math.sin(radians) + dy * Math.cos(radians) + alignment.y,
       ]
     }
-    const polygon = (points: number[][]) => ({
+    const polygon = (points: number[][], holes: number[][][] = []) => ({
       type: 'Polygon' as const,
-      coordinates: [points.map(transform)],
+      coordinates: [points.map(transform), ...holes.map(ring => ring.map(transform))],
     })
     data.level_polygon.features.push({
       type: 'Feature',
-      geometry: polygon(floor.boundary),
+      geometry: polygon(floor.boundary, floor.holes),
       properties: {
         level_id: floor.id,
+        ...(floor.locationId ? { canonical_location_id: floor.locationId } : {}),
         level_name_en: floor.label,
         level_short_name_en: floor.label,
         level_ordinal: index,
@@ -181,7 +208,7 @@ export function floorplanBundle(input: unknown): MapBundle {
     if (index === 0)
       data.venue_polygon.features.push({
         type: 'Feature',
-        geometry: polygon(floor.boundary),
+        geometry: polygon(floor.boundary, floor.holes),
         properties: { venue_id: 'building' },
       })
     // Retain uncovered space explicitly, rather than letting the floor background imply circulation.
@@ -208,9 +235,10 @@ export function floorplanBundle(input: unknown): MapBundle {
     for (const unit of floor.units)
       data.unit_polygon.features.push({
         type: 'Feature',
-        geometry: polygon(unit.polygon),
+        geometry: polygon(unit.polygon, unit.holes),
         properties: {
           unit_id: floor.id + '-' + unit.id,
+          ...(unit.locationId ? { canonical_location_id: unit.locationId } : {}),
           level_id: floor.id,
           unit_name_en: unit.label,
           unit_category: unit.category,
