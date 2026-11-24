@@ -1,4 +1,6 @@
 <script lang="ts">
+// COMPONENTS
+import BuildingConstituents from '#lib/bits/patterns/forms/locationRelationships/BuildingConstituents.svelte'
 let reviewForm: HTMLFormElement
 
 import IdentityCataloguePicker from '../identityCatalogue/IdentityCataloguePicker.svelte'
@@ -707,6 +709,13 @@ $effect(() => {
           <div
             class="@min-[900px]:border-border min-w-0 space-y-6 @min-[900px]:border-l @min-[900px]:pl-6"
           >
+            <BuildingConstituents
+              members={(place.buildingConstituents ?? []).map(member => ({
+                ...member,
+                locationId: member.childLocationId,
+              }))}
+              organisationId={place.editingOrganisationId ?? undefined}
+            />
             {#if !place.facts}
               <LocationAccessibility locationId={place.id} readOnly />
             {/if}

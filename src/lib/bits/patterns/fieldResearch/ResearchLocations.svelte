@@ -3,7 +3,6 @@
 import { onMount } from 'svelte'
 import { SvelteSet } from 'svelte/reactivity'
 // I18N
-import { buildingSourceHref } from '#lib/locations/buildingSource.js'
 import { getLocale, m } from '#lib/i18n.js'
 import { buildingNameLabel } from '#lib/locations/kinds.i18n.js'
 // FIELD RESEARCH
@@ -20,6 +19,7 @@ import {
 } from '#lib/api/fieldResearchLocations.remote.js'
 import { refreshRemoteQuery } from '#lib/remote/index.js'
 // COMPONENTS
+import BuildingConstituents from '#lib/bits/patterns/forms/locationRelationships/BuildingConstituents.svelte'
 import { SectionHeader } from '#lib/bits/custom/form/index.js'
 import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 // ICONS
@@ -29,6 +29,7 @@ import ChevronRightIcon from 'virtual:icons/lucide/chevron-right'
 import LocationIcon from 'virtual:icons/proicons/location'
 import PremisesIcon from 'virtual:icons/lucide/building'
 import BuildingIcon from 'virtual:icons/lucide/building-2'
+import ConstituentIcon from 'virtual:icons/lucide/blocks'
 import PartIcon from 'virtual:icons/lucide/door-open'
 import PlusIcon from 'virtual:icons/lucide/plus'
 import RelationshipsIcon from 'virtual:icons/lucide/network'
@@ -461,45 +462,24 @@ onMount(() => void load().catch(error => (failure = String(error))))
                           </p>
                         {/if}
                       {/each}
-                      {#if item.members.length}
-                        <details class="mt-2 text-sm">
-                          <summary>
-                            {item.members.length} SaanSeoi
-                            {item.members.length === 1 ? 'building' : 'buildings'}
-                          </summary>
-                          <ul class="mt-2 space-y-3">
-                            {#each item.members as member (member.source.id)}
-                              <li>
-                                <a
-                                  class="font-mono text-xs break-words underline"
-                                  href={member.locationId
-                                    ? '/admin/locations/' +
-                                      encodeURIComponent(member.locationId) +
-                                      '?organisation=' +
-                                      encodeURIComponent(organisationId) +
-                                      '#relationships'
-                                    : buildingSourceHref(member.source)}
-                                  >{member.source.id}</a
-                                >
-                              </li>
-                            {/each}
-                          </ul>
-                        </details>
-                      {/if}
+                      <BuildingConstituents members={item.members} {organisationId} />
                     </div>
                   </div>
                   <div class="flex flex-wrap items-center gap-2">
                     {#if item.canEditPhysicalBuilding && !disabled}
                       <button
                         type="button"
-                        class={control}
+                        class={`${rowAction} hover:bg-muted gap-1 px-3`}
+                        aria-label="Add constituent building"
+                        title="Add constituent building"
                         disabled={busy}
                         onclick={() => {
                           active = 'building'
                           physicalId = item.id
                         }}
                       >
-                        Add SaanSeoi building
+                        <PlusIcon class="size-4" />
+                        <ConstituentIcon class="size-5" />
                       </button>
                     {/if}
                     {#if item.kind === 'premises' || item.kind === 'building'}

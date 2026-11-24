@@ -225,7 +225,11 @@ export const getResearchLocations = guardedQuery(
           locationId: member.childLocationId,
           source: member.source,
           coordinates: member.coordinates,
-          addresses: member.addresses.map(({ id, display }) => ({ id, display })),
+          addresses: member.addresses.map(({ id, display, streets }) => ({
+            id,
+            display,
+            streets,
+          })),
         })),
         linkedAddresses: linked.map(entry => entry.label),
         streetAddresses,

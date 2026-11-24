@@ -33,6 +33,7 @@ import { AddressDivisionOverridesSchema } from '#lib/addresses/divisions.js'
 import { updateLocalLocationAddress } from '#lib/db/services/locationLocal.js'
 import { LocalLocationFootprintSchema } from '#lib/locations/footprint.js'
 // DB
+import { physicalBuildingMembers } from '#lib/db/services/physicalBuilding.js'
 import { readLocationCurationLocks } from '#lib/db/services/locationCurationLocks.js'
 import { probeLocationIdentityScope } from '#lib/db/services/locationIdentityReview.js'
 import { archiveLocalLocation } from '#lib/db/services/locationDeletion.js'
@@ -176,6 +177,17 @@ export const getLocation = guardedQuery(
     return resource
       ? {
           ...resource,
+          ...(resource.kind === 'building'
+            ? {
+                buildingConstituents: JSON.parse(
+                  (
+                    await ctx.db.get<{ members: string }>(
+                      sql`SELECT ${physicalBuildingMembers(sql`${input.id}`, editingOrganisationId)} members`,
+                    )
+                  )?.members ?? '[]',
+                ) as import('#lib/locations/physicalBuilding.js').PhysicalBuildingMember[],
+              }
+            : {}),
           editingOrganisationId,
           canEditShared,
           canDelete: Boolean(
