@@ -15,7 +15,18 @@ it.each(['navigation', 'close', 'account'] as const)(
       'utf8',
     )
     const start = source.indexOf('async function applyFeatureBulkEdit()')
-    const handler = source.slice(start, source.indexOf('onMount(() =>', start))
+    expect(start).toBeGreaterThanOrEqual(0)
+    const functionSource = source.slice(start)
+    const parsed = ts.createSourceFile(
+      'bulk-handler.ts',
+      functionSource,
+      ts.ScriptTarget.ES2022,
+      true,
+      ts.ScriptKind.TS,
+    )
+    const declaration = parsed.statements[0]
+    expect(ts.isFunctionDeclaration(declaration)).toBe(true)
+    const handler = functionSource.slice(0, declaration.end)
     let finish!: (value: unknown[]) => void
     const pending = new Promise<unknown[]>(resolve => {
       finish = resolve

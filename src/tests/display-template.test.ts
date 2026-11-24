@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   parseDisplayTemplate,
+  migrateTemplateConditionals,
   renderDisplayTemplate,
   templateCasesTag,
   templatePairTag,
@@ -40,6 +41,44 @@ describe('localized display language', () => {
     expect(
       renderDisplayTemplate('{{ field.open ?? "missing" }}', { 'field.open': false }),
     ).toBe('false')
+  })
+  it('maps exact values and preserves unmatched and missing values', () => {
+    const source = '{{ cases(site, "North", "N", "South", "S") }}'
+    expect(renderDisplayTemplate(source, { site: 'North' })).toBe('N')
+    expect(renderDisplayTemplate(source, { site: 'South' })).toBe('S')
+    expect(renderDisplayTemplate(source, { site: 'north' })).toBe('north')
+    expect(renderDisplayTemplate(source, {})).toBe('')
+    expect(
+      renderDisplayTemplate('{{ cases(site, "North", "") ?? "none" }}', {
+        site: 'North',
+      }),
+    ).toBe('none')
+    expect(() =>
+      parseDisplayTemplate('{{ cases(site, "a", "b", "c", "d", "e") }}'),
+    ).toThrow()
+  })
+  it('supports ternary while retaining legacy cases and trilean', () => {
+    const source = '{{ ternary(flag, "Yes", "No", "Unknown") }}'
+    expect(renderDisplayTemplate(source, { flag: true })).toBe('Yes')
+    expect(renderDisplayTemplate(source, { flag: false })).toBe('No')
+    expect(renderDisplayTemplate(source, {})).toBe('Unknown')
+    expect(
+      renderDisplayTemplate('{{ trilean(flag, "Yes", "No", "Unknown") }}', {
+        flag: false,
+      }),
+    ).toBe('No')
+  })
+  it('migrates nested legacy calls without changing literals or value mappings', () => {
+    const source =
+      'cases in text {{ optional(cases(flag, "cases(", "No", "Missing"), "", "") }} {{ cases(site, "N", "North") }}'
+    const migrated = migrateTemplateConditionals(source)
+    expect(migrated).toBe(
+      'cases in text {{ optional(ternary(flag, "cases(", "No", "Missing"), "", "") }} {{ cases(site, "N", "North") }}',
+    )
+    expect(renderDisplayTemplate(migrated, { flag: true, site: 'N' })).toBe(
+      renderDisplayTemplate(source, { flag: true, site: 'N' }),
+    )
+    expect(migrateTemplateConditionals('{{ cases(')).toBe('{{ cases(')
   })
   it('supports localized text and optional punctuation', () => {
     expect(
