@@ -166,7 +166,7 @@ export default defineConfig({
     // Exclude problematic files that might keep handles open
     exclude: [
       // The managed Playwright runner collects browser interaction specs.
-      'tests/e2e/**',
+      '**/tests/e2e/**',
       // Hosted worker suites and Bun-only workspace checks run through test:workers.
       'workers/whatsapp/**/*.test.ts',
       'workers/telegram/**/*.test.ts',
