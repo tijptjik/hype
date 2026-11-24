@@ -8,6 +8,7 @@ import { sequence, type Handle } from '@sveltejs/kit/hooks'
 // The bundled Recorder calls this remote directly, even before a web route loads it.
 import '#lib/api/recorderAccount.remote.js'
 import '#lib/api/recorderSessions.remote.js'
+import '#lib/api/recorderEditor.remote.js'
 
 // I18N
 import { paraglideMiddleware } from '#lib/paraglide/server.js'

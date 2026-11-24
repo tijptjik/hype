@@ -266,19 +266,36 @@ export function prepareFeatureEditorialProjection(
     gallery?: { actorId: string; attachmentGuard?: SQL }
     /** Trusted identity-review writer, after source selection and scope validation. */
     identity?: { actorId: string; preserveDraft?: boolean }
+    /** Trusted policy-validated recorder edits may reclassify unpublished, unlinked captures. */
+    reclassifyUnlinkedCapture?: boolean
   },
 ): RevisionProjection {
   const previous = FeatureRevisionContentSchema.parse(input.previous)
   const content = FeatureRevisionContentSchema.parse(input.content)
+  const source = parseFeatureRevisionSource(input.source.snapshot)
+  if (
+    input.reclassifyUnlinkedCapture &&
+    (source.record.isPublished ||
+      previous.placement.location ||
+      content.placement.location)
+  )
+    throw new Error(
+      'Recorder reclassification requires an unpublished, unlinked Feature',
+    )
   // Ordinary revision edits cannot bypass subject validation through a profile patch.
-  if ((previous.profile.featureType ?? null) !== (content.profile.featureType ?? null))
+  if (
+    !input.reclassifyUnlinkedCapture &&
+    (previous.profile.featureType ?? null) !== (content.profile.featureType ?? null)
+  )
     throw new Error('Feature type changes require explicit reclassification')
   for (const key of ['kind', 'targetContext', 'associationRelation'] as const)
-    if ((previous.profile[key] ?? null) !== (content.profile[key] ?? null))
+    if (
+      !input.reclassifyUnlinkedCapture &&
+      (previous.profile[key] ?? null) !== (content.profile[key] ?? null)
+    )
       throw new Error(
         'Feature location intent changes require explicit reclassification',
       )
-  const source = parseFeatureRevisionSource(input.source.snapshot)
   if (source.record.id !== input.featureId)
     throw new Error('Projection source belongs to another Feature')
   const galleryChanged = !equalRevisionValue(previous.gallery, content.gallery)
@@ -433,6 +450,12 @@ export function prepareFeatureEditorialProjection(
       : 0
   const recordChanges: Partial<typeof feature.$inferInsert> = {
     modifiedAt: new Date(Math.max(Date.now(), (modifiedAt || 0) + 1)).toISOString(),
+  }
+  if (input.reclassifyUnlinkedCapture) {
+    recordChanges.featureType = content.profile.featureType
+    recordChanges.kind = content.profile.kind
+    recordChanges.targetContext = content.profile.targetContext
+    recordChanges.associationRelation = content.profile.associationRelation
   }
   // Reserved children become ordinary identities inside this publication batch before
   // Location scope triggers validate their accepted association; they remain unpublished.
