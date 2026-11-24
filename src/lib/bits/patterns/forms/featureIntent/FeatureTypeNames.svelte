@@ -27,7 +27,7 @@ import { translateContentField } from '#lib/api/translation.remote.js'
 // TYPES
 import type { FeatureType } from '#lib/features/intents.js'
 let {
-  type = $bindable(),
+  type,
   locales,
   reviewLocales = locales,
   reviewGroup = getContext<TranslationReviewGroup | undefined>(
@@ -35,7 +35,7 @@ let {
   ),
   multilingual,
   disabled = false,
-  onEnglishChange,
+  onNameChange,
 }: {
   type: FeatureType
   locales: string[]
@@ -43,7 +43,7 @@ let {
   reviewGroup?: TranslationReviewGroup
   multilingual: boolean
   disabled?: boolean
-  onEnglishChange?: (before: string, after: string) => void
+  onNameChange: (locale: string, text: string) => void
 } = $props()
 let reviewElement: HTMLDivElement
 let busy = $state<string | undefined>()
@@ -71,9 +71,7 @@ function value(locale: string): string {
  * @param locale Content language. @param text Draft name. @returns Nothing.
  */
 function update(locale: string, text: string): void {
-  if (locale === 'en') onEnglishChange?.(value(locale), text)
-  type.labels = { ...type.labels, [locale]: text }
-  if (locale === 'en') type.label = text
+  if (!disabled) onNameChange(locale, text)
 }
 /** Translate empty targets without replacing concurrent edits or a replaced draft.
  * @param source Source language. @returns Completion of the translation batch.

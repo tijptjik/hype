@@ -14,7 +14,7 @@ import FeatureNamingPolicySettings from './FeatureNamingPolicySettings.svelte'
 import FeatureNamingRuleEditor from './FeatureNamingRuleEditor.svelte'
 import type { FeatureNameRule } from '#lib/features/locationPolicy.js'
 // DOMAIN
-import { DEFAULT_FEATURE_TYPES } from '#lib/features/intents.js'
+import { DEFAULT_FEATURE_TYPES, featureTypeLabelValue } from '#lib/features/intents.js'
 import { TARGET_CONTEXTS } from '#lib/features/locationPolicy.js'
 import { LOCATION_ENTITY_KINDS, locationTaxonomy } from '#lib/locations/taxonomy.js'
 import { locationTaxonomyLabel } from '#lib/locations/taxonomy.i18n.js'
@@ -138,6 +138,19 @@ function updateEnglishName(before: string, after: string): void {
   type.id = next
   automaticIdentifier = next
 }
+
+/** Apply a localized name to the editable draft and retain the legacy English label.
+ * @param locale Edited language.
+ * @param text New label.
+ * @returns Nothing.
+ */
+function updateName(locale: string, text: string): void {
+  if (locale === 'en') {
+    updateEnglishName(featureTypeLabelValue(type, locale), text)
+    type.label = text
+  }
+  type.labels = { ...type.labels, [locale]: text }
+}
 </script>
 
 <div
@@ -149,13 +162,13 @@ function updateEnglishName(before: string, after: string): void {
     aria-label={m.feature_model_type_settings()}
   >
     <FeatureTypeNames
-      bind:type
+      {type}
       {locales}
       {reviewLocales}
       {reviewGroup}
       {multilingual}
       {disabled}
-      onEnglishChange={updateEnglishName}
+      onNameChange={updateName}
     />
     <TextInput
       label={m.feature_model_identifier()}
