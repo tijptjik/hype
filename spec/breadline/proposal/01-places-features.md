@@ -1954,11 +1954,14 @@ address or division memberships; these must not be inferred from a numeric span.
 #194.
 
 In the Building editor, **Relationships → Address choices → Link addresses** opens the
-imported footprint's published address alternatives. Editors can also search by street
-address or building name. Saving attaches the reviewed SaanSeoi address revisions to the
-existing HYPE Building as current, unranked address relationships in the editor's scope.
-Field Research finds the same Location when a researcher searches for a linked address.
-The Building card shows its display address.
+imported footprint's published address alternatives and those retained on its current
+constituents. In a constituent search, **Link addresses to physical building** opens the
+choices for that footprint. Each address can be selected until it is linked to the
+parent in the editor's scope. Editors can also search by street address or building
+name. Saving attaches the reviewed SaanSeoi address revisions to the existing HYPE
+Building as current, unranked address relationships in the editor's scope. Field
+Research finds the same Location when a researcher searches for a linked address. The
+Building card shows its display address.
 
 In **Profile → Address → Street**, an editor can save a building's own street numbers or
 ranges and localized street names. Each confirmed row has an authored HYPE address
@@ -1988,6 +1991,7 @@ imported Building or search the SaanSeoi building catalogue to add children. The
 card shows one building address, with a range per street for a physical parent. Address
 choices remain available in the editor. Refs #194.
 
+From a local Location’s title menu, **Delete** opens a confirmation naming the record.
 In **Relationships → Physical membership**, **Place in physical building** adds the
 current import to a selected existing parent. **Use as physical building** designates
 the current import as the parent under its existing HYPE ID (migration 0273). Its
@@ -1995,7 +1999,6 @@ profile stays independent of its constituents. The owning organisation manages t
 parent. **Preview matches** searches the SaanSeoi catalogue for the building's names,
 addresses and each explicit street-number endpoint. Reviewing a match is read-only.
 
-From a local Location’s title menu, **Delete** opens a confirmation naming the record.
 Deleting a physical building releases its constituent memberships. Each constituent
 keeps its own identity and facts. Migration 0272 retains the actor, baseline revision,
 and historical relationship assertions. A current Feature association, accepted
