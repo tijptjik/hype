@@ -383,17 +383,29 @@ onMount(() => void load().catch(error => (failure = String(error))))
                   </button>
                 {/if}
                 {#if item.kind === 'premises' || item.kind === 'building'}
-                  {@const addLabel =
+                  {@const targets =
                     item.kind === 'premises'
-                      ? `Add related buildings and building parts for ${item.name}`
-                      : `Add related building parts for ${item.name}`}
+                      ? 'related buildings and building parts'
+                      : 'related building parts'}
+                  {@const { included, total } = item.inclusion}
+                  {@const complete = total > 0 && included === total}
+                  {@const addLabel = complete
+                    ? `All ${total} ${targets} included for ${item.name}`
+                    : included
+                      ? `Add remaining ${targets} for ${item.name} (${included} of ${total} included)`
+                      : total
+                        ? `Add ${targets} for ${item.name}`
+                        : `No ${targets} for ${item.name}`}
                   <button
                     type="button"
-                    class={`${rowAction} hover:bg-muted gap-1 px-3`}
+                    class={`${rowAction} hover:bg-muted gap-1 px-3 ${included ? 'text-success' : ''}`}
                     aria-label={addLabel}
                     title={addLabel}
+                    aria-disabled={complete || !total}
                     disabled={busy || disabled}
                     onclick={() =>
+                      !complete &&
+                      total > 0 &&
                       add(
                         item.id,
                         item.kind === 'premises'
@@ -401,7 +413,9 @@ onMount(() => void load().catch(error => (failure = String(error))))
                           : 'building_and_parts',
                       ).catch(() => {})}
                   >
-                    <PlusIcon class="size-4" aria-hidden="true" />
+                    {#if !included}
+                      <PlusIcon class="size-4" aria-hidden="true" />
+                    {/if}
                     {#if item.kind === 'premises'}
                       <BuildingIcon class="size-5" aria-hidden="true" />
                     {/if}
@@ -409,13 +423,16 @@ onMount(() => void load().catch(error => (failure = String(error))))
                   </button>
                 {/if}
                 {#if item.kind === 'building' && !disabled}
+                  {@const relationshipLabel = item.hasRelationships
+                    ? m.location_relationships_recorded()
+                    : m.location_record_relationships()}
                   <a
-                    class={`${rowAction} hover:bg-muted w-11`}
+                    class={`${rowAction} hover:bg-muted w-11 ${item.hasRelationships ? 'text-success' : ''}`}
                     href={detailUrl + '&edit=true#relationships'}
-                    title={m.location_record_relationships()}
+                    title={relationshipLabel}
                   >
                     <RelationshipsIcon class="size-5" aria-hidden="true" />
-                    <span class="sr-only">{m.location_record_relationships()}</span>
+                    <span class="sr-only">{relationshipLabel}</span>
                   </a>
                 {/if}
                 <button

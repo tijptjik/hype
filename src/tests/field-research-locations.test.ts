@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   researchLocationDescendants,
   researchLocationDescendantsSQL,
+  researchLocationInclusionSQL,
 } from '#lib/db/services/fieldResearchLocations.js'
 import { sql } from 'drizzle-orm'
 import { publicationSqlite } from './fixtures/publicationSqlite.js'
@@ -34,6 +35,19 @@ describe('field session Location selection', () => {
         'p',
         'u',
       ])
+      sqlite.exec(`CREATE TABLE fieldResearchSessionLocation(sessionId TEXT, locationId TEXT);
+        INSERT INTO fieldResearchSessionLocation VALUES ('s','b'),('another','f')`)
+      const counts = async () =>
+        JSON.parse(
+          (await db.get<{ counts: string }>(
+            sql`SELECT ${researchLocationInclusionSQL(sql`root.id`, sql`'org'`, sql`'s'`)} counts FROM location root WHERE id='b'`,
+          ))!.counts,
+        )
+      expect(await counts()).toEqual({ included: 0, total: 2 })
+      sqlite.exec("INSERT INTO fieldResearchSessionLocation VALUES ('s','f')")
+      expect(await counts()).toEqual({ included: 1, total: 2 })
+      sqlite.exec("INSERT INTO fieldResearchSessionLocation VALUES ('s','u')")
+      expect(await counts()).toEqual({ included: 2, total: 2 })
       const guard = async () =>
         db.get<{ valid: number }>(
           sql`SELECT NOT EXISTS(SELECT 1 FROM json_each(${JSON.stringify(['b', 'f', 'u'])}) selected WHERE selected.value NOT IN (SELECT id FROM (${researchLocationDescendantsSQL('p', 'org', true)}))) valid`,

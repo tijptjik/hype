@@ -1754,6 +1754,7 @@
   "location_field_branch_id": "分店标识码 · 内部",
   "location_brand_source": "来源",
   "location_record_views": "地点视图",
+  "location_relationships_recorded": "已记录关系",
   "location_record_relationships": "关系",
   "location_record_shared": "社群",
   "location_address_editing": "正在编辑地址",

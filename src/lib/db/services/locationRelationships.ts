@@ -235,7 +235,7 @@ export async function appendLocationTransition(
  */
 export function relationshipScopeSql(
   table: RelationshipTable | 'locationTransition',
-  scope: string | null,
+  scope: string | SQL | null,
 ): SQL {
   const root = table === 'locationTransition' ? 'transitionId' : 'relationshipId'
   return sql`(r.scopeOrganisationId IS ${scope} OR (r.scopeOrganisationId IS NULL AND NOT EXISTS(SELECT 1 FROM ${sql.identifier(table + 'Head')} o WHERE o.${sql.identifier(root)}=r.${sql.identifier(root)} AND o.scopeOrganisationId IS ${scope} AND ${scope} IS NOT NULL)))`

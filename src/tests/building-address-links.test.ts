@@ -8,6 +8,8 @@ import {
   linkBuildingAddressRevisions,
 } from '#lib/db/services/buildingAddressLinks.js'
 
+import { hasLocationRelationshipsSQL } from '#lib/db/services/locationRelationshipReview.js'
+
 const stores: ReturnType<typeof setupLifecycleDatabase>[] = []
 afterEach(() => {
   for (const store of stores.splice(0)) store.sqlite.close()
@@ -71,5 +73,11 @@ it('retains three distinct addresses on one scoped building and reuses links on 
     '34A Tak Ku Ling Road',
   ])
   expect(await labels('other')).toEqual([])
+  const recorded = (scope: string) =>
+    store.db.get<{ value: number }>(
+      sql`SELECT ${hasLocationRelationshipsSQL(sql`'building'`, sql`${scope}`)} value`,
+    )
+  expect(await recorded('p')).toEqual({ value: 1 })
+  expect(await recorded('other')).toEqual({ value: 0 })
   expect(await labels(null)).toEqual([])
 })

@@ -29,7 +29,10 @@ import { executeRevisionBatch } from '#lib/db/services/revisionBatch.js'
 import {
   researchLocationDescendants,
   researchLocationDescendantsSQL,
+  researchLocationInclusionSQL,
 } from '#lib/db/services/fieldResearchLocations.js'
+
+import { hasLocationRelationshipsSQL } from '#lib/db/services/locationRelationshipReview.js'
 
 const id = z.string().min(1).max(100)
 const kind = z.enum(['premises', 'building', 'building_part'])
@@ -93,11 +96,15 @@ export const getResearchLocations = guardedQuery(
       location: string
       members: string
       editableParent: number
+      hasRelationships: number
+      inclusion: string
       hasExteriorMap: number
       hasInteriorMap: number
     }>(
       sql`WITH scope(organisationId) AS (VALUES (${session.organisationId}))
         SELECT l.id,l.matchingType kind,
+          CASE WHEN l.matchingType='building' THEN ${hasLocationRelationshipsSQL(sql`sl.locationId`, sql`scope.organisationId`)} ELSE 0 END hasRelationships,
+          CASE WHEN l.matchingType IN ('building','premises') THEN ${researchLocationInclusionSQL(sql`sl.locationId`, sql`scope.organisationId`, sql`sl.sessionId`)} ELSE '{"total":0,"included":0}' END inclusion,
           EXISTS(SELECT 1 FROM locationExteriorModel WHERE locationId=l.id) hasExteriorMap,
           EXISTS(
             SELECT 1 FROM locationPremisesMap link JOIN premisesMap m ON m.id=link.mapId
@@ -138,6 +145,8 @@ export const getResearchLocations = guardedQuery(
         confirmedUnnamed: row.confirmedUnnamed === 1,
         address,
         canEditPhysicalBuilding: Boolean(row.editableParent),
+        hasRelationships: Boolean(row.hasRelationships),
+        inclusion: JSON.parse(row.inclusion) as { total: number; included: number },
         hasExteriorMap: Boolean(row.hasExteriorMap),
         hasInteriorMap: Boolean(row.hasInteriorMap),
         members: members.map(member => ({

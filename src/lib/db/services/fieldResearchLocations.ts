@@ -10,8 +10,8 @@ import type { SQL } from 'drizzle-orm'
  * @returns Bounded query of current accessible descendants including the root.
  */
 export function researchLocationDescendantsSQL(
-  root: string,
-  organisationId: string,
+  root: string | SQL,
+  organisationId: string | SQL,
   includeParts: boolean,
 ): SQL {
   return sql`WITH RECURSIVE children(id,kind) AS (
@@ -23,6 +23,21 @@ export function researchLocationDescendantsSQL(
     AND child.state!='redirect' AND (child.state!='manual' OR child.ownerOrganisationId=${organisationId})
     AND ((parent.kind='premises' AND child.matchingType='building') OR (${includeParts ? 1 : 0}=1 AND parent.kind IN ('building','building_part') AND child.matchingType='building_part'))
   ) SELECT id,kind FROM children LIMIT 5001`
+}
+
+/** Count the expansion targets already included in this session, excluding the root.
+ * @param root Outer Location ID. @param organisationId Session scope. @param sessionId Session identity.
+ * @returns JSON object with the eligible and already included counts.
+ */
+export function researchLocationInclusionSQL(
+  root: SQL,
+  organisationId: SQL,
+  sessionId: SQL,
+): SQL {
+  return sql`(SELECT json_object('total',count(*),'included',count(selected.locationId))
+    FROM (${researchLocationDescendantsSQL(root, organisationId, true)}) target
+    LEFT JOIN fieldResearchSessionLocation selected ON selected.sessionId=${sessionId} AND selected.locationId=target.id
+    WHERE target.id!=${root})`
 }
 
 /** Resolve the accessible, explicitly asserted containment tree for a field session.

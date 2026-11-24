@@ -27,6 +27,54 @@ const endpoints = {
   locationOccupancy: ['establishmentLocationId', 'containerLocationId'],
 } as const
 
+/** Match either canonical endpoint while respecting private counterpart visibility.
+ * @param table Relationship kind. @param locationId Subject identity. @param scope Read scope.
+ * @returns Predicate for a relationship row aliased as r.
+ */
+function visibleRelationshipSubject(
+  table: RelationshipTable,
+  locationId: string | SQL,
+  scope: string | null | SQL,
+): SQL {
+  const keys = endpoints[table]
+  const visible = keys.map(
+    key =>
+      sql`(r.${sql.identifier(key)} IS NULL OR EXISTS(SELECT 1 FROM location l WHERE l.id=${canonicalLocationSQL(sql`r.${sql.identifier(key)}`)} AND (l.state!='manual' OR l.ownerOrganisationId IS ${scope})))`,
+  )
+  const subject = sql.join(
+    keys.map(
+      key => sql`${canonicalLocationSQL(sql`r.${sql.identifier(key)}`)}=${locationId}`,
+    ),
+    sql` OR `,
+  )
+  return sql`(${subject}) AND ${sql.join(visible, sql` AND `)}`
+}
+
+/** Match a lineage participant only when every participant is visible.
+ * @param locationId Subject identity. @param scope Read scope. @returns Predicate for transition r.
+ */
+function visibleLineageSubject(
+  locationId: string | SQL,
+  scope: string | null | SQL,
+): SQL {
+  return sql`EXISTS(SELECT 1 FROM locationTransitionParticipant p WHERE p.transitionRevisionId=r.id AND ${canonicalLocationSQL(sql`p.locationId`)}=${locationId}) AND NOT EXISTS(SELECT 1 FROM locationTransitionParticipant p JOIN location l ON l.id=${canonicalLocationSQL(sql`p.locationId`)} WHERE p.transitionRevisionId=r.id AND l.state='manual' AND l.ownerOrganisationId IS NOT ${scope})`
+}
+
+/** Check the four editor sections for an asserted relationship in the selected scope.
+ * @param locationId Subject identity. @param scope Authorised organisation. @returns Boolean SQL expression.
+ */
+export function hasLocationRelationshipsSQL(locationId: SQL, scope: SQL): SQL {
+  const matches = (Object.keys(endpoints) as RelationshipTable[]).map(
+    table =>
+      sql`EXISTS(SELECT 1 FROM ${sql.identifier(table + 'Head')} r
+      WHERE r.assertionState='asserted' AND ${relationshipScopeSql(table, scope)}
+        AND ${visibleRelationshipSubject(table, locationId, scope)})`,
+  )
+  matches.push(sql`EXISTS(SELECT 1 FROM locationTransitionHead r WHERE r.assertionState='asserted'
+    AND ${relationshipScopeSql('locationTransition', scope)} AND ${visibleLineageSubject(locationId, scope)})`)
+  return sql`(${sql.join(matches, sql` OR `)})`
+}
+
 /** Prepare a guarded insert for a D1 atomic batch; do not execute raw db.run promises in a batch.
  * @param db Request database.
  * @param table Trusted relationship schema.
@@ -77,17 +125,6 @@ export async function readRelationshipPage(
 ): Promise<{ rows: Record<string, unknown>[]; nextCursor: string | null }> {
   const keys = endpoints[input.table]
   const limit = Math.min(100, Math.max(1, input.limit ?? 25))
-  const visible = keys.map(
-    key =>
-      sql`(r.${sql.identifier(key)} IS NULL OR EXISTS(SELECT 1 FROM location l WHERE l.id=${canonicalLocationSQL(sql`r.${sql.identifier(key)}`)} AND (l.state!='manual' OR l.ownerOrganisationId IS ${input.scope})))`,
-  )
-  const subject = sql.join(
-    keys.map(
-      key =>
-        sql`${canonicalLocationSQL(sql`r.${sql.identifier(key)}`)}=${input.locationId}`,
-    ),
-    sql` OR `,
-  )
   const scope = input.history
     ? sql`(r.scopeOrganisationId IS NULL OR r.scopeOrganisationId IS ${input.scope})`
     : relationshipScopeSql(input.table, input.scope)
@@ -263,7 +300,7 @@ export async function readLocationLineage(
   nextCursor: string | null
 }> {
   const rows = await db.all<Record<string, unknown>>(
-    sql`SELECT r.*,(SELECT json_group_array(json_object('locationId',p.locationId,'side',p.side,'label',(SELECT COALESCE(json_extract(v.facts,'$.i18n.en.name'),p.locationId) FROM locationRevisionContent v WHERE v.locationId=p.locationId ORDER BY v.version DESC LIMIT 1))) FROM locationTransitionParticipant p WHERE p.transitionRevisionId=r.id) participants FROM ${sql.identifier('locationTransition' + (input.history ? '' : 'Head'))} r WHERE ${input.history ? sql`(r.scopeOrganisationId IS NULL OR r.scopeOrganisationId IS ${input.scope})` : relationshipScopeSql('locationTransition', input.scope)} AND r.id>${input.afterId ?? ''} AND EXISTS(SELECT 1 FROM locationTransitionParticipant p WHERE p.transitionRevisionId=r.id AND ${canonicalLocationSQL(sql`p.locationId`)}=${input.locationId}) AND NOT EXISTS(SELECT 1 FROM locationTransitionParticipant p JOIN location l ON l.id=${canonicalLocationSQL(sql`p.locationId`)} WHERE p.transitionRevisionId=r.id AND l.state='manual' AND l.ownerOrganisationId IS NOT ${input.scope}) ORDER BY r.id LIMIT 26`,
+    sql`SELECT r.*,(SELECT json_group_array(json_object('locationId',p.locationId,'side',p.side,'label',(SELECT COALESCE(json_extract(v.facts,'$.i18n.en.name'),p.locationId) FROM locationRevisionContent v WHERE v.locationId=p.locationId ORDER BY v.version DESC LIMIT 1))) FROM locationTransitionParticipant p WHERE p.transitionRevisionId=r.id) participants FROM ${sql.identifier('locationTransition' + (input.history ? '' : 'Head'))} r WHERE ${input.history ? sql`(r.scopeOrganisationId IS NULL OR r.scopeOrganisationId IS ${input.scope})` : relationshipScopeSql('locationTransition', input.scope)} AND r.id>${input.afterId ?? ''} AND ${visibleLineageSubject(input.locationId, input.scope)} ORDER BY r.id LIMIT 26`,
   )
   return {
     rows: rows.slice(0, 25).map(({ provenance, actorId, ...r }) => ({
