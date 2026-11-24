@@ -88,7 +88,7 @@ export const getResearchLocations = guardedQuery(
         } = JSON.parse(row.location ?? '{}')
         const addressValue = emptyFeatureAddress()
         if (location.address) addressValue.source = location.address
-        const address = getAddressDisplay(addressValue, 'en')
+        const address = getAddressDisplay(addressValue, 'en', [], row.kind)
         const name =
           names.en?.trim() ||
           Object.values(names).find(value => value.trim()) ||
