@@ -37,6 +37,7 @@ import {
 import BuildingUnnamedField from './BuildingUnnamedField.svelte'
 import DraftLocationNameFields from '../featureLocation/DraftLocationNameFields.svelte'
 import LocaleToolbar from '#lib/bits/custom/localeControls/LocaleToolbar.svelte'
+import { contentStorageTag } from '#lib/i18n/contentRecords.js'
 import { normalizeContentLocales } from '#lib/content-locales/model.js'
 import { contentLocaleOptions } from '../contentLocaleDefaults/contentLocaleOptions.js'
 import type { ProfileLocaleState } from '../featureLocation/profileLocales.js'
@@ -70,6 +71,7 @@ import { canonicalFacilityLabel } from '#lib/indoor/facilityLabels.js'
 import type { LocationKind } from '#lib/locations/kinds.js'
 import type { LocationDiscoveryType } from '#lib/locations/kinds.js'
 // DOMAIN
+import { addressBuildingNames } from '#lib/locations/addressIdentity.js'
 import { buildingPartDisplay } from '#lib/locations/buildingPartDisplay.js'
 import {
   emptyFeatureAddress,
@@ -164,7 +166,7 @@ const primaryDisplay = $derived.by(() => {
   const selected = primaryStreet
   return selected ? (tag: string) => buildingStreetLabel(selected, tag) : undefined
 })
-let names = $state<Record<string, string>>({})
+let explicitNames = $state<Record<string, string>>({})
 let localeState = $state<ProfileLocaleState>({
   selectedLocales: normalizeContentLocales([
     getLocaleKey(),
@@ -179,6 +181,12 @@ let lifecycle = $state<LocationLifecycleSummary>({})
 let successorLocationId = $state<string | null>(null)
 let initialLifecycleSignature = $state('')
 let unnamedChoice = $state(false)
+// Use the exact address language until the editor supplies a separate Location name.
+const names = $derived(
+  kind === 'building' && draft && !unnamedChoice && !communityClosed('names')
+    ? addressBuildingNames(draft, explicitNames)
+    : explicitNames,
+)
 const hasDraftName = $derived(Object.values(names).some(value => value.trim()))
 const confirmedUnnamed = $derived(kind === 'building' && !hasDraftName && unnamedChoice)
 let expectedKind = $state<LocationKind>('unknown')
@@ -303,7 +311,7 @@ function edit(): void {
   }
   successorLocationId = editableFacts.successorLocationId ?? null
   initialLifecycleSignature = JSON.stringify(lifecycle) ?? ''
-  names = Object.fromEntries(
+  explicitNames = Object.fromEntries(
     Object.entries(editableFacts.names).filter(([, name]) => name?.trim()),
   )
   unnamedChoice = editableFacts.confirmedUnnamed === true
@@ -314,14 +322,14 @@ function edit(): void {
   initialSignature = JSON.stringify([
     draft,
     coordinates,
-    names,
+    explicitNames,
     confirmedUnnamed,
     kind,
     lifecycle,
     successorLocationId,
   ])
   initialAddressSignature = JSON.stringify(draft)
-  initialNamesSignature = JSON.stringify(names)
+  initialNamesSignature = JSON.stringify(explicitNames)
   lookupCandidates = []
   lookupUnavailable = []
   lookupPartial = false
@@ -434,17 +442,17 @@ function selectLookup(candidate: LookupCandidate): void {
   )
   draft.divisionOverrides = selections
   if (candidate.kind === 'establishment' && candidate.names)
-    names = { ...names, ...candidate.names }
+    explicitNames = { ...explicitNames, ...candidate.names }
   else if (kind === 'establishment') establishmentAddressSelected = true
-  else if (kind === 'building' || kind === 'address') {
+  else if (kind === 'address') {
     const content = localAddressContent($state.snapshot(draft))
     const derived = Object.fromEntries(
       Object.entries(content.i18n).flatMap(([tag, fields]) => {
-        const name = kind === 'building' ? fields.buildingName : fields.formattedAddress
+        const name = fields.formattedAddress
         return name ? [[tag, name]] : []
       }),
     )
-    if (Object.keys(derived).length) names = { ...names, ...derived }
+    if (Object.keys(derived).length) explicitNames = { ...explicitNames, ...derived }
   }
   if (kind === 'building')
     draft = localAddressDraft({
@@ -659,7 +667,7 @@ const editorLocaleState = $derived({
 function cancel(): void {
   editing = false
   draft = null
-  names = {}
+  explicitNames = {}
   failed = false
   lookupVersion++
   lookingUp = false
@@ -835,12 +843,11 @@ $effect(() => {
                   onChange={next => {
                     if (Object.values(next).some(value => value.trim()))
                       unnamedChoice = false
-                    names = Object.fromEntries(
-                      Object.entries(next).map(([tag, value]) => [
-                        tag.toLowerCase(),
-                        value,
-                      ]),
-                    )
+                    // Editing one translation keeps the other address-derived names live.
+                    for (const [tag, value] of Object.entries(next)) {
+                      const key = contentStorageTag(tag)
+                      if (names[key] !== value) explicitNames[key] = value
+                    }
                   }}
                 />
                 {#if activeKind === 'building'}
