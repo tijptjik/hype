@@ -275,6 +275,9 @@ $effect(() => {
                     <LocationExteriorMap
                       locationId={place.id}
                       coordinates={place.facts.location.geometry.coordinates}
+                      facts={place.state === 'manual'
+                        ? place.facts
+                        : (place.sharedFacts ?? place.facts)}
                     />
                   {:else}
                     <p class="text-muted-foreground p-6 text-sm">

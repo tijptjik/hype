@@ -1,6 +1,10 @@
 <script lang="ts">
 // SVELTE
 import { onMount } from 'svelte'
+// ADDRESS
+import { getAddressDisplay } from '#lib/addresses/featureAddress.js'
+import { getLocaleKey } from '#lib/i18n.js'
+import { recordedBuildingName } from '#lib/locations/kinds.i18n.js'
 // API
 import {
   findLocationExteriorCandidates,
@@ -10,6 +14,7 @@ import {
 // ICONS
 import BuildingIcon from 'virtual:icons/lucide/boxes'
 import FacadeIcon from 'virtual:icons/lucide/building'
+import AddressIcon from 'virtual:icons/lucide/sparkles'
 import SearchIcon from 'virtual:icons/lucide/search'
 import SliceIcon from 'virtual:icons/lucide/box'
 // BITS COMPONENTS
@@ -19,9 +24,29 @@ import ExteriorFootprintPicker from './ExteriorFootprintPicker.svelte'
 import ExteriorTextureSlider from './ExteriorTextureSlider.svelte'
 import FacadeReview from './FacadeReview.svelte'
 import type { ModelViewerElement } from '@google/model-viewer'
+import type { LocationFacts } from '#lib/locations/model.js'
 
-let { locationId, coordinates }: { locationId: string; coordinates: [number, number] } =
+let {
+  locationId,
+  coordinates,
+  facts,
+}: { locationId: string; coordinates: [number, number]; facts: LocationFacts } =
   $props()
+const displayAddress = $derived(
+  getAddressDisplay(
+    {
+      version: 1,
+      source: facts.location.address,
+      coordinates: facts.location.geometry.coordinates,
+      matchStatus: facts.location.address.status,
+      overrides: {},
+    },
+    getLocaleKey(),
+    [],
+    'building',
+    facts.location.geometry.coordinates,
+  ),
+)
 let result = $state<Awaited<ReturnType<typeof getLocationExterior>> | null>(null)
 const model = $derived(result?.model ?? null)
 const includedFootprints = $derived([
@@ -211,6 +236,10 @@ async function refreshModels(): Promise<void> {
 
 /** Search the CSDI sheet covering the Building. @returns Completion. */
 async function search(): Promise<void> {
+  if (!associating) {
+    footprintSearch = recordedBuildingName(facts.names) || displayAddress
+    searchOpen = false
+  }
   associating = true
   busy = true
   message = ''
@@ -338,9 +367,20 @@ async function importModel(): Promise<void> {
     </div>
   {:else if associating}
     <header
-      class="border-border relative z-20 flex shrink-0 items-center gap-4 border-b px-5 py-3"
+      class="border-border relative z-20 flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b px-5 py-3"
     >
-      <div class="relative min-w-0 flex-1">
+      {#if displayAddress}
+        <p
+          class="text-foreground flex max-w-full min-w-0 items-center gap-2 text-sm font-medium"
+        >
+          <AddressIcon
+            class="text-muted-foreground size-5 shrink-0"
+            aria-hidden="true"
+          />
+          <span class="min-w-0 break-words">{displayAddress}</span>
+        </p>
+      {/if}
+      <div class="relative min-w-0 flex-[1_1_16rem]">
         <SearchIcon class="text-muted-foreground absolute top-3 left-3 size-5" />
         <input
           aria-label="Search building footprints"
@@ -356,7 +396,7 @@ async function importModel(): Promise<void> {
         >
         {#if searchOpen && footprintSearch.trim()}
           <div
-            class="border-border absolute top-full right-0 left-0 mt-1 max-h-80 overflow-y-auto rounded-lg border bg-white p-1 shadow-lg"
+            class="border-border bg-panel text-foreground absolute top-full right-0 left-0 mt-1 max-h-80 overflow-y-auto rounded-lg border p-1 shadow-lg"
           >
             {#each searchResults as { item } (item.properties.csuid)}
               <button
