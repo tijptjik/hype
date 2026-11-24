@@ -14,8 +14,7 @@ export type RowRootProps = {
   variant?: RowVariant
   class?: string
   children?: Snippet
-} & /** An inert row can contain interactive descendants without its own handlers. */
-(
+} /** An inert row can contain interactive descendants without its own handlers. */ & (
   | {
       interactive: false
       onclick?: (event: MouseEvent) => void

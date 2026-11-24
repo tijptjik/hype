@@ -63,16 +63,23 @@ export function artifactHash(directory: string): string {
  * @param directory Retained Cloudflare build directory. @param target Pinned environment and D1 ID.
  * @returns The Worker entry and its public asset root.
  */
-export function applicationPaths(directory: string, target: string): { main: string; assets: string } {
-  const config = JSON.parse(readFileSync(join(directory, 'worker/wrangler.json'), 'utf8'))
+export function applicationPaths(
+  directory: string,
+  target: string,
+): { main: string; assets: string } {
+  const config = JSON.parse(
+    readFileSync(join(directory, 'worker/wrangler.json'), 'utf8'),
+  )
   const binding = config.d1_databases?.find((entry: Binding) => entry.binding === 'DB')
   if (
     config.main !== 'index.js' ||
     config.assets?.directory !== '../client' ||
     config.assets?.binding !== 'ASSETS' ||
     target !== `${config.vars?.ENVIRONMENT}:${binding?.database_id}`
-  ) throw new Error('Cloudflare application build layout or target differs')
-  const main = join(directory, 'worker/index.js'), assets = join(directory, 'client')
+  )
+    throw new Error('Cloudflare application build layout or target differs')
+  const main = join(directory, 'worker/index.js'),
+    assets = join(directory, 'client')
   if (!statSync(main).isFile() || !statSync(assets).isDirectory())
     throw new Error('Missing built Worker or public assets')
   return { main, assets }
@@ -287,7 +294,9 @@ export async function main(args: string[]): Promise<void> {
   if (!apply && !abort) return
   const includesRecording = plan.groups.some(group => group.label === 'revealing-arrow')
   const checkReplannedRecording = async (next: Plan, snapshotDirectory: string) => {
-    if (next.groups.some(group => group.label === 'revealing-arrow') !== includesRecording)
+    if (
+      next.groups.some(group => group.label === 'revealing-arrow') !== includesRecording
+    )
       throw new Error('Replanned recording scope differs from the staged release')
     if (includesRecording)
       await run(

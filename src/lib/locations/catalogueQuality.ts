@@ -78,7 +78,9 @@ export function catalogueQuality(
 /** Decode URL-backed three-way quality filters.
  * @param params Current query parameters. @returns Explicit yes/no choices only.
  */
-export function qualityFiltersFromUrl(params: URLSearchParams): LogoQualityFilters {
+export function qualityFiltersFromUrl(
+  params: Pick<URLSearchParams, 'get'>,
+): LogoQualityFilters {
   return Object.fromEntries(
     LOGO_QUALITIES.flatMap(({ key }) => {
       const value = params.get(`logo-${key}`)

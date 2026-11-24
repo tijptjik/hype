@@ -11,6 +11,7 @@ import {
 import { listLocationResources } from '#lib/db/services/locationDirectory.js'
 import {
   readLocationFacts,
+  serializeLocationFacts,
   LocationFactsSnapshotSchema,
 } from '#lib/locations/factsSnapshot.js'
 // @vitest-environment node
@@ -121,6 +122,7 @@ function setup(
       cardStyleCode TEXT, useAllInOrgContext INTEGER);
     CREATE TABLE feature(id TEXT PRIMARY KEY, featureType TEXT, nameTemplate TEXT, kind TEXT, targetContext TEXT, associationRelation TEXT, layerId TEXT, projectId TEXT, isDraft INTEGER DEFAULT 0, isArchived INTEGER DEFAULT 0, modifiedAt TEXT DEFAULT 'original', geometry TEXT, addressMeta TEXT, isIntangible INTEGER DEFAULT 0);
     CREATE TABLE featureI18n(featureId TEXT,locale TEXT,baseName TEXT,nameOverride TEXT,title TEXT,displayAddress TEXT);
+    CREATE VIEW featureComputedName AS SELECT featureId,locale,coalesce(nameOverride,baseName,title) AS title FROM featureI18n;
     CREATE TABLE hub(id TEXT PRIMARY KEY,code TEXT);
     CREATE TABLE property(id TEXT PRIMARY KEY,key TEXT,scope TEXT,hubId TEXT,audience TEXT NOT NULL DEFAULT 'public');
     CREATE TABLE featureProperty(featureId TEXT,propertyId TEXT,propertyValueId TEXT,value TEXT,valueJson TEXT);
@@ -200,10 +202,28 @@ function setup(
       '0219_address_location_classification',
     ])
       sqlite.exec(readFileSync(`migrations/${migration}.sql`, 'utf8'))
-    // Legacy snapshot conversion cases intentionally insert historical facts directly.
+    // Install the Location portions of the translation migrations before exercising current services.
     sqlite.exec(
-      'DROP TRIGGER location_revision_snapshot_insert; DROP TRIGGER location_revision_unknown_details;',
+      readFileSync('migrations/0238_location_i18n.sql', 'utf8').split(
+        'DROP VIEW featureAcceptedNamingLocation;',
+      )[0],
     )
+    sqlite.exec(
+      readFileSync(
+        'migrations/0241_authoritative_revision_translations.sql',
+        'utf8',
+      ).split('DROP TRIGGER identity_catalogue_i18n_revision;')[0],
+    )
+    for (const name of [
+      '0250_location_canonical_drafts',
+      '0252_location_mutable_drafts',
+      '0253_location_operator',
+      '0254_location_premises_map',
+      '0255_premises_map_releases',
+      '0256_premises_map_draft_history',
+      '0257_premises_map_correction',
+    ])
+      sqlite.exec(readFileSync('migrations/' + name + '.sql', 'utf8'))
   }
   // Scope-focused cases explicitly install their guards after arranging legacy input.
   if (!includeScope)
@@ -340,13 +360,13 @@ describe('accepted Location reads', () => {
     ] as const) {
       sqlite
         .prepare(
-          "INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) VALUES (?,'location',?,'local','hash',?,?)",
+          "INSERT INTO locationRevisionContent(id,locationId,version,origin,contentHash,rawSource,facts) VALUES (?,'location',?,'local','hash',?,?)",
         )
         .run(
           id,
           version,
           JSON.stringify({ privateEvidence: 'secret' }),
-          JSON.stringify(value),
+          serializeLocationFacts(LocationFactsSchema.parse(value), 'establishment'),
         )
     }
     sqlite
@@ -439,7 +459,7 @@ describe('local Location creation', () => {
       ).toEqual({ state, ownerOrganisationId: 'p', ssId: null })
       const revision = sqlite
         .prepare(
-          'SELECT facts,rawSource,origin,contentHash FROM locationRevision WHERE id=?',
+          'SELECT facts,rawSource,origin,contentHash FROM locationRevisionContent WHERE id=?',
         )
         .get(created.revisionId)
       if (!revision) throw new Error('Missing local baseline')
@@ -641,7 +661,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
     expect(accepted.status).toBe('applied')
     const latest = sqlite
       .prepare(
-        'SELECT facts,rawSource FROM locationRevision WHERE locationId=? ORDER BY version DESC LIMIT 1',
+        'SELECT facts,rawSource FROM locationRevisionContent WHERE locationId=? ORDER BY version DESC LIMIT 1',
       )
       .get(local.locationId)!
     const address = readLocationFacts(latest.facts).location.address
@@ -675,9 +695,9 @@ describe('immutable SaanSeoi Place ingestion', () => {
     db.batch = new Proxy(db.batch, {
       apply(target, receiver, args) {
         sqlite
-          .prepare(`INSERT INTO locationRevision
+          .prepare(`INSERT INTO locationRevisionContent
         SELECT 'race-revision',locationId,version+1,origin,ssId,apiVersion,releaseId,snapshotId,
-          contentHash,rawSource,facts,createdAt FROM locationRevision WHERE id=?`)
+          contentHash,rawSource,facts,createdAt FROM locationRevisionContent WHERE id=?`)
           .run(local.revisionId)
         return Reflect.apply(target, receiver, args)
       },
@@ -1634,7 +1654,7 @@ describe('immutable SaanSeoi Place ingestion', () => {
       sqlite.prepare('SELECT version FROM locationRevision ORDER BY version').all(),
     ).toEqual([{ version: 1 }, { version: 2 }])
     const original = sqlite
-      .prepare('SELECT facts,rawSource FROM locationRevision WHERE id=?')
+      .prepare('SELECT facts,rawSource FROM locationRevisionContent WHERE id=?')
       .get(first.revisionId)
     expect(readLocationFacts(original?.facts).names.en).toBe('Bakery')
     expect(JSON.parse(String(original?.rawSource)).resource.sources).toEqual([
@@ -2094,14 +2114,17 @@ describe('atomic linked Feature relation replacement', () => {
   it('gates all deletes/inserts, retains other Features, and rolls back a late error', async () => {
     const { db, sqlite } = setup()
     sqlite.exec(`ALTER TABLE featureI18n ADD COLUMN titleGen INTEGER;
+      ALTER TABLE featureI18n ADD COLUMN isAutomaticOnly INTEGER DEFAULT 0;
+      ALTER TABLE featureI18n ADD COLUMN autoTranslated TEXT;
+      ALTER TABLE featureI18n ADD COLUMN translationProvenance TEXT;
       ALTER TABLE featureI18n ADD COLUMN description TEXT;
       ALTER TABLE featureI18n ADD COLUMN descriptionGen INTEGER;
       ALTER TABLE featureI18n ADD COLUMN displayAddressGen INTEGER;
       ALTER TABLE featureI18n ADD COLUMN addressProperties TEXT;
-      CREATE TABLE featurePropertyI18n(featureId TEXT,propertyId TEXT,locale TEXT,value TEXT,valueGen INTEGER);
+      CREATE TABLE featurePropertyI18n(featureId TEXT,propertyId TEXT,locale TEXT,value TEXT,valueGen INTEGER,isAutomaticOnly INTEGER DEFAULT 0,autoTranslated TEXT,translationProvenance TEXT);
       INSERT INTO featureI18n(featureId,locale,title) VALUES ('f','en','Old name'),('unrelated','en','Keep me');
       INSERT INTO featureProperty(featureId,propertyId,propertyValueId,value) VALUES ('f','old',NULL,'old value'),('unrelated','other',NULL,'Keep me');
-      INSERT INTO featurePropertyI18n VALUES ('f','old','en','old translation',0);`)
+      INSERT INTO featurePropertyI18n(featureId,propertyId,locale,value,valueGen) VALUES ('f','old','en','old translation',0);`)
     const local = await createLocalLocation(
       db,
       'p',
@@ -2479,9 +2502,15 @@ describe('linked Feature form persistence', () => {
     ] as const)
       sqlite
         .prepare(
-          "INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) VALUES (?,?,?,'local',?,'{}',?)",
+          "INSERT INTO locationRevisionContent(id,locationId,version,origin,contentHash,rawSource,facts) VALUES (?,?,?,'local',?,'{}',?)",
         )
-        .run(id, local.locationId, version, id, JSON.stringify(value))
+        .run(
+          id,
+          local.locationId,
+          version,
+          id,
+          serializeLocationFacts(LocationFactsSchema.parse(value), 'establishment'),
+        )
     const resetLink = prepareFeatureLocationAssociationWrite(db, {
       featureId: 'f',
       projectId: 'p',
@@ -2853,12 +2882,15 @@ describe('private local Location discovery', () => {
     )
     sqlite
       .prepare(
-        "INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) VALUES(?,?,2,'local','new','{}',?)",
+        "INSERT INTO locationRevisionContent(id,locationId,version,origin,contentHash,rawSource,facts) VALUES(?,?,2,'local','new','{}',?)",
       )
       .run(
         'new-revision',
         local.locationId,
-        JSON.stringify({ ...facts, names: { en: 'Renamed shop' } }),
+        serializeLocationFacts(
+          LocationFactsSchema.parse({ ...facts, names: { en: 'Renamed shop' } }),
+          'establishment',
+        ),
       )
     expect(
       await searchLocalLocationCandidates(db, { projectId: 'p', q: 'Bakery' }),
@@ -3179,9 +3211,15 @@ describe('accepted Location brand read projection', () => {
     expect((await query())?.locationBrands).toEqual(brands)
     sqlite
       .prepare(
-        "INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) VALUES ('future',?,2,'local','hash','{}',?)",
+        "INSERT INTO locationRevisionContent(id,locationId,version,origin,contentHash,rawSource,facts) VALUES ('future',?,2,'local','hash','{}',?)",
       )
-      .run(local.locationId, JSON.stringify({ ...facts, brands: [] }))
+      .run(
+        local.locationId,
+        serializeLocationFacts(
+          LocationFactsSchema.parse({ ...facts, brands: [] }),
+          'establishment',
+        ),
+      )
     expect((await query())?.locationBrands).toEqual(brands)
     const changed = prepareFeatureLocationAssociationWrite(db, {
       ...input,
@@ -3386,7 +3424,7 @@ describe('explicit Location unlink preservation', () => {
     })
     expect(JSON.parse(row!.locationBrands!)).toEqual([])
     const source = sqlite
-      .prepare('SELECT facts FROM locationRevision WHERE id=?')
+      .prepare('SELECT facts FROM locationRevisionContent WHERE id=?')
       .get(local.revisionId) as { facts: string }
     expect(readLocationFacts(source.facts).brands).toEqual(brands)
     expect(sqlite.prepare('SELECT id FROM location').all()).toHaveLength(1)
@@ -3753,6 +3791,11 @@ describe('atomic source group application', () => {
     )
     // Complete the older Location fixture with current content columns and real revision triggers.
     for (const table of [
+      schema.feature,
+      schema.featureI18n,
+      schema.featureProperty,
+      schema.featurePropertyI18n,
+      schema.featureLocation,
       schema.image,
       schema.featureImage,
       schema.property,
@@ -3911,7 +3954,7 @@ describe('atomic source group application', () => {
         ).toBe(2)
       } else {
         const row = sqlite
-          .prepare('SELECT facts,rawSource FROM locationRevision WHERE id=?')
+          .prepare('SELECT facts,rawSource FROM locationRevisionContent WHERE id=?')
           .get(saved as string)
         expect(readLocationFacts(row?.facts).location.address.status).toBe(
           mode === 'success' ? 'resolved' : 'unresolved',
@@ -3946,7 +3989,7 @@ describe('atomic source group application', () => {
     const { sqlite, binding, first } = await fixture(true)
 
     const original = sqlite
-      .prepare('SELECT * FROM locationRevision WHERE id=?')
+      .prepare('SELECT * FROM locationRevisionContent WHERE id=?')
       .get(first.revisionId)
     if (!original) throw new Error('Missing original source fixture')
     const projection = {
@@ -4715,7 +4758,7 @@ describe('standalone Location directory', () => {
         }
         sqlite
           .prepare(
-            "INSERT INTO locationRevision(id,locationId,version,origin,ssId,apiVersion,releaseId,snapshotId,contentHash,rawSource,facts) VALUES (?,?,?,?,?,?,?,?,?,'{}',?)",
+            "INSERT INTO locationRevisionContent(id,locationId,version,origin,ssId,apiVersion,releaseId,snapshotId,contentHash,rawSource,facts) VALUES (?,?,?,?,?,?,?,?,?,'{}',?)",
           )
           .run(
             `${id}-${version}`,
@@ -4727,7 +4770,7 @@ describe('standalone Location directory', () => {
             owner ? null : 'release',
             owner ? null : 'snapshot',
             `${version}`,
-            JSON.stringify(value),
+            serializeLocationFacts(LocationFactsSchema.parse(value), 'establishment'),
           )
       }
     }
@@ -4968,7 +5011,7 @@ describe('forward-only bulk source persistence', () => {
     expect(edit?.organisationRevision).toBeTruthy()
     const refreshed = await persistForwardSaanSeoiPlace(db, source(9))
     const row = sqlite
-      .prepare('SELECT * FROM locationRevision WHERE id=?')
+      .prepare('SELECT * FROM locationRevisionContent WHERE id=?')
       .get(refreshed.revisionId)!
     expect(readLocationFacts(row.facts)).toEqual(source(9).facts)
     expect(JSON.parse(row.rawSource as string).localAddress).toBeUndefined()
@@ -5326,7 +5369,7 @@ describe('local Location address revisions', () => {
         .get(created.revisionId),
     ).toEqual(old)
     const row = sqlite
-      .prepare('SELECT facts,rawSource FROM locationRevision WHERE id=?')
+      .prepare('SELECT facts,rawSource FROM locationRevisionContent WHERE id=?')
       .get(updated!.revisionId)!
     expect(readLocationFacts(row.facts).location.address.authored).toEqual(
       input.address,
@@ -5842,7 +5885,7 @@ describe('structured Location address editor writes', () => {
     })
     expect(resource.metadata?.version).toBe(2)
     const original = sqlite
-      .prepare('SELECT facts FROM locationRevision WHERE id=?')
+      .prepare('SELECT facts FROM locationRevisionContent WHERE id=?')
       .get(created.revisionId)
     expect(readLocationFacts(original?.facts).location.geometry.coordinates).toEqual(
       facts.location.geometry.coordinates,
@@ -6210,7 +6253,7 @@ describe('Organisation-wide Location corrections', () => {
     expect(
       readLocationFacts(
         sqlite
-          .prepare('SELECT facts FROM locationRevision WHERE id=?')
+          .prepare('SELECT facts FROM locationRevisionContent WHERE id=?')
           .get(local.revisionId)!.facts,
       ).names.en,
     ).toBe('Bakery')
@@ -6415,7 +6458,7 @@ describe('Organisation-wide Location corrections', () => {
       apply(target, receiver, args) {
         sqlite
           .prepare(
-            "INSERT INTO locationRevision SELECT 'raced',locationId,version+1,origin,ssId,apiVersion,releaseId,snapshotId,'raced',rawSource,facts,createdAt FROM locationRevision WHERE id=?",
+            "INSERT INTO locationRevisionContent SELECT 'raced',locationId,version+1,origin,ssId,apiVersion,releaseId,snapshotId,'raced',rawSource,facts,createdAt FROM locationRevisionContent WHERE id=?",
           )
           .run(local.revisionId)
         return Reflect.apply(target, receiver, args)
@@ -6474,7 +6517,7 @@ it('persists one existing neighbourhood path in immutable Location revisions', a
     'actor',
   )
   const original = sqlite
-    .prepare('SELECT facts FROM locationRevision WHERE id=?')
+    .prepare('SELECT facts FROM locationRevisionContent WHERE id=?')
     .get(created.revisionId)
   const address = {
     scope: 'building',
@@ -6500,7 +6543,7 @@ it('persists one existing neighbourhood path in immutable Location revisions', a
   expect(resource.facts?.location.address.divisionOverrides).toEqual(divisionOverrides)
   expect(
     sqlite
-      .prepare('SELECT facts FROM locationRevision WHERE id=?')
+      .prepare('SELECT facts FROM locationRevisionContent WHERE id=?')
       .get(created.revisionId),
   ).toEqual(original)
   await expect(
@@ -6560,16 +6603,6 @@ describe('shared Location footprint persistence', () => {
     'creates a %s %s with authored geometry and no upstream source',
     async (state, kind) => {
       const { db, sqlite } = setup(true)
-      sqlite.exec(
-        readFileSync('migrations/0142_location_facts_snapshots.sql', 'utf8')
-          .replaceAll('payload', 'rawSource')
-          .replaceAll('sequence', 'version'),
-      )
-      sqlite.exec(
-        readFileSync('migrations/0238_location_i18n.sql', 'utf8').split(
-          'DROP VIEW featureAcceptedNamingLocation;',
-        )[0],
-      )
       const created = await createLocalLocation(
         db,
         'p',
@@ -6577,7 +6610,7 @@ describe('shared Location footprint persistence', () => {
         'curator',
       )
       const stored = sqlite
-        .prepare('SELECT facts FROM locationRevision WHERE id=?')
+        .prepare('SELECT facts FROM locationRevisionContent WHERE id=?')
         .get(created.revisionId)!
       expect(
         LocationFactsSnapshotSchema.parse(JSON.parse(String(stored.facts))),
@@ -6603,16 +6636,6 @@ describe('shared Location footprint persistence', () => {
 
   it('retains footprints on ordinary saves and scopes geometry corrections and clears to their Organisation', async () => {
     const { db, sqlite } = setup(true)
-    sqlite.exec(
-      readFileSync('migrations/0142_location_facts_snapshots.sql', 'utf8')
-        .replaceAll('payload', 'rawSource')
-        .replaceAll('sequence', 'version'),
-    )
-    sqlite.exec(
-      readFileSync('migrations/0238_location_i18n.sql', 'utf8').split(
-        'DROP VIEW featureAcceptedNamingLocation;',
-      )[0],
-    )
     const created = await createLocalLocation(
       db,
       'p',
@@ -6620,7 +6643,7 @@ describe('shared Location footprint persistence', () => {
       'curator',
     )
     const original = sqlite
-      .prepare('SELECT facts FROM locationRevision WHERE id=?')
+      .prepare('SELECT facts FROM locationRevisionContent WHERE id=?')
       .get(created.revisionId)!
     const saved = await updateLocalLocationAddress(db, {
       allowSharedBaseline: true,
@@ -6632,13 +6655,14 @@ describe('shared Location footprint persistence', () => {
     })
     expect(saved).not.toBeNull()
     const latest = sqlite
-      .prepare('SELECT facts FROM locationRevision WHERE id=?')
+      .prepare('SELECT facts FROM locationRevisionContent WHERE id=?')
       .get(saved!.revisionId)!
     expect(
       LocationFactsSnapshotSchema.parse(JSON.parse(String(latest.facts))),
     ).toMatchObject({
       kind: 'building',
-      common: { footprint, names: { en: 'Corrected building name' } },
+      common: { footprint },
+      i18n: { en: { name: 'Corrected building name' } },
     })
     const corrected = await updateLocalLocationAddress(db, {
       allowSharedBaseline: true,
@@ -6684,12 +6708,12 @@ describe('shared Location footprint persistence', () => {
     ).toBeNull()
     expect(
       sqlite
-        .prepare('SELECT facts FROM locationRevision WHERE id=?')
+        .prepare('SELECT facts FROM locationRevisionContent WHERE id=?')
         .get(created.revisionId),
     ).toEqual(original)
     expect(
       sqlite
-        .prepare('SELECT facts FROM locationRevision WHERE id=?')
+        .prepare('SELECT facts FROM locationRevisionContent WHERE id=?')
         .get(saved!.revisionId),
     ).toEqual(latest)
     const ownerEdit = await updateLocalLocationAddress(db, {
@@ -6773,7 +6797,7 @@ it('classifies an unknown local identity when building status is first establish
   const snapshot = JSON.parse(
     String(
       sqlite
-        .prepare('SELECT facts FROM locationRevision WHERE id=?')
+        .prepare('SELECT facts FROM locationRevisionContent WHERE id=?')
         .get(updated!.revisionId)?.facts,
     ),
   )
@@ -7706,9 +7730,13 @@ describe('Hype shared correction storage', () => {
     const changed = { ...facts, phoneNumber: ['+85229876543'] }
     sqlite
       .prepare(
-        "INSERT INTO locationRevision(id,locationId,version,origin,contentHash,rawSource,facts) VALUES(?,?,2,'local','next','{}',?)",
+        "INSERT INTO locationRevisionContent(id,locationId,version,origin,contentHash,rawSource,facts) VALUES(?,?,2,'local','next','{}',?)",
       )
-      .run('source-next', created.locationId, JSON.stringify(changed))
+      .run(
+        'source-next',
+        created.locationId,
+        serializeLocationFacts(LocationFactsSchema.parse(changed), 'establishment'),
+      )
     await reconcileSharedLocationSource(db, created.locationId, 'source-next')
     const head = await readSharedLocationCorrection(db, created.locationId)
     expect(JSON.parse(head!.corrections).phoneNumber.supersededBy).toBe('source-next')

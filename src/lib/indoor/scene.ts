@@ -167,10 +167,8 @@ export function stationProjection(
     aspect = 0.75,
     padding = 0.76,
   ): string => {
-    const projection = (flat ??= stationProjection(data, false, {
-      bearing: 0,
-      tilt: 0,
-    }))
+    flat ??= stationProjection(data, false, { bearing: 0, tilt: 0 })
+    const projection = flat
     // Compare both footprint orientations before aligning the winning fit to the viewing heading.
     const candidates = [false, true].flatMap(swapped => {
       const fitted = projection.logo(feature, swapped ? 1 / aspect : aspect, padding)
@@ -190,7 +188,7 @@ export function stationProjection(
     } = best
     const level = value(feature.properties, 'level_id')
     const [x, y] = project(
-      flat.unproject([e + (a + c) / 2, f + (b + d) / 2], level),
+      projection.unproject([e + (a + c) / 2, f + (b + d) / 2], level),
       level,
     )
     // Counter-rotation in the floor plane removes bearing; pitch still compresses its vertical axis.

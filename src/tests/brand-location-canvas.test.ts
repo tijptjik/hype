@@ -157,7 +157,7 @@ it('clusters 600 points, generates proportional sprites on demand and zooms clus
   ).toBe(true)
 
   renderer.update(points.slice(0, 300))
-  expect(source.setData.mock.calls[0][0].features).toHaveLength(300)
+  expect(source.setData.mock.lastCall?.[0].features).toHaveLength(300)
   renderer.destroy()
 })
 

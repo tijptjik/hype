@@ -70,3 +70,6 @@ spec/breadline/Breadline v4 - Scope of Work.pdf
 
 # Indoor geometry is published to R2; local source archives belong under .research/.
 /static/indoor/
+
+# Managed validation harness generated outside the application source.
+/.dotjik-runner/

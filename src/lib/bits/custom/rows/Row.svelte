@@ -8,10 +8,7 @@ let {
   isSelected = false,
   selectionState = null,
   isFocusable = true,
-  interactive = true,
   variant,
-  onclick,
-  onkeydown,
   class: className = '',
   image,
   imageSrc,
@@ -25,6 +22,7 @@ let {
   description = '',
   onDescriptionClick,
   children,
+  ...interaction
 }: RowProps = $props()
 </script>
 
@@ -34,10 +32,8 @@ let {
   {isSelected}
   {selectionState}
   {isFocusable}
-  {interactive}
   {variant}
-  {onclick}
-  {onkeydown}
+  {...interaction}
   class={className}
 >
   {#if title}

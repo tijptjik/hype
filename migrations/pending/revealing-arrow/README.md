@@ -20,8 +20,8 @@ existing triggers rebuild membership, search, counts and background work.
 ## Production catalogue
 
 The operator confirmed that tiles formed the sign. The first production lifecycle
-planner adds the original Tiles option ID to the project's Material catalogue. It
-maps the historical condition to Stratigraphy = Revealed. The recording keeps all four
+planner adds the original Tiles option ID to the project's Material catalogue. It maps
+the historical condition to Stratigraphy = Revealed. The recording keeps all four
 original Feature revisions, including their original labels. A fifth revision extends
 version 11 to version 12 and captures the current definitions. The production group
 replays the catalogue, recording and new head atomically.
@@ -31,7 +31,8 @@ replays the catalogue, recording and new head atomically.
 
 This is a **pending post-lifecycle data migration**, not a numbered migration. The
 numbered migration stage runs before the managed lifecycle conversion and cannot read
-this recording's current revision schema. The production planner selects this recording after lifecycle conversion.
+this recording's current revision schema. The production planner selects this recording
+after lifecycle conversion.
 
 1. Retain `.local/revealing-arrow/media/` with the release handoff. It contains the
    hash-verified originals and metadata objects listed in `media-manifest.json`. Image
@@ -49,8 +50,9 @@ this recording's current revision schema. The production planner selects this re
    statements across batches or execute it against the old production schema. Include
    the data group in the release's expected-state fingerprints and recovery checkpoint.
    The production adapter prepares and verifies the group on the rehearsal database.
-5. Verify the retained version 11 and the new `revealing-arrow:production-taxonomy-v1` head at version 12, its
-   Location binding and both image originals/metadata in production before activation.
+5. Verify the retained version 11 and the new `revealing-arrow:production-taxonomy-v1`
+   head at version 12, its Location binding and both image originals/metadata in
+   production before activation.
 
 The batch rejects existing Feature, Location, image and revision identities. Resume
 through the deployment journal; do not rerun a committed batch or change it to
