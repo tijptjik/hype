@@ -2941,6 +2941,40 @@ describe('atomic unresolved Feature split application', () => {
     })
     expect(sqlite.prepare('SELECT count(*) AS n FROM featureLocation').get()?.n).toBe(0)
   })
+  it('moves detached brands into the split Location and replays exactly', async () => {
+    const { db, sqlite } = await fixture()
+    const brands = [
+      { identifiers: { breadlineBrand: 'example' }, names: { en: 'Example' } },
+    ]
+    sqlite
+      .prepare('UPDATE feature SET localLocationBrands=? WHERE id=?')
+      .run(JSON.stringify({ brands, revision: 'before', actorId: 'actor' }), 'f')
+    const baseline = await readFeatureLocationBaseline(db, 'f', 'p')
+    if (baseline.status !== 'ready') throw new Error('Expected baseline')
+    const planned = planUnresolvedFeatureSplit(baseline.baseline)
+    if (planned.status !== 'planned') throw new Error('Expected plan')
+    expect(await applyUnresolvedFeatureSplit(db, planned.plan, 'actor')).toEqual({
+      status: 'applied',
+    })
+    expect(await applyUnresolvedFeatureSplit(db, planned.plan, 'actor')).toEqual({
+      status: 'already-applied',
+    })
+    expect((await getAcceptedFeatureLocation(db, 'f', 'p'))?.effective.brands).toEqual(
+      brands,
+    )
+    expect(
+      sqlite
+        .prepare('SELECT localLocationBrands,modifiedAt FROM feature WHERE id=?')
+        .get('f'),
+    ).toEqual({
+      localLocationBrands: null,
+      modifiedAt: planned.plan.expectedFeatureModifiedAt,
+    })
+    sqlite.exec("UPDATE featureI18n SET baseName='A later edit' WHERE featureId='f'")
+    expect(await applyUnresolvedFeatureSplit(db, planned.plan, 'actor')).toEqual({
+      status: 'conflict',
+    })
+  })
   it('leaves no orphan when a concurrent save wins after baseline validation', async () => {
     const { db, sqlite, plan } = await fixture()
     const originalBatch = db.batch.bind(db)

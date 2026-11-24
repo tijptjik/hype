@@ -13,11 +13,13 @@ import { locationTaxonomy } from '#lib/locations/taxonomy.js'
 import { serializeLocationFacts } from '#lib/locations/factsSnapshot.js'
 import { equalLocationValue } from '#lib/locations/baseline.js'
 import { planUnresolvedFeatureSplit } from '#lib/locations/migrationPlan.js'
+import { resolveFeatureLocation } from '#lib/locations/resolve.js'
 // SERVICES
 import { readFeatureLocationBaseline } from './locationBaseline'
 import { readProjectLocationOwner, locationOwnerForProject } from './locationScope'
 import { prepareFeatureLocationAssociationWrite } from './locationAssociation'
 import { prepareOrganisationLocationWrite } from './organisationLocation'
+import { prepareFeatureLocationAssociationCapture } from './featureLocationAssociationRevision'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { UnresolvedFeatureSplit } from '#lib/locations/migrationPlan.js'
@@ -31,7 +33,8 @@ import type { UnresolvedFeatureSplit } from '#lib/locations/migrationPlan.js'
  * @remarks Internal migration primitive, never a remote client command. Recomputes the
  * proposal from current persisted values; arbitrary manifest facts are not authoritative.
  * Each Feature is one atomic batch. A failed later Feature does not undo completed earlier
- * Features; exact replay supports resumption. No Feature values or spatial jobs are changed.
+ * Features; exact replay supports resumption. Effective facts and spatial jobs are preserved;
+ * detached brands move to the Location and enrolled Features receive an attributed revision.
  */
 export async function applyUnresolvedFeatureSplit(
   db: Database,
@@ -40,16 +43,7 @@ export async function applyUnresolvedFeatureSplit(
 ): Promise<{ status: 'applied' | 'already-applied' | 'conflict' }> {
   if (!actorId || !proposed?.featureId || !proposed.projectId)
     throw new Error('Incomplete Feature split request')
-  const baseline = await readFeatureLocationBaseline(
-    db,
-    proposed.featureId,
-    proposed.projectId,
-  )
-  if (baseline.status !== 'ready') return { status: 'conflict' }
-  const recomputed = planUnresolvedFeatureSplit(baseline.baseline)
-  if (recomputed.status !== 'planned' || !equalLocationValue(recomputed.plan, proposed))
-    return { status: 'conflict' }
-  const plan = recomputed.plan
+  const plan = proposed
   const ownerOrganisationId = await readProjectLocationOwner(db, plan.projectId)
   const association = await db
     .select()
@@ -76,23 +70,44 @@ export async function applyUnresolvedFeatureSplit(
         ),
       )
       .get()
+    const exact =
+      prior &&
+      prior.state === 'unresolved' &&
+      prior.ssId === null &&
+      prior.ownerOrganisationId === ownerOrganisationId &&
+      prior.origin === 'local' &&
+      association.locationId === plan.locationId &&
+      association.factsRevisionId === plan.revisionId &&
+      association.locationRevisionId === plan.revisionId &&
+      equalLocationValue(association.overrides, plan.overrides) &&
+      equalLocationValue(prior.facts, plan.facts) &&
+      equalLocationValue(prior.rawSource.plan, plan)
+    if (!exact) return { status: 'conflict' }
+    // Brands now belong to the Location; recover the verified values for replay planning.
+    const baseline = await readFeatureLocationBaseline(
+      db,
+      plan.featureId,
+      plan.projectId,
+    )
+    if (baseline.status !== 'ready') return { status: 'conflict' }
+    baseline.baseline.effective.brands = resolveFeatureLocation(
+      plan.facts,
+      plan.facts.location,
+      plan.overrides,
+    ).brands
+    const replay = planUnresolvedFeatureSplit(baseline.baseline)
     return {
       status:
-        prior &&
-        prior.state === 'unresolved' &&
-        prior.ssId === null &&
-        prior.ownerOrganisationId === ownerOrganisationId &&
-        prior.origin === 'local' &&
-        association.locationId === plan.locationId &&
-        association.factsRevisionId === plan.revisionId &&
-        association.locationRevisionId === plan.revisionId &&
-        equalLocationValue(association.overrides, plan.overrides) &&
-        equalLocationValue(prior.facts, plan.facts) &&
-        equalLocationValue(prior.rawSource.plan, plan)
+        replay.status === 'planned' && equalLocationValue(replay.plan, plan)
           ? 'already-applied'
           : 'conflict',
     }
   }
+  const baseline = await readFeatureLocationBaseline(db, plan.featureId, plan.projectId)
+  if (baseline.status !== 'ready') return { status: 'conflict' }
+  const recomputed = planUnresolvedFeatureSplit(baseline.baseline)
+  if (recomputed.status !== 'planned' || !equalLocationValue(recomputed.plan, proposed))
+    return { status: 'conflict' }
   const collision = await db
     .select({ id: locationTable.id })
     .from(locationTable)
@@ -133,9 +148,22 @@ export async function applyUnresolvedFeatureSplit(
     locationOrganisationRevision: correction.revision,
     additionalGuard: correction.guard,
   })
+  const capture = await prepareFeatureLocationAssociationCapture(db, {
+    association: associationWrite.input,
+    version: associationWrite.version,
+    guard,
+    migration: {
+      acceptedLocation: resolveFeatureLocation(
+        plan.facts,
+        plan.facts.location,
+        plan.overrides,
+      ),
+    },
+  })
   // All three writes use one D1 transaction; a stale guard leaves no orphan Location/revision.
   // Raw SELECT follows schema column order, including nullable source fields and timestamps.
   const results = await db.batch([
+    ...capture.before,
     db
       .insert(locationTable)
       .select(sql`SELECT ${plan.locationId},NULL,${locationTaxonomy(classifyLocationFactsKind('unknown', plan.facts)).kind},${locationTaxonomy(classifyLocationFactsKind('unknown', plan.facts)).class},${ownerOrganisationId},'unresolved','current',
@@ -147,12 +175,15 @@ export async function applyUnresolvedFeatureSplit(
       strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE ${guard}`),
     ...correction.queries,
     associationWrite.query,
+    ...capture.after,
   ] as [
     import('drizzle-orm/batch').BatchItem<'sqlite'>,
     ...import('drizzle-orm/batch').BatchItem<'sqlite'>[],
   ])
   return {
-    status: (results[2 + correction.queries.length] as unknown[]).length
+    status: (
+      results[capture.before.length + 2 + correction.queries.length] as unknown[]
+    ).length
       ? 'applied'
       : 'conflict',
   }

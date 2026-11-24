@@ -17,8 +17,9 @@ import type { UnresolvedFeatureSplit } from '../../src/lib/locations/migrationPl
 /**
  * Verify a completed split against its untouched local baseline and private manifest.
  * @returns Count-only evidence; throws on row drift, missing associations or broken integrity.
- * @remarks Read-only SQLite connections. Feature-owned rows are compared in both directions;
- * actual revision facts/overrides are resolved independently of the application receipt.
+ * @remarks Read-only SQLite connections. Feature-owned rows are compared in both directions,
+ * except the checked revision pointers and migrated detached brands; actual revision facts and
+ * overrides are resolved independently of the application receipt.
  */
 function main(): void {
   const [manifestPath, baselinePath, resultPath] = process.argv.slice(2)
@@ -41,9 +42,17 @@ function main(): void {
       'featureProperty',
       'featurePropertyI18n',
     ]) {
+      // Revision pointers advance for enrolled Features; all other Feature data stays fixed.
       const columns = (
         db.query(`PRAGMA baseline.table_info(${table})`).all() as { name: string }[]
       )
+        .filter(
+          row =>
+            table !== 'feature' ||
+            !['currentRevisionId', 'revisionVersion', 'localLocationBrands'].includes(
+              row.name,
+            ),
+        )
         .map(row => `"${row.name.replaceAll('"', '""')}"`)
         .join(',')
       if (!columns) throw new Error(`Missing baseline table: ${table}`)
@@ -91,11 +100,79 @@ function main(): void {
     const query =
       db.query(`SELECT fp.locationId,fp.factsRevisionId,fp.locationRevisionId,fp.acceptedOverrides AS overrides,
       p.ownerOrganisationId,p.state,p.ssId,r.facts,r.origin,
-      (SELECT count(*) FROM featureLocationHistory h WHERE h.featureId=fp.featureId) AS historyCount
+      (SELECT count(*) FROM featureLocationHistory h WHERE h.featureId=fp.featureId) -
+      (SELECT count(*) FROM baseline.featureLocationHistory h WHERE h.featureId=fp.featureId) AS historyCount
       FROM featureLocation fp JOIN location p ON p.id=fp.locationId
       JOIN ${revisionTable} r ON r.id=fp.factsRevisionId AND r.locationId=fp.locationId
       WHERE fp.featureId=?`)
+    const lifecycle = db
+      .query(
+        "SELECT 1 FROM pragma_table_info('feature') WHERE name='currentRevisionId'",
+      )
+      .get()
+    const planned = new Set(plans.map(plan => plan.featureId))
+    const brandChanges = db
+      .query(`SELECT f.id FROM feature f JOIN baseline.feature old ON old.id=f.id
+      WHERE f.localLocationBrands IS NOT old.localLocationBrands`)
+      .all() as { id: string }[]
+    if (brandChanges.some(row => !planned.has(row.id)))
+      throw new Error('Unplanned detached brand data changed')
+    if (lifecycle) {
+      const changed = db
+        .query(`SELECT f.id FROM feature f JOIN baseline.feature old ON old.id=f.id
+        WHERE f.currentRevisionId IS NOT old.currentRevisionId OR f.revisionVersion IS NOT old.revisionVersion`)
+        .all() as { id: string }[]
+      if (changed.some(row => !planned.has(row.id)))
+        throw new Error('Unplanned Feature revision changed')
+    }
+    const revision = lifecycle
+      ? db.query(`SELECT old.currentRevisionId AS oldRevision,old.revisionVersion AS oldVersion,
+          f.currentRevisionId AS newRevision,f.revisionVersion AS newVersion,
+          r.previousRevisionId,c.actorId,c.origin
+        FROM baseline.feature old JOIN feature f ON f.id=old.id
+        LEFT JOIN featureRevision r ON r.id=f.currentRevisionId AND r.featureId=f.id
+        LEFT JOIN revisionChangeSet c ON c.id=r.changeSetId WHERE f.id=?`)
+      : null
     for (const plan of plans) {
+      const brands = db
+        .query(`SELECT old.localLocationBrands AS previous,f.localLocationBrands AS current
+        FROM baseline.feature old JOIN feature f ON f.id=old.id WHERE f.id=?`)
+        .get(plan.featureId) as {
+        previous: string | null
+        current: string | null
+      } | null
+      if (
+        !brands ||
+        brands.current !== null ||
+        (brands.previous !== null &&
+          !equalLocationValue(
+            JSON.parse(brands.previous).brands,
+            resolveFeatureLocation(plan.facts, plan.facts.location, plan.overrides)
+              .brands,
+          ))
+      )
+        throw new Error('Detached brands were not preserved in the Location')
+      if (revision) {
+        const current = revision.get(plan.featureId) as {
+          oldRevision: string | null
+          oldVersion: number
+          newRevision: string | null
+          newVersion: number
+          previousRevisionId: string | null
+          actorId: string | null
+          origin: string | null
+        } | null
+        if (
+          !current ||
+          (current.oldRevision !== null &&
+            (current.newRevision === current.oldRevision ||
+              current.newVersion !== current.oldVersion + 1 ||
+              current.previousRevisionId !== current.oldRevision ||
+              current.actorId !== 'migration:existing-feature-split' ||
+              current.origin !== 'migration'))
+        )
+          throw new Error('Split Feature revision attribution mismatch')
+      }
       const row = query.get(plan.featureId) as {
         locationId: string
         factsRevisionId: string
@@ -145,7 +222,7 @@ function main(): void {
     console.log(
       JSON.stringify({
         verified: plans.length,
-        originalFeatureRowsUnchanged: true,
+        featureValuesPreserved: true,
         effectiveValuesPreserved: true,
         oneHistoryPerSplit: true,
         integrity: 'ok',

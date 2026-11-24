@@ -4,6 +4,7 @@ import { and, eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 // SCHEMA
 import { feature } from '../schema/feature'
+import { featureLocation } from '../schema/location'
 import { property, propertyI18n } from '../schema/property'
 import { hub } from '../schema/hub'
 // DOMAIN
@@ -38,14 +39,22 @@ export async function prepareFeatureLocationAssociationCapture(
     projection?: ReturnType<typeof materializeEffectiveLocation>
     guard: SQL
     preparedSharedCorrections?: readonly import('./locationShared').PreparedSharedCorrection[]
+    /** Preserve existing Feature values for the trusted existing-Feature migration. */
+    migration?: {
+      acceptedLocation: import('#lib/locations/resolve.js').EffectiveLocationFacts
+    }
   },
 ): Promise<Awaited<ReturnType<typeof prepareFeatureAcceptedCapture>>> {
   const association = input.association
   const capture = await prepareFeatureAcceptedCapture(db, {
     featureId: association.featureId,
     actorId: association.actorId,
+    ...(input.migration
+      ? { origin: 'migration' as const, revisionBoundary: true }
+      : {}),
     guard: input.guard,
     preparedSharedCorrections: input.preparedSharedCorrections,
+    acceptedLocation: input.migration?.acceptedLocation,
     reason: association.expectedRevision
       ? 'Feature reassociated with Location'
       : 'Feature linked to Location',
@@ -202,7 +211,15 @@ export async function prepareFeatureLocationAssociationCapture(
       return content
     },
   })
-  if (capture.revisionId) {
+  if (input.migration) {
+    capture.after.unshift(
+      db
+        .update(feature)
+        .set({ localLocationBrands: null, modifiedAt: sql`${feature.modifiedAt}` })
+        .where(sql`${feature.id}=${association.featureId}
+        AND EXISTS(SELECT 1 FROM ${featureLocation} WHERE ${featureLocation.featureId}=${association.featureId} AND ${featureLocation.version}=${input.version})`),
+    )
+  } else if (capture.revisionId) {
     const now = new Date(
       Math.max(
         Date.now(),

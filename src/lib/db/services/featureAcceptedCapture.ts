@@ -46,6 +46,8 @@ export async function prepareFeatureAcceptedCapture(
     resultingScope?: { organisationId: string; projectId: string; layerId: string }
     /** Exact shared revisions inserted by this same atomic operation. */
     preparedSharedCorrections?: readonly import('./locationShared').PreparedSharedCorrection[]
+    /** Effective facts for a trusted Location created by the same transaction. */
+    acceptedLocation?: import('#lib/locations/resolve.js').EffectiveLocationFacts
     unpublish?: boolean
     derive: (
       previous: FeatureRevisionContent,

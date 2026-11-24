@@ -601,6 +601,8 @@ export async function prepareLifecycleCapture(
     featureId: string
     /** Exact shared revisions inserted by this same atomic operation. */
     preparedSharedCorrections?: readonly import('./locationShared').PreparedSharedCorrection[]
+    /** Trusted migration's effective facts when its Location is inserted in this batch. */
+    acceptedLocation?: import('#lib/locations/resolve.js').EffectiveLocationFacts
     unpublish?: boolean
     visibility?: boolean
     derive: (
@@ -627,6 +629,7 @@ export async function prepareLifecycleCapture(
     previous: current.content,
     content,
     preparedSharedCorrections: input.preparedSharedCorrections,
+    acceptedLocation: input.acceptedLocation,
   })
   const idle = await prepareFeatureIdleRevision(db, {
     ...input,
