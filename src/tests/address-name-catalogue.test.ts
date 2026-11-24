@@ -379,3 +379,68 @@ it('retains both endpoints of a range following a matched Chinese street', () =>
     })
   expect(review.unresolved).toEqual({})
 })
+
+const lungKongRoad = {
+  id: 'lung-kong',
+  names: { en: 'Lung Kong Road', 'zh-Hant': '龍崗道', 'zh-Hans': '龙岗道' },
+  divisionCodes: [],
+}
+
+it('extracts Lung Kong Road and repairs the Chinese number range on review and acceptance', () => {
+  const source = {
+    'zh-hant': '佳景樓5759龍崗道九龍城區九龍',
+    'zh-hans': '佳景楼5759龙岗道九龙城区九龙',
+    en: 'KAI KING MANSION, 57-59 LUNG KONG ROAD, KOWLOON CITY DISTRICT, KLN',
+  }
+  const content = createLocalLocationAddress(source)
+  content.i18n.en.buildingName = 'Kai King Mansion'
+  content.i18n['zh-hant'].buildingName = '佳景樓'
+  content.i18n['zh-hans'].buildingName = '佳景楼'
+  const draft = localAddressDraft(content)
+  const review = proposeLocalAddressParse(localAddressParseInput(draft, 'building'), [
+    lungKongRoad,
+  ])
+  expect(review.source).toEqual(source)
+  const accepted = applyLocalAddressParse(draft, review.content)
+  const saved = localAddressContent(accepted)
+  for (const [tag, streetName] of Object.entries(lungKongRoad.names)) {
+    const fields = {
+      streetName,
+      buildingNumberExpression: '57-59',
+      buildingNumberFrom: '57',
+      buildingNumberTo: '59',
+      buildingNumberConnector: '-',
+    }
+    expect(review.content.i18n[tag.toLowerCase()]).toMatchObject(fields)
+    expect(saved.i18n[tag.toLowerCase()]).toMatchObject(fields)
+  }
+  expect(getAddressDisplay(accepted, 'zhHant')).toBe('龍崗道57-59號佳景樓')
+  expect(getAddressDisplay(accepted, 'zhHans')).toBe('龙岗道57-59号佳景楼')
+  expect(review.unresolved['zh-hant']).toBe('九龍城區九龍')
+  expect(review.unresolved['zh-hans']).toBe('九龙城区九龙')
+})
+
+it.each([
+  ['5759 Lung Kong Road', '龙岗道5759号', [lungKongRoad]],
+  ['57-59 Lyndhurst Terrace', '龙岗道5759号', [street, lungKongRoad]],
+  ['57-59 Lung Kong Road', '龙岗道57-60号', [lungKongRoad]],
+  [
+    '57-59 Lung Kong Road',
+    '龙岗道5759号',
+    [lungKongRoad, { ...lungKongRoad, id: 'other' }],
+  ],
+] as const)(
+  'keeps 5759 without unambiguous matching range evidence (%s, %s)',
+  (en, simplified, streets) => {
+    const content = createLocalLocationAddress()
+    const review = proposeLocalAddressParse(
+      { content, source: { en, 'zh-hant': '龍崗道5759號', 'zh-hans': simplified } },
+      [...streets],
+    )
+    expect(review.content.i18n['zh-hant']).toMatchObject({
+      buildingNumberFrom: '5759',
+      buildingNumberTo: null,
+      buildingNumberConnector: null,
+    })
+  },
+)

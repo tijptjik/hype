@@ -25,7 +25,11 @@ function streetIndex(streets: AddressName[]): StreetIndex {
   // The shared dictionary indexes Chinese under zh-hant. Register script variants as
   // spelling aliases for the same street so Simplified input keeps its own spelling.
   for (const street of streets) {
-    const localized = withSimplifiedChinese(street.names)
+    const localized = withSimplifiedChinese(
+      Object.fromEntries(
+        Object.entries(street.names).map(([tag, name]) => [tag.toLowerCase(), name]),
+      ),
+    )
     if (localized['zh-hans'] && localized['zh-hans'] !== localized['zh-hant'])
       names.push({ locale: 'zh-hant', name: localized['zh-hans'], streetId: street.id })
   }
@@ -67,6 +71,41 @@ function chineseStreetNumber(
     ? [before, after.slice(following[0].length)]
     : [before.slice(0, match.index), after]
   return { expression: number.number.expression, remainder: remainder.join(' ') }
+}
+
+/** Restore a missing range separator only from agreeing labels for the same street.
+ * @param rows Newly extracted fields before existing draft values are merged.
+ * @param streets Prepared catalogue entries with the IDs behind each matched spelling.
+ * @returns Nothing. Only corroborated Chinese single-number expressions are corrected.
+ */
+function repairChineseRanges(
+  rows: AddressParseResult['content']['i18n'],
+  streets: StreetIndex,
+): void {
+  const evidence = Object.entries(rows).flatMap(([tag, row]) => {
+    if (!row.streetName || !row.buildingNumberExpression) return []
+    const ids = streets.find(street => street.name === row.streetName)?.streetIds
+    const parsed = parseStreetNumber(row.buildingNumberExpression)
+    return ids?.length === 1 && parsed.valid
+      ? [{ tag, row, id: ids[0], number: parsed.number }]
+      : []
+  })
+  for (const { tag, row, id, number } of evidence) {
+    if (!tag.toLowerCase().startsWith('zh') || !/^\d+$/.test(number.expression))
+      continue
+    const peers = evidence.filter(peer => peer.id === id && peer.tag !== tag)
+    const range = peers.find(peer => peer.number.connector === '-')?.number
+    if (
+      range &&
+      number.expression === `${range.from}${range.to}` &&
+      peers.every(
+        peer =>
+          peer.number.expression === range.expression ||
+          peer.number.expression === number.expression,
+      )
+    )
+      row.buildingNumberExpression = range.expression
+  }
 }
 
 /** Parse the display fields in the current editor and enrich the existing authored components.
@@ -112,6 +151,9 @@ export function proposeLocalAddressParse(
       if (remaining) parsed.unresolved[tag] = remaining
       else delete parsed.unresolved[tag]
     }
+  }
+  repairChineseRanges(parsed.content.i18n, matcher.streetsByLongestName)
+  for (const [tag, fields] of Object.entries(parsed.content.i18n)) {
     const row = { ...content.i18n[tag], ...fields }
     // A newly matched street cannot inherit the previous street's number.
     if (
