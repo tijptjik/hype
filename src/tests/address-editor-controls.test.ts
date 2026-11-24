@@ -890,7 +890,9 @@ it('shows retained display addresses beneath the viewer heading when no structur
   expect(fallback().querySelector('p')?.textContent?.trim()).toBe(
     '500 Castle Peak Road',
   )
-  expect(view.container.querySelector('[data-address-parts]')).toBeNull()
+  expect(
+    fallback().closest('[data-address-parts]')?.querySelectorAll('section'),
+  ).toHaveLength(1)
 })
 
 it('shows translated display addresses with structured fields in the viewer', async () => {

@@ -241,7 +241,7 @@ it('restores grouped divisions and class labels in the read-only Feature address
   const locality = view.container.querySelector('[data-division-group="locality"]')
   expect(locality?.textContent).toContain('Microhood')
   expect(
-    view.container.querySelector('[data-address-display-values]')?.textContent,
+    view.container.querySelector('[data-address-display-values]')?.textContent ?? '',
   ).not.toContain('Lan Kwai Fong')
 })
 

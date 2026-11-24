@@ -1659,7 +1659,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
       primaryLocale={selectedLocales[0]}
       additionalValue={additionalLocaleValue}
       groups={fieldGroups}
-      displayRows={translations ? viewerDisplayAddressRows : []}
+      displayRows={viewerDisplayAddressRows}
       {displayStale}
       {labels}
     />
