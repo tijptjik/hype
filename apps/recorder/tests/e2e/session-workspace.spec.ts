@@ -443,7 +443,7 @@ test('opens a shared session, swipes, selects a building part and persists a rec
   if (fixture) {
     await page.getByLabel('vitality', { exact: true }).selectOption('poor')
     await page.getByLabel('notes', { exact: true }).fill('Observed during survey')
-    await expect(page.getByRole('button', { name: 'Save changes' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeEnabled()
     await page.goBack()
     await page.getByRole('button', { name: 'See Records' }).click()
     await page.getByRole('button', { name: 'Survey 1', exact: true }).click()
@@ -464,8 +464,11 @@ test('opens a shared session, swipes, selects a building part and persists a rec
       .getByRole('group', { name: 'Draft', exact: true })
       .getByRole('button', { name: 'No', exact: true })
       .click()
-    await page.getByRole('button', { name: 'Save changes' }).click()
-    await expect(page.getByText('Changes saved.')).toBeVisible()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(
+      page.getByRole('button', { name: 'Save', exact: true }).locator('svg'),
+    ).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeDisabled()
     if (artifacts)
       await page.screenshot({
         path: join(artifacts, 'recorder-editor.png'),

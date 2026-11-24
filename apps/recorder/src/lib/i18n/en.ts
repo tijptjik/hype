@@ -46,7 +46,7 @@ export const en = {
   fields: 'Fields',
   no_fields_are_configured_for_this_recording_layer:
     'No fields are configured for this recording layer.',
-  save_changes: 'Save changes',
+  save_changes: 'Save',
   try_again: 'Try again',
   not_set: 'Not set',
   from: 'From',

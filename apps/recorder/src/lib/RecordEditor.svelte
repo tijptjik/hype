@@ -1,6 +1,7 @@
 <script lang="ts">
 // SVELTE
-import { onDestroy, untrack } from 'svelte'
+import { onDestroy, onMount, untrack } from 'svelte'
+import { scale } from 'svelte/transition'
 import { beforeNavigate } from '$app/navigation'
 // I18N
 import { t, errorMessage } from './i18n'
@@ -31,11 +32,21 @@ let record = $state<RecorderEditor | null>(null)
 let loading = $state(true)
 let busy = $state(false)
 let failure = $state('')
-let notice = $state('')
+let saveComplete = $state(false)
+let reducedMotion = $state(false)
 let saved = $state('')
 let statusOpen = $state(false)
 let fieldsOpen = $state(true)
 let request = 0
+onMount(() => {
+  const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+  const update = () => {
+    reducedMotion = media.matches
+  }
+  update()
+  media.addEventListener('change', update)
+  return () => media.removeEventListener('change', update)
+})
 let dirty = $derived(
   record !== null &&
     JSON.stringify({ status: record.status, values: record.values }) !== saved,
@@ -79,6 +90,9 @@ const booleanFields: {
     icon: 'M9 6h12M9 12h12M9 18h12M2 6l2 2 3-4M2 12l2 2 3-4M2 18l2 2 3-4',
   },
 ]
+$effect(() => {
+  if (dirty) saveComplete = false
+})
 $effect(() => {
   ondirty?.(dirty || busy)
 })
@@ -130,7 +144,8 @@ async function save(event: SubmitEvent): Promise<void> {
   event.preventDefault()
   if (!record || busy || !record.editable) return
   busy = true
-  failure = notice = ''
+  failure = ''
+  saveComplete = false
   try {
     record = await saveRecorder({
       id: record.id,
@@ -141,7 +156,7 @@ async function save(event: SubmitEvent): Promise<void> {
       values: record.values,
     })
     saved = JSON.stringify({ status: record.status, values: record.values })
-    notice = t('changes_saved')
+    saveComplete = true
   } catch (cause) {
     failure = errorMessage(
       cause,
@@ -336,9 +351,32 @@ function summary(field: RecorderEditor['fields'][number]): string {
       <button
         type="submit"
         disabled={busy || !dirty}
-        class="bg-accent text-on-accent min-h-14 rounded-xl px-4 font-semibold disabled:opacity-50"
+        aria-busy={busy}
+        class="bg-accent text-on-accent flex min-h-14 items-center justify-center gap-2 rounded-xl px-4 font-semibold disabled:opacity-50"
       >
-        {t('save_changes')}
+        <span class="relative">
+          <span
+            class="absolute top-1/2 right-full mr-2 -translate-y-1/2"
+            aria-hidden="true"
+          >
+            {#if saveComplete && !dirty}
+              <svg
+                aria-hidden="true"
+                in:scale={{ duration: reducedMotion ? 0 : 220, start: 0.5 }}
+                class="size-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="m5 12 4 4L19 6" />
+              </svg>
+            {/if}
+          </span>
+          {t('save_changes')}
+        </span>
       </button>
     {/if}
   </form>
@@ -355,6 +393,4 @@ function summary(field: RecorderEditor['fields'][number]): string {
     </button>
   {/if}
 {/if}
-{#if notice}
-  <p role="status" class="text-muted">{notice}</p>
-{/if}
+<p role="status" class="sr-only">{saveComplete && !dirty ? t('changes_saved') : ''}</p>
