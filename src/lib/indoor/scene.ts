@@ -199,6 +199,8 @@ export function stationProjection(
 }
 /** Maps source classes onto a theme-independent cartographic palette. @param feature Source unit. @param branded Known shop logo. @returns CSS paint value. */
 export function stationFill(feature: IndoorFeature, branded = false): string {
+  // Extraction gaps remain visibly unresolved, never styled as inferred circulation.
+  if (feature.properties.extraction_residual) return '#fef3c7'
   if (branded) return '#fff'
   const p = feature.properties,
     category = value(p, 'unit_category')

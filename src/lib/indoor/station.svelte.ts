@@ -106,6 +106,18 @@ export class StationState {
   ) {
     this.featuredUnits = featuredUnits
   }
+  /** Load an authorized unpublished bundle into the shared scene without public catalogue navigation.
+   * @param data Validated interior draft. @returns Nothing.
+   */
+  loadDraft(data: IndoorData): void {
+    this.data = data
+    this.sourceEntries = exposedIndoorPlaces(data, places(data))
+    this.floor = value(initialLevel(data).properties, 'level_id')
+    this.bearing = data.coordinateSpace === 'image-pixels' ? 0 : -115
+    this.exploded = false
+    this.loading = false
+    this.fitRevision++
+  }
   floor = $state('')
   selected = $state<Place | null>(null)
   error = $state('')
