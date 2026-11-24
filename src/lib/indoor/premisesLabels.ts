@@ -1,5 +1,5 @@
 // I18N
-import { simplifiedChinese } from '#lib/addresses/chinese.js'
+import { simplifiedChinese } from '#lib/addresses/simplifiedChinese.js'
 // TYPES
 import type { SymbolLayerSpecification } from 'maplibre-gl'
 
@@ -13,10 +13,16 @@ export function premisesNameI18n(premises: { name: string; nameZh: string }): {
   zhHant: { name: string }
   zhHans: { name: string }
 } {
+  // A map visit in English or Traditional Chinese can use the catalogue without building the conversion trie.
+  const traditionalName = premises.nameZh
+  let simplified: { name: string } | undefined
   return {
     en: { name: premises.name },
-    zhHant: { name: premises.nameZh },
-    zhHans: { name: simplifiedChinese(premises.nameZh) },
+    zhHant: { name: traditionalName },
+    get zhHans() {
+      simplified ??= { name: simplifiedChinese(traditionalName) }
+      return simplified
+    },
   }
 }
 
