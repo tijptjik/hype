@@ -42,7 +42,7 @@ async function range(
   etag: string,
 ): Promise<Uint8Array> {
   const response = await fetch(url, {
-    redirect: 'error',
+    redirect: 'manual',
     headers: { Range: `bytes=${start}-${end}`, 'If-Range': etag },
   })
   if (
@@ -90,7 +90,7 @@ export async function lookupSheet(
     !/^\/api\/3d-zip\/GLTF\/[\w-]+\.zip$/.test(archive.pathname)
   )
     throw new Error('Invalid CSDI archive URL')
-  const head = await fetch(archive, { method: 'HEAD', redirect: 'error' })
+  const head = await fetch(archive, { method: 'HEAD', redirect: 'manual' })
   const etag = head.headers.get('etag')
   const length = Number(head.headers.get('content-length'))
   if (
