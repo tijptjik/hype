@@ -3,6 +3,8 @@
 import { draggable, droppable, dndState, type DragDropState } from '@thisux/sveltednd'
 // SERVICES
 import { getDropIndex } from '#lib/client/services/dragDrop.js'
+// ADDRESS
+import { compareStreetNumbers } from '#lib/addresses/streetNumber.js'
 // COMPONENTS
 import { ResourceCard } from '#lib/bits/patterns/cards/resourceCard/index.js'
 // I18N
@@ -125,6 +127,17 @@ function handleDrop(state: DragDropState, targetId: string): void {
   const [item] = next.splice(next.indexOf(dragged.id), 1)
   next.splice(destination, 0, item)
   order = next
+}
+/** Sort the draft list, keeping the editor's current order for equal street numbers.
+ * @returns Nothing. Save address order persists the draft.
+ */
+function sortByStreetNumber(): void {
+  const numbers = new Map(
+    currentAddresses.map(row => [String(row.id), String(row.streetNumber ?? '')]),
+  )
+  order = [...ordered].sort((a, b) =>
+    compareStreetNumbers(numbers.get(a) ?? '', numbers.get(b) ?? ''),
+  )
 }
 /** Save exact immutable heads and reject stale or incomplete address lists. */
 async function saveOrder(clear = false): Promise<void> {
@@ -311,8 +324,8 @@ async function saveOrder(clear = false): Promise<void> {
   {/if}
   {#if canOrder}
     <p class="text-muted-foreground text-xs">
-      Drag addresses into preferred order, then save. The first address has the highest
-      priority.
+      Sort by street number (ranges first) or drag addresses into order, then save. The
+      first address has the highest priority.
     </p>
     <!-- Match Project layer rows: the grip starts dragging and each row owns its insertion gap. -->
     <div
@@ -357,6 +370,12 @@ async function saveOrder(clear = false): Promise<void> {
       {/each}
     </div>
     <div class="flex flex-wrap gap-2">
+      <Button
+        type="button"
+        text={m.relationship_sort_by_number()}
+        disabled={busy || saving || ordered.length < 2}
+        onClick={sortByStreetNumber}
+      />
       <Button
         type="button"
         text={m.relationship_order()}

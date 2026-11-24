@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest'
 // ADDRESS
 import {
+  compareStreetNumbers,
   parseStreetNumber,
   formatStreetNumber,
   streetNumberIssue,
@@ -39,6 +40,20 @@ const examples = [
 ] as const
 
 describe('street-number input, structure, persistence and display', () => {
+  it('sorts ranges first, compares numeric endpoints and keeps unnumbered choices stable', () => {
+    const numbers = ['34A', 'unknown', '32–100', '2', '10A-C', '', '34', '32–40', '32']
+    expect(numbers.sort(compareStreetNumbers)).toEqual([
+      '10A-C',
+      '32–40',
+      '32–100',
+      '2',
+      '32',
+      '34',
+      '34A',
+      'unknown',
+      '',
+    ])
+  })
   it.each(examples)(
     '%s → %s / %s / %s → %s',
     (raw, from, to, connector, expression) => {

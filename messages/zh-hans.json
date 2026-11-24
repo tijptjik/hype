@@ -1890,6 +1890,7 @@
   "relationship_more": "加载更多",
   "relationship_loading": "正在加载关系…",
   "relationship_empty": "暂无关系记录。",
+  "relationship_sort_by_number": "按门牌号码排序",
   "relationship_order": "保存地址排序",
   "relationship_clear_order": "清除地址优先次序",
   "relationship_up": "上移",

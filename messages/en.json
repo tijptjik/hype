@@ -1890,6 +1890,7 @@
   "relationship_more": "Load more",
   "relationship_loading": "Loading relationships…",
   "relationship_empty": "No recorded relationships.",
+  "relationship_sort_by_number": "Sort by street number",
   "relationship_order": "Save address order",
   "relationship_clear_order": "Clear address priorities",
   "relationship_up": "Move up",

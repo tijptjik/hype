@@ -61,6 +61,25 @@ export function parseStreetNumber(input: string): StreetNumberParse {
   return { valid: true, number: { expression, from, to, connector } }
 }
 
+const numberCollator = new Intl.Collator('en', { numeric: true })
+
+/** Compare address choices by range first, then by their numeric endpoints and suffixes.
+ * @param left First street-number expression.
+ * @param right Second street-number expression.
+ * @returns Sort order, with missing or unrecognized numbers tied at the end.
+ */
+export function compareStreetNumbers(left: string, right: string): number {
+  const a = parseStreetNumber(left)
+  const b = parseStreetNumber(right)
+  if (!a.valid || !a.number.from) return b.valid && b.number.from ? 1 : 0
+  if (!b.valid || !b.number.from) return -1
+  return (
+    Number(b.number.connector === '-') - Number(a.number.connector === '-') ||
+    numberCollator.compare(a.number.from, b.number.from) ||
+    numberCollator.compare(a.number.to ?? '', b.number.to ?? '')
+  )
+}
+
 /** Format recognized number syntax while leaving retained, unrecognized evidence intact.
  * @param expression Existing expression. @param from Structured first endpoint.
  * @param to Structured last endpoint. @param connector Range or pair separator.

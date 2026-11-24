@@ -95,12 +95,24 @@ export async function readRelationshipPage(
     key =>
       sql`(SELECT COALESCE(json_extract(v.facts,'$.i18n.en.name'),l.id) FROM location l LEFT JOIN locationRevisionContent v ON v.locationId=l.id WHERE l.id=${canonicalLocationSQL(sql`r.${sql.identifier(key)}`)} ORDER BY v.version DESC LIMIT 1) AS ${sql.identifier(key + 'Label')}`,
   )
-  const addressLabel =
+  // Read the street number separately so building names and unit numbers never affect ranking.
+  const addressFields =
     input.table === 'locationAddress'
-      ? sql`,(SELECT COALESCE(json_extract(a.components,'$.i18n.en.formattedAddress'),a.id) FROM addressRevision a WHERE a.id=r.addressRevisionId) AS addressLabel`
+      ? sql`, COALESCE(json_extract(a.components,'$.i18n.en.formattedAddress'),a.id) AS addressLabel,
+          (SELECT COALESCE(NULLIF(fields.value->>'buildingNumberExpression',''),
+                           NULLIF(fields.value->>'streetNumber',''),
+                           NULLIF(fields.value->>'buildingNumberFrom','') ||
+                             COALESCE(COALESCE(NULLIF(fields.value->>'buildingNumberConnector',''),'-') ||
+                                      NULLIF(fields.value->>'buildingNumberTo',''),''))
+             AS number FROM json_each(a.components,'$.i18n') fields
+           WHERE number IS NOT NULL ORDER BY fields.key != 'en', fields.key LIMIT 1) AS streetNumber`
+      : sql``
+  const addressJoin =
+    input.table === 'locationAddress'
+      ? sql`LEFT JOIN addressRevision a ON a.id=r.addressRevisionId`
       : sql``
   const rows = await db.all<Record<string, unknown>>(
-    sql`SELECT r.*,${sql.join(labels, sql`,`)}${addressLabel} FROM ${sql.identifier(input.table + (input.history ? '' : 'Head'))} r WHERE (${subject}) AND ${scope} AND ${sql.join(visible, sql` AND `)} AND r.id>${input.afterId ?? ''} ORDER BY r.id LIMIT ${limit + 1}`,
+    sql`SELECT r.*,${sql.join(labels, sql`,`)}${addressFields} FROM ${sql.identifier(input.table + (input.history ? '' : 'Head'))} r ${addressJoin} WHERE (${subject}) AND ${scope} AND ${sql.join(visible, sql` AND `)} AND r.id>${input.afterId ?? ''} ORDER BY r.id LIMIT ${limit + 1}`,
   )
   return {
     rows: rows.slice(0, limit).map(({ evidence, provenance, actorId, ...row }) => row),
