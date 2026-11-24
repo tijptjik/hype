@@ -1353,7 +1353,7 @@ function selectDraftLocation(result: {
     return
   }
   draftResultHistoryId = crypto.randomUUID()
-  void goto(page.shallow?.url ?? page.url, {
+  void goto((page.shallow?.url ?? page.url).href, {
     shallow: true,
     state: { ...page.state, draftLocationResult: draftResultHistoryId },
   })
@@ -2253,7 +2253,7 @@ function restoreFeatureCheckpoint(
     saved.resultHistoryId &&
     page.state.draftLocationResult !== saved.resultHistoryId
   ) {
-    void goto(page.shallow?.url ?? page.url, {
+    void goto((page.shallow?.url ?? page.url).href, {
       shallow: true,
       state: { ...page.state, draftLocationResult: saved.resultHistoryId },
     })
@@ -4201,7 +4201,7 @@ function resetNewFeatureFlow(): void {
   mapPartsSuggestion = null
   // Remove the discarded selection's history marker without traversing browser history.
   if (page.state.draftLocationResult) {
-    void goto(page.shallow?.url ?? page.url, {
+    void goto((page.shallow?.url ?? page.url).href, {
       shallow: true,
       replace: true,
       state: { ...page.state, draftLocationResult: undefined },
