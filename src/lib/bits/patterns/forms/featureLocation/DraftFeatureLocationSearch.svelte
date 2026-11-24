@@ -85,6 +85,7 @@ let {
   active,
   allowedLocationKinds: configuredLocationKinds,
   suggestionKinds,
+  initialSearchKinds,
   preferredKind,
   initialMode = 'search',
   searchRequest,
@@ -123,6 +124,8 @@ let {
   active: boolean
   allowedLocationKinds?: readonly string[]
   suggestionKinds?: readonly string[]
+  /** Starting search providers; accepted Location kinds remain independently constrained. */
+  initialSearchKinds?: readonly ('establishment' | 'building' | 'address')[]
   preferredKind?: Result['kind']
   initialMode?: 'search' | 'pin'
   searchRequest?: {
@@ -295,9 +298,10 @@ let includeAddresses = $state(true)
 let includeBuildings = $state(true)
 $effect(() => {
   const kinds =
-    preferredKind && searchKinds.some(kind => kind === preferredKind)
+    initialSearchKinds ??
+    (preferredKind && searchKinds.some(kind => kind === preferredKind)
       ? [preferredKind]
-      : suggestionKinds
+      : suggestionKinds)
   if (kinds)
     untrack(() => {
       fallbackOpen = false
@@ -1316,21 +1320,27 @@ export function restoreProgress(progress: DraftLocationSearchProgress | null): v
   includeShops =
     retainedChoices && progress
       ? progress.includeShops
-      : preferredKind
-        ? preferredKind === 'establishment'
-        : true
+      : initialSearchKinds
+        ? initialSearchKinds.includes('establishment')
+        : preferredKind
+          ? preferredKind === 'establishment'
+          : true
   includeAddresses =
     retainedChoices && progress
       ? progress.includeAddresses
-      : preferredKind
-        ? preferredKind === 'address'
-        : true
+      : initialSearchKinds
+        ? initialSearchKinds.includes('address')
+        : preferredKind
+          ? preferredKind === 'address'
+          : true
   includeBuildings =
     retainedChoices && progress
       ? progress.includeBuildings
-      : preferredKind
-        ? preferredKind === 'building'
-        : true
+      : initialSearchKinds
+        ? initialSearchKinds.includes('building')
+        : preferredKind
+          ? preferredKind === 'building'
+          : true
   fallbackOpen = false
   selected = progress?.selected ?? null
   selectedResultNumber = progress?.selectedResultNumber

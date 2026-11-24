@@ -49,6 +49,26 @@ describe('building suggestions', () => {
     expect(result.rows.map(row => row.buildingSource.id)).toEqual(['near'])
     expect(loadBuildingDetails).not.toHaveBeenCalledWith('far', expect.anything())
   })
+  it('searches the entire selected footprint instead of stopping at the pin radius', async () => {
+    vi.mocked(loadBuildingDetails).mockImplementation(async id => ({
+      id,
+      coordinates: id === 'far' ? [114.16, 22.3] : [114.1501, 22.3],
+      addresses: [],
+    }))
+    const result = await suggestAddressBuildings(address(), 'en', () => true, {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [114.159, 22.299],
+          [114.161, 22.299],
+          [114.161, 22.301],
+          [114.159, 22.301],
+          [114.159, 22.299],
+        ],
+      ],
+    })
+    expect(result.rows.map(row => row.buildingSource.id)).toEqual(['far'])
+  })
   it('prefers a canonical address match over a closer unrelated building', async () => {
     vi.mocked(loadBuildingDetails).mockImplementation(async id => ({
       id,

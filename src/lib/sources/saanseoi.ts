@@ -36,6 +36,31 @@ export function saanseoiOrigin(): string {
   ).replace(/\/$/, '')
 }
 
+/** Resolve local export links through the origin that served the manifest.
+ * @param href Published chunk URL. @param manifestUrl Requested manifest URL.
+ * @returns Chunk URL reachable through the local API, or the unchanged published URL.
+ * @remarks Local exporters emit their internal loopback port behind Caddy. Only known local origins and the same export directory are rewritten; production/CDN links stay intact.
+ */
+export function resolveSourceChunkUrl(href: string, manifestUrl: URL): URL {
+  const resolved = new URL(href, manifestUrl)
+  const localHosts = ['api.atlas.localhost', 'localhost', '127.0.0.1', '[::1]']
+  const directory = manifestUrl.pathname.slice(
+    0,
+    manifestUrl.pathname.lastIndexOf('/') + 1,
+  )
+  if (
+    localHosts.includes(manifestUrl.hostname) &&
+    ['localhost', '127.0.0.1', '[::1]'].includes(resolved.hostname) &&
+    resolved.port === '8793' &&
+    resolved.protocol === 'http:' &&
+    !resolved.username &&
+    !resolved.password &&
+    resolved.pathname.startsWith(directory)
+  )
+    return new URL(resolved.pathname + resolved.search, manifestUrl.origin)
+  return resolved
+}
+
 /** Fetch all JSON chunks atomically, verifying published checksums and counts.
  * @param manifestUrl Projection manifest, including its version/domain/variant.
  * @param schema Record validator.
@@ -84,7 +109,7 @@ export async function fetchSaanseoiProjection<T extends { id: string }>(
   const records: T[] = []
   // Only expose data after every pinned chunk passes integrity and schema validation.
   for (const file of files) {
-    const href = new URL(file.href, url)
+    const href = resolveSourceChunkUrl(file.href, url)
     if (!['http:', 'https:'].includes(href.protocol) || href.username || href.password)
       throw new Error('Invalid source URL')
     const rows = await cache.load(

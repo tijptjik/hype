@@ -14,6 +14,8 @@ import type {
 } from 'maplibre-gl'
 
 export type MapController = {
+  /** Observe explicit map clicks; returns cleanup for the owning picker. */
+  onPointSelect?: (callback: (point: [number, number]) => void) => () => void
   projectToViewport?: (
     coordinates: [number, number],
   ) => { left: number; top: number } | null
@@ -58,6 +60,16 @@ export const createMapController = (
   }
 
   return {
+    onPointSelect: callback => {
+      const map = getMap()
+      if (!map) return () => {}
+      const click = (event: import('maplibre-gl').MapMouseEvent): void =>
+        callback([event.lngLat.lng, event.lngLat.lat])
+      map.on('click', click)
+      return () => {
+        map.off('click', click)
+      }
+    },
     /** Projects a geographic marker into viewport pixels. @param coordinates Marker longitude and latitude. @returns Position including the map element offset, or null before mount. */
     projectToViewport: coordinates => {
       const map = getMap()

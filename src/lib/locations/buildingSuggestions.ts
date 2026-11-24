@@ -17,6 +17,10 @@ import {
 import { localAddressContent } from '#lib/addresses/locationDraft.js'
 import { normalizeNameSearch } from '#lib/addresses/nameSearch.js'
 // DOMAIN
+import {
+  containsBuildingPoint,
+  type SelectedBuilding,
+} from '#lib/map/buildingAddress.js'
 import { locationDistance } from './searchPresentation'
 // TYPES
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
@@ -61,15 +65,17 @@ export function buildingHasAddress(
   })
 }
 
-/** Resolve address suggestions and all building points within fifty metres, including unnamed records.
+/** Resolve address suggestions and unnamed buildings within the discovery radius or selected footprint.
  * @param address Current placement. @param locale Display locale. @param isCurrent Stale request guard.
- * @returns Exact address matches first, otherwise the complete radius result, pinned to one export release.
- * @remarks The cached point index bounds address matching to 100 metres; only when no address matches do we show the 50-metre fallback. Detail reads are batched eight at a time.
+ * @param footprint Optional selected building area; restricts discovery to its complete extent instead of a pin radius.
+ * @returns Exact address matches first, otherwise the complete radius or footprint result, pinned to one export release.
+ * @remarks Without a footprint, the cached point index bounds address matching to 100 metres and fallback to 50 metres. A selected footprint replaces both radius limits. Detail reads are batched eight at a time.
  */
 export async function suggestAddressBuildings(
   address: FeatureAddress,
   locale: LocaleKey,
   isCurrent: () => boolean,
+  footprint?: SelectedBuilding['geometry'],
 ): Promise<{ rows: BuildingSearchResult[]; exact: boolean }> {
   const coordinates = address.coordinates
   const [inventory, streets] = await Promise.all([
@@ -81,7 +87,11 @@ export async function suggestAddressBuildings(
   // Join nearby detail shards only: avoid downloading the full address export for every picker.
   const points = await loadBuildingPoints(inventory.release)
   const nearby = points
-    .filter(point => locationDistance(coordinates, point.coordinates) <= 100)
+    .filter(point =>
+      footprint
+        ? containsBuildingPoint(point.coordinates, footprint)
+        : locationDistance(coordinates, point.coordinates) <= 100,
+    )
     .sort(
       (a, b) =>
         locationDistance(coordinates, a.coordinates) -
@@ -140,7 +150,9 @@ export async function suggestAddressBuildings(
   const withinRadius = all.filter(
     row =>
       row.address.coordinates &&
-      locationDistance(coordinates, row.address.coordinates) <= 50,
+      (footprint
+        ? containsBuildingPoint(row.address.coordinates, footprint)
+        : locationDistance(coordinates, row.address.coordinates) <= 50),
   )
   // Keep one address alternative per physical building, preferring an exact address.
   const rows = [

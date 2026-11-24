@@ -281,7 +281,11 @@ onDestroy(() => {
       {#if section !== 'fields'}
         <div class="grid grid-cols-1 xl:grid-cols-2">
           <section class="min-w-0">
-            <SectionHeader title="Session details" icon={LayersIcon} />
+            <SectionHeader
+              class="relative z-10 shadow-sm"
+              title="Session details"
+              icon={LayersIcon}
+            />
             <div class="grid items-start gap-6 px-6 py-5">
               <TextInput
                 id={inputId + '-code'}
@@ -296,6 +300,7 @@ onDestroy(() => {
             </div>
           </section>
           <FormProjectLayersSection
+            class="[&>header]:relative [&>header]:z-10 [&>header]:shadow-sm"
             title="Layers"
             items={layers.map(layer => ({
               id: layer.id,
@@ -318,7 +323,12 @@ onDestroy(() => {
       {/if}
       {#if section !== 'fields'}
         <section>
-          <SectionHeader title="Feature fields" icon={TagIcon} right={layerScope} />
+          <SectionHeader
+            class="relative z-10 shadow-sm"
+            title="Feature fields"
+            icon={TagIcon}
+            right={layerScope}
+          />
           <div class="mx-6 flex min-w-0 flex-col gap-3 py-5">
             {#each featureFields as key}
               {@const label = key === 'featureType' ? 'Feature type' : labels[key]}
@@ -458,6 +468,7 @@ onDestroy(() => {
       {#if section !== 'core' && (data.properties.length || section === 'fields')}
         <section>
           <SectionHeader
+            class="relative z-10 shadow-sm"
             title="Project properties"
             icon={PropertiesIcon}
             right={layerScope}
@@ -467,7 +478,9 @@ onDestroy(() => {
               {@const own = selected
                 ? selected.overrides.properties[property.id]
                 : settings.properties[property.id]}
-              <PropertyCard.Root class="min-w-0 flex-wrap">
+              <PropertyCard.Root
+                class="grid! min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_18rem_20rem]"
+              >
                 <PropertyCard.Body
                   name={property.i18n?.en?.label || property.key}
                   scopeLabel={property.scope}
@@ -477,35 +490,7 @@ onDestroy(() => {
                       ? 'hub'
                       : 'project'}
                 />
-                <div class="flex flex-wrap gap-2">
-                  {#each ['isVisible', 'isRecordable'] as key}
-                    <label class="flex flex-col text-xs"
-                      >{key === 'isVisible' ? 'Visible' : 'Recordable'}
-                      <select
-                        class={control}
-                        {disabled}
-                        value={own?.[key as 'isVisible' | 'isRecordable'] === undefined
-                          ? selected
-                            ? 'inherit'
-                            : 'false'
-                          : String(own[key as 'isVisible' | 'isRecordable'])}
-                        onchange={e =>
-                          setProperty(
-                            property.id,
-                            key as 'isVisible' | 'isRecordable',
-                            e.currentTarget.value,
-                          )}
-                      >
-                        {#if selected}
-                          <option value="inherit">Inherit</option>
-                        {/if}
-                        <option value="true">Yes</option>
-                        <option value="false">No</option>
-                      </select>
-                    </label>
-                  {/each}
-                </div>
-                <div class="flex flex-col gap-1 text-xs">
+                <div class="flex min-w-0 flex-col gap-1 px-4 text-xs">
                   {#if selected}
                     <label
                       ><input
@@ -528,8 +513,10 @@ onDestroy(() => {
                     >
                   {/if}
                   {#if !selected || own?.defaultValue !== undefined}
-                    <label for={`${inputId}-property-default-${property.id}`}
-                      >Default value
+                    <label
+                      for={`${inputId}-property-default-${property.id}`}
+                      class="grid min-w-0 grid-cols-[3rem_minmax(0,1fr)] items-center gap-3"
+                      ><span class="text-muted-foreground">Default</span>
                       {#if property.values?.length && property.cardinality === 'many'}
                         <select
                           id={`${inputId}-property-default-${property.id}`}
@@ -618,6 +605,32 @@ onDestroy(() => {
                     </label>
                   {/if}
                 </div>
+                <div
+                  class="border-border/60 grid grid-cols-2 items-center gap-4 border-l px-4 py-2"
+                >
+                  {#each ['isVisible', 'isRecordable'] as key}
+                    <label
+                      class="flex items-center justify-between gap-3 text-xs"
+                      for={`${inputId}-${property.id}-${key}`}
+                    >
+                      <span>{key === 'isVisible' ? 'Visible' : 'Recordable'}</span>
+                      <Switch
+                        id={`${inputId}-${property.id}-${key}`}
+                        size="sm"
+                        {disabled}
+                        states={selected ? 3 : 2}
+                        checked={own?.[key as 'isVisible' | 'isRecordable'] ??
+                          (selected ? null : false)}
+                        onCheckedChange={value =>
+                          setProperty(
+                            property.id,
+                            key as 'isVisible' | 'isRecordable',
+                            value === null ? 'inherit' : String(value),
+                          )}
+                      />
+                    </label>
+                  {/each}
+                </div>
               </PropertyCard.Root>
             {/each}
           </PropertyCard.Wrapper>
@@ -630,7 +643,11 @@ onDestroy(() => {
       {/if}
       {#if section !== 'fields'}
         <section>
-          <SectionHeader title="Title template" icon={TextIcon} />
+          <SectionHeader
+            class="relative z-10 shadow-sm"
+            title="Title template"
+            icon={TextIcon}
+          />
           <div class="min-w-0 space-y-3 px-6 py-5">
             {#if selected}
               <label

@@ -166,7 +166,7 @@ onMount(() => void load())
 <div
   class={sessionId
     ? 'w-full min-w-0'
-    : 'mx-auto w-full min-w-0 max-w-5xl px-4 py-6 sm:px-6'}
+    : 'mx-auto w-full max-w-5xl min-w-0 px-4 py-6 sm:px-6'}
 >
   {#if !sessionId}
     <h1 class="text-2xl font-semibold">Field Sessions</h1>
@@ -182,6 +182,7 @@ onMount(() => void load())
       class="bg-base-200 mt-6 h-64 animate-pulse rounded-xl"
       aria-busy="true"
       aria-label="Loading field sessions"
+      role="status"
     ></div>
   {:else if current}
     {#key current.id}
@@ -201,6 +202,7 @@ onMount(() => void load())
         </div>
         {#if facet === 'locations'}
           <ResearchLocations
+            projectId={current.projectId}
             sessionId={current.id}
             revision={current.revision}
             disabled={busy ||

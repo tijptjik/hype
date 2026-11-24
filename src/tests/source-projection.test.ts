@@ -1,5 +1,9 @@
 import { expect, it } from 'vitest'
-import { fetchSaanseoiProjection, sourceNameSchema } from '../lib/sources/saanseoi'
+import {
+  fetchSaanseoiProjection,
+  resolveSourceChunkUrl,
+  sourceNameSchema,
+} from '../lib/sources/saanseoi'
 
 async function fixture(tamper = false) {
   const records = [1, 2].map(id => ({
@@ -94,4 +98,24 @@ it('uses the matching ID shard and rejects a different release', async () => {
       { id: '2', release: 'wrong' },
     ),
   ).rejects.toThrow('release mismatch')
+})
+
+it('resolves internal exporter links through the local manifest origin', () => {
+  const manifest = new URL('http://api.atlas.localhost/buildings/names/manifest.json')
+  expect(
+    resolveSourceChunkUrl(
+      'http://127.0.0.1:8793/buildings/names/chunk.json?release=one',
+      manifest,
+    ).href,
+  ).toBe('http://api.atlas.localhost/buildings/names/chunk.json?release=one')
+  for (const href of [
+    'https://cdn.example/buildings/names/chunk.json',
+    'http://127.0.0.1:8793/other/chunk.json',
+  ])
+    expect(resolveSourceChunkUrl(href, manifest).href).toBe(href)
+  const publicManifest = new URL(
+    'https://api.saanseoi.hk/buildings/names/manifest.json',
+  )
+  const internal = 'http://127.0.0.1:8793/buildings/names/chunk.json'
+  expect(resolveSourceChunkUrl(internal, publicManifest).href).toBe(internal)
 })
