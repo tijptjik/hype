@@ -17,10 +17,10 @@ describe('atomic property value appends', () => {
           PRAGMA foreign_keys=ON;
           CREATE TABLE property(id TEXT PRIMARY KEY);
           CREATE TABLE propertyValue(id TEXT PRIMARY KEY, propertyId TEXT NOT NULL REFERENCES property(id), rank INTEGER NOT NULL, value TEXT);
-          CREATE TABLE propertyValueI18n(propertyValueId TEXT NOT NULL REFERENCES propertyValue(id),locale TEXT NOT NULL,value TEXT NOT NULL,valueGen INTEGER NOT NULL,PRIMARY KEY(propertyValueId,locale));
+          CREATE TABLE propertyValueI18n(propertyValueId TEXT NOT NULL REFERENCES propertyValue(id),locale TEXT NOT NULL,value TEXT NOT NULL,valueGen INTEGER NOT NULL,isAutomaticOnly INTEGER NOT NULL DEFAULT 0,autoTranslated TEXT,translationProvenance TEXT,PRIMARY KEY(propertyValueId,locale));
           INSERT INTO property VALUES ('target'),('outside');
           INSERT INTO propertyValue VALUES ('old','target',7,'existing'),('foreign','outside',8,'outside');
-          INSERT INTO propertyValueI18n VALUES ('old','en','Existing',0),('foreign','en','Outside',0);
+          INSERT INTO propertyValueI18n(propertyValueId,locale,value,valueGen) VALUES ('old','en','Existing',0),('foreign','en','Outside',0);
         `)
         if (mode === 'value')
           sqlite.exec(

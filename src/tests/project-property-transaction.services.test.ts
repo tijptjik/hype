@@ -654,7 +654,7 @@ describe('local project property value translations', () => {
 
   it('rejects a failed translation write and restores the entire prior subtree', async () => {
     sqlite.exec(`INSERT INTO propertyValue VALUES ('existing', 'local', 0, 'original');
-      INSERT INTO propertyValueI18n VALUES ('existing', 'en', 'Original', 0);
+      INSERT INTO propertyValueI18n(propertyValueId,locale,value,valueGen) VALUES ('existing', 'en', 'Original', 0);
       INSERT INTO propertyI18n (propertyId, locale, label) VALUES ('local', 'en', 'Original label');
       CREATE TRIGGER reject_translation BEFORE INSERT ON propertyValueI18n
       WHEN NEW.value = 'Rejected'
@@ -843,7 +843,7 @@ describe('local project property value translations', () => {
 
   it('clears only local properties and cascades child deletions atomically', async () => {
     sqlite.exec(`INSERT INTO propertyValue VALUES ('local-value', 'local', 0, 'local'), ('foreign', 'old', 0, 'foreign');
-      INSERT INTO propertyValueI18n VALUES ('local-value', 'en', 'Local', 0), ('foreign', 'en', 'Foreign', 0)`)
+      INSERT INTO propertyValueI18n(propertyValueId,locale,value,valueGen) VALUES ('local-value', 'en', 'Local', 0), ('foreign', 'en', 'Foreign', 0)`)
     expect(await upsertProjectProperties(db, [], 'project')).toEqual([])
     expect(propertySnapshot().values.map(row => row.id)).toEqual(['foreign'])
     expect(

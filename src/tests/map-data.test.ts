@@ -58,7 +58,7 @@ describe('map search data', () => {
     expect(await searchAllAsync('Point only', app)).toEqual([])
   })
 
-  it('keeps generated feature titles visible in search results', async () => {
+  it('uses the published fallback for a feature with an unaccepted generated title', async () => {
     const appCtx = {
       getUserPreferences: () => ({
         fallbackLocales: [],
@@ -76,9 +76,10 @@ describe('map search data', () => {
                 id: 'feature-mong',
                 i18n: {
                   en: {
-                    title: 'Mong Kok Hotel',
+                    title: 'Unverified title',
                     titleGen: true,
                   },
+                  zhHant: { title: 'Mong Kok Hotel', titleGen: false },
                 },
               },
             ],

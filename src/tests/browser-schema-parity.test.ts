@@ -12,6 +12,7 @@ import {
   user,
   image,
 } from '#lib/db/schema/index.js'
+import { automaticTranslationReadFields } from '#lib/i18n/automaticSchema.js'
 import { ContentTagInput } from '#lib/i18n/contentRecords.js'
 import { valueContract } from '#lib/db/zod/schema/property.form.js'
 import {
@@ -32,12 +33,16 @@ import {
   OrganisationRoleReadSchema,
 } from '#lib/db/zod/schema/organisation.profile.js'
 
+// Browser reads also accept partial projections and validate the JSON metadata from SQLite.
 const oldProperty = createSelectSchema(property)
 const contracts = [
   [
     'organisation translation',
     OrganisationI18nReadSchema,
-    createSelectSchema(organisationI18n),
+    createSelectSchema(organisationI18n).extend({
+      ...automaticTranslationReadFields,
+      locale: ContentTagInput,
+    }),
   ],
   [
     'organisation role',
@@ -97,18 +102,27 @@ const contracts = [
   [
     'property translation',
     PropertyI18nRecord,
-    createSelectSchema(propertyI18n).extend({ locale: ContentTagInput }),
+    createSelectSchema(propertyI18n).extend({
+      ...automaticTranslationReadFields,
+      locale: ContentTagInput,
+    }),
   ],
   [
     'property value translation',
     PropertyValueI18nRecord,
-    createSelectSchema(propertyValueI18n).extend({ locale: ContentTagInput }),
+    createSelectSchema(propertyValueI18n).extend({
+      ...automaticTranslationReadFields,
+      locale: ContentTagInput,
+    }),
   ],
   [
     'feature translation',
     FeatureI18nBase,
     createSelectSchema(featureI18n).extend({
+      ...automaticTranslationReadFields,
       locale: ContentTagInput,
+      baseName: z.string().nullish(),
+      nameOverride: z.string().nullish(),
       addressProperties: z.custom().nullish(),
     }),
   ],

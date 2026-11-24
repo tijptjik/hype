@@ -79,8 +79,8 @@ function addPhoto(id: string, featureId: string, owner = 'target'): void {
 it('reads 20 map-compatible features in one statement with bounded parameters', async () => {
   const ids = Array.from({ length: 20 }, (_, i) => `f${i}`)
   for (const id of ids) addFeature(id)
-  sqlite.exec(`INSERT INTO featureI18n (featureId,locale,title,titleGen,displayAddress,displayAddressGen,descriptionGen)
-    VALUES ('f0','en','A place',0,'Street address',0,0)`)
+  sqlite.exec(`INSERT INTO featureI18n (featureId,locale,title,titleGen,displayAddress,displayAddressGen,descriptionGen,isAutomaticOnly)
+    VALUES ('f0','en','A place',0,'Street address',0,0,0)`)
   const rows = await readUserContributedFeatures(db, { ...params, ids })
   expect(rows).toHaveLength(20)
   expect(rows.find(row => row.id === 'f0')).toMatchObject({
@@ -99,11 +99,11 @@ it('preserves translated property definitions and options in contribution pages'
     INSERT INTO property
       (id,scope,type,key,dataType,dateResolution,timeMaxHour,cardinality,presentation,audience,component,isTranslatable,isUserContributable,isDefaultEnabled,createdAt,modifiedAt)
       VALUES ('category','project','classifier','category','text','day',24,'one','text','public','SelectField',1,1,1,'2026-01-01','2026-01-01');
-    INSERT INTO propertyI18n (propertyId,locale,label,labelGen,placeholderGen)
-      VALUES ('category','en','Category',0,0);
+    INSERT INTO propertyI18n (propertyId,locale,label,labelGen,placeholderGen,isAutomaticOnly)
+      VALUES ('category','en','Category',0,0,0);
     INSERT INTO propertyValue (id,propertyId,rank) VALUES ('bookshop','category',0);
-    INSERT INTO propertyValueI18n (propertyValueId,locale,value,valueGen)
-      VALUES ('bookshop','en','Bookshop',0);
+    INSERT INTO propertyValueI18n (propertyValueId,locale,value,valueGen,isAutomaticOnly)
+      VALUES ('bookshop','en','Bookshop',0,0);
     INSERT INTO featureProperty (featureId,propertyId,propertyValueId)
       VALUES ('translated','category','bookshop');
   `)

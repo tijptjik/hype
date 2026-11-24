@@ -47,7 +47,7 @@ afterEach(() => {
 })
 
 function fixture() {
-  const store = setupLifecycleDatabase()
+  const store = setupLifecycleDatabase(false, true, undefined, 'current-taxonomy')
   stores.push(store)
   for (const [name, table] of [
     ['feature', feature],
@@ -66,7 +66,7 @@ function fixture() {
         )
   }
   store.sqlite.exec(`CREATE UNIQUE INDEX feature_locale ON featureI18n(featureId,locale);
-    CREATE TABLE featurePropertyI18n(featureId TEXT,propertyId TEXT,locale TEXT,value TEXT,valueGen INTEGER,PRIMARY KEY(featureId,propertyId,locale));
+    CREATE TABLE featurePropertyI18n(featureId TEXT,propertyId TEXT,locale TEXT,value TEXT,valueGen INTEGER,isAutomaticOnly INTEGER NOT NULL DEFAULT 0,autoTranslated TEXT,translationProvenance TEXT,PRIMARY KEY(featureId,propertyId,locale));
     INSERT INTO property(id,key,audience) VALUES ('prop','test','public');`)
   const save = async (id: string, i18n: Record<string, any>, properties?: any[]) => {
     const statements = prepareFeatureFormRelations(
@@ -452,6 +452,15 @@ describe('single-field translation provider', () => {
     expect(await translateContentField(input, 'region', 'key')).toEqual({
       status: 'translated',
       text: '喫茶店',
+      automatic: {
+        value: '喫茶店',
+        sourceText: 'Cafe',
+        sourceLocale: 'en',
+        provider: 'azure-translator',
+        sourceHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        model: null,
+        generatedAt: expect.any(String),
+      },
       source: 'en',
       target: 'ja',
     })

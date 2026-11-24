@@ -97,9 +97,9 @@ it('rebuilds fallback titles when user locale preferences change', () => {
     zhHant: { title: 'Traditional title' },
     zhHans: { title: 'Simplified title' },
   } as never
-  input.userPreferences = { fallbackLocales: ['zh-hant', 'zh-hans'] } as UserPreferences
+  input.userPreferences = { contentLocale: 'zh-Hant' } as UserPreferences
   expect(getCachedFeatureRowModel(input).title).toBe('Traditional title')
-  input.userPreferences = { fallbackLocales: ['zh-hans', 'zh-hant'] } as UserPreferences
+  input.userPreferences = { contentLocale: 'zh-Hans' } as UserPreferences
   expect(getCachedFeatureRowModel(input).title).toBe('Simplified title')
 })
 

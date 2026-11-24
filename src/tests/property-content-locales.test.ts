@@ -83,9 +83,9 @@ it('persists added languages and legacy Chinese tags without overwriting English
   const { db, sqlite } = publicationSqlite({})
   try {
     sqlite.exec(`CREATE TABLE property(id TEXT PRIMARY KEY);
-      CREATE TABLE propertyI18n(propertyId TEXT,locale TEXT,label TEXT,labelGen INTEGER,placeholder TEXT,placeholderGen INTEGER);
+      CREATE TABLE propertyI18n(propertyId TEXT,locale TEXT,label TEXT,labelGen INTEGER,placeholder TEXT,placeholderGen INTEGER,isAutomaticOnly INTEGER NOT NULL DEFAULT 0,autoTranslated TEXT,translationProvenance TEXT);
       CREATE TABLE propertyValue(id TEXT PRIMARY KEY,propertyId TEXT,rank INTEGER,value TEXT);
-      CREATE TABLE propertyValueI18n(propertyValueId TEXT,locale TEXT,value TEXT,valueGen INTEGER,PRIMARY KEY(propertyValueId,locale));
+      CREATE TABLE propertyValueI18n(propertyValueId TEXT,locale TEXT,value TEXT,valueGen INTEGER,isAutomaticOnly INTEGER NOT NULL DEFAULT 0,autoTranslated TEXT,translationProvenance TEXT,PRIMARY KEY(propertyValueId,locale));
       INSERT INTO property VALUES ('religion');`)
     const labelRows = PropertyI18nByLocaleFormData.parse({
       en: { label: 'Religion' },
@@ -132,8 +132,8 @@ it('persists added languages and legacy Chinese tags without overwriting English
 it('omits empty locale controls and removes cleared translations while retaining placeholder-only text', async () => {
   const { db, sqlite } = publicationSqlite({})
   try {
-    sqlite.exec(`CREATE TABLE propertyI18n(propertyId TEXT,locale TEXT,label TEXT,labelGen INTEGER,placeholder TEXT,placeholderGen INTEGER);
-      CREATE TABLE propertyValueI18n(propertyValueId TEXT,locale TEXT,value TEXT,valueGen INTEGER);`)
+    sqlite.exec(`CREATE TABLE propertyI18n(propertyId TEXT,locale TEXT,label TEXT,labelGen INTEGER,placeholder TEXT,placeholderGen INTEGER,isAutomaticOnly INTEGER NOT NULL DEFAULT 0,autoTranslated TEXT,translationProvenance TEXT);
+      CREATE TABLE propertyValueI18n(propertyValueId TEXT,locale TEXT,value TEXT,valueGen INTEGER,isAutomaticOnly INTEGER NOT NULL DEFAULT 0,autoTranslated TEXT,translationProvenance TEXT);`)
     await createI18n(
       db as unknown as Database,
       {
@@ -165,7 +165,9 @@ it('omits empty locale controls and removes cleared translations while retaining
     expect(sqlite.prepare('SELECT locale FROM propertyI18n').all()).toEqual([
       { locale: 'en' },
     ])
-    sqlite.exec("INSERT INTO propertyValueI18n VALUES ('v','ja','古い',0)")
+    sqlite.exec(
+      "INSERT INTO propertyValueI18n(propertyValueId,locale,value,valueGen) VALUES ('v','ja','古い',0)",
+    )
     await updatePropertyValueI18n(
       db as unknown as Database,
       {
