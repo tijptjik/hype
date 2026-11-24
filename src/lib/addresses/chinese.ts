@@ -1,27 +1,19 @@
 // THIRD-PARTY
 import { ConverterBuilder } from 'opencc-js/core'
 import * as cn2t from 'opencc-js/preset/cn2t'
-import * as t2cn from 'opencc-js/preset/t2cn'
+// I18N
+import { simplifiedChinese } from './simplifiedChinese.js'
 // TYPES
 import type { LocaleKey } from '#lib/types.js'
 
-// Keep the exact OpenCC normalization and segmentation rules, but ship only our two locales.
+export { simplifiedChinese }
+
+// Keep the exact OpenCC normalization and segmentation rules for the reverse conversion.
 const Converter = ConverterBuilder({
-  from: { hk: t2cn.from.hk, cn: cn2t.from.cn },
-  to: { cn: t2cn.to.cn, hk: cn2t.to.hk },
-  configs: { hk2s: t2cn.configs.hk2s, s2hk: cn2t.configs.s2hk },
+  from: { cn: cn2t.from.cn },
+  to: { hk: cn2t.to.hk },
+  configs: { s2hk: cn2t.configs.s2hk },
 })
-
-let simplify: ReturnType<typeof Converter> | undefined
-
-/** Convert Traditional Chinese presentation text without modifying source evidence.
- * @param value Published Traditional Chinese text.
- * @returns Simplified Chinese characters and vocabulary.
- */
-export function simplifiedChinese(value: string): string {
-  simplify ??= Converter({ from: 'hk', to: 'cn' })
-  return simplify(value)
-}
 
 /** Read a published name, preferring Chinese script fallback before English.
  * @param names Published names keyed by locale tag. @param locale Requested display language.
