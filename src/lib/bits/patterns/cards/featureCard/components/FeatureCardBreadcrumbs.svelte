@@ -9,6 +9,8 @@ import { m } from '#lib/i18n.js'
 // CONTEXT
 import { getSurfaceCtx } from '#lib/context/resourceView.svelte.js'
 import { getCardCtx } from '#lib/context/card.svelte.js'
+// NAVIGATION
+import { getFeatureBreadcrumbHierarchy } from '#lib/navigation/featureBreadcrumbs.js'
 // AUTH
 import { hasDurableAccount, requestAccountUpgrade } from '#lib/auth/upgrade.js'
 // ENUMS
@@ -55,8 +57,7 @@ $effect(() => {
 
   hierarchyLoadErrorFeatureId = null
 
-  void appCtx
-    .getHierarchy(resolvedFeature)
+  void getFeatureBreadcrumbHierarchy(resolvedFeature, appCtx)
     .then(hierarchy => {
       if (!isCurrent) return
       resolvedHierarchy = hierarchy
@@ -138,6 +139,7 @@ const actionItems = [
       Boolean(organisationName || projectName),
     )}
     <div
+      aria-busy={resolvedHierarchyFeatureId !== feature.id}
       class="pointer-events-auto flex w-full items-start justify-between bg-(--theme-panel) px-[var(--feature-card-breadcrumbs-padding)] py-[var(--feature-card-content-gap)]"
     >
       {#key feature.id}
