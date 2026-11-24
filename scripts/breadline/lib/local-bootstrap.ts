@@ -14,14 +14,40 @@ import { buildSyncSql } from '../../sync-map-styles'
 // 2. LOCAL APPLICATION SETUP
 // ---
 
+// These data scripts seed or amend specific production collections. A clean local
+// database has no such collection or contributor IDs. Keep them out of its applied ledger.
+const productionData = new Set([
+  '0028_seed_breadline_layers.sql',
+  '0034_seed_eln_project_properties.sql',
+  '0035_seed_eln_book_features.sql',
+  '0036_seed_eln_book_images.sql',
+  '0037_seed_foodaccess_base_entities.sql',
+  '0038_seed_foodaccess_project_properties.sql',
+  '0039_seed_foodaccess_layers.sql',
+  '0040_seed_foodaccess_features.sql',
+  '0041_seed_foodaccess_feature_properties.sql',
+  '0042_seed_eln_2025_features.sql',
+  '0043_seed_eln_2024_spots.sql',
+  '0046_set_ztoryhome_display_address.sql',
+  '0099_offboard_farmthecity.sql',
+  '0127_eln_sourced_backfill.sql',
+  '0128_eln_edition_order.sql',
+  '0131_default_map_descriptions.sql',
+  '0152_historical_layer_descriptions.sql',
+  '0201_neon_contributor_attribution.sql',
+  '0204_independent_bookstores_contributor_attribution.sql',
+  '0207_former_bookstore_occupancy.sql',
+  '0223_breadline_mtr_paid_area.sql',
+])
+
 /**
  * Create a clean source-derived local schema and replay applicable migrations in order.
  * @param db Empty, disposable SQLite database; never a populated/live destination.
  * @param root Repository root containing the versioned baseline and migrations.
  * @returns Input hashes and applied migration names for the private rebuild receipt.
- * @remarks Historical seed migrations require two hub IDs and a temporary user ID.
+ * @remarks Historical schema and catalogue migrations require the local ownership scope and a temporary user ID.
  * This bootstrap supplies only those references, never old users, credentials or content.
- * The reviewed bookstore data migration remains pending until the lifecycle cutover.
+ * Production collection data scripts are recorded separately from applied schema migrations.
  */
 export function bootstrapLocalDatabase(
   db: Database,
@@ -48,6 +74,8 @@ export function bootstrapLocalDatabase(
       ('4Jsk5LngvFZq','hkghostsigns','hkghostsigns.com'),
       ('Zmr0egfhmvs-','core','hype.hk'),
       ('breadlineHub','breadline','breadline.hk');
+    INSERT INTO organisation(id,code,hubId,isPublished) VALUES ('hkfoodworks1','hkfoodworks','breadlineHub',1);
+    INSERT INTO project(id,code,organisationId,isPublished) VALUES ('breadlinePrj','breadline','hkfoodworks1',1);
     INSERT INTO user(id,name,email,createdAt,updatedAt) VALUES
       ('qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM','Local bootstrap',NULL,1,1);`)
   const migrations: Array<{ name: string; sha256: string }> = []
@@ -57,24 +85,28 @@ export function bootstrapLocalDatabase(
     .filter(name => name.endsWith('.sql'))
     .sort()) {
     const sql = readFileSync(resolve(root, 'migrations', name), 'utf8')
-    // This production-data migration requires accepted Feature heads and reviewed records.
-    if (name === '0207_former_bookstore_occupancy.sql') {
+    // Keep the original SQL hash in the receipt for each inapplicable collection update.
+    if (productionData.has(name)) {
       deferred.push({ name, sha256: createHash('sha256').update(sql).digest('hex') })
       continue
     }
     const disablesForeignKeys = /PRAGMA\s+foreign_keys\s*=\s*(OFF|0|false)/i.test(sql)
     db.exec(disablesForeignKeys ? 'PRAGMA foreign_keys=OFF' : 'PRAGMA foreign_keys=ON')
-    db.transaction(() => {
-      // An intentional comment-only migration still needs a migration-ledger entry.
-      if (
-        sql
-          .replace(/--[^\n]*/g, '')
-          .replace(/\/\*[\s\S]*?\*\//g, '')
-          .trim()
-      )
-        db.exec(sql)
-      db.query('INSERT INTO d1_migrations(name) VALUES (?)').run(name)
-    })()
+    try {
+      db.transaction(() => {
+        // An intentional comment-only migration still needs a migration-ledger entry.
+        if (
+          sql
+            .replace(/--[^\n]*/g, '')
+            .replace(/\/\*[\s\S]*?\*\//g, '')
+            .trim()
+        )
+          db.exec(sql)
+        db.query('INSERT INTO d1_migrations(name) VALUES (?)').run(name)
+      })()
+    } catch (error) {
+      throw new Error(`Local bootstrap migration failed: ${name}`, { cause: error })
+    }
     db.exec('PRAGMA foreign_keys=ON')
     migrations.push({ name, sha256: createHash('sha256').update(sql).digest('hex') })
   }
@@ -110,11 +142,6 @@ export function seedLocalApplication(db: Database): void {
       'qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM',
     )
     db.query('DELETE FROM user WHERE id=?').run('qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM')
-    db.exec(
-      "INSERT INTO organisation(id,code,hubId,isPublished) VALUES ('hkfoodworks1','hkfoodworks','breadlineHub',1)",
-    )
-    db.exec(`INSERT INTO project(id,code,organisationId,isPublished,capabilities)
-      VALUES ('breadlinePrj','breadline','hkfoodworks1',1,'{"manageBakeries":true,"manageVolunteers":true,"manageDropOffs":true}')`)
     const hubs = [
       { id: 'Zmr0egfhmvs-', name: 'HYPE' },
       { id: '4Jsk5LngvFZq', name: 'HK Ghost Signs' },
