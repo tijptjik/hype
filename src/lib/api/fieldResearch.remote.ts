@@ -132,7 +132,7 @@ export const getResearchLayers = guardedQuery(
 )
 
 /** Browse retained sessions with a stable identity cursor.
- * @param input Optional cursor, name search, creator/destination filters and sort order. @returns A bounded session page with layer and creator display metadata.
+ * @param input Optional cursor, name search, creator/destination filters and sort order. @returns A bounded session page with record counts and project, layer and creator display metadata.
  */
 export const getResearchSessions = guardedQuery(
   z.object({
@@ -158,6 +158,10 @@ export const getResearchSessions = guardedQuery(
       .select({
         ...researchSessionMetadata,
         totalCount: sql<number>`count(*) over()`,
+        recordCount: sql<number>`(SELECT count(*) FROM fieldResearchRecord WHERE sessionId=fieldResearchSession.id)`,
+        projectName: sql<
+          string | null
+        >`(SELECT name FROM projectI18n WHERE projectId=fieldResearchSession.projectId ORDER BY locale='en' DESC LIMIT 1)`,
         layerName: sql<
           string | null
         >`(SELECT name FROM layerI18n WHERE layerId=fieldResearchSession.layerId ORDER BY locale='en' DESC LIMIT 1)`,
