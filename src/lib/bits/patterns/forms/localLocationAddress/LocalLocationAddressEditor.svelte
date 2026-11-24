@@ -1181,13 +1181,15 @@ $effect(() => {
       }}
     >
       {#snippet map()}
-        {@const indoorSource = place.indoorSource}
+        {@const indoorMap = place.indoorSource?.href
+          ? place.indoorSource
+          : place.buildingInterior}
         <div
           class="grid h-full min-h-0 min-w-0"
-          class:grid-cols-2={Boolean(place.indoorSource?.href)}
+          class:grid-cols-2={Boolean(indoorMap)}
           data-location-profile-maps
         >
-          {#if indoorSource?.href}
+          {#if indoorMap}
             <div
               class="border-border relative min-h-0 min-w-0 overflow-hidden border-r"
               data-location-indoor-map
@@ -1196,7 +1198,8 @@ $effect(() => {
                 {#snippet children(expanded)}
                   <LocationIndoorMap
                     {expanded}
-                    source={indoorSource}
+                    source={indoorMap}
+                    locationId={place.id}
                     contextMap={numberMapController}
                   />
                 {/snippet}
@@ -1213,10 +1216,8 @@ $effect(() => {
             >
               {#snippet children(expanded)}
                 <MapPrimitive
-                  premisesMapId={place.indoorSource?.href
-                    ? place.indoorSource.mapId
-                    : undefined}
-                  initialZoom={place.indoorSource?.href ? 18 : 20}
+                  premisesMapId={indoorMap?.mapId}
+                  initialZoom={indoorMap ? 18 : 20}
                   onMapReady={controller => (numberMapController = controller)}
                   coordinates={point}
                   addressMeta={{ address }}

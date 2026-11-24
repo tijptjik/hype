@@ -6,6 +6,8 @@ import ContentSkeleton from '#lib/bits/custom/skeleton/ContentSkeleton.svelte'
 import StationScene from '#lib/bits/patterns/station/StationScene.svelte'
 import StationIndexes from '#lib/bits/patterns/station/StationIndexes.svelte'
 import StationIdentity from '#lib/bits/patterns/station/StationIdentity.svelte'
+// API
+import { getBuildingInteriorPreview } from '#lib/api/locationInterior.remote.js'
 // DOMAIN
 import { StationState } from '#lib/indoor/station.svelte.js'
 import { loadPremisesCatalogue } from '#lib/indoor/registry.js'
@@ -15,10 +17,14 @@ import type { MapController } from '#lib/map/controller.js'
 
 let {
   source,
+  locationId,
   contextMap,
   expanded = false,
 }: {
-  source: NonNullable<LocationResource['indoorSource']>
+  source: NonNullable<
+    LocationResource['indoorSource'] | LocationResource['buildingInterior']
+  >
+  locationId: string
   contextMap: MapController | null
   expanded?: boolean
 } = $props()
@@ -64,35 +70,61 @@ $effect(() => {
 
 // Keep the admin preview independent of the public map's navigation and session.
 $effect(() => {
-  const { mapId, polygonId } = source
-  retry
+  const target = source
+  const partId = locationId
+  const attempt = retry
   const next = new StationState(() => null, false)
-  scene = next
+  scene = null
   failed = false
   let cancelled = false
-  void loadPremisesCatalogue()
-    .then(async catalogue => {
+  async function load(): Promise<void> {
+    if ('buildingId' in target) {
+      const query = getBuildingInteriorPreview({
+        locationId: target.buildingId,
+        hash: target.hash,
+      })
+      if (attempt) await query.refresh()
+      const data = await query
       if (cancelled) return
-      const map = catalogue.find(entry => entry.id === mapId)
+      next.loadDraft(data)
+      // Match only saved canonical associations. Unmapped parts open the building's default floor.
+      const unit = next.entries.find(
+        entry => entry.feature.properties.canonical_location_id === partId,
+      )
+      const level = data.level_polygon.features.find(
+        feature => feature.properties.canonical_location_id === partId,
+      )
+      if (unit) next.select(unit)
+      else if (level) next.openFloor(String(level.properties.level_id))
+    } else {
+      const catalogue = await loadPremisesCatalogue()
+      if (cancelled) return
+      const map = catalogue.find(entry => entry.id === target.mapId)
       if (!map) throw new Error('Indoor map unavailable')
-      await next.open(map.code, polygonId, false)
-      if (!cancelled) failed = Boolean(next.error || !next.data)
-    })
-    .catch(() => {
-      if (!cancelled) failed = true
-    })
+      await next.open(map.code, target.polygonId, false)
+    }
+    if (cancelled) return
+    if (next.error || !next.data) throw new Error('Indoor map unavailable')
+    const { floor, selected, exploded } = next
+    restoreSelection = () => {
+      next.openFloor(floor)
+      if (selected) next.select(selected)
+      next.exploded = exploded
+    }
+    scene = next
+  }
+  void load().catch(() => {
+    if (!cancelled) failed = true
+  })
   return () => {
     cancelled = true
     untrack(() => next.close(false))
   }
 })
 // Collapsing returns the preview to the profile's own building part.
+let restoreSelection: () => void = () => {}
 $effect(() => {
-  const current = scene
-  if (!expanded && current?.data && !current.loading) {
-    const polygonId = source.polygonId
-    untrack(() => void current.open(current.code, polygonId, false))
-  }
+  if (!expanded && scene) untrack(restoreSelection)
 })
 </script>
 
