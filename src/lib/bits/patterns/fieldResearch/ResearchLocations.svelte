@@ -1,6 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { onMount } from 'svelte'
+import { SvelteSet } from 'svelte/reactivity'
 // I18N
 import { buildingSourceHref } from '#lib/locations/buildingSource.js'
 import { getLocale, m } from '#lib/i18n.js'
@@ -24,6 +25,7 @@ import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 // ICONS
 import SearchIcon from 'virtual:icons/lucide/search'
 import MapIcon from 'virtual:icons/lucide/map'
+import ChevronRightIcon from 'virtual:icons/lucide/chevron-right'
 import LocationIcon from 'virtual:icons/proicons/location'
 import PremisesIcon from 'virtual:icons/lucide/building'
 import BuildingIcon from 'virtual:icons/lucide/building-2'
@@ -75,6 +77,8 @@ let districtsReady = $state(false)
 let districtFailure = $state('')
 let loadVersion = 0
 const groups = $derived(groupResearchLocations(added, grouping, sorting))
+const groupIdPrefix = $props.id()
+const collapsedGroups = new SvelteSet<string>()
 let physicalId = $state<string | null>(null)
 const physicalTarget = $derived(
   active === 'building'
@@ -365,15 +369,30 @@ onMount(() => void load().catch(error => (failure = String(error))))
           {@const heading =
             group.key ||
             (grouping === 'district' ? 'District unknown' : 'Street unknown')}
+          {@const groupId = `${groupIdPrefix}-${grouping}-${encodeURIComponent(group.key)}`}
+          {@const collapsed = collapsedGroups.has(groupId)}
           <section aria-label={grouping === 'none' ? undefined : heading}>
             {#if grouping !== 'none'}
-              <h4
-                class="border-border bg-muted/50 border-y px-4 py-2 text-sm font-semibold break-words"
-              >
-                {heading}
+              <h4 class="border-border bg-muted/50 border-y">
+                <button
+                  type="button"
+                  class="hover:bg-muted focus-visible:outline-ring flex min-h-11 w-full items-center justify-between gap-2 px-4 py-2 text-left text-sm font-semibold focus-visible:outline-2 focus-visible:-outline-offset-2"
+                  aria-expanded={!collapsed}
+                  aria-controls={groupId}
+                  onclick={() => {
+                    if (collapsed) collapsedGroups.delete(groupId)
+                    else collapsedGroups.add(groupId)
+                  }}
+                >
+                  <span class="min-w-0 break-words">{heading}</span>
+                  <ChevronRightIcon
+                    class={`text-muted-foreground size-4 shrink-0 ${collapsed ? '' : 'rotate-90'}`}
+                    aria-hidden="true"
+                  />
+                </button>
               </h4>
             {/if}
-            <ul class="divide-border divide-y">
+            <ul id={groupId} hidden={collapsed} class="divide-border divide-y">
               {#each group.rows as { item, addresses } (item.id)}
                 {@const type = kinds.find(kind => kind.id === item.kind)}
                 {@const Icon = type?.icon ?? LocationIcon}

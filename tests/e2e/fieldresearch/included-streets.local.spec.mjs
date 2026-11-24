@@ -39,6 +39,16 @@ test('groups the included buildings in the Kowloon City session by street and nu
   )
   expect(firstNumbers).toEqual(firstNumbers.toSorted((a, b) => a - b))
   expect(firstNumbers).toEqual(expect.arrayContaining([20, 26, 32, 36]))
+  const streetToggle = street.getByRole('button', {
+    name: 'Tak Ku Ling Road',
+    exact: true,
+  })
+  const buildingRows = street.locator(':scope > ul')
+  await expect(streetToggle).toHaveAttribute('aria-expanded', 'true')
+  await streetToggle.click()
+  await expect(streetToggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(buildingRows).toBeHidden()
+  await expect(list.getByRole('link', { name: 'Kai King Mansion' })).toBeVisible()
   await expect(street).toContainText(/36 TAK KU LING ROAD.*38 TAK KU LING ROAD/is)
   await expect(list.getByRole('region', { name: 'Lung Kong Road' })).toContainText(
     'Kai King Mansion',
@@ -60,6 +70,9 @@ test('groups the included buildings in the Kowloon City session by street and nu
   await expect(groupBy).toHaveValue('street')
   await expect(sortBy).toHaveValue('number-asc')
   await sortBy.selectOption('number-desc')
+  await expect(buildingRows).toBeHidden()
+  await streetToggle.press('Enter')
+  await expect(buildingRows).toBeVisible()
   const descending = await rows.evaluateAll(items =>
     items.map(item => Number(item.querySelector('a + p').textContent.match(/\d+/)[0])),
   )
@@ -79,6 +92,19 @@ test('groups the included buildings in the Kowloon City session by street and nu
   await expect(district).toContainText('Kai King Mansion', { timeout: 60_000 })
   await expect(district).toContainText('Luen Fat Building')
   await expect(sortBy).toHaveValue('name-desc')
+  const districtToggle = district.getByRole('button', {
+    name: 'Kowloon City District',
+    exact: true,
+  })
+  await districtToggle.press('Space')
+  await expect(districtToggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(district.locator(':scope > ul')).toBeHidden()
+  await groupBy.selectOption('none')
+  await expect(titleLinks.first()).toBeVisible()
+  await groupBy.selectOption('district')
+  await expect(districtToggle).toHaveAttribute('aria-expanded', 'false')
+  await districtToggle.click()
+  await expect(district.getByRole('link', { name: 'Kai King Mansion' })).toBeVisible()
   await header.screenshot({
     path: join(process.env.DEV_RUNNER_ARTIFACTS, 'included-location-controls.png'),
   })
