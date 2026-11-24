@@ -338,7 +338,8 @@ const includedMarkers = $derived(
             number: index + 1,
             coordinates: item.coordinates,
             label: item.name,
-            selected: true,
+            previewOnly: true,
+            compact: true,
             skipAutoFit: true,
           },
         ]
