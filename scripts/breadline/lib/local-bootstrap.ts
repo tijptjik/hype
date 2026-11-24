@@ -38,6 +38,7 @@ const productionData = new Set([
   '0204_independent_bookstores_contributor_attribution.sql',
   '0207_former_bookstore_occupancy.sql',
   '0223_breadline_mtr_paid_area.sql',
+  '0270_unison_building_exterior.sql',
 ])
 
 /**

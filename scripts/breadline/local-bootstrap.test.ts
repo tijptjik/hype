@@ -19,6 +19,9 @@ describe('clean local source and migration bootstrap', () => {
       expect(receipt.deferred.map(migration => migration.name)).toContain(
         '0028_seed_breadline_layers.sql',
       )
+      expect(receipt.deferred.map(migration => migration.name)).toContain(
+        '0270_unison_building_exterior.sql',
+      )
       const appliedNames = migrationNames.filter(
         name => !receipt.deferred.some(m => m.name === name),
       )
