@@ -8,6 +8,7 @@ const fetcher = vi.fn()
 function event(path: string) {
   return {
     params: { path },
+    request: new Request('http://localhost:4173'),
     url: new URL(`http://localhost:4173/api/dev-basemap/${path}`),
     locals: { platform: { env: { VITE_SAANSEOI_API_KEY: 'server-only-test-key' } } },
     fetch: fetcher,
@@ -54,6 +55,26 @@ it('rejects unexpected upstream tile hosts', async () => {
   await expect(GET(event('hongkong-latest.json'))).rejects.toMatchObject({
     status: 502,
   })
+})
+it('recovers from an interrupted metadata request', async () => {
+  vi.stubEnv('DEV', true)
+  fetcher.mockRejectedValueOnce(new TypeError('fetch failed'))
+  fetcher.mockResolvedValueOnce(
+    Response.json({
+      tiles: ['https://tiles.saanseoi.hk/hongkong-latest/{z}/{x}/{y}.mvt'],
+    }),
+  )
+  expect((await GET(event('hongkong-latest.json'))).status).toBe(200)
+  expect(fetcher).toHaveBeenCalledTimes(2)
+})
+it.each([
+  [new DOMException('Timed out', 'TimeoutError'), 504],
+  [new TypeError('fetch failed'), 502],
+])('reports an upstream transport failure after one retry', async (cause, status) => {
+  vi.stubEnv('DEV', true)
+  fetcher.mockRejectedValue(cause)
+  await expect(GET(event('hongkong-latest.json'))).rejects.toMatchObject({ status })
+  expect(fetcher).toHaveBeenCalledTimes(2)
 })
 it('streams vector tiles without forwarding credential or upstream headers', async () => {
   vi.stubEnv('DEV', true)

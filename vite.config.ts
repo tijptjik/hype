@@ -188,6 +188,9 @@ export default defineConfig(async ({ command }) => ({
       ignored: [
         '**/.wrangler/**',
         '**/apps/recorder/**',
+        // Editing migration notes and browser checks must not invalidate a live form request.
+        '**/migrations/pending/**',
+        '**/scripts/visual-checks/**',
         ...getDevOutput(process.argv, command).ignored,
       ],
     },
