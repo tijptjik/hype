@@ -4663,3 +4663,18 @@ Reset returns it to matching at 1440px and 1200px. Database coverage in
 content/association rejection, project boundaries, shared-Location isolation and later
 match precedence. Local migration 0252 is applied; remote migration and deployment
 remain separate release steps. Refs #194.
+
+### Durable donor corrections (24 November 2026, Refs #194)
+
+Reviewed operator corrections in `scripts/breadline/lib/donor-curation.ts` are keyed by
+stable donor identity and override later imported values until explicitly revised. Raw
+source hashes remain unchanged; generated Features retain curation provenance. Existing
+donors receive attributed shared Location corrections and Feature adoption. The legacy
+Place sync planner must not be applied to the deployed Location schema; current-schema
+sync replay remains an acceptance requirement.
+
+The post-cutover correction step is `scripts/breadline/prepare-donor-curations.ts`. Run
+it after source reconciliation on the private working target, include its guarded
+revision groups in the release, and require a zero-group repeat. Production application
+uses the existing maintenance journal and restores the retained application identity; it
+does not require an application redeployment.

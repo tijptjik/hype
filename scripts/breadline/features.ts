@@ -14,6 +14,7 @@ import donorImportPolicy from './donor-import-policy.json'
 import donorBrandIdentities from './donor-brand-identities.json'
 import { validateBreadlineFeatureRows } from './lib/feature-validation'
 import { reviewedDonorMtr } from './lib/donor-mtr-decisions'
+import { reviewedDonorCuration } from './lib/donor-curation'
 import { toProductionFeatureAddress } from './lib/production-address'
 // VALIDATION
 import { normalizeHongKongPhoneNumber } from '../../src/lib/utils/phone-property'
@@ -387,7 +388,12 @@ function buildBreadlineFeaturePlan(
             ? normalizeHongKongPhoneNumber(String(row.phone || ''))
             : null
         if (table === 'donors' && row.phone && !phone) invalidPhones++
-        const phones = phone ? [phone] : []
+        const donorCuration = reviewedDonorCuration(table, sourceId)
+        const phones = donorCuration?.phoneNumber
+          ? [...donorCuration.phoneNumber]
+          : phone
+            ? [phone]
+            : []
         const brands = []
         if (table === 'donors') {
           const curated =
@@ -474,6 +480,9 @@ function buildBreadlineFeaturePlan(
           facts: {
             names,
             phoneNumber: phones,
+            ...(donorCuration?.operatingStatus
+              ? { operatingStatus: donorCuration.operatingStatus }
+              : {}),
             brands,
             location: { geometry, address: localAddress },
           },
@@ -512,6 +521,7 @@ function buildBreadlineFeaturePlan(
                 : featureAddress,
               breadlineSource: { table, id: sourceId },
               ...(correction ? { coordinateCorrection: correction.evidence } : {}),
+              ...(donorCuration ? { breadlineCuration: donorCuration } : {}),
             },
             isPublished: published ? 1 : 0,
             publisherId: published ? authors[0].id : null,

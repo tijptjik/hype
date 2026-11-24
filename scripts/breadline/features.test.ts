@@ -129,6 +129,55 @@ function fixture() {
 const MIGRATED_IMPORT_TIMEOUT_MS = 20_000
 
 test(
+  'donor import retains reviewed contact and closure despite upstream values',
+  () => {
+    const f = fixture()
+    try {
+      f.target.exec(`ALTER TABLE feature ADD COLUMN mtrStation TEXT;
+      ALTER TABLE feature ADD COLUMN mtrExit TEXT;
+      ALTER TABLE feature ADD COLUMN mtrDistance REAL;
+      ALTER TABLE feature ADD COLUMN mtrResolution TEXT;
+      CREATE TABLE featureMtrJob(featureId TEXT,geometry TEXT);`)
+      const source = new Database(f.sourcePath)
+      source.exec(`UPDATE breadline__public__donors SET id=767, phone='2345 6789' WHERE id=900001;
+      UPDATE breadline__public__donors SET id=768, active=1 WHERE id=900002;
+      DELETE FROM breadline__public__runs;
+      INSERT INTO breadline__public__runs VALUES (767),(768);`)
+      const reviews = JSON.parse(
+        readFileSync('scripts/breadline/donor-mtr-decisions.json', 'utf8'),
+      ).decisions
+      for (const id of ['767', '768']) {
+        const review = reviews.find((row: { sourceId: string }) => row.sourceId === id)
+        if (review)
+          source
+            .query(
+              'UPDATE breadline__public__donors SET longitude=?,latitude=?,_breadline_row_hash=? WHERE id=?',
+            )
+            .run(...review.coordinates, review.sourceHash, Number(id))
+      }
+      source.close()
+      f.generate()
+      f.apply()
+      const rows = f.target
+        .query(`SELECT b.sourceId,r.facts FROM breadlineImportFeature b
+      JOIN featureLocation fl ON fl.featureId=b.featureId
+      JOIN locationRevisionContent r ON r.id=fl.factsRevisionId WHERE b.sourceTable='donors'`)
+        .all() as Array<{ sourceId: string; facts: string }>
+      expect(
+        readLocationFacts(rows.find(row => row.sourceId === '767')!.facts).phoneNumber,
+      ).toEqual(['+85229722222'])
+      expect(
+        readLocationFacts(rows.find(row => row.sourceId === '768')!.facts)
+          .operatingStatus,
+      ).toBe('permanently_closed')
+    } finally {
+      f.target.close()
+    }
+  },
+  MIGRATED_IMPORT_TIMEOUT_MS,
+)
+
+test(
   'imports participating donors/dropoffs as linked Locations, with brands and phone arrays',
   () => {
     const { target, generate, apply, output } = fixture()
