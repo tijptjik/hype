@@ -172,11 +172,15 @@ test('fills the session workspace and lowers the camera to view facades', async 
   const region = page.getByRole('region', { name: 'Session building map' })
   const compass = region.locator('.maplibregl-ctrl-compass .maplibregl-ctrl-icon')
   await expect(compass).toBeVisible({ timeout: 60_000 })
-  const pitch = () =>
+  const angles = () =>
     compass.evaluate(el => {
       const transform = new DOMMatrix(getComputedStyle(el).transform)
-      return (Math.acos(transform.m33) * 180) / Math.PI
+      return {
+        pitch: (Math.acos(transform.m33) * 180) / Math.PI,
+        heading: (Math.atan2(transform.m21, transform.m11) * 180) / Math.PI,
+      }
     })
+  const heading = async () => (await angles()).heading
   const canvas = region.locator('canvas').first()
   const main = page.locator('main[data-responsive-main]')
   await expect(region.getByRole('status')).toHaveText(
@@ -202,15 +206,24 @@ test('fills the session workspace and lowers the camera to view facades', async 
       })
       .toBeLessThan(3)
   }
-  await expect.poll(pitch).toBeCloseTo(60, 1)
+  await expect.poll(async () => (await angles()).pitch).toBeCloseTo(60, 1)
+  await region.getByRole('button', { name: 'Rotate map right' }).click()
+  await expect.poll(heading).toBeCloseTo(30, 1)
+  await region.getByRole('button', { name: 'Rotate map left' }).click()
+  await expect.poll(heading).toBeCloseTo(0, 1)
   const bounds = await canvas.boundingBox()
   const x = bounds.x + bounds.width / 2
   const y = bounds.y + bounds.height / 2
   await page.mouse.move(x, y)
   await page.mouse.down({ button: 'right' })
+  await page.mouse.move(x + 100, y, { steps: 10 })
+  await page.mouse.up({ button: 'right' })
+  await expect.poll(async () => Math.abs(await heading())).toBeGreaterThan(5)
+  await page.mouse.move(x, y)
+  await page.mouse.down({ button: 'right' })
   await page.mouse.move(x, y - 140, { steps: 10 })
   await page.mouse.up({ button: 'right' })
-  await expect.poll(pitch).toBeCloseTo(85, 1)
+  await expect.poll(async () => (await angles()).pitch).toBeCloseTo(85, 1)
   await region.screenshot({
     path: join(process.env.DEV_RUNNER_ARTIFACTS, 'session-map-facades.png'),
   })

@@ -5,6 +5,10 @@ import { untrack } from 'svelte'
 import { LngLatBounds, type GeoJSONSource, type Map as LibreMap } from 'maplibre-gl'
 import type { FeatureCollection, Point } from 'geojson'
 import { AttributionControl, NavigationControl } from 'svelte-maplibre-gl'
+// ICONS
+import RotateLeftIcon from 'virtual:icons/proicons/arrow-counterclockwise'
+import RotateRightIcon from 'virtual:icons/proicons/arrow-clockwise'
+// COMPONENTS
 import MapSurface from '#lib/bits/custom/map/MapSurface.svelte'
 import {
   sessionModelLayer,
@@ -27,6 +31,10 @@ import { getLocaleKey } from '#lib/i18n.js'
 
 let { buildings }: { buildings: SessionMapBuilding[] } = $props()
 const initialPitch = 60
+const rotations = [
+  { label: 'Rotate map left', icon: RotateLeftIcon, step: -30 },
+  { label: 'Rotate map right', icon: RotateRightIcon, step: 30 },
+] as const
 const located = $derived(
   buildings.filter((b): b is SessionMapBuilding & { coordinates: [number, number] } =>
     Boolean(b.coordinates),
@@ -63,6 +71,7 @@ $effect(() => {
       maxZoom: 18.5,
       padding: 85,
       pitch: initialPitch,
+      bearing: instance.getBearing(),
       duration: 0,
     }),
   )
@@ -166,6 +175,21 @@ $effect(() => {
       <NavigationControl visualizePitch />
       <AttributionControl position="bottom-left" />
     </MapSurface>
+    <div
+      class="border-border bg-panel absolute right-3 bottom-3 flex rounded-md border shadow"
+    >
+      {#each rotations as rotation (rotation.label)}
+        <button
+          type="button"
+          aria-label={rotation.label}
+          title={rotation.label}
+          class="text-foreground hover:bg-raised grid size-11 place-items-center rounded-md"
+          onclick={() => map?.setBearing(map.getBearing() + rotation.step)}
+        >
+          <rotation.icon class="size-5" aria-hidden="true" />
+        </button>
+      {/each}
+    </div>
     <p
       role="status"
       class="bg-panel text-foreground absolute top-3 left-3 rounded-md px-3 py-2 text-xs shadow"
