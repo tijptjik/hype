@@ -76,3 +76,5 @@ export * from './operator'
 export * from './premisesMap'
 
 export * from './systemTask'
+
+export * from './locationExteriorModel'
