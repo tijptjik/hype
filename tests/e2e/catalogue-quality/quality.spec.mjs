@@ -1,5 +1,19 @@
 import { test, expect } from '@playwright/test'
 import { join } from 'node:path'
+async function expectBrandFilterMenu(page) {
+  await expect(page.getByRole('button', { name: 'Status', exact: true })).toBeVisible()
+  for (const name of [
+    'Translation',
+    'Content',
+    'Images',
+    'Licence',
+    'Categories',
+    'Freeform',
+  ]) {
+    await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0)
+  }
+}
+
 test('quality filters apply to records and survive reload and detail navigation', async ({
   page,
 }) => {
@@ -18,6 +32,7 @@ test('quality filters apply to records and survive reload and detail navigation'
   await page.getByRole('button', { name: 'Show filters', exact: true }).click()
   await expect(page.getByText('Image quality', { exact: true }).first()).toBeVisible()
   await page.getByRole('button', { name: 'Image quality', exact: true }).click()
+  await expectBrandFilterMenu(page)
   await page.getByRole('button', { name: 'Origin', exact: true }).click()
   await expect(page.getByRole('button', { name: /^Catalogue origin:/ })).toBeVisible()
   await page.getByRole('button', { name: /^Catalogue origin:/ }).click()
@@ -29,17 +44,6 @@ test('quality filters apply to records and survive reload and detail navigation'
   await expect(page).not.toHaveURL(/catalogue-origin=/)
   await page.getByRole('button', { name: 'Origin', exact: true }).click()
   await page.getByRole('button', { name: 'Image quality', exact: true }).click()
-  for (const name of [
-    'Translation',
-    'Status',
-    'Content',
-    'Images',
-    'Licence',
-    'Categories',
-    'Freeform',
-  ]) {
-    await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0)
-  }
   const svg = page.getByRole('group', { name: 'SVG', exact: true })
   await svg.getByRole('button', { name: 'No', exact: true }).click()
   await expect(page).toHaveURL(/logo-svg=no/)
@@ -88,15 +92,7 @@ test('feature filter groups do not survive returning to the catalogue', async ({
   ).toBeVisible()
   await page.getByRole('button', { name: 'Image quality', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Origin', exact: true })).toBeVisible()
-  for (const name of [
-    'Translation',
-    'Status',
-    'Content',
-    'Images',
-    'Licence',
-    'Categories',
-    'Freeform',
-  ]) {
-    await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0)
-  }
+  await expectBrandFilterMenu(page)
+  await page.getByRole('button', { name: 'Status', exact: true }).click()
+  await expect(page.getByText('Independent', { exact: true })).toBeVisible()
 })
