@@ -256,6 +256,7 @@ export const createLocalLocation = guardedCommand(
         operatesInLocationId: input.operatesInLocationId,
         facts: input.facts,
         parseSource: input.parseSource,
+        parseReview: input.parseReview,
         sharingPreference: input.sharingPreference,
       },
       ctx.user.id,

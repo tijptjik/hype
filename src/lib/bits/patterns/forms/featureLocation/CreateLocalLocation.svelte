@@ -28,6 +28,7 @@ import LocationKindField from '../localLocationAddress/LocationKindField.svelte'
 import LocationNameFields from '../localLocationAddress/LocationNameFields.svelte'
 import type { LocationKind } from '#lib/locations/kinds.js'
 // TYPES
+import type { AddressParseResult } from '@saanseoi/address'
 import type { LocationFacts } from '#lib/locations/model.js'
 
 let {
@@ -100,6 +101,7 @@ let buildingId = $state('')
 let parentPartId = $state('')
 const namesValid = $derived(LocationNamesEditSchema.safeParse(names).success)
 let address = $state(createLocalLocationAddress())
+let parseReview = $state.raw<AddressParseResult | undefined>()
 let parseSource = $state<Record<string, string> | undefined>()
 let locationState = $state<'manual' | 'unresolved'>('unresolved')
 let busy = $state(false)
@@ -117,6 +119,7 @@ $effect(() => {
   const original = initialAddress
   const query = lookupRequest?.query ?? getAddressDisplay(original, getLocaleKey())
   address = prepareLocalLocationAddress(original)
+  parseReview = undefined
   parseSource = Object.fromEntries(
     Object.entries(ADDRESS_LOCALES).map(([locale, tag]) => [
       tag,
@@ -176,7 +179,8 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
       ...(kind === 'building_part'
         ? { buildingId, parentPartId: parentPartId || undefined }
         : {}),
-      parseSource,
+      parseSource: parseReview ? undefined : parseSource,
+      parseReview,
       facts: {
         names: LocationNamesEditSchema.parse(names),
         phoneNumber: [],
@@ -202,6 +206,7 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
     open = false
     names = {}
     address = createLocalLocationAddress()
+    parseReview = undefined
     parseSource = undefined
   } catch {
     failed = true
@@ -298,8 +303,8 @@ async function create(sharingPreference: 'private' | 'allow-sharing'): Promise<v
         bind:value={address}
         disabled={busy || disabled || preparing}
         show3dAddressOptions={kind !== 'building'}
-        onParsed={source => {
-          parseSource = source
+        onParsed={proposal => {
+          parseReview = proposal
         }}
       />
       <p class="text-muted-foreground text-sm">

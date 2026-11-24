@@ -79,6 +79,22 @@ export function localAddressDraft(content: LocalLocationAddress): FeatureAddress
   return draft
 }
 
+/** Apply reviewed components while keeping explicit display labels and division selections.
+ * @param previous Editor snapshot that supplied the parse input.
+ * @param content Reviewed authored address, including existing component edits.
+ * @returns An editable draft with the same custom display labels.
+ */
+export function applyLocalAddressParse(
+  previous: FeatureAddress,
+  content: LocalLocationAddress,
+): FeatureAddress {
+  const next = localAddressDraft(content)
+  next.divisionOverrides = previous.divisionOverrides
+  for (const [tag, label] of Object.entries(localAddressDisplayOverrides(previous)))
+    next.overrides[tag] = { formattedAddress: label }
+  return next
+}
+
 /** Materialize combined-expression edits into the shared authored content contract.
  * @param draft Editor envelope. @returns Structured local content without invented source IDs.
  * @remarks Source evidence is never modified. Parsed number/block/phase fields and generated
@@ -193,4 +209,31 @@ export function localAddressDisplayOverrides(
     else if (Object.keys(corrections).length) delete labels[tag]
   }
   return labels
+}
+
+/** Capture the exact display inputs for review while retaining structured fields separately.
+ * @param draft Current editor snapshot with any complete display overrides.
+ * @param locationKind Entity kind used by the display fields.
+ * @returns Existing authored content and source labels, including explicit empty labels.
+ */
+export function localAddressParseInput(
+  draft: FeatureAddress,
+  locationKind?: string,
+): { content: LocalLocationAddress; source: Record<string, string> } {
+  const content = localAddressContent(draft)
+  const source = localAddressDisplayOverrides(draft)
+  for (const [locale, tag] of Object.entries(ADDRESS_LOCALES)) {
+    const label = getAddressDisplay(
+      draft,
+      locale as keyof typeof ADDRESS_LOCALES,
+      [],
+      locationKind,
+    )
+    if (label || content.i18n[tag])
+      source[tag] ??= label || content.i18n[tag]?.formattedAddress || ''
+  }
+  for (const [tag, row] of Object.entries(content.i18n))
+    source[tag] ??= row.formattedAddress
+
+  return { content, source }
 }

@@ -1,5 +1,8 @@
 // SHARED ADDRESS PARSER
-import { createPlaceAddressMatcher } from '@saanseoi/address'
+import {
+  createPlaceAddressMatcher,
+  type PlaceStreetDefinition,
+} from '@saanseoi/address'
 import { parseAddressContent } from '#lib/addresses/parseAddress.js'
 // VALIDATION
 import { z } from 'zod'
@@ -168,6 +171,37 @@ export function setAddressName(
   return address
 }
 
+/** Build the localized street dictionary, including short directional aliases.
+ * @param streets Published street vocabulary.
+ * @returns Names and source IDs for the shared text matcher.
+ */
+export function catalogueStreetDefinitions(
+  streets: AddressName[],
+): PlaceStreetDefinition[] {
+  const directions: Record<string, string> = {
+    NORTH: 'N',
+    SOUTH: 'S',
+    EAST: 'E',
+    WEST: 'W',
+  }
+  return streets.flatMap(street =>
+    Object.entries(street.names).flatMap(([locale, name]) => {
+      const shortDirection =
+        locale === 'en'
+          ? name.replace(
+              /\b(NORTH|SOUTH|EAST|WEST)$/i,
+              word => directions[word.toUpperCase()],
+            )
+          : name
+      return [...new Set([name, shortDirection])].map(alias => ({
+        locale: locale.toLowerCase(),
+        name: alias,
+        streetId: street.id,
+      }))
+    }),
+  )
+}
+
 /** Parse an unassociated Place address, accepting English streets only from the catalogue.
  * @param address Selected preview, with original text retained as evidence.
  * @param streets Controlled street vocabulary.
@@ -188,28 +222,7 @@ export function structurePlaceAddress(
     return address
   const content = prepareLocalLocationAddress(address)
   // Match compound source addresses against the same street vocabulary used by the pickers.
-  const directions: Record<string, string> = {
-    NORTH: 'N',
-    SOUTH: 'S',
-    EAST: 'E',
-    WEST: 'W',
-  }
-  const streetDefinitions = streets.flatMap(street =>
-    Object.entries(street.names).flatMap(([locale, name]) => {
-      const shortDirection =
-        locale === 'en'
-          ? name.replace(
-              /\b(NORTH|SOUTH|EAST|WEST)$/i,
-              word => directions[word.toUpperCase()],
-            )
-          : name
-      return [...new Set([name, shortDirection])].map(alias => ({
-        locale: locale.toLowerCase(),
-        name: alias,
-        streetId: street.id,
-      }))
-    }),
-  )
+  const streetDefinitions = catalogueStreetDefinitions(streets)
   // Limit the large building vocabulary to names present in this source text; never guess a translation.
   const labelsKey = Object.values(address.source.fallbackDisplay).map(value =>
     normalizeNameSearch(applyAddressAbbreviations(value)),

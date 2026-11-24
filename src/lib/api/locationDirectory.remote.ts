@@ -18,7 +18,10 @@ import {
   OperatingStatusSchema,
   BuildingStatusSchema,
 } from '#lib/locations/lifecycle.js'
-import { LocalLocationAddressSchema } from '#lib/addresses/localLocationAddress.js'
+import {
+  LocalAddressParseReviewSchema,
+  LocalLocationAddressSchema,
+} from '#lib/addresses/localLocationAddress.js'
 import { LocationNamesEditSchema } from '#lib/locations/validation.js'
 import { LocationKindSchema } from '#lib/locations/kinds.js'
 import { locationDiscoveryTypes } from '#lib/locations/kinds.js'
@@ -252,6 +255,7 @@ export const saveLocalLocationAddress = guardedCommand(
       .optional(),
     divisionOverrides: AddressDivisionOverridesSchema.optional(),
     displayOverrides: z.record(z.string().max(32), z.string().max(4000)).optional(),
+    parseReview: LocalAddressParseReviewSchema.optional(),
     parseSource: z.record(z.string().max(32), z.string().max(4000)).optional(),
   }),
   async (input, ctx) => {

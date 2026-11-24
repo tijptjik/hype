@@ -23,6 +23,7 @@ import {
 import { canOperateIn } from '#lib/features/locationPolicy.js'
 import { locationOccupancy, locationMembership } from '../schema/locationRelationships'
 // SHARED PARSER
+import type { AddressParseResult } from '@saanseoi/address'
 import { parseAddressContent } from '#lib/addresses/parseAddress.js'
 // VALIDATION
 import { LocalizedCurationTextSchema } from '#lib/locations/curationIdentity.js'
@@ -134,6 +135,9 @@ export async function createLocalLocation(
     if (!host || !canOperateIn(parsed.kind, host.matchingType))
       throw new Error('Operating host unavailable or incompatible')
   }
+  const reviewedParse =
+    parsed.parseReview ??
+    (parsed.parseSource && parseAddressContent(parsed.parseSource))
   const rawSource = {
     kind: buildingEvidence
       ? 'reviewed-building-evidence'
@@ -145,10 +149,10 @@ export async function createLocalLocation(
     actorId,
     organisationId,
     input: parsed,
-    ...(parsed.parseSource
+    ...(reviewedParse
       ? {
           localAddress: {
-            parse: parseAddressContent(parsed.parseSource),
+            parse: reviewedParse,
             review: 'authored',
           },
         }
@@ -256,6 +260,7 @@ export async function updateLocalLocationAddress(
     divisionOverrides?: AddressDivisionOverrides
     displayOverrides?: Record<string, string>
     parseSource?: Record<string, string>
+    parseReview?: AddressParseResult
     actorId: string
     allowSharedBaseline?: boolean
   },
@@ -379,6 +384,8 @@ export async function updateLocalLocationAddress(
           },
     },
   }
+  const reviewedParse =
+    input.parseReview ?? (input.parseSource && parseAddressContent(input.parseSource))
   const correction = await prepareLocationCorrection(db, {
     organisationId: input.organisationId,
     locationId: input.locationId,
@@ -387,11 +394,11 @@ export async function updateLocalLocationAddress(
     after,
     allowSharedBaseline: input.allowSharedBaseline,
     currentOverrides: current?.overrides ?? {},
-    ...(input.parseSource
+    ...(reviewedParse
       ? {
           provenance: {
             localAddress: {
-              parse: parseAddressContent(input.parseSource),
+              parse: reviewedParse,
               review: 'authored',
             },
           },

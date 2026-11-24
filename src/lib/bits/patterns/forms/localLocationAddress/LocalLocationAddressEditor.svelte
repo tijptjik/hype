@@ -66,6 +66,7 @@ import {
 } from '#lib/addresses/featureAddress.js'
 import { geocodeAddressCandidates } from '#lib/api/external/geocoding.js'
 import {
+  applyLocalAddressParse,
   prepareLocalLocationAddress,
   localAddressDraft,
   localAddressContent,
@@ -76,6 +77,7 @@ import { getLocaleKey, m } from '#lib/i18n.js'
 // TYPES
 import type { CurationLockField } from '#lib/locations/curationLocks.js'
 import type { HeaderFormActionsState } from '#lib/context/headerState.types.js'
+import type { AddressParseResult } from '@saanseoi/address'
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
 import type { LocationResource } from '#lib/locations/resource.js'
 
@@ -147,7 +149,7 @@ let numberMapController = $state.raw<
 let coordinates = $state<[number, number]>([0, 0])
 let expectedRevisionId = $state('')
 let expectedOrganisationRevision = $state<string | null>(null)
-let parseSource = $state<Record<string, string> | undefined>()
+let parseReview = $state.raw<AddressParseResult | undefined>()
 let editing = $state(false)
 let busy = $state(false)
 let failed = $state(false)
@@ -275,7 +277,7 @@ function edit(): void {
           ? 'zh-hans'
           : 'en']: '',
     }
-  parseSource = undefined
+  parseReview = undefined
   expectedRevisionId = place.revisionId
   expectedOrganisationRevision = place.organisationRevision ?? null
   editing = true
@@ -551,7 +553,7 @@ async function save(): Promise<void> {
             ? draft.divisionOverrides
             : undefined,
         coordinates,
-        parseSource,
+        parseReview,
       })
     await onSaved()
     editing = false
@@ -968,20 +970,22 @@ $effect(() => {
                   onChange={next => (draft = next)}
                 />
                 {#if editing && draft}
-                  {@const content = localAddressContent($state.snapshot(draft))}
                   <details class="border-border col-span-full border-t pt-4">
                     <summary class="text-muted-foreground cursor-pointer text-sm">
                       {m.location_address_parse()}
                     </summary>
                     <div class="pt-3">
                       <LocalAddressParseReview
-                        value={content}
+                        {draft}
+                        locationKind={activeKind}
                         disabled={busy}
-                        onParsed={source => (parseSource = source)}
-                        onValueChange={next => {
-                          const selections = draft?.divisionOverrides
-                          draft = localAddressDraft(next)
-                          draft.divisionOverrides = selections
+                        onAccept={proposal => {
+                          if (!draft) return
+                          parseReview = proposal
+                          draft = applyLocalAddressParse(
+                            $state.snapshot(draft),
+                            proposal.content,
+                          )
                         }}
                       />
                     </div>

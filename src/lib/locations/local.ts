@@ -10,6 +10,7 @@ import { validateLocationStatusKind } from './lifecycle'
 import { LocationFactsSchema } from './validation'
 import { LocationKindSchema } from './kinds'
 import { normalizeHongKongPhoneNumber } from '#lib/utils/phone-property.js'
+import { LocalAddressParseReviewSchema } from '#lib/addresses/localLocationAddress.js'
 import { streetNumberIssue } from '#lib/addresses/streetNumber.js'
 
 /** Local baselines cannot claim unverified canonical Address identities. */
@@ -47,6 +48,7 @@ export const LocalLocationInputSchema = z
     operatesInLocationId: z.string().trim().min(1).max(200).optional(),
     // Consent is independent of source matching state and Organisation visibility.
     sharingPreference: z.enum(['private', 'allow-sharing']).default('private'),
+    parseReview: LocalAddressParseReviewSchema.optional(),
     parseSource: z.record(z.string().max(35), z.string().max(10000)).optional(),
     facts: LocationFactsSchema.superRefine((facts, context) => {
       // Local authoring accepts geometry, not fabricated upstream geometry-publication claims.

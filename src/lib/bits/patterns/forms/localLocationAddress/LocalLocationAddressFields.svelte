@@ -3,10 +3,15 @@
 import LocalAddressParseReview from './LocalAddressParseReview.svelte'
 import AddressDetails from '../formFeatureAddress/AddressDetails.svelte'
 // DOMAIN
-import { localAddressDraft, localAddressContent } from '#lib/addresses/locationDraft.js'
+import {
+  applyLocalAddressParse,
+  localAddressDraft,
+  localAddressContent,
+} from '#lib/addresses/locationDraft.js'
 // I18N
 import { m } from '#lib/i18n.js'
 // TYPES
+import type { AddressParseResult } from '@saanseoi/address'
 import type { LocalLocationAddress } from '#lib/addresses/localLocationAddress.js'
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
 
@@ -21,7 +26,7 @@ let {
   disabled?: boolean
   show3dAddressOptions?: boolean
   locationKind?: string
-  onParsed?: (source: Record<string, string>) => void
+  onParsed?: (proposal: AddressParseResult) => void
 } = $props()
 let draft = $state<FeatureAddress | null>(null)
 let written: LocalLocationAddress | undefined
@@ -59,6 +64,19 @@ function change(next: FeatureAddress): void {
     <summary class="text-muted-foreground cursor-pointer text-sm">
       {m.location_address_parse()}
     </summary>
-    <div class="pt-3"><LocalAddressParseReview bind:value {disabled} {onParsed} /></div>
+    {#if draft}
+      <div class="pt-3">
+        <LocalAddressParseReview
+          {draft}
+          {locationKind}
+          {disabled}
+          onAccept={proposal => {
+            if (!draft) return
+            change(applyLocalAddressParse($state.snapshot(draft), proposal.content))
+            onParsed?.(proposal)
+          }}
+        />
+      </div>
+    {/if}
   </details>
 </fieldset>

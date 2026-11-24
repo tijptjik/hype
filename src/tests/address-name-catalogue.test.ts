@@ -1,5 +1,13 @@
 // @vitest-environment node
 import { expect, it } from 'vitest'
+import { proposeLocalAddressParse } from '#lib/addresses/localAddressParse.js'
+import {
+  applyLocalAddressParse,
+  localAddressParseInput,
+  localAddressContent,
+  localAddressDraft,
+} from '#lib/addresses/locationDraft.js'
+import { createLocalLocationAddress } from '#lib/addresses/localLocationAddress.js'
 import {
   completeStreetNames,
   structurePlaceAddress,
@@ -281,4 +289,93 @@ it('clears names in additional languages omitted by the selected building', () =
   })
   expect(next.overrides.ja.buildingName).toBeNull()
   expect(getAddressLocale(next, 'en').buildingName).toBe('Replacement Building')
+})
+
+it('parses the current complete labels and keeps authored building names and custom displays on acceptance', () => {
+  const content = createLocalLocationAddress({
+    en: 'Retained earlier source',
+    'zh-hant': '達德樓32打鼓嶺道九龍城區九龍',
+    'zh-hans': '达德楼32打鼓岭道九龙城区九龙',
+  })
+  content.scope = 'building'
+  content.i18n.en.buildingName = 'Tat Tak Building'
+  content.i18n['zh-hant'].buildingName = '達德樓'
+  content.i18n['zh-hans'].buildingName = '达德楼'
+  const label = 'TAT TAK BUILDING, 32 TAK KU LING ROAD, KOWLOON CITY DISTRICT, KLN'
+  const draft = setAddressOverride(
+    localAddressDraft(content),
+    'en',
+    'formattedAddress',
+    label,
+  )
+  const streets = [
+    {
+      id: 'tak-ku-ling',
+      names: { en: 'Tak Ku Ling Road', 'zh-Hant': '打鼓嶺道' },
+      divisionCodes: [],
+    },
+  ]
+  const review = proposeLocalAddressParse(
+    localAddressParseInput(draft, 'building'),
+    streets,
+  )
+  expect(review.source.en).toBe(label)
+  expect(review.unresolved.en).toBe('KOWLOON CITY DISTRICT KLN')
+  expect(review.content.scope).toBe('building')
+  for (const [tag, streetName] of Object.entries({
+    en: 'Tak Ku Ling Road',
+    'zh-hant': '打鼓嶺道',
+    'zh-hans': '打鼓岭道',
+  })) {
+    expect(review.content.i18n[tag]).toMatchObject({
+      streetName,
+      buildingNumberExpression: '32',
+      buildingNumberFrom: '32',
+      buildingName: content.i18n[tag].buildingName,
+    })
+  }
+  expect(content.i18n.en.streetName).toBeUndefined()
+  const accepted = applyLocalAddressParse(draft, review.content)
+  expect(getAddressDisplay(accepted, 'en')).toBe(label)
+  expect(localAddressContent(accepted).i18n.en).toMatchObject({
+    buildingName: 'Tat Tak Building',
+    streetName: 'Tak Ku Ling Road',
+    buildingNumberFrom: '32',
+  })
+  expect(accepted.source.address2dId).toBeNull()
+})
+
+it('keeps an unknown street unresolved and honors an explicitly cleared source', () => {
+  const content = createLocalLocationAddress({
+    en: '9 Imaginary Street',
+    'zh-hant': '擺花街8號',
+  })
+  const draft = setAddressOverride(
+    localAddressDraft(content),
+    'zhHant',
+    'formattedAddress',
+    '',
+  )
+  const review = proposeLocalAddressParse(localAddressParseInput(draft), [street])
+  expect(review.unresolved.en).toBe('9 IMAGINARY STREET')
+  expect(review.content.i18n.en.streetName).toBeUndefined()
+  expect(review.content.i18n.en.buildingNumberFrom).toBeUndefined()
+  expect(review.source['zh-hant']).toBe('')
+  expect(review.content.i18n['zh-hant'].streetName).toBeUndefined()
+})
+
+it('retains both endpoints of a range following a matched Chinese street', () => {
+  const content = createLocalLocationAddress()
+  const review = proposeLocalAddressParse(
+    { content, source: { 'zh-hant': '擺花街32–34A號', 'zh-hans': '摆花街32-34A号' } },
+    [street],
+  )
+  for (const row of Object.values(review.content.i18n))
+    expect(row).toMatchObject({
+      buildingNumberExpression: '32-34A',
+      buildingNumberFrom: '32',
+      buildingNumberTo: '34A',
+      buildingNumberConnector: '-',
+    })
+  expect(review.unresolved).toEqual({})
 })

@@ -1,11 +1,14 @@
 <script lang="ts">
-// SHARED ADDRESS PACKAGE
-import { parseAddressContent } from '#lib/addresses/parseAddress.js'
+// API
+import { reviewLocalAddress } from '#lib/api/addressLocation.remote.js'
+// ADDRESS
+import { localAddressParseInput } from '#lib/addresses/locationDraft.js'
 import type { AddressParseResult, AddressContent } from '@saanseoi/address'
 // COMPONENTS
 import { Button } from '#lib/bits/core/index.js'
 // ADDRESS DISPLAY
 import {
+  type FeatureAddress,
   emptyFeatureAddress,
   getAddressDisplay,
   ADDRESS_LOCALES,
@@ -13,24 +16,47 @@ import {
 // I18N
 import { m } from '#lib/i18n.js'
 let {
-  value = $bindable(),
+  draft,
+  locationKind,
   disabled = false,
-  onParsed,
-  onValueChange,
+  onAccept,
 }: {
-  value: AddressContent
+  draft: FeatureAddress
+  locationKind?: string
   disabled?: boolean
-  onParsed?: (source: Record<string, string>) => void
-  onValueChange?: (content: AddressContent) => void
+  onAccept: (proposal: AddressParseResult) => void
 } = $props()
-let proposal = $state<AddressParseResult | null>(null)
-/** Parse a copy; the editable address changes only when the proposal is accepted. */
-function propose(): void {
-  proposal = parseAddressContent(
-    Object.fromEntries(
-      Object.keys(value.i18n).map(locale => [locale, display(value, locale)]),
-    ),
-  )
+let review = $state.raw<{
+  draft: FeatureAddress
+  kind?: string
+  parsed: AddressParseResult
+} | null>(null)
+let loading = $state(false)
+let failed = $state(false)
+const proposal = $derived(
+  review?.draft === draft && review.kind === locationKind ? review.parsed : null,
+)
+
+/** Parse a copy; the editable address changes only when the proposal is accepted.
+ * @returns Nothing. Catalogue errors leave the draft available for a retry.
+ */
+async function propose(): Promise<void> {
+  loading = true
+  failed = false
+  review = null
+  try {
+    review = {
+      draft,
+      kind: locationKind,
+      parsed: await reviewLocalAddress(
+        localAddressParseInput($state.snapshot(draft), locationKind),
+      ),
+    }
+  } catch {
+    failed = true
+  } finally {
+    loading = false
+  }
 }
 /** Resolve the exact proposed display with the ordinary Feature formatter. */
 function display(content: AddressContent, tag: string): string {
@@ -44,7 +70,16 @@ function display(content: AddressContent, tag: string): string {
 }
 </script>
 <div class="space-y-3">
-  <Button text={m.location_address_parse()} {disabled} onClick={propose} />
+  <Button
+    text={m.location_address_parse()}
+    disabled={disabled || loading}
+    onClick={propose}
+  />
+  {#if loading}
+    <div aria-busy="true" class="bg-muted h-24 animate-pulse rounded-xl"></div>
+  {:else if failed}
+    <p role="alert" class="text-destructive text-sm">{m.address_names_unavailable()}</p>
+  {/if}
   {#if proposal}
     <section
       class="border-border space-y-3 rounded-xl border p-4"
@@ -57,7 +92,7 @@ function display(content: AddressContent, tag: string): string {
             <span class="text-muted-foreground text-xs"
               >{tag}
               · {m.location_review_before()}</span
-            ><br>{display(value, tag)}
+            ><br>{proposal.source[tag]}
           </p>
           <p>
             <span class="text-muted-foreground text-xs"
@@ -80,10 +115,8 @@ function display(content: AddressContent, tag: string): string {
         {disabled}
         onClick={() => {
           if (!proposal) return
-          onParsed?.(proposal.source)
-          value = proposal.content
-          onValueChange?.(value)
-          proposal = null
+          onAccept(proposal)
+          review = null
         }}
       />
     </section>

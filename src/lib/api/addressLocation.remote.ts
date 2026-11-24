@@ -3,13 +3,16 @@ import { error } from '@sveltejs/kit'
 // VALIDATION
 import { z } from 'zod'
 // REMOTE
-import { guardedQuery } from '#lib/api/server/guarded.js'
+import { guardedQuery, guardedCommand } from '#lib/api/server/guarded.js'
 // AUTHORIZATION
 import { requireLocationOrganisationManager } from '#lib/api/services/locationOwnership.js'
 // DB
 import { probeProjectQuery } from '#lib/db/services/project.js'
 import { nearbyLocalLocationCandidates } from '#lib/db/services/locationCandidate.js'
 // ADDRESS
+import { LocalAddressParseReviewSchema } from '#lib/addresses/localLocationAddress.js'
+import { loadAddressNames } from '#lib/addresses/nameCatalogue.js'
+import { proposeLocalAddressParse } from '#lib/addresses/localAddressParse.js'
 import { FeatureAddressSchema } from '#lib/addresses/featureAddress.js'
 import { exactAddressChangeMatch } from '#lib/addresses/mapAddressChange.js'
 
@@ -60,5 +63,18 @@ export const findDraftAddressLocation = guardedQuery(
     })
     if (matches.length > 1) error(409, 'ADDRESS_MATCH_REVIEW_REQUIRED')
     return matches[0] ?? null
+  },
+)
+
+/** Propose components for an authored address using Hype's cached public street inventory.
+ * @param input The editor's current content and localized display labels.
+ * @returns A proposal for explicit review, without changing any record.
+ * @remarks POST keeps editable address text out of URLs. Only public catalogue data is fetched upstream.
+ */
+export const reviewLocalAddress = guardedCommand(
+  LocalAddressParseReviewSchema.pick({ content: true, source: true }),
+  async (input, ctx) => {
+    if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
+    return proposeLocalAddressParse(input, await loadAddressNames('streets'))
   },
 )

@@ -90,7 +90,8 @@ import { LocalLocationInputSchema } from '#lib/locations/local.js'
 import { ProjectLocationPolicyFormData } from '#lib/db/zod/schema/project.js'
 import { DEFAULT_PROJECT_LOCATION_POLICY } from '#lib/locations/model.js'
 import { LocationFactsSchema } from '#lib/locations/validation.js'
-import { parseAddressContent } from '@saanseoi/address'
+import { createAddressContent, parseAddressContent } from '@saanseoi/address'
+import { proposeLocalAddressParse } from '#lib/addresses/localAddressParse.js'
 import {
   authorizeFeatureUpdateForSubmission,
   authorizeProjectUpdateForSubmission,
@@ -5401,6 +5402,64 @@ it.each([null, '', 'Use the side entrance'])(
 )
 
 describe('structured Location address editor writes', () => {
+  it('persists the accepted catalogue parse on creation and later address corrections', async () => {
+    const { db, sqlite } = setup()
+    const streets = [
+      { id: 'street', names: { en: 'Tak Ku Ling Road' }, divisionCodes: [] },
+    ]
+    const content = createAddressContent()
+    content.i18n.en = { formattedAddress: '', buildingName: 'Tat Tak Building' }
+    const first = proposeLocalAddressParse(
+      { content, source: { en: '32 Tak Ku Ling Road' } },
+      streets,
+    )
+    const created = await createLocalLocation(
+      db,
+      'p',
+      {
+        state: 'manual',
+        kind: 'building',
+        parseReview: first,
+        facts: {
+          ...facts,
+          location: {
+            ...facts.location,
+            address: { ...facts.location.address, authored: first.content },
+          },
+        },
+      },
+      'actor',
+    )
+    const row = sqlite
+      .prepare('SELECT rawSource FROM locationRevisionContent WHERE id=?')
+      .get(created.revisionId)!
+    expect(JSON.parse(String(row.rawSource)).localAddress.parse).toEqual(first)
+    const next = proposeLocalAddressParse(
+      { content: first.content, source: { en: '32A Tak Ku Ling Road' } },
+      streets,
+    )
+    const saved = await updateLocalLocationAddress(db, {
+      locationId: created.locationId,
+      organisationId: 'p',
+      expectedRevisionId: created.revisionId,
+      address: next.content,
+      parseReview: next,
+      actorId: 'actor',
+    })
+    const correction = sqlite
+      .prepare('SELECT provenance FROM organisationLocation WHERE id=?')
+      .get(saved!.organisationRevision!)!
+    expect(JSON.parse(String(correction.provenance)).localAddress.parse).toEqual(next)
+    const updated = (
+      await listLocationResources(db, { id: created.locationId, organisationId: 'p' })
+    ).data[0]
+    expect(updated.facts?.location.address.authored?.i18n.en).toMatchObject({
+      streetName: 'Tak Ku Ling Road',
+      buildingNumberFrom: '32A',
+      buildingName: 'Tat Tak Building',
+    })
+  })
+
   it('keeps building authoring free of unit and floor details', async () => {
     const { db } = setup()
     const content = parseAddressContent({
