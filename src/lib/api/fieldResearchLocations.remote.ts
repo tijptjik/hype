@@ -110,6 +110,7 @@ export const getResearchLocations = guardedQuery(
       hasRelationships: number
       inclusion: string
       assetId: string | null
+      frontViewId: string | null
       sourceModelId: string | null
       interiorMaps: string
     }>(
@@ -118,6 +119,9 @@ export const getResearchLocations = guardedQuery(
           CASE WHEN l.matchingType='building' THEN ${hasLocationRelationshipsSQL(sql`sl.locationId`, sql`scope.organisationId`)} ELSE 0 END hasRelationships,
           CASE WHEN l.matchingType IN ('building','premises') THEN ${researchLocationInclusionSQL(sql`sl.locationId`, sql`scope.organisationId`, sql`sl.sessionId`)} ELSE '{"total":0,"included":0}' END inclusion,
           exterior.assetId,exterior.sourceModelId,
+          (SELECT a.alignment->>'$.frontViewId' FROM locationExteriorAlignment a
+           WHERE a.locationId=exterior.locationId AND a.assetId=exterior.assetId AND a.geometryId=exterior.assetId
+           ORDER BY a.revision DESC LIMIT 1) frontViewId,
           (SELECT json_group_array(json_object('id',id,'name',name,'hash',publishedHash)) FROM (
             SELECT m.id,m.name,m.publishedHash FROM locationPremisesMap link JOIN premisesMap m ON m.id=link.mapId
             WHERE link.locationId=l.id AND m.publishedHash IS NOT NULL
@@ -215,6 +219,7 @@ export const getResearchLocations = guardedQuery(
         hasRelationships: Boolean(row.hasRelationships),
         inclusion: JSON.parse(row.inclusion) as { total: number; included: number },
         hasExteriorMap: Boolean(row.assetId),
+        frontViewId: row.frontViewId,
         exteriorUrl:
           row.assetId && row.sourceModelId
             ? `/api/location-exterior/${encodeURIComponent(row.id)}/${encodeURIComponent(row.assetId)}/${encodeURIComponent(row.sourceModelId)}.gltf`

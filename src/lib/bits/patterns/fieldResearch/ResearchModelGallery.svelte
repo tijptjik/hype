@@ -16,6 +16,7 @@ let {
   view,
   title,
   icon,
+  organisationId,
   sessionId,
   revision,
   onClose,
@@ -23,6 +24,7 @@ let {
   view: 'exterior' | 'interior' | 'map'
   title: string
   icon: Component
+  organisationId: string
   sessionId: string
   revision: number
   onClose: () => void
@@ -94,6 +96,11 @@ const columns =
     {:else}
       <section class={columns} aria-label={`${title} cards`}>
         {#each buildings as building (building.id)}
+          {@const locationHref =
+            '/admin/locations/' +
+            encodeURIComponent(building.id) +
+            '?organisation=' +
+            encodeURIComponent(organisationId)}
           {@const previews =
             view === 'exterior'
               ? [{ url: building.exteriorUrl, name: '' }]
@@ -116,6 +123,7 @@ const columns =
                 {#if preview.url}
                   <ResearchModelPreview
                     url={preview.url}
+                    frontViewId={building.frontViewId}
                     title={building.title + ' ' + view}
                     interior={view === 'interior'}
                   />
@@ -130,7 +138,10 @@ const columns =
                   </span>
                 {/if}
               </div>
-              <div class="border-border border-t px-4 py-3">
+              <a
+                href={locationHref}
+                class="border-border hover:bg-muted focus-visible:outline-ring block border-t px-4 py-3 hover:underline focus-visible:outline-2 focus-visible:-outline-offset-2"
+              >
                 <h3 class="text-foreground font-semibold break-words">
                   {building.title}
                 </h3>
@@ -142,7 +153,7 @@ const columns =
                 {#if preview.name}
                   <p class="text-muted-foreground text-sm">{preview.name}</p>
                 {/if}
-              </div>
+              </a>
             </article>
           {/each}
         {/each}

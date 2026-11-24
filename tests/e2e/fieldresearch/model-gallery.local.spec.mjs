@@ -85,6 +85,33 @@ test('opens read-only session galleries and assembles the exterior models on the
   ).toBeVisible()
 })
 
+test('opens the model facing its front and links its caption to the Location', async ({
+  page,
+}) => {
+  await page.goto(session + '&models=exterior#locations', {
+    waitUntil: 'domcontentloaded',
+  })
+  const card = page.getByRole('article', { name: 'Kai King Mansion' })
+  const caption = card.getByRole('link', {
+    name: /Kai King Mansion.*57[-–]59 Lung Kong Road/i,
+  })
+  const href =
+    '/admin/locations/building%3Acbab3d4d32f73b706b05fb7836f120f3d695277bdd5ecba28894dc7c0aedce26?organisation=oDucgyH4H4Bm'
+  await expect(caption).toHaveAttribute('href', href, { timeout: 60_000 })
+  await card.scrollIntoViewIfNeeded()
+  const model = card.locator('model-viewer')
+  await expect(model).toHaveAttribute('camera-orbit', /deg 90deg auto$/, {
+    timeout: 60_000,
+  })
+  const { actual, expected } = await model.evaluate(el => ({
+    actual: el.getCameraOrbit().theta,
+    expected: (Number.parseFloat(el.cameraOrbit) * Math.PI) / 180,
+  }))
+  expect(Math.cos(actual - expected)).toBeCloseTo(1)
+  await caption.click()
+  await expect(page).toHaveURL(url => url.pathname + url.search === href)
+})
+
 test('renders a published interior bundle in a read-only card', async ({ page }) => {
   // This local session has no assigned interiors. Exercise the same renderer with a real release.
   await page.route('**/_app/remote/*/getResearchLocations*', async route => {

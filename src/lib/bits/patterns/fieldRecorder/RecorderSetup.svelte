@@ -432,6 +432,7 @@ async function create(): Promise<void> {
               view={modelView.id}
               title={modelView.label}
               icon={modelView.icon}
+              organisationId={current.organisationId}
               sessionId={current.id}
               revision={current.revision}
               onClose={() => selectModels(null)}
