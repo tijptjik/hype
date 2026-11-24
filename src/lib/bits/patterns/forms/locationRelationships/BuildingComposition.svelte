@@ -1,7 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { goto } from '$app/navigation'
-import { onDestroy } from 'svelte'
+import { page } from '$app/state'
+import { onDestroy, untrack } from 'svelte'
 // API
 import {
   attachPhysicalBuildingMember,
@@ -24,15 +25,21 @@ let {
   locationId,
   organisationId,
   previewTerms,
+  continueAdding,
   onSaved,
 }: {
   locationId: string
   organisationId: string
+  continueAdding: boolean
   previewTerms: string[]
-  onSaved: () => Promise<void>
+  onSaved: (adding?: boolean) => Promise<void>
 } = $props()
 const role = $derived(getBuildingCompositionRole({ locationId, organisationId }))
-let mode = $state<'preview' | 'add' | null>(null)
+let mode = $state<'preview' | 'add' | null>(
+  untrack(() => continueAdding || page.url.searchParams.get('constituents') === 'add')
+    ? 'add'
+    : null,
+)
 let placing = $state(false)
 let query = $state('')
 let rows = $state<BuildingSearchResult[]>([])
@@ -101,14 +108,14 @@ async function save(row?: BuildingSearchResult, parentId?: string): Promise<void
     })
     if (row) {
       await role.refresh()
-      await onSaved()
+      await onSaved(true)
     } else
       await goto(
         '/admin/locations/' +
           encodeURIComponent(parent.locationId) +
           '?organisation=' +
           encodeURIComponent(organisationId) +
-          '&edit=true#relationships',
+          '&edit=true&constituents=add#relationships',
         { invalidateAll: true },
       )
   } catch (e) {
@@ -140,7 +147,7 @@ async function designate(): Promise<void> {
     await role.refresh()
     placing = false
     mode = 'add'
-    await onSaved()
+    await onSaved(true)
   } catch (e) {
     failure = submissionErrorMessage(e) ?? 'Could not designate this building.'
   } finally {

@@ -42,6 +42,7 @@ let {
   onCompositionSaved?: () => Promise<void>
 } = $props()
 let refreshVersion = $state(0)
+let continueAddingFor = $state<string | null>(null)
 const uid = $props.id()
 let adding = $state(false)
 let linkingAddresses = $state(false)
@@ -275,10 +276,12 @@ async function save(
             organisationId &&
             kind === 'building'}
             <BuildingComposition
+              continueAdding={continueAddingFor === locationId}
               {previewTerms}
               {locationId}
               {organisationId}
-              onSaved={async () => {
+              onSaved={async adding => {
+                continueAddingFor = adding ? locationId : null
                 await getRelationshipPage({
                   locationId,
                   organisationId,
