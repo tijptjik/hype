@@ -13,6 +13,7 @@ import {
 import { refreshRemoteQuery } from '#lib/remote/index.js'
 // COMPONENTS
 import { SectionHeader } from '#lib/bits/custom/form/index.js'
+import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 // ICONS
 import SearchIcon from 'virtual:icons/lucide/search'
 import MapIcon from 'virtual:icons/lucide/map'
@@ -245,7 +246,11 @@ onMount(() => void load().catch(error => (failure = String(error))))
           <div class="flex animate-pulse gap-3">
             <div class="bg-muted mt-1 size-5 shrink-0 rounded"></div>
             <div class="min-w-0 flex-1 space-y-2">
-              <div class="bg-muted h-3 w-20 rounded"></div>
+              <div class="flex h-6 items-center gap-1.5">
+                <div class="bg-muted mr-auto h-3 w-20 rounded"></div>
+                <div class="bg-muted size-2 rounded-full"></div>
+                <div class="bg-muted size-2 rounded-full"></div>
+              </div>
               <div class="bg-muted h-5 w-3/4 rounded"></div>
               <div class="bg-muted h-4 w-full rounded"></div>
             </div>
@@ -264,17 +269,40 @@ onMount(() => void load().catch(error => (failure = String(error))))
           {#each added as item (item.id)}
             {@const type = kinds.find(kind => kind.id === item.kind)}
             {@const Icon = type?.icon ?? LocationIcon}
+            {@const exteriorStatus = item.hasExteriorMap ? 'available' : 'unavailable'}
+            {@const interiorStatus = item.hasInteriorMap ? 'available' : 'unavailable'}
             <li class="space-y-3 p-4">
               <div class="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-3">
                 <Icon class="text-primary mt-1 size-5" />
                 <div class="min-w-0">
-                  <p class="text-muted-foreground text-xs">
-                    {item.kind === 'building_part'
-                      ? 'Building part'
-                      : item.kind === 'premises'
-                        ? 'Premises'
-                        : 'Building'}
-                  </p>
+                  <div class="flex items-center justify-between gap-2">
+                    <p class="text-muted-foreground text-xs">
+                      {item.kind === 'building_part'
+                        ? 'Building part'
+                        : item.kind === 'premises'
+                          ? 'Premises'
+                          : 'Building'}
+                    </p>
+                    <SimpleTooltip
+                      triggerClass="focus-visible:outline-ring h-6 shrink-0 cursor-help items-center gap-1.5 rounded px-1 focus-visible:outline-2"
+                      triggerProps={{
+                        role: 'button',
+                        'aria-label': `Interior map ${interiorStatus}, exterior map ${exteriorStatus}`,
+                      }}
+                      contentProps={{ align: 'end' }}
+                    >
+                      {#snippet trigger()}
+                        {#each [item.hasInteriorMap, item.hasExteriorMap] as available}
+                          <span
+                            aria-hidden="true"
+                            class={`size-2 rounded-full border ${available ? 'border-success bg-success' : 'border-muted-foreground/60'}`}
+                          ></span>
+                        {/each}
+                      {/snippet}
+                      <p>Interior {interiorStatus}</p>
+                      <p>Exterior {exteriorStatus}</p>
+                    </SimpleTooltip>
+                  </div>
                   <a
                     href={'/admin/locations/' + item.id}
                     class="font-semibold break-words whitespace-normal hover:underline"
