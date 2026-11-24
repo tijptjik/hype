@@ -235,6 +235,10 @@ describe('feature service property normalization', () => {
 
   it('accepts blank feature-property locale values in admin profiles', () => {
     const parsed = FeatureAdminProfileAPI.safeParse({
+      featureType: 'default',
+      kind: 'object',
+      targetContext: null,
+      associationRelation: 'locatedAt',
       id: 'feature-1',
       localLocationBrands: null,
       organisationId: 'org-1',
@@ -330,6 +334,6 @@ describe('feature service property normalization', () => {
       images: null,
     })
 
-    expect(parsed.success).toBe(true)
+    expect(parsed.error?.issues ?? []).toEqual([])
   })
 })

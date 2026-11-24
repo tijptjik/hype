@@ -21,7 +21,7 @@ const validation = remote.slice(
   remote.indexOf('    const created = await createFeatureForm'),
 )
 const validate = new Function(
-  'data',
+  'createData',
   'presentationPolicy',
   'invalid',
   'issue',

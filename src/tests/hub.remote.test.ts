@@ -310,7 +310,8 @@ vi.mock('#lib/db/services/property.js', () => ({
   syncHubGlobalProperties: vi.fn(async () => undefined),
 }))
 
-vi.mock('#lib/db/schema/index.js', () => ({
+vi.mock('#lib/db/schema/index.js', async importOriginal => ({
+  ...(await importOriginal<typeof import('#lib/db/schema/index.js')>()),
   hub: {
     id: 'hub.id',
     code: 'hub.code',

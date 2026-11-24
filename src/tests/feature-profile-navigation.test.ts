@@ -33,6 +33,8 @@ function setup() {
   const create = new Function(
     'getFeature',
     'getFeatureLocation',
+    'formCtx',
+    'tick',
     'adminCtx',
     'commitSettledFeatureState',
     'syncSelectedProject',
@@ -47,10 +49,15 @@ function setup() {
   `,
   )
   const api = create(
-    () => response.promise,
+    () =>
+      Object.assign(response.promise, {
+        refresh: vi.fn().mockResolvedValue(undefined),
+      }),
     () => {
       throw new Error('Profile navigation must not fetch the Location')
     },
+    { reset: vi.fn() },
+    async () => {},
     {
       view: {
         resources: { queryMeta: {} },

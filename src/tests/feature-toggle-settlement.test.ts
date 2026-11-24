@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 // NODE
+import { submissionErrorMessage } from '#lib/forms/submissionError.js'
 import { readFileSync } from 'node:fs'
 // TESTS
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -83,8 +84,9 @@ function setup() {
     'client',
     'untrack',
     'flushSync',
+    'submissionErrorMessage',
     `${compiled.replace(/import \* as \$ from ['"]svelte\/internal\/client['"];?/, 'const $ = client;')}\nreturn create;`,
-  )(client, untrack, flushSync)
+  )(client, untrack, flushSync, submissionErrorMessage)
   const handler = create(env) as {
     run: () => Promise<void>
     current: () => { data: Record<string, unknown> } | null

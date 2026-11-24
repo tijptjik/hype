@@ -26,6 +26,9 @@ const state = vi.hoisted(() => ({
 vi.mock('#lib/api/tasks.remote.js', () => ({
   getTasks: state.getTasks,
 }))
+vi.mock('#lib/api/featureIndex.remote.js', () => ({
+  getFeatureIndexPage: () => ({ current: { totalCount: 0 }, loading: false }),
+}))
 const taskRows = new SvelteMap<string, unknown[]>([['task', []]])
 vi.mock('$app/state', () => ({
   page: { url: new URL('http://localhost/admin/features') },
@@ -47,7 +50,11 @@ vi.mock('#lib/context/admin.svelte.js', () => ({
           },
         },
       },
-      filters: { viewFilters: { task: { isReviewed: false, type: null } } },
+      filters: {
+        sorting: { feature: {} },
+        values: { feature: { text: '' } },
+        viewFilters: { feature: {}, task: { isReviewed: false, type: null } },
+      },
       scope: { prisms: state.prisms, togglePrism: state.togglePrism },
       resources: { queryMeta: { isAdminRequest: true, scope: 'test' } },
       getListQueryMeta: () =>
@@ -146,7 +153,12 @@ it('loads a scoped server total before task rows have been loaded', () => {
   expect(state.getTasks).toHaveBeenCalledWith(
     expect.objectContaining({
       pagination: { limit: 1, offset: 0 },
-      conditions: { isReviewed: false, type: null },
+      conditions: {
+        isReviewed: false,
+        type: null,
+        reviewAction: undefined,
+        reviewOutcome: null,
+      },
       prisms: { organisation: [], project: [], layer: [] },
     }),
   )
@@ -194,7 +206,8 @@ it('refreshes the badge after queue rows change without duplicating the initial 
   await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1))
 })
 
-it('shows Docs last for superAdmins', () => {
+it('shows Docs to superAdmins in the expanded menu', async () => {
+  vi.useRealTimers()
   state.user = {
     id: 'super-admin',
     isAnonymous: false,
@@ -203,6 +216,9 @@ it('shows Docs last for superAdmins', () => {
   } as unknown as SessionUser
   state.getTasks.mockReturnValue({ current: { totalCount: 0 } })
   render(AdminMenu, { isNarrow: false })
-  const links = screen.getAllByRole('link')
-  expect(links.at(-1)?.getAttribute('href')).toBe('/admin/docs')
+  await fireEvent.click(screen.getByRole('button', { name: 'All views' }))
+  expect(screen.getByRole('link', { name: 'Docs' })).toHaveAttribute(
+    'href',
+    '/admin/docs',
+  )
 })
