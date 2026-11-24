@@ -38,6 +38,7 @@ import EstablishmentIcon from 'virtual:icons/lucide/store'
 import OperationalIcon from 'virtual:icons/lucide/settings'
 // COMPONENTS
 import ResearchLocationPicker from './ResearchLocationPicker.svelte'
+import PhysicalParentPicker from '#lib/bits/patterns/forms/locationRelationships/PhysicalParentPicker.svelte'
 let {
   sessionId,
   organisationId,
@@ -80,6 +81,10 @@ let loadVersion = 0
 const groups = $derived(groupResearchLocations(added, grouping, sorting))
 const groupIdPrefix = $props.id()
 const collapsedGroups = new SvelteSet<string>()
+let startFrom = $state<'parent' | 'constituent' | null>(null)
+// Retain creation tokens when an editor switches search methods before retrying inclusion.
+const creationRequests = new Map<string, string>()
+let savingBuilding = $state(false)
 let physicalId = $state<string | null>(null)
 const physicalTarget = $derived(
   active === 'building'
@@ -146,6 +151,23 @@ async function add(
   } finally {
     busy = false
   }
+}
+/** Include the reviewed physical parent once and keep it open for constituent selection.
+ * @param parentId Owned physical building found in the directory or the session.
+ * @returns Once the session and constituent picker show the selected parent.
+ */
+async function openParent(parentId: string): Promise<void> {
+  if (busy || disabled) return
+  if (!rows.some(row => row.id === parentId)) {
+    try {
+      await add(parentId, 'single')
+    } catch {
+      return
+    }
+  }
+  active = 'building'
+  physicalId = parentId
+  startFrom = null
 }
 /** Remove one selected Location. @param locationId Location identity. @returns Once refreshed. */
 async function remove(locationId: string): Promise<void> {
@@ -216,7 +238,7 @@ onMount(() => void load().catch(error => (failure = String(error))))
               title={option.label}
               aria-pressed={mode === option.value}
               class="text-muted-foreground hover:bg-muted aria-pressed:bg-background aria-pressed:text-primary rounded-md p-2 aria-pressed:shadow-sm"
-              disabled={busy}
+              disabled={busy || savingBuilding}
               onclick={() => (mode = option.value as 'search' | 'map')}
             >
               <option.icon class="size-5" />
@@ -240,9 +262,10 @@ onMount(() => void load().catch(error => (failure = String(error))))
             type="button"
             aria-pressed={active === item.id}
             class={`${control} aria-pressed:border-primary aria-pressed:bg-primary/10 aria-pressed:text-primary`}
-            disabled={busy}
+            disabled={busy || savingBuilding}
             onclick={() => {
               active = item.id
+              startFrom = null
               physicalId = null
             }}
           >
@@ -266,8 +289,39 @@ onMount(() => void load().catch(error => (failure = String(error))))
           <OperationalIcon class="mr-1 inline size-4" />Service Points
         </button>
       </fieldset>
-      {#if loaded}
-        {#key `${active}-${mode}-${physicalTarget?.id ?? ''}`}
+      {#if loaded && !physicalTarget && !disabled}
+        <fieldset aria-label="Physical building" class="flex flex-wrap gap-2">
+          {#each [
+            { value: 'parent', label: 'Find a physical building' },
+            { value: 'constituent', label: 'Start from a constituent' },
+          ] as choice (choice.value)}
+            <button
+              type="button"
+              class={`${control} aria-pressed:border-primary aria-pressed:text-primary`}
+              aria-pressed={startFrom === choice.value}
+              disabled={busy || savingBuilding}
+              onclick={() => {
+                active = 'building'
+                startFrom =
+                  startFrom === choice.value
+                    ? null
+                    : (choice.value as 'parent' | 'constituent')
+              }}
+            >
+              {choice.label}
+            </button>
+          {/each}
+        </fieldset>
+      {/if}
+      {#if loaded && startFrom === 'parent' && !physicalTarget}
+        <PhysicalParentPicker
+          {organisationId}
+          busy={busy || disabled}
+          actionLabel="Select physical building"
+          onPlace={openParent}
+        />
+      {:else if loaded}
+        {#key `${active}-${mode}-${startFrom ?? ''}-${physicalTarget?.id ?? ''}`}
           <ResearchLocationPicker
             {projectId}
             included={added}
@@ -275,7 +329,13 @@ onMount(() => void load().catch(error => (failure = String(error))))
             kind={active}
             disabled={busy || disabled}
             {physicalTarget}
-            onPhysicalTarget={id => (physicalId = id)}
+            {creationRequests}
+            bind:savingBuilding
+            constituentOnly={startFrom === 'constituent'}
+            onPhysicalTarget={id => {
+              physicalId = id
+              startFrom = null
+            }}
             onMembersChanged={load}
             onSelect={id => add(id, 'single')}
           />
@@ -419,7 +479,7 @@ onMount(() => void load().catch(error => (failure = String(error))))
                             ? 'Building part'
                             : item.kind === 'premises'
                               ? 'Premises'
-                              : item.members.length
+                              : item.canEditPhysicalBuilding || item.members.length
                                 ? 'Physical building'
                                 : 'Building'}
                         </p>
@@ -472,11 +532,8 @@ onMount(() => void load().catch(error => (failure = String(error))))
                         class={`${rowAction} hover:bg-muted gap-1 px-3`}
                         aria-label="Add constituent building"
                         title="Add constituent building"
-                        disabled={busy}
-                        onclick={() => {
-                          active = 'building'
-                          physicalId = item.id
-                        }}
+                        disabled={busy || savingBuilding}
+                        onclick={() => openParent(item.id)}
                       >
                         <PlusIcon class="size-4" />
                         <ConstituentIcon class="size-5" />

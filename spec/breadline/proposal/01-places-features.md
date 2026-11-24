@@ -1969,15 +1969,24 @@ the existing display when all rows are unranked or the best rank is tied. Profil
 commits the address changes together with the other profile edits. Individual published
 house numbers remain available in **Relationships**. Refs #194.
 
-In **Field Research → Locations → Buildings**, **Use Building** includes the selected
-record. **Create Physical Building** creates a separate HYPE identity and imports or
-reuses the selected SaanSeoi Building as its first constituent. **Add to Physical
-Building** adds subsequent constituents. Migration 0271 records these edges in
-`locationMembership` with the parent and child Location IDs and their reviewed revision
-IDs. **Physical membership** on either record links to the other. The Location editor
-can create a parent from an imported Building or search the SaanSeoi building catalogue
-to add children. The session card shows one building address, with a range per street
-for a physical parent. Address choices remain available in the editor. Refs #194.
+In **Field Research → Locations**, **Find a physical building** selects an editable
+parent and opens its constituent search. **Start from a constituent** opens building
+search directly. Both text and map selections use the same membership command as the
+Location editor. A map footprint helps identify a published building. The editor chooses
+each sibling explicitly. Migration 0274 allows buildings created by the earlier
+combine-evidence form to receive constituents under their original Location ID,
+retaining their reviewed profile and geometry. Historical references stay available for
+review.
+
+In **Buildings**, **Use Building** includes the selected record. **Create Physical
+Building** creates a separate HYPE identity and imports or reuses the selected SaanSeoi
+Building as its first constituent. **Add to Physical Building** adds subsequent
+constituents. Migration 0271 records these edges in `locationMembership` with the parent
+and child Location IDs and their reviewed revision IDs. **Physical membership** on
+either record links to the other. The Location editor can create a parent from an
+imported Building or search the SaanSeoi building catalogue to add children. The session
+card shows one building address, with a range per street for a physical parent. Address
+choices remain available in the editor. Refs #194.
 
 In **Relationships → Physical membership**, **Place in physical building** adds the
 current import to a selected existing parent. **Use as physical building** designates
