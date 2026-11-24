@@ -46,6 +46,8 @@ export async function prepareNewLifecycleFeature(
   db: Database,
   input: RevisionCommand & {
     featureId: string
+    isDraft?: boolean
+    isPendingReview?: boolean
     contributorId?: string
     content: FeatureRevisionContent
     scope: Pick<FeatureLifecycleState, 'organisationId' | 'projectId' | 'layerId'>
@@ -86,7 +88,8 @@ export async function prepareNewLifecycleFeature(
     localIsPublished: false,
     isArchived: false,
     localIsArchived: null,
-    isDraft: false,
+    isDraft: input.isDraft ?? false,
+    isPendingReview: input.isPendingReview ?? false,
     localLocationBrands: null,
     geometry: content.placement.geometry,
     addressMeta: content.placement.addressMeta,
@@ -124,7 +127,7 @@ export async function prepareNewLifecycleFeature(
     previous: empty,
     content,
     gallery: { actorId: input.actorId, attachmentGuard: input.guard },
-    identity: { actorId: input.actorId },
+    identity: { actorId: input.actorId, preserveDraft: input.isDraft },
   })
   const displayTemplate = await prepareFeatureDisplayTemplate(db, {
     featureId: input.featureId,

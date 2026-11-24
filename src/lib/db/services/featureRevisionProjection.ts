@@ -265,7 +265,7 @@ export function prepareFeatureEditorialProjection(
     content: FeatureRevisionContent
     gallery?: { actorId: string; attachmentGuard?: SQL }
     /** Trusted identity-review writer, after source selection and scope validation. */
-    identity?: { actorId: string }
+    identity?: { actorId: string; preserveDraft?: boolean }
   },
 ): RevisionProjection {
   const previous = FeatureRevisionContentSchema.parse(input.previous)
@@ -436,7 +436,8 @@ export function prepareFeatureEditorialProjection(
   }
   // Reserved children become ordinary identities inside this publication batch before
   // Location scope triggers validate their accepted association; they remain unpublished.
-  if (input.identity && source.record.isDraft) recordChanges.isDraft = false
+  if (input.identity && !input.identity.preserveDraft && source.record.isDraft)
+    recordChanges.isDraft = false
   if (brandsChanged)
     recordChanges.localLocationBrands =
       content.detachedBrands === null
