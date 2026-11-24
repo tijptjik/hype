@@ -7,7 +7,7 @@ import { layerProperty } from '../schema/layer'
 // PROPERTY CONTRACT
 import { normalizeRangeValue, isRangeProperty } from '#lib/properties/range.js'
 import { normalizePhoneNumber, readPhoneNumbers } from '#lib/utils/phone-property.js'
-import { m } from '#lib/i18n.js'
+import * as m from '#lib/paraglide/messages.js'
 import { normalizeLinkValue, propertyValueRegistry } from '#lib/properties/value.js'
 // TYPES
 import type { Database } from '#lib/types.js'

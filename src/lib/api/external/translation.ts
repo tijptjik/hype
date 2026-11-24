@@ -70,7 +70,7 @@ export async function translateText(
   const data = await response.json().catch(() => null)
   if (!response.ok) {
     // Azure reports unsupported source/target combinations separately from service errors.
-    const code = Number(data?.error?.code)
+    const code = Number((data as { error?: { code?: unknown } } | null)?.error?.code)
     const unsupported = [400035, 400036].includes(code)
     throw new TranslationProviderError(
       unsupported

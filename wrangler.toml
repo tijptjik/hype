@@ -152,8 +152,10 @@ name = "ROUTING_LIMITER"
 namespace_id = "21302"
 simple = { limit = 30, period = 60 }
 
+[env.production.secrets]
+required = ["CLOUDFLARE_ACCOUNT_ID"]
+
 [env.production.vars]
-CLOUDFLARE_ACCOUNT_ID = "a6eeace4b6d9f8e07ab307964e74d801"
 ENVIRONMENT = "production"
 PRODUCT_USAGE_DATASET = "hype_product_usage_production"
 WHATSOVER_VOICE_URL = "wss://hype-whatsover-voice-prod.hypehk.workers.dev/voice"
