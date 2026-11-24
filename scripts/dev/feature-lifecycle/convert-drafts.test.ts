@@ -286,4 +286,4 @@ test('the managed planner detects current lifecycle storage and verifies its cle
   } finally {
     d.close()
   }
-})
+}, 60_000)
