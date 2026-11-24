@@ -116,7 +116,7 @@ async function submitDeletion(): Promise<void> {
     if (result === 'deleted') admin.view.cache.location.delete(target.id)
     if (page.params.id !== target.id) return
     if (result === 'deleted') {
-      const directory = new URL('/admin/locations', page.url)
+      const directory = new URL('/admin/locations', page.url.href)
       const organisationId = page.url.searchParams.get('organisation')
       if (organisationId) directory.searchParams.set('organisationId', organisationId)
       await goto(directory, { replaceState: true, invalidateAll: true })
@@ -234,7 +234,7 @@ $effect(() => {
         <AddressEditorSkeleton full />
       {:then place}
         {#if place}
-          {#key place.id}
+          {#key JSON.stringify([place.id, place.editingOrganisationId])}
             <Tabs
               value={activeFacet === 'features' ||
               (place.kind === 'building' &&
