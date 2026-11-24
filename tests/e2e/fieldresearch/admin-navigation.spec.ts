@@ -72,33 +72,42 @@ test('keeps Field Sessions accessible after Field Entries is moved', async ({
   await profile.click()
   await expect(code).toBeVisible()
 
-  // Validate the required code even when the save action is on another tab.
+  await page.goto('/admin/fieldresearch', { waitUntil: 'domcontentloaded' })
+  await expect(page).toHaveURL(/\/admin\/field-recorder$/)
+  await expect(editor).toBeVisible({ timeout: 60_000 })
+  await expect(toolbarTitle).toBeVisible()
+})
+
+test('shows and clears the required session code error', async ({ page }) => {
+  test.setTimeout(120_000)
+  await page.goto('/admin/field-recorder', { waitUntil: 'domcontentloaded' })
+  const auth = await (await page.request.get('/api/auth/get-session')).json()
+  expect(auth.user.id).toBe('hype-local-agent-admin')
+  await page.locator('a[href*="field-recorder?session="]').first().click()
+  const code = page.getByLabel('Session code', { exact: true })
+  await expect(code).toBeVisible({ timeout: 60_000 })
+  const fields = page
+    .getByRole('banner')
+    .getByRole('button', { name: 'Fields', exact: true })
+
+  // Validate and highlight the required code before submitting it.
   await page
     .getByRole('banner')
     .getByRole('button', { name: 'Edit', exact: true })
     .click()
   await code.fill('  ')
-  await fields.click()
   await page
     .getByRole('banner')
     .getByRole('button', { name: 'Save', exact: true })
     .click()
-  await expect(page.getByRole('alert')).toContainText(
-    'Enter a session code on the Profile tab.',
-  )
-  await profile.click()
   await expect(code).toHaveAttribute('aria-invalid', 'true')
   await expect(page.getByRole('alert')).toContainText('Enter a session code.')
   await code.fill('SURVEY')
   await expect(code).not.toHaveAttribute('aria-invalid', 'true')
   await expect(page.getByText('Enter a session code.', { exact: true })).toHaveCount(0)
-  await page
-    .getByRole('banner')
-    .getByRole('button', { name: 'Reset', exact: true })
-    .click()
-
-  await page.goto('/admin/fieldresearch', { waitUntil: 'domcontentloaded' })
-  await expect(page).toHaveURL(/\/admin\/field-recorder$/)
-  await expect(editor).toBeVisible({ timeout: 60_000 })
-  await expect(toolbarTitle).toBeVisible()
+  await code.fill('  ')
+  await fields.click()
+  await expect(page.getByRole('alert')).toContainText(
+    'Enter a session code on the Profile tab.',
+  )
 })
