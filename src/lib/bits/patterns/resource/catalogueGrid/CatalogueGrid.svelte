@@ -41,7 +41,7 @@ let {
 >
   {#if loading && !records.length}
     {#each Array(compact ? 16 : 8) as _}
-      <IndexCardSkeleton />
+      <IndexCardSkeleton subtleImage />
     {/each}
   {/if}
   {#each records as record (record.id)}
@@ -67,7 +67,34 @@ let {
   {/each}
   {#if loadingMore}
     {#each Array(compact ? 16 : 8) as _}
-      <IndexCardSkeleton />
+      <IndexCardSkeleton subtleImage />
     {/each}
   {/if}
 </section>
+
+<style>
+/* Let the card background show through while inset catalogue artwork loads. */
+section :global([data-image-skeleton]) {
+  background: radial-gradient(
+    ellipse,
+    color-mix(in srgb, currentColor 4%, transparent),
+    transparent 70%
+  );
+}
+
+section :global([data-image-skeleton] > div) {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  section :global([data-image-skeleton]) {
+    animation: catalogue-image-breathe 2s ease-in-out infinite;
+  }
+}
+
+@keyframes catalogue-image-breathe {
+  50% {
+    opacity: 0.35;
+  }
+}
+</style>
