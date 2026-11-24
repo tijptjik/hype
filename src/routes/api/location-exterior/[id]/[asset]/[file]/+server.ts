@@ -13,6 +13,9 @@ import { premisesMapBucket } from '#lib/indoor/server/storage.js'
 export const GET: RequestHandler = async event => {
   const { params, locals, platform, request } = event
   if (
+    !params.id ||
+    !params.asset ||
+    !params.file ||
     !/^[a-f0-9-]{36}$/.test(params.asset) ||
     !/^[a-zA-Z0-9_.-]+\.(gltf|bin|jpg|jpeg|png)$/i.test(params.file)
   )
