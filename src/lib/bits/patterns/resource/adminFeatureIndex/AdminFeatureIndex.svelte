@@ -2,7 +2,7 @@
 // APP
 import { page } from '$app/state'
 // SVELTE
-import { onDestroy, onMount, untrack } from 'svelte'
+import { onDestroy, untrack } from 'svelte'
 import { debounce } from '@sillvva/utils'
 import { toast } from 'svelte-sonner'
 // ADAPTERS
@@ -14,7 +14,6 @@ import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // REMOTE
 import { updateFeatureBulkState } from '#lib/api/feature.remote.js'
 import { getFeatureIndexPage } from '#lib/api/featureIndex.remote.js'
-import { getResearchSessions } from '#lib/api/fieldResearch.remote.js'
 import { featureOriginLabels } from '#lib/fieldResearch/model.js'
 import type { FeatureIndexQuery } from '#lib/features/indexQuery.js'
 import { refreshRemoteQuery, readFreshRemoteQuery } from '#lib/remote/index.js'
@@ -420,6 +419,7 @@ let matchingCountLoading = $state(true)
 let matchingCountRevision = $state(0)
 onDestroy(() => {
   bulkSelectionRevision++
+  featureTextSearchWorker?.terminate()
 })
 let bulkRowResultsById = $state.raw<Map<string, ResourceIndexRowSelectionState>>(
   new Map(),
@@ -956,37 +956,42 @@ async function applyFeatureBulkEdit(): Promise<void> {
     })
 }
 
-onMount(() => {
-  {
-    // Session choices use the same project-management scope as the research index.
-    void (async () => {
-      let before: string | undefined
-      const options: { value: string; label: string }[] = []
-      for (;;) {
-        const sessions = await refreshRemoteQuery(getResearchSessions({ before }))
-        options.push(
-          ...sessions.map(session => ({ value: session.id, label: session.name })),
-        )
-        if (sessions.length < 50) break
-        before = sessions[sessions.length - 1].id
-      }
+// Session choices use the research index's project-management scope only while that filter is active.
+$effect(() => {
+  const scope = adminCtx.view.resources.scopeKey
+  researchSessionOptions = []
+  if (adminCtx.view.filters.viewFilters.feature.origin !== 'field_research') return
+  let current = true
+  void (async () => {
+    const { getResearchSessions } = await import('#lib/api/fieldResearch.remote.js')
+    const options: { value: string; label: string }[] = []
+    let before: string | undefined
+    while (current && scope === adminCtx.view.resources.scopeKey) {
+      const sessions = await readFreshRemoteQuery(getResearchSessions({ before }))
+      if (!current) return
+      options.push(
+        ...sessions.map(session => ({ value: session.id, label: session.name })),
+      )
+      if (sessions.length < 50) break
+      before = sessions[sessions.length - 1].id
+    }
+    if (current && scope === adminCtx.view.resources.scopeKey)
       researchSessionOptions = options
-    })().catch(() => {})
+  })().catch(() => {})
+  return () => {
+    current = false
   }
+})
+
+// Build the local text index on the first search, then reuse it until this view unmounts.
+$effect(() => {
+  if (!normalizedTextQuery || featureTextSearchWorker) return
   const worker = new Worker(
     new URL('../../../../workers/featureTextSearchWorker.ts', import.meta.url),
-    {
-      type: 'module',
-    },
+    { type: 'module' },
   )
-
   worker.onmessage = handleFeatureTextSearchWorkerMessage
   featureTextSearchWorker = worker
-
-  return () => {
-    worker.terminate()
-    featureTextSearchWorker = null
-  }
 })
 
 const scheduleRemoteQuery = debounce((nextQuery: string) => {
