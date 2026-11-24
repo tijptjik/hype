@@ -20,6 +20,7 @@ import { refreshRemoteQuery } from '#lib/remote/index.js'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import ResearchConfiguration from '#lib/bits/patterns/fieldResearch/ResearchConfiguration.svelte'
 import ResearchLocations from '#lib/bits/patterns/fieldResearch/ResearchLocations.svelte'
+import { researchConfigurationVersion } from '#lib/fieldResearch/configuration.js'
 // TYPES
 import type { ResearchSession } from '#lib/fieldResearch/model.js'
 let projects = $state<Awaited<ReturnType<typeof getResearchProjects>>>([])
@@ -187,20 +188,25 @@ onMount(() => void load())
   {:else if current}
     {#key current.id}
       <FormSurface>
-        <div hidden={facet === 'locations'}>
+        <div
+          hidden={facet === 'locations' &&
+            current.configurationVersion === researchConfigurationVersion}
+        >
           <ResearchConfiguration
             {header}
             section={facet === 'fields' ? 'fields' : 'core'}
             sessionId={current.id}
             revision={current.revision}
             {layers}
+            allowMigration={!current.isArchived}
             disabled={busy ||
               current.status === 'completed' ||
               Boolean(current.isArchived)}
             onSaved={refresh}
           />
         </div>
-        {#if facet === 'locations'}
+        {#if facet === 'locations' &&
+          current.configurationVersion === researchConfigurationVersion}
           <ResearchLocations
             projectId={current.projectId}
             sessionId={current.id}

@@ -1,6 +1,7 @@
 // DRIZZLE
 import { sql } from 'drizzle-orm'
 import {
+  index,
   integer,
   primaryKey,
   real,
@@ -8,13 +9,14 @@ import {
   text,
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core'
+import { feature } from './feature'
 // TYPES
 import type {
   ResearchConfiguration,
   ResearchLayerOverrides,
 } from '#lib/fieldResearch/configuration.js'
 
-/** Private sessions retain their original capture extent after grouping and conversion. */
+/** Project-shared sessions retain their original capture extent after grouping and conversion. */
 export const fieldResearchSession = sqliteTable('fieldResearchSession', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
@@ -22,6 +24,8 @@ export const fieldResearchSession = sqliteTable('fieldResearchSession', {
   projectId: text('projectId').notNull(),
   layerId: text('layerId'),
   code: text('code'),
+  configurationVersion: integer('configurationVersion').notNull().default(0),
+  recordSequence: integer('recordSequence').notNull().default(0),
   configuration: text('configuration', { mode: 'json' }).$type<
     Omit<ResearchConfiguration, 'code'>
   >(),
@@ -39,6 +43,22 @@ export const fieldResearchSession = sqliteTable('fieldResearchSession', {
   east: real('east'),
   north: real('north'),
 })
+
+/** A field capture belongs to one shared session. */
+export const fieldResearchRecord = sqliteTable(
+  'fieldResearchRecord',
+  {
+    id: text('id').primaryKey(),
+    featureId: text('featureId').references(() => feature.id),
+    sessionId: text('sessionId')
+      .notNull()
+      .references(() => fieldResearchSession.id),
+  },
+  table => [
+    index('fieldResearchRecord_session').on(table.sessionId),
+    uniqueIndex('fieldResearchRecord_feature').on(table.featureId),
+  ],
+)
 
 /** Configured project layers inherit their session defaults unless explicitly overridden. */
 export const fieldResearchSessionLayer = sqliteTable(
@@ -59,6 +79,22 @@ export const fieldResearchSessionLayer = sqliteTable(
   ],
 )
 
+/** Original version and exact payload preserved before each configuration replacement. */
+export const fieldResearchConfigurationHistory = sqliteTable(
+  'fieldResearchConfigurationHistory',
+  {
+    sessionId: text('sessionId')
+      .notNull()
+      .references(() => fieldResearchSession.id),
+    revision: integer('revision').notNull(),
+    schemaVersion: integer('schemaVersion').notNull(),
+    code: text('code'),
+    configuration: text('configuration'),
+    layers: text('layers').notNull(),
+  },
+  table => [primaryKey({ columns: [table.sessionId, table.revision] })],
+)
+
 /** Locations explicitly vetted for use within a field session. */
 export const fieldResearchSessionLocation = sqliteTable(
   'fieldResearchSessionLocation',
@@ -68,37 +104,6 @@ export const fieldResearchSessionLocation = sqliteTable(
   },
   table => [primaryKey({ columns: [table.sessionId, table.locationId] })],
 )
-
-/** Working groups exist only inside field research; converted groups retain their Feature receipt. */
-export const fieldResearchStack = sqliteTable('fieldResearchStack', {
-  id: text('id').primaryKey(),
-  sessionId: text('sessionId').notNull(),
-  longitude: real('longitude'),
-  latitude: real('latitude'),
-  featureId: text('featureId'),
-  name: text('name'),
-  featureType: text('featureType'),
-  createdAt: text('createdAt').notNull(),
-})
-
-/** Uploaded assets remain independent of the Feature gallery until explicit conversion. */
-export const fieldResearchImage = sqliteTable('fieldResearchImage', {
-  id: text('id').primaryKey(),
-  sessionId: text('sessionId').notNull(),
-  stackId: text('stackId'),
-  state: text('state', { enum: ['uploading', 'uploaded'] }).notNull(),
-  filename: text('filename').notNull(),
-  longitude: real('longitude'),
-  latitude: real('latitude'),
-  capturedAt: text('capturedAt'),
-  contentHash: text('contentHash').notNull(),
-  storageKey: text('storageKey').notNull(),
-  env: text('env').notNull(),
-  mediaType: text('mediaType').notNull(),
-  byteSize: integer('byteSize').notNull(),
-  metadata: text('metadata').notNull(),
-  createdAt: text('createdAt').notNull(),
-})
 
 /** Immutable origin keys select the server-owned namespace of the optional related ID. */
 export const featureOrigin = sqliteTable('featureOrigin', {

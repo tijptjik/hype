@@ -3,40 +3,41 @@ import { error } from '@sveltejs/kit'
 // VALIDATION
 import { z } from 'zod'
 // DRIZZLE
-import { and, asc, desc, eq, gt, sql, getTableColumns } from 'drizzle-orm'
+import { and, asc, desc, eq, sql } from 'drizzle-orm'
 // API
 import { guardedCommand, guardedQuery } from './server/guarded.js'
 // SCHEMA
 import {
+  fieldResearchConfigurationHistory as history,
   fieldResearchSession as sessions,
   fieldResearchSessionLayer as sessionLayers,
-  fieldResearchImage as images,
-  fieldResearchStack as stacks,
 } from '#lib/db/schema/fieldResearch.js'
 // DOMAIN
 import {
   researchProjectAccess,
   requireResearchSessionAccess,
 } from '#lib/fieldResearch/access.js'
-import { mergeResearchStacks } from '#lib/db/services/fieldResearch.js'
-import { image as imageTable } from '#lib/db/schema/image.js'
-import { ImageContextResource } from '#lib/enums.js'
-import { ResearchCoordinatesSchema } from '#lib/fieldResearch/model.js'
 import {
+  researchConfigurationVersion,
   researchConfigurationSchema,
   researchLayerOverridesSchema,
 } from '#lib/fieldResearch/configuration.js'
+import {
+  migrateResearchSettings,
+  validResearchPropertyDefault,
+} from '#lib/fieldResearch/configurationMigration.js'
 import { listResolvedProjectProperties } from '#lib/db/services/property.js'
 import { requireFeatureType } from '#lib/features/intents.js'
 // SERVICES
+import {
+  firstResearchLayerSQL,
+  initialResearchLayersSQL,
+} from '#lib/db/services/fieldResearchLayers.js'
 import { setResearchSessionsArchived } from '#lib/db/services/fieldResearchArchive.js'
 import {
   readResearchSession,
-  clusterResearchImages,
-  moveResearchImage,
-  placeResearchStack,
+  researchSessionMetadata,
 } from '#lib/db/services/fieldResearch.js'
-import { convertResearchStack } from '#lib/db/services/fieldResearchConversion.js'
 import { executeRevisionBatch } from '#lib/db/services/revisionBatch.js'
 import { readFeatureIntentPolicy } from '#lib/db/services/featureIntentPolicy.js'
 // TYPES
@@ -45,7 +46,7 @@ import type { GuardedBaseContext } from './guarded.types.js'
 // TABLE OF CONTENTS
 // 1. Authorization and scope choices
 // 2. Session reads and edits
-// 3. Grouping and Feature conversion
+// 3. Versioned configuration and session metadata
 
 const id = z.string().min(1).max(100)
 const sessionRevision = z.object({
@@ -99,7 +100,7 @@ export const getResearchLayers = guardedQuery(
     )
       error(403, 'INSUFFICIENT_ROLE')
     const rows = await ctx.db.all<{ id: string; name: string }>(
-      sql`SELECT l.id,COALESCE((SELECT name FROM layerI18n WHERE layerId=l.id ORDER BY locale='en' DESC LIMIT 1),l.id) name FROM layer l WHERE l.projectId=${session.projectId} AND l.organisationId=${session.organisationId} AND l.isArchived=0 AND l.historicalSourceLayerId IS NULL ORDER BY name`,
+      sql`SELECT l.id,COALESCE((SELECT name FROM layerI18n WHERE layerId=l.id ORDER BY locale='en' DESC LIMIT 1),l.id) name FROM layer l WHERE l.projectId=${session.projectId} AND l.organisationId=${session.organisationId} AND l.isArchived=0 AND l.historicalSourceLayerId IS NULL ORDER BY name,l.id`,
     )
     return Promise.all(
       rows.map(async row => ({
@@ -134,10 +135,8 @@ export const getResearchSessions = guardedQuery(
     const comparison = sql.raw(input.sortOrder === 'asc' ? '>' : '<')
     return ctx.db
       .select({
-        ...getTableColumns(sessions),
+        ...researchSessionMetadata,
         totalCount: sql<number>`count(*) over()`,
-        photoCount: sql<number>`(SELECT count(*) FROM fieldResearchImage WHERE sessionId=fieldResearchSession.id)`,
-        stackCount: sql<number>`(SELECT count(*) FROM fieldResearchStack s WHERE s.sessionId=fieldResearchSession.id AND EXISTS(SELECT 1 FROM fieldResearchImage i WHERE i.stackId=s.id))`,
         layerName: sql<
           string | null
         >`(SELECT name FROM layerI18n WHERE layerId=fieldResearchSession.layerId ORDER BY locale='en' DESC LIMIT 1)`,
@@ -286,8 +285,11 @@ export const createResearchSession = guardedCommand(
       .insert(sessions)
       .values({
         ...input,
+        layerId:
+          input.layerId ?? firstResearchLayerSQL(input.projectId, scope.organisationId),
         organisationId: scope.organisationId,
         createdBy: ctx.user.id,
+        configurationVersion: researchConfigurationVersion,
         createdAt: now,
         updatedAt: now,
         status: 'uploading',
@@ -298,19 +300,12 @@ export const createResearchSession = guardedCommand(
       sql`EXISTS(SELECT 1 FROM project p JOIN organisation o ON o.id=p.organisationId WHERE p.id=${input.projectId} AND p.organisationId=${scope.organisationId} AND p.isArchived=0 AND o.isArchived=0) AND NOT EXISTS(SELECT 1 FROM fieldResearchSession WHERE id=${input.id} AND (projectId!=${input.projectId} OR createdBy!=${ctx.user.id}))`,
       [
         insert,
-        ...(input.layerId
-          ? [
-              ctx.db
-                .insert(sessionLayers)
-                .values({
-                  sessionId: input.id,
-                  layerId: input.layerId,
-                  isDefault: true,
-                  overrides: { defaults: {}, fieldVisibility: {}, properties: {} },
-                })
-                .onConflictDoNothing(),
-            ]
-          : []),
+        // Include every eligible layer only on the initial insert; retries preserve saved choices.
+        ctx.db
+          .insert(sessionLayers)
+          .select(
+            initialResearchLayersSQL(input.id, input.projectId, scope.organisationId),
+          ),
       ],
     )
     if (!created)
@@ -331,6 +326,16 @@ export const getResearchConfiguration = guardedQuery(
     requireResearch(ctx)
     await requireResearchSessionAccess(ctx, input.sessionId)
     const session = await readResearchSession(ctx.db, input.sessionId)
+    const version = session.configurationVersion
+    if (version !== researchConfigurationVersion)
+      return {
+        version,
+        currentVersion: researchConfigurationVersion,
+        settings: null,
+        configuredLayers: [],
+        properties: [],
+        types: [],
+      }
     const stored = await ctx.db
       .select({ code: sessions.code, configuration: sessions.configuration })
       .from(sessions)
@@ -345,6 +350,8 @@ export const getResearchConfiguration = guardedQuery(
       readFeatureIntentPolicy(ctx.db, { type: 'project', id: session.projectId }),
     ])
     return {
+      version,
+      currentVersion: researchConfigurationVersion,
       settings:
         stored?.code && stored.configuration
           ? { ...stored.configuration, code: stored.code }
@@ -356,110 +363,243 @@ export const getResearchConfiguration = guardedQuery(
   },
 )
 
-/** Save session configuration and layer overrides as one revision-fenced change.
- * @param input Current revision, settings and configured layers. @returns Nothing.
- * @remarks The selected layers and properties must remain within the owning project.
+const configurationInput = sessionRevision.extend({
+  settings: researchConfigurationSchema,
+  layers: z
+    .array(
+      z.object({
+        layerId: id,
+        isDefault: z.boolean(),
+        overrides: researchLayerOverridesSchema,
+      }),
+    )
+    .max(100),
+})
+
+/** Validate and atomically replace the complete configuration with a version/revision fence.
+ * @param input Validated settings and configured layers. @param ctx Authorized request.
+ * @param expectedVersion Source schema version. @returns Once the batch has committed.
+ */
+async function writeConfiguration(
+  input: z.infer<typeof configurationInput>,
+  ctx: GuardedBaseContext,
+  expectedVersion: number,
+): Promise<void> {
+  requireResearch(ctx)
+  await requireResearchSessionAccess(ctx, input.sessionId)
+  const session = await readResearchSession(ctx.db, input.sessionId)
+  if (
+    new Set(input.layers.map(layer => layer.layerId)).size !== input.layers.length ||
+    input.layers.filter(layer => layer.isDefault).length > 1
+  )
+    error(400, 'Choose distinct layers and at most one default layer.')
+  const properties = await listResolvedProjectProperties(ctx.db, session.projectId)
+  const byId = new Map(properties.map(property => [property.id, property]))
+  for (const settings of [
+    input.settings.properties,
+    ...input.layers.map(layer => layer.overrides.properties),
+  ]) {
+    for (const [id, setting] of Object.entries(settings)) {
+      const property = byId.get(id)
+      if (!property || !validResearchPropertyDefault(property, setting.defaultValue))
+        error(
+          400,
+          'Choose an available project property and a compatible default for ' +
+            id +
+            '.',
+        )
+    }
+  }
+  const projectPolicy = await readFeatureIntentPolicy(ctx.db, {
+    type: 'project',
+    id: session.projectId,
+  })
+  requireFeatureType(projectPolicy.types, input.settings.defaults.featureType)
+  for (const layer of input.layers) {
+    const valid = await ctx.db.get(
+      sql`SELECT id FROM layer WHERE id=${layer.layerId} AND projectId=${session.projectId} AND organisationId=${session.organisationId} AND isArchived=0 AND historicalSourceLayerId IS NULL`,
+    )
+    if (!valid) error(400, 'Choose active layers in this project.')
+    const policy = await readFeatureIntentPolicy(ctx.db, {
+      type: 'layer',
+      id: layer.layerId,
+    })
+    requireFeatureType(
+      policy.types,
+      layer.overrides.defaults.featureType ?? input.settings.defaults.featureType,
+    )
+  }
+  const { code, ...configuration } = input.settings
+  const defaultLayer = input.layers.find(layer => layer.isDefault)?.layerId ?? null
+  const committed = await executeRevisionBatch(
+    ctx.db,
+    sql`EXISTS(SELECT 1 FROM fieldResearchSession WHERE id=${session.id} AND revision=${input.revision} AND configurationVersion=${expectedVersion} AND (status!='completed' OR ${expectedVersion !== researchConfigurationVersion ? 1 : 0}) AND isArchived=0) AND NOT EXISTS(SELECT 1 FROM json_each(${JSON.stringify(input.layers.map(layer => layer.layerId))}) chosen LEFT JOIN layer l ON l.id=chosen.value AND l.projectId=${session.projectId} AND l.organisationId=${session.organisationId} AND l.isArchived=0 AND l.historicalSourceLayerId IS NULL WHERE l.id IS NULL)`,
+    [
+      ctx.db.insert(history).values({
+        sessionId: session.id,
+        revision: input.revision,
+        schemaVersion: expectedVersion,
+        code: sql`(SELECT code FROM fieldResearchSession WHERE id=${session.id})`,
+        configuration: sql`(SELECT configuration FROM fieldResearchSession WHERE id=${session.id})`,
+        layers: sql`(SELECT json_group_array(json_object('layerId',layerId,'isDefault',isDefault,'overrides',overrides)) FROM fieldResearchSessionLayer WHERE sessionId=${session.id})`,
+      }),
+      ctx.db.delete(sessionLayers).where(eq(sessionLayers.sessionId, session.id)),
+      ...input.layers.map(layer =>
+        ctx.db.insert(sessionLayers).values({ sessionId: session.id, ...layer }),
+      ),
+      ctx.db
+        .update(sessions)
+        .set({
+          code,
+          configuration,
+          configurationVersion: researchConfigurationVersion,
+          layerId: defaultLayer,
+          revision: sql`${sessions.revision}+1`,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(sessions.id, session.id)),
+    ],
+  )
+  if (!committed)
+    error(
+      409,
+      'The session, its schema version or its layers changed. Refresh and retry.',
+    )
+}
+
+/** Save settings only for a session on the current configuration schema.
+ * @param input Current revision, settings and layer overrides. @returns Once saved.
  */
 export const saveResearchConfiguration = guardedCommand(
-  sessionRevision.extend({
-    settings: researchConfigurationSchema,
-    layers: z
-      .array(
-        z.object({
-          layerId: id,
-          isDefault: z.boolean(),
-          overrides: researchLayerOverridesSchema,
-        }),
-      )
-      .max(100),
-  }),
+  configurationInput.extend({ schemaVersion: z.literal(researchConfigurationVersion) }),
+  (input, ctx) => writeConfiguration(input, ctx, researchConfigurationVersion),
+)
+
+const migrationInput = sessionRevision.extend({
+  from: z.number().int().nonnegative(),
+  to: z.literal(researchConfigurationVersion),
+})
+
+/** Compute the same migration for preview and apply, always from server-side persisted data.
+ * @param input Reviewed session revision and version pair. @param ctx Authenticated request.
+ * @returns Valid target settings and changes for the reviewer.
+ */
+async function planMigration(
+  input: z.infer<typeof migrationInput>,
+  ctx: GuardedBaseContext,
+): Promise<ReturnType<typeof migrateResearchSettings> & { token: string }> {
+  requireResearch(ctx)
+  await requireResearchSessionAccess(ctx, input.sessionId)
+  const session = await readResearchSession(ctx.db, input.sessionId)
+  if (
+    session.revision !== input.revision ||
+    session.configurationVersion !== input.from ||
+    input.from >= input.to
+  )
+    error(409, 'Refresh the session before migrating its configuration.')
+  const [stored, rows, properties, project, layers] = await Promise.all([
+    ctx.db.get<{ code: string | null; configuration: string | null }>(
+      sql`SELECT code,configuration FROM fieldResearchSession WHERE id=${session.id}`,
+    ),
+    ctx.db.all<{ layerId: string; isDefault: number; overrides: string }>(
+      sql`SELECT layerId,isDefault,overrides FROM fieldResearchSessionLayer WHERE sessionId=${session.id} ORDER BY layerId`,
+    ),
+    listResolvedProjectProperties(ctx.db, session.projectId),
+    readFeatureIntentPolicy(ctx.db, { type: 'project', id: session.projectId }),
+    ctx.db.all<{ id: string }>(
+      sql`SELECT id FROM layer WHERE projectId=${session.projectId} AND organisationId=${session.organisationId} AND isArchived=0 AND historicalSourceLayerId IS NULL AND id IN (SELECT layerId FROM fieldResearchSessionLayer WHERE sessionId=${session.id})`,
+    ),
+  ])
+  const enabled = (policy: typeof project): string[] =>
+    policy.types.filter(type => type.enabled !== false).map(type => type.id)
+  const policies = await Promise.all(
+    layers.map(
+      async layer =>
+        [
+          layer.id,
+          enabled(
+            await readFeatureIntentPolicy(ctx.db, { type: 'layer', id: layer.id }),
+          ),
+        ] as const,
+    ),
+  )
+  const unreadable: string[] = []
+  // A historical blob may not decode as an object. Its original bytes are kept in history on apply.
+  /** Decode historical settings safely before target validation.
+   * @param raw Stored JSON. @param path Review label. @returns Object members or an empty fallback.
+   */
+  function decode(
+    raw: string | null | undefined,
+    path: string,
+  ): Record<string, unknown> {
+    if (raw == null) return {}
+    try {
+      const value: unknown = JSON.parse(raw)
+      if (value && typeof value === 'object' && !Array.isArray(value))
+        return value as Record<string, unknown>
+    } catch {
+      /* Report the field and supply target defaults below. */
+    }
+    unreadable.push(path)
+    return {}
+  }
+  const plan = migrateResearchSettings(
+    {
+      settings: {
+        ...decode(stored?.configuration, 'session.configuration'),
+        code: stored?.code,
+      },
+      layers: rows.map(row => ({
+        ...row,
+        isDefault: Boolean(row.isDefault),
+        overrides: decode(row.overrides, 'layers.' + row.layerId + '.overrides'),
+      })),
+    },
+    input.from,
+    input.to,
+    session.id,
+    { properties, types: enabled(project), layers: new Map(policies) },
+  )
+  plan.removed.push(...unreadable)
+  // A catalogue edit can change the preview even when the session revision stays the same.
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(JSON.stringify(plan)),
+  )
+  const token = Array.from(new Uint8Array(digest), byte =>
+    byte.toString(16).padStart(2, '0'),
+  ).join('')
+  return { ...plan, token }
+}
+
+/** Preview a specific schema upgrade without changing stored data.
+ * @param input Session revision and version pair. @returns Proposed changes and review token.
+ */
+export const previewResearchMigration = guardedQuery(migrationInput, planMigration)
+
+/** Apply exactly the migration reviewed for this session, retaining its source in history.
+ * @param input Source/target versions, revision and preview token. @returns Once migrated.
+ */
+export const migrateResearchConfiguration = guardedCommand(
+  migrationInput.extend({ token: z.string().length(64) }),
   async (input, ctx) => {
-    requireResearch(ctx)
-    await requireResearchSessionAccess(ctx, input.sessionId)
-    const session = await readResearchSession(ctx.db, input.sessionId)
-    if (
-      new Set(input.layers.map(layer => layer.layerId)).size !== input.layers.length ||
-      input.layers.filter(layer => layer.isDefault).length > 1
+    const plan = await planMigration(input, ctx)
+    if (input.token !== plan.token)
+      error(409, 'The migration preview changed. Review it again.')
+    await writeConfiguration(
+      configurationInput.parse({
+        ...input,
+        settings: plan.settings,
+        layers: plan.layers,
+      }),
+      ctx,
+      input.from,
     )
-      error(400, 'Choose distinct layers and at most one default layer.')
-    const properties = await listResolvedProjectProperties(ctx.db, session.projectId)
-    const propertyIds = new Set(properties.map(property => property.id))
-    for (const settings of [
-      input.settings.properties,
-      ...input.layers.map(layer => layer.overrides.properties),
-    ]) {
-      if (Object.keys(settings).some(propertyId => !propertyIds.has(propertyId)))
-        error(400, 'Choose properties available in this project.')
-      for (const [propertyId, setting] of Object.entries(settings)) {
-        const value = setting.defaultValue
-        if (value === undefined || value === null) continue
-        const property = properties.find(item => item.id === propertyId)!
-        if (property.values?.length) {
-          const allowed = new Set(property.values.map(option => option.id))
-          const values = Array.isArray(value) ? value : [value]
-          if (
-            (property.cardinality === 'one' && Array.isArray(value)) ||
-            (property.cardinality === 'many' && !Array.isArray(value)) ||
-            values.some(item => typeof item !== 'string' || !allowed.has(item))
-          )
-            error(400, 'Choose valid project property options.')
-        } else if (
-          Array.isArray(value) ||
-          (property.dataType === 'boolean' && typeof value !== 'boolean') ||
-          (property.dataType === 'number' && typeof value !== 'number') ||
-          (!['boolean', 'number'].includes(property.dataType ?? 'text') &&
-            typeof value !== 'string')
-        )
-          error(400, 'Choose a default value matching the property type.')
-      }
-    }
-    const projectPolicy = await readFeatureIntentPolicy(ctx.db, {
-      type: 'project',
-      id: session.projectId,
-    })
-    requireFeatureType(projectPolicy.types, input.settings.defaults.featureType)
-    for (const layer of input.layers) {
-      const valid = await ctx.db.get(
-        sql`SELECT id FROM layer WHERE id=${layer.layerId} AND projectId=${session.projectId} AND organisationId=${session.organisationId} AND isArchived=0 AND historicalSourceLayerId IS NULL`,
-      )
-      if (!valid) error(400, 'Choose active layers in this project.')
-      const policy = await readFeatureIntentPolicy(ctx.db, {
-        type: 'layer',
-        id: layer.layerId,
-      })
-      requireFeatureType(
-        policy.types,
-        layer.overrides.defaults.featureType ?? input.settings.defaults.featureType,
-      )
-    }
-    const { code, ...configuration } = input.settings
-    const defaultLayer = input.layers.find(layer => layer.isDefault)?.layerId ?? null
-    const committed = await executeRevisionBatch(
-      ctx.db,
-      sql`EXISTS(SELECT 1 FROM fieldResearchSession WHERE id=${session.id} AND revision=${input.revision} AND status!='completed' AND isArchived=0) AND NOT EXISTS(SELECT 1 FROM json_each(${JSON.stringify(input.layers.map(layer => layer.layerId))}) chosen LEFT JOIN layer l ON l.id=chosen.value AND l.projectId=${session.projectId} AND l.organisationId=${session.organisationId} AND l.isArchived=0 AND l.historicalSourceLayerId IS NULL WHERE l.id IS NULL)`,
-      [
-        ctx.db.delete(sessionLayers).where(eq(sessionLayers.sessionId, session.id)),
-        ...input.layers.map(layer =>
-          ctx.db.insert(sessionLayers).values({ sessionId: session.id, ...layer }),
-        ),
-        ctx.db
-          .update(sessions)
-          .set({
-            code,
-            configuration,
-            layerId: defaultLayer,
-            revision: sql`${sessions.revision}+1`,
-            updatedAt: new Date().toISOString(),
-          })
-          .where(eq(sessions.id, session.id)),
-      ],
-    )
-    if (!committed) error(409, 'The session or its layers changed. Refresh and retry.')
   },
 )
 
-/** Read session metadata and working stacks; image payloads use a separate paginated query.
- * @param input Session identity. @returns Session and nonempty working stacks.
+/** Read session metadata without decoding version-specific settings.
+ * @param input Session identity. @returns Session metadata.
  */
 export const getResearchSession = guardedQuery(
   z.object({ sessionId: id }),
@@ -467,40 +607,7 @@ export const getResearchSession = guardedQuery(
     requireResearch(ctx)
     await requireResearchSessionAccess(ctx, input.sessionId)
     const session = await readResearchSession(ctx.db, input.sessionId)
-    const groups = await ctx.db
-      .select()
-      .from(stacks)
-      .where(
-        and(
-          eq(stacks.sessionId, session.id),
-          sql`EXISTS(SELECT 1 FROM fieldResearchImage WHERE stackId=${stacks.id})`,
-        ),
-      )
-      .orderBy(stacks.createdAt, stacks.id)
-    return { session, stacks: groups }
-  },
-)
-
-/** Page capture records without loading original image bytes or Feature relations.
- * @param input Session and optional cursor. @returns Up to 200 lightweight capture rows.
- */
-export const getResearchImages = guardedQuery(
-  z.object({ sessionId: id, after: id.optional() }),
-  async (input, ctx) => {
-    requireResearch(ctx)
-    await requireResearchSessionAccess(ctx, input.sessionId)
-    await readResearchSession(ctx.db, input.sessionId)
-    return ctx.db
-      .select()
-      .from(images)
-      .where(
-        and(
-          eq(images.sessionId, input.sessionId),
-          input.after ? gt(images.id, input.after) : undefined,
-        ),
-      )
-      .orderBy(images.id)
-      .limit(200)
+    return { session }
   },
 )
 
@@ -515,7 +622,7 @@ export const updateResearchSession = guardedCommand(
   async (input, ctx) => {
     requireResearch(ctx)
     await requireResearchSessionAccess(ctx, input.sessionId)
-    const guard = sql`EXISTS(SELECT 1 FROM fieldResearchSession WHERE id=${input.sessionId} AND revision=${input.revision}) AND (${input.completed ? sql`NOT EXISTS(SELECT 1 FROM fieldResearchImage i LEFT JOIN fieldResearchStack s ON s.id=i.stackId WHERE i.sessionId=${input.sessionId} AND (i.state!='uploaded' OR s.featureId IS NULL))` : sql`1`})`
+    const guard = sql`EXISTS(SELECT 1 FROM fieldResearchSession WHERE id=${input.sessionId} AND revision=${input.revision} AND configurationVersion=${researchConfigurationVersion} AND isArchived=0)`
     const result = await executeRevisionBatch(ctx.db, guard, [
       ctx.db
         .update(sessions)
@@ -528,238 +635,6 @@ export const updateResearchSession = guardedCommand(
         })
         .where(eq(sessions.id, input.sessionId)),
     ])
-    if (!result)
-      error(409, 'Refresh the session; all images must be converted before completion.')
-  },
-)
-
-/** Cluster only new ungrouped captures after their upload queue settles.
- * @param input Session revision. @returns Nothing after a successful suggestion pass.
- */
-export const clusterResearchSession = guardedCommand(
-  sessionRevision,
-  async (input, ctx) => {
-    requireResearch(ctx)
-    await requireResearchSessionAccess(ctx, input.sessionId)
-    await clusterResearchImages(ctx.db, input.sessionId, input.revision)
-  },
-)
-
-/** Move an image between working stacks or extract it into a singleton.
- * @param input Current revision, image and optional target stack. @returns Nothing.
- */
-export const moveResearchCapture = guardedCommand(
-  sessionRevision.extend({
-    imageId: id,
-    targetStackId: id.nullable(),
-    coordinates: ResearchCoordinatesSchema.optional(),
-  }),
-  async (input, ctx) => {
-    requireResearch(ctx)
-    await requireResearchSessionAccess(ctx, input.sessionId)
-    await moveResearchImage(ctx.db, input)
-  },
-)
-
-/** Place a working stack while retaining each original image coordinate.
- * @param input Current revision, stack and chosen coordinates. @returns Nothing.
- */
-export const placeResearchCapture = guardedCommand(
-  sessionRevision.extend({ stackId: id, coordinates: ResearchCoordinatesSchema }),
-  async (input, ctx) => {
-    requireResearch(ctx)
-    await requireResearchSessionAccess(ctx, input.sessionId)
-    await placeResearchStack(ctx.db, input)
-  },
-)
-
-/** Convert one reviewed stack into an unpublished Feature and retain its receipt.
- * @param input Current revision, stack and chosen destination layer/type. @returns Feature ID.
- */
-export const createResearchFeature = guardedCommand(
-  sessionRevision.extend({ stackId: id, layerId: id, featureType: id }),
-  async (input, ctx) => {
-    requireResearch(ctx)
-    await requireResearchSessionAccess(ctx, input.sessionId)
-    return convertResearchStack(ctx.db, { ...input, actorId: ctx.user.id })
-  },
-)
-
-/** Retain provisional labels without creating or editing a Feature.
- * @param input Working stack and editable fields. @returns Nothing after a revision-fenced write.
- */
-export const updateResearchStack = guardedCommand(
-  sessionRevision.extend({
-    stackId: id,
-    name: z.string().max(200),
-    featureType: z.string().max(100),
-  }),
-  async (input, ctx) => {
-    requireResearch(ctx)
-    await requireResearchSessionAccess(ctx, input.sessionId)
-    const committed = await executeRevisionBatch(
-      ctx.db,
-      sql`EXISTS(SELECT 1 FROM fieldResearchSession WHERE id=${input.sessionId} AND revision=${input.revision} AND status!='completed') AND EXISTS(SELECT 1 FROM fieldResearchStack WHERE id=${input.stackId} AND sessionId=${input.sessionId} AND featureId IS NULL)`,
-      [
-        ctx.db
-          .update(stacks)
-          .set({ name: input.name.trim(), featureType: input.featureType || null })
-          .where(eq(stacks.id, input.stackId)),
-        ctx.db
-          .update(sessions)
-          .set({
-            revision: sql`${sessions.revision}+1`,
-            updatedAt: new Date().toISOString(),
-          })
-          .where(eq(sessions.id, input.sessionId)),
-      ],
-    )
-    if (!committed) error(409, 'The stack changed. Refresh before editing its details.')
-  },
-)
-
-/** Set a legacy session's destination once, before entering map review.
- * @param input Session revision and initial layer. @returns Nothing.
- */
-export const configureResearchLayer = guardedCommand(
-  sessionRevision.extend({ layerId: id }),
-  async (input, ctx) => {
-    requireResearch(ctx)
-    await requireResearchSessionAccess(ctx, input.sessionId)
-    const committed = await executeRevisionBatch(
-      ctx.db,
-      sql`EXISTS(SELECT 1 FROM fieldResearchSession s JOIN layer l ON l.projectId=s.projectId AND l.organisationId=s.organisationId WHERE s.id=${input.sessionId} AND s.revision=${input.revision} AND s.layerId IS NULL AND s.status!='completed' AND l.id=${input.layerId} AND l.isArchived=0 AND l.historicalSourceLayerId IS NULL)`,
-      [
-        ctx.db
-          .insert(sessionLayers)
-          .values({
-            sessionId: input.sessionId,
-            layerId: input.layerId,
-            isDefault: true,
-            overrides: { defaults: {}, fieldVisibility: {}, properties: {} },
-          })
-          .onConflictDoUpdate({
-            target: [sessionLayers.sessionId, sessionLayers.layerId],
-            set: { isDefault: true },
-          }),
-        ctx.db
-          .update(sessions)
-          .set({ layerId: input.layerId, revision: sql`${sessions.revision}+1` })
-          .where(eq(sessions.id, input.sessionId)),
-      ],
-    )
-    if (!committed) error(409, 'Refresh the session before choosing its layer.')
-  },
-)
-
-/** Convert all reviewed provisional stacks, retaining receipts so retries never duplicate Features.
- * @param input Session revision. @returns Number of newly created unpublished Features.
- * @remarks Each stack is atomic; a later failure leaves earlier receipts available for safe retry.
- */
-export const saveResearchFeatures = guardedCommand(
-  sessionRevision,
-  async (input, ctx) => {
-    requireResearch(ctx)
-    await requireResearchSessionAccess(ctx, input.sessionId)
-    let session = await readResearchSession(ctx.db, input.sessionId)
-    if (session.revision !== input.revision)
-      error(409, 'Refresh before saving this session.')
-    if (!session.layerId) error(400, 'Choose the session layer before saving.')
-    const layerId = session.layerId
-    const rows = await ctx.db
-      .select()
-      .from(stacks)
-      .where(
-        and(
-          eq(stacks.sessionId, session.id),
-          sql`${stacks.featureId} IS NULL`,
-          sql`EXISTS(SELECT 1 FROM fieldResearchImage WHERE stackId=${stacks.id})`,
-        ),
-      )
-    const policy = await readFeatureIntentPolicy(ctx.db, { type: 'layer', id: layerId })
-    if (
-      await ctx.db.get(
-        sql`SELECT id FROM fieldResearchImage WHERE sessionId=${session.id} AND (state!='uploaded' OR stackId IS NULL) LIMIT 1`,
-      )
-    )
-      error(400, 'Finish uploading and grouping all images first.')
-    for (const row of rows) {
-      if (row.longitude === null || row.latitude === null)
-        error(400, 'Place every stack on the map before saving.')
-      if (
-        !policy.types.some(
-          type => type.id === row.featureType && type.enabled !== false,
-        )
-      )
-        error(400, 'Choose a Feature type for every stack before saving.')
-    }
-    for (const row of rows) {
-      await convertResearchStack(ctx.db, {
-        sessionId: session.id,
-        revision: session.revision,
-        stackId: row.id,
-        layerId,
-        featureType: row.featureType!,
-        actorId: ctx.user.id,
-      })
-      session = await readResearchSession(ctx.db, session.id)
-    }
-    return { created: rows.length }
-  },
-)
-
-/** Browse authorized layer destinations with their owning organisation image.
- * @param input Empty options. @returns Layer suggestions grouped visually by project.
- */
-export const getResearchDestinations = guardedQuery(z.object({}), async (_, ctx) => {
-  requireResearch(ctx)
-  const rows = await ctx.db.all<{
-    id: string
-    projectId: string
-    organisationId: string
-    name: string
-    projectName: string
-    organisationImageId: string | null
-  }>(
-    sql`SELECT l.id,l.projectId,l.organisationId,o.imageId organisationImageId,COALESCE((SELECT name FROM layerI18n WHERE layerId=l.id ORDER BY locale='en' DESC LIMIT 1),l.id) name,COALESCE((SELECT name FROM projectI18n WHERE projectId=p.id ORDER BY locale='en' DESC LIMIT 1),p.id) projectName FROM layer l JOIN project p ON p.id=l.projectId JOIN organisation o ON o.id=p.organisationId WHERE l.isArchived=0 AND l.historicalSourceLayerId IS NULL AND p.isArchived=0 AND o.isArchived=0 AND ${researchProjectAccess(ctx, sql`p.id`)} ORDER BY projectName,name`,
-  )
-  const icons = new Map<string, Promise<typeof imageTable.$inferSelect | undefined>>()
-  return Promise.all(
-    rows.map(async row => {
-      if (row.organisationImageId && !icons.has(row.organisationImageId))
-        icons.set(
-          row.organisationImageId,
-          ctx.db
-            .select()
-            .from(imageTable)
-            .where(eq(imageTable.id, row.organisationImageId))
-            .get(),
-        )
-      const image = row.organisationImageId
-        ? await icons.get(row.organisationImageId)
-        : undefined
-      return {
-        ...row,
-        organisationImage: image
-          ? {
-              ctxType: ImageContextResource.organisation,
-              ctxId: row.organisationId,
-              image,
-            }
-          : null,
-      }
-    }),
-  )
-})
-
-/** Merge a complete working stack into another without changing the target marker.
- * @param input Session revision and source/target stack identities. @returns Nothing.
- */
-export const mergeResearchCaptures = guardedCommand(
-  sessionRevision.extend({ sourceStackId: id, targetStackId: id }),
-  async (input, ctx) => {
-    requireResearch(ctx)
-    await requireResearchSessionAccess(ctx, input.sessionId)
-    await mergeResearchStacks(ctx.db, input)
+    if (!result) error(409, 'Refresh the session and check its configuration version.')
   },
 )

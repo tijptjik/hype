@@ -13,6 +13,7 @@ import {
 } from '#lib/db/schema/fieldResearch.js'
 // SERVICES
 import { requireResearchSessionAccess } from '#lib/fieldResearch/access.js'
+import { researchConfigurationVersion } from '#lib/fieldResearch/configuration.js'
 import { readResearchSession } from '#lib/db/services/fieldResearch.js'
 import { listLocationResources } from '#lib/db/services/locationDirectory.js'
 import { executeRevisionBatch } from '#lib/db/services/revisionBatch.js'
@@ -127,7 +128,7 @@ export const addResearchLocation = guardedCommand(
         : sql`NOT EXISTS(SELECT 1 FROM json_each(${JSON.stringify(ids)}) selected WHERE selected.value NOT IN (SELECT id FROM (${researchLocationDescendantsSQL(input.locationId, session.organisationId, includeParts)})))`
     const committed = await executeRevisionBatch(
       ctx.db,
-      sql`EXISTS(SELECT 1 FROM fieldResearchSession WHERE id=${input.sessionId} AND revision=${input.revision} AND status!='completed' AND isArchived=0) AND EXISTS(SELECT 1 FROM location root WHERE root.id=${input.locationId} AND root.matchingType=${root.kind} AND root.state!='redirect' AND (root.state!='manual' OR root.ownerOrganisationId=${session.organisationId})) AND NOT EXISTS(SELECT 1 FROM json_each(${JSON.stringify(ids)}) picked LEFT JOIN location l ON l.id=picked.value WHERE l.id IS NULL OR l.state='redirect' OR (l.state='manual' AND l.ownerOrganisationId IS NOT ${session.organisationId})) AND ${containmentGuard}`,
+      sql`EXISTS(SELECT 1 FROM fieldResearchSession WHERE id=${input.sessionId} AND revision=${input.revision} AND configurationVersion=${researchConfigurationVersion} AND status!='completed' AND isArchived=0) AND EXISTS(SELECT 1 FROM location root WHERE root.id=${input.locationId} AND root.matchingType=${root.kind} AND root.state!='redirect' AND (root.state!='manual' OR root.ownerOrganisationId=${session.organisationId})) AND NOT EXISTS(SELECT 1 FROM json_each(${JSON.stringify(ids)}) picked LEFT JOIN location l ON l.id=picked.value WHERE l.id IS NULL OR l.state='redirect' OR (l.state='manual' AND l.ownerOrganisationId IS NOT ${session.organisationId})) AND ${containmentGuard}`,
       [
         ...inserts,
         ctx.db
@@ -153,7 +154,7 @@ export const removeResearchLocation = guardedCommand(
     await requireResearchSessionAccess(ctx, input.sessionId)
     const committed = await executeRevisionBatch(
       ctx.db,
-      sql`EXISTS(SELECT 1 FROM fieldResearchSession WHERE id=${input.sessionId} AND revision=${input.revision} AND status!='completed' AND isArchived=0)`,
+      sql`EXISTS(SELECT 1 FROM fieldResearchSession WHERE id=${input.sessionId} AND revision=${input.revision} AND configurationVersion=${researchConfigurationVersion} AND status!='completed' AND isArchived=0)`,
       [
         ctx.db
           .delete(sessionLocations)
@@ -203,7 +204,7 @@ export const addResearchParts = guardedCommand(
       )
     const committed = await executeRevisionBatch(
       ctx.db,
-      sql`EXISTS(SELECT 1 FROM fieldResearchSession WHERE id=${input.sessionId} AND revision=${input.revision} AND status!='completed' AND isArchived=0) AND NOT EXISTS(SELECT 1 FROM json_each(${JSON.stringify(ids)}) picked LEFT JOIN location l ON l.id=picked.value WHERE l.id IS NULL OR l.matchingType!='building_part' OR l.state='redirect' OR (l.state='manual' AND l.ownerOrganisationId IS NOT ${session.organisationId}))`,
+      sql`EXISTS(SELECT 1 FROM fieldResearchSession WHERE id=${input.sessionId} AND revision=${input.revision} AND configurationVersion=${researchConfigurationVersion} AND status!='completed' AND isArchived=0) AND NOT EXISTS(SELECT 1 FROM json_each(${JSON.stringify(ids)}) picked LEFT JOIN location l ON l.id=picked.value WHERE l.id IS NULL OR l.matchingType!='building_part' OR l.state='redirect' OR (l.state='manual' AND l.ownerOrganisationId IS NOT ${session.organisationId}))`,
       [
         ...inserts,
         ctx.db

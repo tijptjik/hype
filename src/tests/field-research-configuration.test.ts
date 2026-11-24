@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
+import { migrateResearchSettings } from '#lib/fieldResearch/configurationMigration.js'
 import { DatabaseSync } from 'node:sqlite'
 import { readFileSync } from 'node:fs'
 import {
@@ -13,6 +14,7 @@ import {
 } from '#lib/templates/displayTemplate.js'
 import {
   researchConfigurationSchema,
+  researchPropertyIncluded,
   researchLayerOverridesSchema,
   resolveResearchConfiguration,
 } from '#lib/fieldResearch/configuration.js'
@@ -40,12 +42,37 @@ describe('field research configuration', () => {
     })
     expect(resolved.properties.material).toEqual({
       isVisible: false,
-      isRecordable: true,
+      isRecordable: false,
       defaultValue: null,
     })
     expect(resolved.fieldVisibility.isDraft).toBe(false)
     expect(resolved.fieldVisibility.isVisitable).toBe(true)
     expect(session.properties.material.isVisible).toBe(true)
+  })
+  it('normalizes legacy flags into inclusion while retaining inherited defaults', () => {
+    const session = researchConfigurationSchema.parse({
+      code: 'TEST',
+      properties: {
+        material: { isVisible: true, isRecordable: false, defaultValue: 'stone' },
+      },
+    })
+    expect(session.properties.material).toEqual({
+      isVisible: true,
+      isRecordable: true,
+      defaultValue: 'stone',
+    })
+    const layer = researchLayerOverridesSchema.parse({
+      properties: { material: { defaultValue: 'wood' } },
+    })
+    expect(researchPropertyIncluded(layer.properties.material)).toBeUndefined()
+    expect(resolveResearchConfiguration(session, layer).properties.material).toEqual({
+      isVisible: true,
+      isRecordable: true,
+      defaultValue: 'wood',
+    })
+    expect(researchPropertyIncluded({ isVisible: false, isRecordable: true })).toBe(
+      true,
+    )
   })
   it('renders zero-padded ordinals and rejects templates without a sequence', () => {
     const template = '{{session.code}}-{{000}}'
@@ -126,4 +153,64 @@ describe('field research configuration', () => {
       db.close()
     }
   })
+})
+
+it('migrates compatible false values, sparse overrides, removed keys and newly required defaults', () => {
+  const source = {
+    settings: {
+      code: 'A',
+      obsolete: 1,
+      defaults: { isDraft: false, isVisitable: 'yes' },
+      properties: {
+        retired: {},
+        p: { defaultValue: 'retired-option', isVisible: true },
+      },
+    },
+    layers: [
+      {
+        layerId: 'l',
+        isDefault: true,
+        overrides: {
+          defaults: { isIntangible: false },
+          properties: { p: { isRecordable: false } },
+        },
+      },
+    ],
+  }
+  const catalogue = {
+    types: ['object'],
+    layers: new Map([['l', ['object']]]),
+    properties: [
+      {
+        id: 'p',
+        type: 'specifier' as const,
+        dataType: 'boolean' as const,
+        cardinality: 'one' as const,
+      },
+    ],
+  }
+  const result = migrateResearchSettings(source, 0, 1, 'session', catalogue)
+  expect(result.settings.defaults).toMatchObject({
+    isDraft: false,
+    isVisitable: false,
+    isPendingReview: true,
+  })
+  expect(result.settings.properties).toEqual({
+    p: { isVisible: true, isRecordable: true },
+  })
+  expect(result.layers[0].overrides).toEqual({
+    defaults: { isIntangible: false },
+    properties: { p: { isRecordable: false, isVisible: false } },
+    fieldVisibility: {},
+  })
+  expect(result.removed).toEqual(
+    expect.arrayContaining([
+      'session.obsolete',
+      'session.properties.retired',
+      'session.properties.p.defaultValue',
+      'session.defaults.isVisitable',
+    ]),
+  )
+  expect(result.defaulted).toContain('session.defaults.isPendingReview')
+  expect(() => migrateResearchSettings(source, 2, 1, 'session', catalogue)).toThrow()
 })

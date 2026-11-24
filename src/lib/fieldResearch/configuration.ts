@@ -2,6 +2,9 @@
 import { z } from 'zod'
 import { parseDisplayTemplate } from '#lib/templates/displayTemplate.js'
 
+// Bump when a stored configuration needs reinterpretation. Version zero predates this contract.
+export const researchConfigurationVersion = 1
+
 /** Session defaults are inherited independently by every configured layer. */
 const featureDefaultFields = {
   featureType: z.string().min(1).max(80),
@@ -31,7 +34,7 @@ export const researchFieldVisibilitySchema = fieldVisibilitySchema.default({
   isDraft: true,
   isPendingReview: true,
 })
-export const researchPropertySettingsSchema = z.object({
+export const propertySettingsSchema = z.object({
   isVisible: z.boolean(),
   isRecordable: z.boolean(),
   defaultValue: z
@@ -43,6 +46,33 @@ export const researchPropertySettingsSchema = z.object({
       z.array(z.string().max(200)).max(100),
     ])
     .optional(),
+})
+/** Treat the legacy visibility/recordability pair as one inclusion setting.
+ * @param settings Stored property settings or a partial layer override.
+ * @returns Inclusion, or undefined when the layer inherits it.
+ * @remarks Either previously enabled flag retains the field. Explicit layer choices override the session as a pair.
+ */
+export function researchPropertyIncluded(settings?: {
+  isVisible?: boolean
+  isRecordable?: boolean
+}): boolean | undefined {
+  if (settings?.isVisible === undefined && settings?.isRecordable === undefined)
+    return undefined
+  return Boolean(settings?.isVisible || settings?.isRecordable)
+}
+
+// Retain the stored keys for compatibility, but normalize them to one logical switch.
+export const researchPropertySettingsSchema = propertySettingsSchema.transform(
+  settings => {
+    const included = researchPropertyIncluded(settings) ?? false
+    return { ...settings, isVisible: included, isRecordable: included }
+  },
+)
+const propertyOverridesSchema = propertySettingsSchema.partial().transform(settings => {
+  const included = researchPropertyIncluded(settings)
+  return included === undefined
+    ? settings
+    : { ...settings, isVisible: included, isRecordable: included }
 })
 export const researchPropertiesSchema = z.record(
   z.string().min(1).max(100),
@@ -77,9 +107,7 @@ export const researchConfigurationSchema = z.object({
 export const researchLayerOverridesSchema = z.object({
   defaults: z.object(featureDefaultFields).partial().default({}),
   fieldVisibility: fieldVisibilitySchema.partial().default({}),
-  properties: z
-    .record(z.string().min(1).max(100), researchPropertySettingsSchema.partial())
-    .default({}),
+  properties: z.record(z.string().min(1).max(100), propertyOverridesSchema).default({}),
   titleTemplate: titleTemplateSchema.optional(),
 })
 export type ResearchConfiguration = z.infer<typeof researchConfigurationSchema>
@@ -107,12 +135,12 @@ export function resolveResearchConfiguration(
         id,
         {
           isVisible:
-            overrides?.properties[id]?.isVisible ??
-            session.properties[id]?.isVisible ??
+            researchPropertyIncluded(overrides?.properties[id]) ??
+            researchPropertyIncluded(session.properties[id]) ??
             false,
           isRecordable:
-            overrides?.properties[id]?.isRecordable ??
-            session.properties[id]?.isRecordable ??
+            researchPropertyIncluded(overrides?.properties[id]) ??
+            researchPropertyIncluded(session.properties[id]) ??
             false,
           defaultValue:
             overrides?.properties[id]?.defaultValue !== undefined

@@ -5,27 +5,36 @@ import { onMount, onDestroy } from 'svelte'
 import {
   getResearchConfiguration,
   saveResearchConfiguration,
+  previewResearchMigration,
+  migrateResearchConfiguration,
   getResearchLayers,
 } from '#lib/api/fieldResearch.remote.js'
 import { refreshRemoteQuery } from '#lib/remote/index.js'
 // ICONS
 import LayersIcon from 'virtual:icons/proicons/layers'
-import EyeIcon from 'virtual:icons/proicons/eye'
 import TagIcon from 'virtual:icons/proicons/tag'
 import PropertiesIcon from 'virtual:icons/proicons/tag-multiple'
+import CategoricalIcon from 'virtual:icons/proicons/shape-intersect'
 import TextIcon from 'virtual:icons/proicons/text'
 // COMPONENTS
 import { SectionHeader, TextInput } from '#lib/bits/custom/form/index.js'
 import { Button, Select } from '#lib/bits/core/index.js'
+import { isRangeProperty } from '#lib/properties/range.js'
+import FeatureFieldLinks from '#lib/bits/patterns/forms/formFeatureField/components/FeatureFieldLinks.svelte'
+import FeatureFieldInterval from '#lib/bits/patterns/forms/formFeatureField/components/FeatureFieldInterval.svelte'
 import FormProjectLayersSection from '#lib/bits/patterns/forms/formProjectLayersSection/FormProjectLayersSection.svelte'
 import DisplayTemplateEditor from '#lib/bits/patterns/forms/displayTemplate/DisplayTemplateEditor.svelte'
 import * as PropertyCard from '#lib/bits/patterns/cards/layerPropertyCard/components/index.js'
 import { Card, Switch } from '#lib/bits/custom/index.js'
 import { ResourceCard } from '#lib/bits/patterns/cards/resourceCard/index.js'
 import type { HeaderCtrl } from '#lib/context/header.svelte.js'
+// CONTEXT
+import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // DOMAIN
 import {
+  researchConfigurationVersion,
   researchConfigurationSchema,
+  researchPropertyIncluded,
   researchFeatureDefaultsSchema,
   researchFieldVisibilitySchema,
   researchLayerOverridesSchema,
@@ -46,6 +55,7 @@ let {
   revision,
   layers,
   disabled: locked,
+  allowMigration = false,
   header,
   onSaved,
 }: {
@@ -54,6 +64,7 @@ let {
   revision: number
   layers: Awaited<ReturnType<typeof getResearchLayers>>
   disabled: boolean
+  allowMigration?: boolean
   header?: HeaderCtrl
   onSaved: () => Promise<void>
 } = $props()
@@ -63,9 +74,15 @@ let configured = $state<LayerChoice[]>([])
 let active = $state('session')
 let busy = $state(false)
 let failure = $state('')
+let migration = $state<Awaited<ReturnType<typeof previewResearchMigration>> | null>(
+  null,
+)
+const adminCtx = getAdminCtx()
 const inputId = $props.id()
 const control =
   'min-w-0 max-w-full rounded-lg border border-border/50 bg-transparent px-3 py-2 text-sm text-foreground'
+const defaultSelectClass =
+  'h-auto! min-h-12 w-full! max-w-full min-w-0 border-0! px-0! [&>div]:gap-2! [&>div]:p-0! [&>div>span]:overflow-visible! [&>div>span]:pl-0! [&>div>span]:whitespace-normal! [&>span]:overflow-visible! [&>span]:pl-0! [&>span]:whitespace-normal!'
 const editing = $derived(header?.state.isEditing ?? true)
 const disabled = $derived(locked || !editing || busy)
 let baseline = $state('')
@@ -120,6 +137,13 @@ async function load(cacheRevision = revision): Promise<void> {
     data = await refreshRemoteQuery(
       getResearchConfiguration({ sessionId, revision: cacheRevision }),
     )
+    migration = null
+    if (data.version !== researchConfigurationVersion) {
+      settings = null
+      configured = []
+      baseline = ''
+      return
+    }
     settings = data.settings
       ? researchConfigurationSchema.parse(data.settings)
       : {
@@ -170,30 +194,26 @@ function setFlag(flag: (typeof flags)[number], value: string): void {
     selected.overrides.defaults[flag] =
       flag === 'isIntangible' ? value !== 'true' : value === 'true'
 }
-/** Store a property choice on the active scope.
- * @param id Project property. @param key Property setting. @param value Inheritance or boolean choice. @returns Nothing.
+/** Include a property in recording, or inherit the session choice.
+ * @param id Project property. @param value Inclusion or inheritance. @returns Nothing.
  */
-function setProperty(
-  id: string,
-  key: 'isVisible' | 'isRecordable',
-  value: string,
-): void {
+function setProperty(id: string, value: boolean | null): void {
   if (!settings) return
-  if (!selected) {
-    settings.properties[id] = {
-      ...(settings.properties[id] ?? { isVisible: false, isRecordable: false }),
-      [key]: value === 'true',
+  const properties = selected ? selected.overrides.properties : settings.properties
+  if (value === null && selected) {
+    if (properties[id]) {
+      delete selected.overrides.properties[id].isVisible
+      delete selected.overrides.properties[id].isRecordable
     }
-  } else if (value === 'inherit') {
-    if (selected.overrides.properties[id]) delete selected.overrides.properties[id][key]
   } else {
-    selected.overrides.properties[id] = {
-      ...selected.overrides.properties[id],
-      [key]: value === 'true',
+    properties[id] = {
+      ...properties[id],
+      isVisible: value === true,
+      isRecordable: value === true,
     }
   }
 }
-/** Set a project property's default without changing its visibility.
+/** Set a project property's default without changing its inclusion.
  * @param id Property identity. @param value Valid option IDs or scalar value. @returns Nothing.
  */
 function setPropertyDefault(
@@ -222,6 +242,7 @@ async function save(): Promise<void> {
       sessionId,
       revision,
       settings,
+      schemaVersion: researchConfigurationVersion,
       layers: configured,
     })
     await onSaved()
@@ -229,6 +250,34 @@ async function save(): Promise<void> {
     if (mounted && !failure) header?.setEditing(false)
   } catch (error) {
     failure = error instanceof Error ? error.message : String(error)
+  } finally {
+    busy = false
+  }
+}
+/** Preview or apply the exact schema upgrade offered for this session. @returns Once the view refreshes. */
+async function upgrade(): Promise<void> {
+  if (!data || busy) return
+  busy = true
+  failure = ''
+  const input = {
+    sessionId,
+    revision,
+    from: data.version,
+    to: researchConfigurationVersion,
+  } as const
+  try {
+    if (!migration)
+      migration = await refreshRemoteQuery(previewResearchMigration(input))
+    else {
+      await migrateResearchConfiguration({ ...input, token: migration.token })
+      await onSaved()
+      await load(input.revision + 1)
+    }
+  } catch (error) {
+    migration = null
+    failure = error instanceof Error ? error.message : String(error)
+    await onSaved()
+    await load()
   } finally {
     busy = false
   }
@@ -264,7 +313,50 @@ onDestroy(() => {
 {/snippet}
 
 {#snippet configuration()}
-  {#if failure && (!settings || !data)}
+  {#if data && data.version !== researchConfigurationVersion}
+    <section class="mx-6 my-5 space-y-3" aria-label="Session configuration migration">
+      <h2 class="font-semibold">Session configuration version {data.version}</h2>
+      {#if data.version > researchConfigurationVersion}
+        <p>
+          This session requires a newer application. Its settings are read-only here.
+        </p>
+      {:else}
+        <p>
+          Migrate to version {researchConfigurationVersion} before editing this session
+          or recording Features.
+        </p>
+        {#if migration}
+          {#each [
+            ['Settings that could not be carried over', migration.removed],
+            ['Settings receiving defaults', migration.defaulted],
+            ['Settings updated', migration.changed],
+          ] as [title, paths]}
+            {#if Array.isArray(paths) && paths.length}
+              <h3>{title}</h3>
+              <ul class="list-inside list-disc">
+                {#each paths as path}
+                  <li>{path}</li>
+                {/each}
+              </ul>
+            {/if}
+          {/each}
+          {#if !migration.removed.length &&
+            !migration.defaulted.length &&
+            !migration.changed.length}
+            <p>All settings can be carried over.</p>
+          {/if}
+        {/if}
+        <Button
+          text={migration ? 'Apply migration' : 'Review migration'}
+          disabled={busy || Boolean(locked && !allowMigration)}
+          onClick={upgrade}
+        />
+      {/if}
+      {#if failure}
+        <p role="alert">{failure}</p>
+      {/if}
+    </section>
+  {:else if failure && (!settings || !data)}
     <p role="alert" class="text-error mt-4">{failure}</p>
   {:else if !settings || !data}
     <div
@@ -345,7 +437,7 @@ onDestroy(() => {
                     <Select
                       variant="ghost"
                       reserveTriggerSpace={true}
-                      class="h-auto! min-h-12 w-full! max-w-full min-w-0 border-0! px-0! [&>div]:gap-2! [&>div]:p-0! [&>div>span]:overflow-visible! [&>div>span]:pl-0! [&>div>span]:whitespace-normal! [&>span]:overflow-visible! [&>span]:pl-0! [&>span]:whitespace-normal!"
+                      class={defaultSelectClass}
                       triggerClass="gap-2!"
                       isEditing={editing}
                       triggerAttrs={{ 'aria-label': label + ' default value' }}
@@ -391,7 +483,7 @@ onDestroy(() => {
                     <Select
                       variant="ghost"
                       reserveTriggerSpace={true}
-                      class="h-auto! min-h-12 w-full! max-w-full min-w-0 border-0! px-0! [&>div]:gap-2! [&>div]:p-0! [&>div>span]:overflow-visible! [&>div>span]:pl-0! [&>div>span]:whitespace-normal! [&>span]:overflow-visible! [&>span]:pl-0! [&>span]:whitespace-normal!"
+                      class={defaultSelectClass}
                       triggerClass="gap-2!"
                       isEditing={editing}
                       triggerAttrs={{ 'aria-label': label + ' default value' }}
@@ -432,14 +524,8 @@ onDestroy(() => {
                     for={inputId + '-visible-' + key}
                     class="bits-form__parent-resource-default"
                   >
-                    <span class="bits-form__parent-resource-default-icon [&_svg]:size-4"
-                      ><EyeIcon /></span
-                    >
-                    <span class="bits-form__parent-resource-default-label"
-                      >{selected &&
-                      selected.overrides.fieldVisibility[key] === undefined
-                        ? 'Inherited'
-                        : 'Visible'}<span class="sr-only"> · {label}</span></span
+                    <span class="text-xs"
+                      >Include<span class="sr-only"> · {label}</span></span
                     >
                     <Switch
                       id={inputId + '-visible-' + key}
@@ -478,17 +564,30 @@ onDestroy(() => {
               {@const own = selected
                 ? selected.overrides.properties[property.id]
                 : settings.properties[property.id]}
-              <PropertyCard.Root
-                class="grid! min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_18rem_20rem]"
-              >
-                <PropertyCard.Body
-                  name={property.i18n?.en?.label || property.key}
-                  scopeLabel={property.scope}
-                  scopeTone={property.scope === 'organisation'
-                    ? 'org'
+              {@const hubCode = property.hubId
+                ? adminCtx.view.cache.hub.get(property.hubId)?.code
+                : null}
+              {@const scope =
+                property.scope === 'organisation'
+                  ? 'org'
+                  : property.scope === 'hub' && (!hubCode || hubCode === 'core')
+                    ? 'global'
                     : property.scope === 'hub'
                       ? 'hub'
                       : 'project'}
+              <PropertyCard.Root
+                class="grid! min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_18rem_8rem]"
+              >
+                <PropertyCard.Body
+                  name={property.i18n?.en?.label || property.key}
+                  scopeLabel={scope}
+                  scopeTone={scope}
+                  iconComponent={property.type === 'classifier'
+                    ? CategoricalIcon
+                    : TextIcon}
+                  iconTitle={property.type === 'classifier'
+                    ? 'Categorical field'
+                    : 'Free form field'}
                 />
                 <div class="flex min-w-0 flex-col gap-1 px-4 text-xs">
                   {#if selected}
@@ -517,7 +616,24 @@ onDestroy(() => {
                       for={`${inputId}-property-default-${property.id}`}
                       class="grid min-w-0 grid-cols-[3rem_minmax(0,1fr)] items-center gap-3"
                       ><span class="text-muted-foreground">Default</span>
-                      {#if property.values?.length && property.cardinality === 'many'}
+                      {#if isRangeProperty(property)}
+                        <FeatureFieldInterval
+                          definition={property}
+                          value={String(own?.defaultValue ?? '')}
+                          isEditing={!disabled}
+                          onChange={value =>
+                            setPropertyDefault(property.id, value || null)}
+                        />
+                      {:else if property.dataType === 'link'}
+                        <FeatureFieldLinks
+                          cardinality={property.cardinality}
+                          value={String(own?.defaultValue ?? '')}
+                          isEditing={!disabled}
+                          onChange={value =>
+                            setPropertyDefault(property.id, value || null)}
+                        />
+                      {:else if property.values?.length &&
+                        property.cardinality === 'many'}
                         <select
                           id={`${inputId}-property-default-${property.id}`}
                           class={control}
@@ -542,44 +658,58 @@ onDestroy(() => {
                           {/each}
                         </select>
                       {:else if property.values?.length}
-                        <select
-                          id={`${inputId}-property-default-${property.id}`}
-                          class={control}
+                        <Select
+                          variant="ghost"
+                          reserveTriggerSpace={true}
+                          class={defaultSelectClass}
+                          triggerClass="gap-2!"
+                          isEditing={editing}
+                          triggerAttrs={{
+                            id: `${inputId}-property-default-${property.id}`,
+                            'aria-label':
+                              (property.i18n?.en?.label || property.key) +
+                              ' default value',
+                          }}
                           {disabled}
+                          allowDeselect={true}
+                          placeholder="No default"
+                          items={property.values.map(value => ({
+                            value: value.id,
+                            label: value.i18n?.en?.value || value.value || value.id,
+                          }))}
                           value={String(own?.defaultValue ?? '')}
-                          onchange={event =>
-                            setPropertyDefault(
-                              property.id,
-                              event.currentTarget.value || null,
-                            )}
-                        >
-                          <option value="">No default</option>
-                          {#each property.values as value}
-                            <option value={value.id}>
-                              {value.i18n?.en?.value || value.value}
-                            </option>
-                          {/each}
-                        </select>
+                          onValueChange={value =>
+                            setPropertyDefault(property.id, value || null)}
+                        />
                       {:else if property.dataType === 'boolean'}
-                        <select
-                          id={`${inputId}-property-default-${property.id}`}
-                          class={control}
+                        <Select
+                          variant="ghost"
+                          reserveTriggerSpace={true}
+                          class={defaultSelectClass}
+                          triggerClass="gap-2!"
+                          isEditing={editing}
+                          triggerAttrs={{
+                            id: `${inputId}-property-default-${property.id}`,
+                            'aria-label':
+                              (property.i18n?.en?.label || property.key) +
+                              ' default value',
+                          }}
                           {disabled}
+                          allowDeselect={true}
+                          placeholder="No default"
+                          items={[
+                            { value: 'true', label: 'Yes' },
+                            { value: 'false', label: 'No' },
+                          ]}
                           value={own?.defaultValue == null
                             ? ''
                             : String(own.defaultValue)}
-                          onchange={event =>
+                          onValueChange={value =>
                             setPropertyDefault(
                               property.id,
-                              event.currentTarget.value === ''
-                                ? null
-                                : event.currentTarget.value === 'true',
+                              value === '' ? null : value === 'true',
                             )}
-                        >
-                          <option value="">No default</option>
-                          <option value="true">Yes</option>
-                          <option value="false">No</option>
-                        </select>
+                        />
                       {:else}
                         <input
                           id={`${inputId}-property-default-${property.id}`}
@@ -605,31 +735,16 @@ onDestroy(() => {
                     </label>
                   {/if}
                 </div>
-                <div
-                  class="border-border/60 grid grid-cols-2 items-center gap-4 border-l px-4 py-2"
-                >
-                  {#each ['isVisible', 'isRecordable'] as key}
-                    <label
-                      class="flex items-center justify-between gap-3 text-xs"
-                      for={`${inputId}-${property.id}-${key}`}
-                    >
-                      <span>{key === 'isVisible' ? 'Visible' : 'Recordable'}</span>
-                      <Switch
-                        id={`${inputId}-${property.id}-${key}`}
-                        size="sm"
-                        {disabled}
-                        states={selected ? 3 : 2}
-                        checked={own?.[key as 'isVisible' | 'isRecordable'] ??
-                          (selected ? null : false)}
-                        onCheckedChange={value =>
-                          setProperty(
-                            property.id,
-                            key as 'isVisible' | 'isRecordable',
-                            value === null ? 'inherit' : String(value),
-                          )}
-                      />
-                    </label>
-                  {/each}
+                <div class="[&_label]:text-muted-foreground flex justify-end px-4 py-2">
+                  <Switch
+                    topText="Include"
+                    id={`${inputId}-${property.id}-included`}
+                    size="sm"
+                    {disabled}
+                    states={selected ? 3 : 2}
+                    checked={researchPropertyIncluded(own) ?? (selected ? null : false)}
+                    onCheckedChange={value => setProperty(property.id, value)}
+                  />
                 </div>
               </PropertyCard.Root>
             {/each}
