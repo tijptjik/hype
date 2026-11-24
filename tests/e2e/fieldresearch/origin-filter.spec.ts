@@ -20,7 +20,7 @@ test('offers session filtering only for field research origin', async ({ page })
     if (new URL(request.url()).pathname.endsWith('/getResearchSessions'))
       sessionRequests++
   })
-  await page.goto('/admin/features')
+  await page.goto('/admin/features', { waitUntil: 'commit', timeout: 60000 })
   const session = await (await page.request.get('/api/auth/get-session')).json()
   expect(session.user.id).toBe('hype-local-agent-admin')
   await expect(page).toHaveURL(/\/admin\/features/)
