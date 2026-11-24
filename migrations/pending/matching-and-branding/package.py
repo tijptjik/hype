@@ -423,6 +423,30 @@ def groups_for(pending, table_ops, manifest, db):
         )
     for table, (cols, keys, ops) in table_ops.items():
         final.extend(sql_stage(table, cols, keys, ops))
+        if table == "location":
+            # Resolve the stable redirect graph once; placement guards otherwise
+            # rebuild its recursive view for every imported relationship and binding.
+            canonical_view = db.execute(
+                "SELECT sql FROM sqlite_schema WHERE type='view' AND name='locationCanonical'"
+            ).fetchone()[0]
+            final.extend(
+                [
+                    guard(
+                        "EXISTS(SELECT 1 FROM sqlite_schema WHERE type='view' AND name='locationCanonical' AND sql=?)",
+                        (canonical_view,),
+                    ),
+                    statement(
+                        "CREATE TABLE _matchingBrandingCanonicalCache(aliasId TEXT PRIMARY KEY,locationId TEXT NOT NULL)"
+                    ),
+                    statement(
+                        "INSERT INTO _matchingBrandingCanonicalCache SELECT aliasId,locationId FROM locationCanonical"
+                    ),
+                    statement("DROP VIEW locationCanonical"),
+                    statement(
+                        "CREATE VIEW locationCanonical AS SELECT aliasId,locationId FROM _matchingBrandingCanonicalCache"
+                    ),
+                ]
+            )
     for name in sorted(active_triggers):
         final.append(statement(active_triggers[name]))
     # Verify the projected row values again after every table and its normal derived triggers.
@@ -446,6 +470,19 @@ def groups_for(pending, table_ops, manifest, db):
         [
             guard(DONOR_HEADS_MATCH),
             guard("NOT EXISTS(SELECT 1 FROM pragma_foreign_key_check)"),
+            # Keep the cache transaction-local and restore the exact live schema.
+            *(
+                [
+                    statement("DROP VIEW locationCanonical"),
+                    statement(canonical_view),
+                    guard(
+                        "NOT EXISTS(SELECT aliasId,locationId FROM locationCanonical EXCEPT SELECT aliasId,locationId FROM _matchingBrandingCanonicalCache) AND NOT EXISTS(SELECT aliasId,locationId FROM _matchingBrandingCanonicalCache EXCEPT SELECT aliasId,locationId FROM locationCanonical)"
+                    ),
+                    statement("DROP TABLE _matchingBrandingCanonicalCache"),
+                ]
+                if "location" in table_ops
+                else []
+            ),
             statement(f"DROP TABLE {STAGE}"),
         ]
     )
