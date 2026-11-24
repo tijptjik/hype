@@ -8,6 +8,7 @@ import Tabs from '#lib/bits/core/tabs/Tabs.svelte'
 import * as Main from '#lib/bits/custom/main/index.js'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import LocalLocationAddressEditor from '#lib/bits/patterns/forms/localLocationAddress/LocalLocationAddressEditor.svelte'
+import LocationExteriorMap from '#lib/bits/patterns/forms/localLocationAddress/LocationExteriorMap.svelte'
 // NAVIGATION
 import { getAdminMapHref } from '#lib/navigation/adminMapLink.js'
 import { bindAdminFacetHistorySync } from '#lib/client/services/form.js'
@@ -39,13 +40,23 @@ const header = getHeaderCtrl()
 const admin = getAdminCtx()
 const activeFacet = $derived(admin.activeFacet || 'core')
 bindAdminFacetHistorySync({
-  getFacetOrder: () => ['core', 'relationships', 'features'],
+  getFacetOrder: () =>
+    request.current?.kind === 'building'
+      ? ['core', 'relationships', 'interior', 'exterior', 'features']
+      : ['core', 'relationships', 'features'],
   getActiveFacet: () => admin.activeFacet,
   adminCtx: admin,
   resourceType: FirstClassResource.location,
   getResourceRef: () => page.params.id ?? '',
 })
-const facetTabs = getAdminFacetTabsForResource(FirstClassResource.location)
+const facetTabs = $derived.by(() => {
+  const tabs = getAdminFacetTabsForResource(FirstClassResource.location)
+  if (request.current?.kind !== 'building') {
+    tabs.delete('interior')
+    tabs.delete('exterior')
+  }
+  return tabs
+})
 const scope = $derived(admin.view.getRoleScopeQueryKey())
 const request = $derived(
   getLocation({
@@ -142,12 +153,22 @@ $effect(() => {
         {#if place}
           {#key place.id}
             <Tabs
-              value={activeFacet === 'features' ? 'features' : 'record'}
+              value={activeFacet === 'features' ||
+              (place.kind === 'building' &&
+                (activeFacet === 'interior' || activeFacet === 'exterior'))
+                ? activeFacet
+                : 'record'}
               showList={false}
               label={m.location_record_views()}
               items={[
                 { value: 'record', label: m.location_record_views() },
                 { value: 'features', label: m.location_features_associated() },
+                ...(place.kind === 'building'
+                  ? [
+                      { value: 'interior', label: 'Interior' },
+                      { value: 'exterior', label: 'Exterior' },
+                    ]
+                  : []),
               ]}
               class="h-full min-h-0"
               contentClass="h-full"
@@ -161,6 +182,39 @@ $effect(() => {
                     resourceId={place.id}
                     embedded
                   />
+                {:else if view === 'interior'}
+                  <div class="space-y-4 overflow-y-auto p-6">
+                    {#if place.premisesMapId}
+                      <p class="text-sm">Interior map linked to this building.</p>
+                      <div class="flex flex-wrap gap-3">
+                        {#if place.premisesMap}
+                          <Button
+                            text="Open interior map"
+                            href={place.premisesMap.href}
+                          />
+                        {/if}
+                        <Button
+                          text="Open map editor"
+                          href={`/admin/premises-maps?map=${encodeURIComponent(place.premisesMapId)}`}
+                        />
+                      </div>
+                    {:else}
+                      <p class="text-muted-foreground text-sm">
+                        No interior map is linked to this building.
+                      </p>
+                    {/if}
+                  </div>
+                {:else if view === 'exterior'}
+                  {#if place.facts?.location.geometry.coordinates}
+                    <LocationExteriorMap
+                      locationId={place.id}
+                      coordinates={place.facts.location.geometry.coordinates}
+                    />
+                  {:else}
+                    <p class="text-muted-foreground p-6 text-sm">
+                      No building coordinates are available.
+                    </p>
+                  {/if}
                 {:else}
                   <LocalLocationAddressEditor
                     recordView={activeFacet === 'relationships'

@@ -27,6 +27,8 @@ export const ADMIN_FACETS = {
   share: 'share',
   core: 'core',
   relationships: 'relationships',
+  interior: 'interior',
+  exterior: 'exterior',
   capabilities: 'capabilities',
   messaging: 'messaging',
   users: 'users',
@@ -79,6 +81,8 @@ export type LayerFacet =
   | 'advanced'
 
 export const ADMIN_FACET_DEFINITIONS = {
+  interior: { label: () => 'Interior', icon: Layers3Icon },
+  exterior: { label: () => 'Exterior', icon: MapPinIcon },
   relationships: {
     label: () => m.location_record_relationships(),
     icon: RelationshipsIcon,
@@ -120,6 +124,8 @@ export const ADMIN_FACET_DEFINITIONS = {
 } as const satisfies Record<FacetType, { label: () => string; icon: Component | null }>
 
 export const ADMIN_FACET_ACTION_LABEL_DEFINITIONS = {
+  interior: () => 'Interior',
+  exterior: () => 'Exterior',
   relationships: () => m.location_record_relationships(),
   [ADMIN_FACETS.share]: () => 'Share',
   [ADMIN_FACETS.users]: () => 'Users',
@@ -219,7 +225,13 @@ export const ADMIN_SUPPORTED_FACETS_BY_RESOURCE: Partial<
     ADMIN_FACETS.images,
     ADMIN_FACETS.updates,
   ],
-  location: [ADMIN_FACETS.core, ADMIN_FACETS.relationships, ADMIN_FACETS.features],
+  location: [
+    ADMIN_FACETS.core,
+    ADMIN_FACETS.relationships,
+    ADMIN_FACETS.interior,
+    ADMIN_FACETS.exterior,
+    ADMIN_FACETS.features,
+  ],
   task: [ADMIN_FACETS.core],
 }
 
