@@ -7,6 +7,7 @@ import { page } from '$app/state'
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // ICONS
 import FieldResearchIcon from '#lib/bits/custom/icon/FieldResearchIcon.svelte'
+import ProjectIcon from 'virtual:icons/lucide/layout-grid'
 // API
 import {
   createResearchSession,
@@ -28,11 +29,23 @@ let sessions = $state<Awaited<ReturnType<typeof getResearchSessions>>>([])
 let layers = $state<Awaited<ReturnType<typeof getResearchLayers>>>([])
 let current = $state<ResearchSession | null>(null)
 let projectId = $state('')
+let projectSearch = $state('')
 let name = $state('')
 let busy = $state(false)
 let ready = $state(false)
 let failure = $state('')
 const control = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm'
+const matchingProjects = $derived.by(() => {
+  const query = projectSearch.trim().toLocaleLowerCase()
+  return projects.filter(project =>
+    [
+      project.name,
+      project.organisationName,
+      project.code,
+      project.organisationCode,
+    ].some(value => value.toLocaleLowerCase().includes(query)),
+  )
+})
 const header = getHeaderCtrl()
 const indexPath = '/admin/field-recorder'
 const facets = new Map([
@@ -55,6 +68,7 @@ const facet = $derived(
 function startNew(): Promise<void> {
   name = ''
   projectId = ''
+  projectSearch = ''
   return goto(indexPath + '?new=1')
 }
 
@@ -152,6 +166,7 @@ async function create(): Promise<void> {
     })
     name = ''
     projectId = ''
+    projectSearch = ''
     await goto(indexPath + '?session=' + encodeURIComponent(session.id), {
       replace: true,
     })
@@ -237,19 +252,50 @@ onMount(() => void load())
             maxlength="200"
           ></label
         >
-        <label class="block space-y-1 text-sm"
-          >Project<select class={control} bind:value={projectId} required>
-            <option value="">Choose a project</option>
-            {#each projects as project}
-              <option value={project.id}>
-                {project.name} · {project.organisationName}
-              </option>
+        <fieldset class="space-y-2">
+          <legend class="text-sm">Project</legend>
+          <label class="text-muted-foreground block text-sm">
+            Search by project or organisation name
+            <input
+              type="search"
+              class="bg-panel text-base-content border-border focus-visible:outline-primary mt-2 w-full min-w-0 rounded-lg border p-3"
+              placeholder="Search by name"
+              bind:value={projectSearch}
+              oninput={() => (projectId = '')}
+              onkeydown={event => {
+                if (event.key === 'Enter') event.preventDefault()
+              }}
+            >
+          </label>
+          <div class="grid gap-2 sm:grid-cols-2">
+            {#each matchingProjects as project (project.id)}
+              <button
+                type="button"
+                class="bg-panel border-border hover:border-primary hover:bg-primary/5 focus-visible:ring-primary/50 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl border p-4 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+                class:ring-1={project.id === projectId}
+                class:ring-primary={project.id === projectId}
+                class:ring-inset={project.id === projectId}
+                aria-pressed={project.id === projectId}
+                onclick={() => (projectId = project.id)}
+              >
+                <ProjectIcon
+                  class="text-primary bg-primary/10 size-10 shrink-0 rounded-lg p-2"
+                />
+                <span class="min-w-0 break-words whitespace-normal">
+                  <span class="text-muted-foreground block text-xs"
+                    >{project.organisationName}</span
+                  >
+                  <span class="block font-semibold">{project.name}</span>
+                </span>
+              </button>
+            {:else}
+              <p class="text-muted-foreground text-sm">No projects found.</p>
             {/each}
-          </select></label
-        >
+          </div>
+        </fieldset>
         <button
           type="submit"
-          class="bg-primary text-primary-foreground rounded-lg px-4 py-2 disabled:opacity-50"
+          class="bg-primary rounded-lg px-4 py-2 text-white disabled:opacity-50"
           disabled={busy || !projectId || !name.trim()}
         >
           Create session
