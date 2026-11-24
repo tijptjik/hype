@@ -1,4 +1,6 @@
 {
+  "location_role_physical_building": "Physical building",
+  "location_role_constituent_building": "Constituent building",
   "location_delete_title": "Delete {name}?",
   "location_delete_description": "This removes the Location from the directory and releases its relationships. Constituent buildings keep their own records.",
   "location_delete_in_use": "A Feature, field capture, indoor map, or Location redirect still uses this record. Review its links before deleting it.",

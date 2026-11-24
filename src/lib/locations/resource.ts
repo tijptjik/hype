@@ -5,6 +5,7 @@ import type { LocationFacts } from './model'
 /** Standalone Location projection; source payloads and Feature associations stay private. */
 export type LocationResource = {
   buildingConstituents?: import('./physicalBuilding').PhysicalBuildingMember[]
+  buildingRoles?: { physical: boolean; constituent: boolean }
   canEditBuildingStreets?: boolean
   buildingStreets?: import('./buildingStreetAddresses').BuildingStreet[]
   linkedAddresses?: string[]

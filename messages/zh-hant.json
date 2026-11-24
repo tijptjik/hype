@@ -1,4 +1,6 @@
 {
+  "location_role_physical_building": "實體建築物",
+  "location_role_constituent_building": "組成建築物",
   "location_delete_title": "刪除「{name}」？",
   "location_delete_description": "此操作會從目錄移除此地點並解除其關係。各組成建築物會保留各自的記錄。",
   "location_delete_in_use": "仍有地圖項目、實地記錄、室內地圖或地點重新導向使用此記錄。請先檢視相關連結，再刪除此地點。",

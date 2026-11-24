@@ -10,7 +10,7 @@ import { nanoid } from 'nanoid'
 import { locationRevisionInput } from '../schema/location'
 import { executeRevisionBatch } from './revisionBatch'
 import { importBuildingLocation } from './locationBuilding'
-import { canonicalLocationSQL } from './locationRedirect'
+import { canonicalLocationSQL, locationAliasIds } from './locationRedirect'
 import { relationshipScopeSql } from './locationRelationships'
 import { createLocalLocation } from './locationLocal'
 // DOMAIN
@@ -50,6 +50,41 @@ export function physicalBuildingMembers(
     AND ${relationshipScopeSql('locationMembership', scope)}
     AND (r.effectiveFrom IS NULL OR r.effectiveFrom<=date('now')) AND (r.effectiveTo IS NULL OR r.effectiveTo>date('now'))
     ORDER BY v.version))`
+}
+
+/** Identify a created or explicitly designated physical parent.
+ * @param locationId Trusted Location identity expression. @returns A SQL predicate.
+ */
+export function isPhysicalBuildingParent(locationId: SQLWrapper): SQL {
+  return sql`EXISTS(SELECT 1 FROM locationRevision v WHERE v.locationId=${locationId}
+    AND ((v.version=1 AND v.rawSource->>'$.kind'='physical-building-member')
+      OR (v.version=1 AND v.rawSource->>'$.kind'='reviewed-building-evidence'
+        AND v.rawSource->>'$.buildingEvidence.review'='explicit-physical-building')
+      OR v.rawSource->>'$.kind'='physical-building-designation'))`
+}
+
+/** Read both composition roles for an authorized building profile.
+ * @param db Request-local database. @param locationId Current visible building identity.
+ * @param scope Organisation whose effective memberships are visible, or null for shared reads.
+ * @returns Independent parent and constituent flags. An unattached import has neither role.
+ */
+export async function readBuildingProfileRoles(
+  db: Database,
+  locationId: string,
+  scope: string | null,
+): Promise<{ physical: boolean; constituent: boolean }> {
+  // Only effective building-to-building membership in a physical parent establishes a constituent role.
+  const row = await db.get<{ physical: number; constituent: number }>(sql`SELECT
+    ${isPhysicalBuildingParent(sql`${locationId}`)} physical,
+    EXISTS(SELECT 1 FROM locationMembershipHead r
+      JOIN location p ON p.id=${canonicalLocationSQL(sql`r.parentLocationId`)}
+      WHERE r.childLocationId IN ${locationAliasIds(locationId)}
+        AND p.matchingType='building' AND p.state!='redirect' AND (p.state!='manual' OR p.ownerOrganisationId IS ${scope})
+        AND ${isPhysicalBuildingParent(sql`p.id`)} AND ${relationshipScopeSql('locationMembership', scope)}
+        AND r.assertionState='asserted' AND r.membershipState='current'
+        AND (r.effectiveFrom IS NULL OR r.effectiveFrom<=date('now')) AND (r.effectiveTo IS NULL OR r.effectiveTo>date('now'))
+    ) constituent`)
+  return { physical: Boolean(row?.physical), constituent: Boolean(row?.constituent) }
 }
 
 /** Save one verified catalogue member as a child of a new or existing physical building.

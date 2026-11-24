@@ -25,6 +25,7 @@ import {
 } from '#lib/db/services/locationLocal.js'
 import { createLocalLocationAddress } from '#lib/addresses/localLocationAddress.js'
 import {
+  readBuildingProfileRoles,
   physicalBuildingMembers,
   savePhysicalBuildingMember,
 } from '#lib/db/services/physicalBuilding.js'
@@ -258,6 +259,54 @@ db.execute('SELECT 1 FROM locationDeletionBlocker WHERE locationId=?', ('test',)
     expect(getAddressDisplay(address, 'en', [], 'building')).toBe(
       '36–38 Tak Ku Ling Road',
     )
+  })
+  it('labels physical and constituent roles independently using effective scoped membership', async () => {
+    const { db } = setupLocationServiceDatabase(true)
+    const parent = await savePhysicalBuildingMember(
+      db,
+      'p',
+      'user',
+      { requestId: 'parent' },
+      member('first', '36'),
+    )
+    const child = await savePhysicalBuildingMember(
+      db,
+      'p',
+      'user',
+      { requestId: 'child' },
+      member('second', '38'),
+    )
+    expect(await readBuildingProfileRoles(db, parent, 'p')).toEqual({
+      physical: true,
+      constituent: false,
+    })
+    const imported = await importBuildingLocation(
+      db,
+      'p',
+      member('ordinary', '40').source,
+      'shared',
+      'user',
+    )
+    expect(await readBuildingProfileRoles(db, imported.locationId, 'p')).toEqual({
+      physical: false,
+      constituent: false,
+    })
+    await db.run(sql`INSERT INTO locationMembership(id,relationshipId,scopeOrganisationId,assertionState,childLocationId,parentLocationId,membershipState)
+      VALUES ('nested','nested',NULL,'asserted',${child},${parent},'current')`)
+    expect(await readBuildingProfileRoles(db, child, 'p')).toEqual({
+      physical: true,
+      constituent: true,
+    })
+    await db.run(sql`INSERT INTO locationMembership(id,relationshipId,scopeOrganisationId,assertionState,childLocationId,parentLocationId,membershipState)
+      VALUES ('hidden','nested','p','suppressed',${child},${parent},'current')`)
+    expect(await readBuildingProfileRoles(db, child, 'p')).toEqual({
+      physical: true,
+      constituent: false,
+    })
+    expect(await readBuildingProfileRoles(db, child, null)).toEqual({
+      physical: true,
+      constituent: true,
+    })
   })
   it('fills a legacy parent from its pinned member and a second refresh creates no revision', async () => {
     const { db } = setupLocationServiceDatabase(true)

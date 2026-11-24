@@ -35,7 +35,10 @@ import { LocalLocationFootprintSchema } from '#lib/locations/footprint.js'
 // DB
 import { BuildingStreetsEditSchema } from '#lib/locations/buildingStreetAddresses.js'
 import { canManageSharedLocationIdentity } from '#lib/api/services/authz/location.js'
-import { physicalBuildingMembers } from '#lib/db/services/physicalBuilding.js'
+import {
+  physicalBuildingMembers,
+  readBuildingProfileRoles,
+} from '#lib/db/services/physicalBuilding.js'
 import { readBuildingStreets } from '#lib/db/services/buildingStreetAddresses.js'
 import { readLocationCurationLocks } from '#lib/db/services/locationCurationLocks.js'
 import { probeLocationIdentityScope } from '#lib/db/services/locationIdentityReview.js'
@@ -189,6 +192,11 @@ export const getLocation = guardedQuery(
                     )
                   )?.members ?? '[]',
                 ) as import('#lib/locations/physicalBuilding.js').PhysicalBuildingMember[],
+                buildingRoles: await readBuildingProfileRoles(
+                  ctx.db,
+                  input.id,
+                  editingOrganisationId,
+                ),
                 canEditBuildingStreets: Boolean(
                   editingOrganisationId ||
                     canManageSharedLocationIdentity({

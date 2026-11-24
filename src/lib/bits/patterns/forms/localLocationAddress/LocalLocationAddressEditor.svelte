@@ -263,6 +263,14 @@ const address = $derived(editing && draft ? draft : presentationAddress)
 const point = $derived(
   editing ? coordinates : (place.facts?.location.geometry.coordinates ?? [0, 0]),
 )
+const buildingRoleLabels = $derived(
+  activeKind === 'building'
+    ? [
+        place.buildingRoles?.physical && m.location_role_physical_building(),
+        place.buildingRoles?.constituent && m.location_role_constituent_building(),
+      ].filter(Boolean)
+    : [],
+)
 const kindLabel = $derived(
   activeKind === 'building_part' && place.indoorSource?.category
     ? canonicalFacilityLabel(facilitySymbol(place.indoorSource.category).label)
@@ -1241,7 +1249,7 @@ $effect(() => {
         <div
           class="text-primary flex min-w-0 items-center gap-2"
           data-location-record
-          data-tooltip={kindLabel}
+          data-tooltip={buildingRoleLabels.join(' · ') || kindLabel}
         >
           <LocationAvatar
             kind={activeKind}
@@ -1251,10 +1259,16 @@ $effect(() => {
           <span class="min-w-0 text-sm font-semibold break-words whitespace-normal"
             >{title}</span
           >
-          <span
-            class="text-muted-foreground hidden shrink-0 text-xs @min-[900px]:inline"
-            >{kindLabel}</span
-          >
+          {#if buildingRoleLabels.length}
+            <span class="text-muted-foreground min-w-0 text-xs" data-building-role>
+              {buildingRoleLabels.join(' · ')}
+            </span>
+          {:else}
+            <span
+              class="text-muted-foreground hidden shrink-0 text-xs @min-[900px]:inline"
+              >{kindLabel}</span
+            >
+          {/if}
           {#if status !== 'unknown'}
             <span class="text-muted-foreground shrink-0 text-xs" data-location-status
               >{lifecycleLabel(status)}</span
