@@ -2,7 +2,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 // PLAYWRIGHT
-import { chromium } from 'playwright'
+import { chromium } from '@playwright/test'
 
 /** Verify public production donor, station and artwork routes using managed visible Chrome.
  * @returns Receipt and screenshots in the managed artifact directory.
@@ -36,6 +36,12 @@ async function main(): Promise<void> {
     const page = await context.newPage()
     for (const [index, row] of cases.entries()) {
       const errors: string[] = []
+      const requests: string[] = []
+      const failedResponse = (response: import('@playwright/test').Response) => {
+        if (response.status() >= 400)
+          requests.push(`${response.status()} ${response.url().split('?')[0]}`)
+      }
+      page.on('response', failedResponse)
       const capture = (error: Error) => errors.push(error.message)
       page.on('pageerror', capture)
       try {
@@ -57,9 +63,16 @@ async function main(): Promise<void> {
             .first()
             .waitFor({ state: 'visible', timeout: 60000 })
         }
+        await page.waitForTimeout(row.kind === 'station' ? 15000 : 3000)
         const body = await page.locator('body').innerText()
-        if (/Maintenance in progress|Internal Error/.test(body))
+        if (
+          /Maintenance in progress|Internal Error|error loading|failed to load/i.test(
+            body,
+          )
+        )
           throw new Error('Application error page')
+        if (row.kind === 'station' && !(await page.locator('canvas').count()))
+          throw new Error('Station map canvas did not render')
         await page.screenshot({
           path: join(output, `${index}-${row.kind}.png`),
           fullPage: true,
@@ -69,10 +82,11 @@ async function main(): Promise<void> {
           status: response.status(),
           url: page.url(),
           errors,
+          requests,
           passed: errors.length === 0,
         })
       } catch (error) {
-        results.push({ ...row, passed: false, error: String(error), errors })
+        results.push({ ...row, passed: false, error: String(error), errors, requests })
         await page
           .screenshot({
             path: join(output, `${index}-${row.kind}-failed.png`),
@@ -81,6 +95,7 @@ async function main(): Promise<void> {
           .catch(() => {})
       } finally {
         page.off('pageerror', capture)
+        page.off('response', failedResponse)
       }
     }
     await context.close()
