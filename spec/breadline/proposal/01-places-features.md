@@ -4713,3 +4713,21 @@ copy rehearsal preserved all 330 existing identities and naming templates, appli
 updates and one new drop-off, and replayed with zero writes. Integrity was OK, with zero
 foreign-key violations; donor corrections and authentication rows survived. This tooling
 change does not deploy an application or schedule recurring execution.
+
+### Feature breadcrumbs with unavailable parents (24 November 2026, Refs #194)
+
+A published Feature can be readable while its Organisation, Project or Layer is not.
+Breadcrumb navigation resolves each persisted parent ID independently through the
+current surface's authorized resource reader. A forbidden (403) or absent (404) parent
+contributes no label; other readable labels and Feature actions remain available.
+Authentication (401), transport and server failures still produce the existing error
+state. Strict hierarchy resolution used by editing and other domain operations is
+unchanged. This behavior does not publish parent resources or grant upward access.
+
+The production Breadline reproduction found denied Organisation, Project and Layer
+queries on all three sampled donors and the drop-off. Those parent records were
+unpublished in the retained production snapshot. Remote-query errors used HTTP 200
+transport envelopes containing status 403, so HTTP-status-only smoke checks missed them.
+The breadcrumb-specific reader and focused tests cover complete, partial and unavailable
+context; managed Chrome checks require rendered Feature content and the breadcrumb
+surface on desktop and mobile.

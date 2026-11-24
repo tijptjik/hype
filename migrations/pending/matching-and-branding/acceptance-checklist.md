@@ -193,3 +193,17 @@ adopted version 2 checkpoint explicitly for the next reviewed run. Managed job
 existing Cloudflare/Miniflare D1 type mismatches in `src/lib/auth.ts` and
 `src/lib/db/index.ts`; the overall typecheck is not green. No production database writes
 or recurring schedule activation were performed for this planner port.
+
+Breadcrumb follow-up: managed production diagnostic `job-fZye35ltKM` confirmed 403
+permission errors inside HTTP 200 remote-query envelopes for Organisation, Project and
+Layer reads on all four sampled Feature pages. The retained production snapshot has
+those parents unpublished. The prepared UI fix omits only forbidden or missing
+breadcrumb parents, preserving readable context and Feature actions without changing
+publication or strict editing authorization. Focused tests passed (10 tests,
+`job-vvJKkcpAOO`). Production application acceptance remains pending deployment and
+readback of that fix; station rendering remains a separate open item.
+
+Local browser verification passed all eight donor/drop-off cases at 1440 px and 390 px
+in managed Chrome (`job-p3sYSYqx2W`), waiting for completed parent lookups
+(`aria-busy=false`) and checking that Feature actions remain visible. The application
+fix is local-only until deployment; this does not close production acceptance.
