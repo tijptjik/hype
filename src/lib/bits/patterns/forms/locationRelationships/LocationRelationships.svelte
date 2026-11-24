@@ -8,6 +8,7 @@ import {
   getRelationshipPage,
   reconcilePlacementPage,
 } from '#lib/api/locationRelationships.remote.js'
+import { getBuildingCompositionRole } from '#lib/api/buildingEvidence.remote.js'
 // BITS
 import { Button } from '#lib/bits/core/button/index.js'
 import { SelectField, TextInput, TextArea } from '#lib/bits/custom/form/index.js'
@@ -182,6 +183,12 @@ async function save(
       history: false,
       afterId: undefined,
     }).refresh()
+    // Membership withdrawals must also refresh the visible constituents and add picker.
+    if (table === 'locationMembership') {
+      if (organisationId && kind === 'building')
+        await getBuildingCompositionRole({ locationId, organisationId }).refresh()
+      await onCompositionSaved?.()
+    }
     refreshVersion += 1
     selected = []
     sourceUrl = ''

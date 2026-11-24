@@ -79,7 +79,10 @@ const canOrder = $derived(
 )
 // Current addresses are rendered once, as draggable resource rows while ordering is available.
 const displayRows = $derived(
-  canOrder ? rows.filter(row => !currentAddresses.includes(row)) : rows,
+  (canOrder ? rows.filter(row => !currentAddresses.includes(row)) : rows).filter(
+    row =>
+      history || table !== 'locationMembership' || row.assertionState !== 'suppressed',
+  ),
 )
 const ordered = $derived(
   order.length
@@ -278,13 +281,22 @@ async function saveOrder(clear = false): Promise<void> {
           />
         {/if}
         <Button
-          text={organisationId
-            ? 'Hide for this organisation'
-            : 'Withdraw shared relationship'}
+          text={table === 'locationMembership'
+            ? row.parentLocationId === locationId
+              ? 'Remove constituent'
+              : 'Remove from building'
+            : organisationId
+              ? 'Hide for this organisation'
+              : 'Withdraw shared relationship'}
           attrs={{
-            'data-tooltip': organisationId
-              ? 'Exclude this relationship from this organisation’s view. Other organisations and version history are unchanged.'
-              : 'Withdraw this shared assertion from current views. Its recorded history remains available.',
+            'data-tooltip':
+              table === 'locationMembership'
+                ? organisationId
+                  ? 'Remove this incorrect membership for this organisation. Both Locations and the recorded history are retained.'
+                  : 'Withdraw this incorrect shared membership. Both Locations and the recorded history are retained.'
+                : organisationId
+                  ? 'Exclude this relationship from this organisation’s view. Other organisations and version history are unchanged.'
+                  : 'Withdraw this shared assertion from current views. Its recorded history remains available.',
           }}
           size="sm"
           style="ghost"
@@ -294,7 +306,7 @@ async function saveOrder(clear = false): Promise<void> {
       {/if}
     </div>
   {:else}
-    {#if request.ready && !rows.length}
+    {#if request.ready && !displayRows.length && !currentAddresses.length}
       <p class="text-muted-foreground bg-muted/20 rounded-lg px-4 py-6 text-sm">
         {#if hostRequest}
           This establishment has operating locations, not physical membership. Physical
