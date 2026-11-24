@@ -27,6 +27,24 @@ export function locationKindLabel(kind: LocationKind): string {
   return m.location_type_unknown()
 }
 
+/** Select a recorded building name for display or search.
+ * @param names Recorded translations. @param locale Preferred storage locale.
+ * @returns The preferred nonblank name, or an empty string if none is recorded.
+ */
+export function recordedBuildingName(
+  names: Record<string, string>,
+  locale = getLocale().toLowerCase(),
+): string {
+  return (
+    names[locale]?.trim() ||
+    names.en?.trim() ||
+    Object.values(names)
+      .find(name => name.trim())
+      ?.trim() ||
+    ''
+  )
+}
+
 /** Display a building identity without interpreting authored names as status labels.
  * @param names Recorded translations. @param confirmedUnnamed Explicit naming decision.
  * @param locale Preferred storage locale. @returns A name or the localized naming status.
@@ -37,9 +55,7 @@ export function buildingNameLabel(
   locale = getLocale().toLowerCase(),
 ): string {
   return (
-    names[locale]?.trim() ||
-    names.en?.trim() ||
-    Object.values(names).find(name => name.trim()) ||
+    recordedBuildingName(names, locale) ||
     (confirmedUnnamed ? m.building_name_unnamed() : m.building_name_unknown())
   )
 }

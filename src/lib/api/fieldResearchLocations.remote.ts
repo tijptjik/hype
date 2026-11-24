@@ -24,6 +24,11 @@ import { LocationFootprintSchema } from '#lib/locations/footprint.js'
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
 import { physicalBuildingMembers } from '#lib/db/services/physicalBuilding.js'
 import type { PhysicalBuildingMember } from '#lib/locations/physicalBuilding.js'
+import { addressComponentValue } from '#lib/addresses/presentation.js'
+import { researchStreetAddresses } from '#lib/fieldResearch/locationStreets.js'
+import type { LocalLocationAddress } from '#lib/addresses/localLocationAddress.js'
+import { canonicalLocationSQL } from '#lib/db/services/locationRedirect.js'
+import { currentAddressLinks } from '#lib/db/services/buildingAddressLinks.js'
 import { listLocationResources } from '#lib/db/services/locationDirectory.js'
 import { executeRevisionBatch } from '#lib/db/services/revisionBatch.js'
 import {
@@ -94,32 +99,39 @@ export const getResearchLocations = guardedQuery(
       confirmedUnnamed: number | null
       footprint: string | null
       location: string
+      linkedAddresses: string
       members: string
       editableParent: number
       hasRelationships: number
       inclusion: string
-      hasExteriorMap: number
-      hasInteriorMap: number
+      assetId: string | null
+      sourceModelId: string | null
+      interiorMaps: string
     }>(
       sql`WITH scope(organisationId) AS (VALUES (${session.organisationId}))
         SELECT l.id,l.matchingType kind,
           CASE WHEN l.matchingType='building' THEN ${hasLocationRelationshipsSQL(sql`sl.locationId`, sql`scope.organisationId`)} ELSE 0 END hasRelationships,
           CASE WHEN l.matchingType IN ('building','premises') THEN ${researchLocationInclusionSQL(sql`sl.locationId`, sql`scope.organisationId`, sql`sl.sessionId`)} ELSE '{"total":0,"included":0}' END inclusion,
-          EXISTS(SELECT 1 FROM locationExteriorModel WHERE locationId=l.id) hasExteriorMap,
-          EXISTS(
-            SELECT 1 FROM locationPremisesMap link JOIN premisesMap m ON m.id=link.mapId
+          exterior.assetId,exterior.sourceModelId,
+          (SELECT json_group_array(json_object('id',id,'name',name,'hash',publishedHash)) FROM (
+            SELECT m.id,m.name,m.publishedHash FROM locationPremisesMap link JOIN premisesMap m ON m.id=link.mapId
             WHERE link.locationId=l.id AND m.publishedHash IS NOT NULL
-            UNION ALL
-            SELECT 1 FROM premisesMapUnit unit JOIN premisesMap m ON m.id=unit.mapId
-            WHERE unit.locationId=l.id AND m.publishedHash IS NOT NULL
-          ) hasInteriorMap,
+            UNION
+            SELECT m.id,m.name,m.publishedHash FROM premisesMapUnit unit JOIN premisesMap m ON m.id=unit.mapId
+            WHERE unit.locationId=l.id AND m.publishedHash IS NOT NULL ORDER BY name,id
+          )) interiorMaps,
           (l.ownerOrganisationId=scope.organisationId AND l.state='unresolved' AND l.matchingType='building'
            AND EXISTS(SELECT 1 FROM locationRevision seed WHERE seed.locationId=l.id AND seed.version=1
             AND json_extract(seed.rawSource,'$.kind')='physical-building-member')) editableParent,
           CASE WHEN l.matchingType='building' THEN ${members} ELSE '[]' END members,
+          (SELECT json_group_array(json(i18n)) FROM (
+            SELECT coalesce(ar.components->'$.i18n','{}') i18n ${currentAddressLinks(session.organisationId)}
+            AND ${canonicalLocationSQL(sql`r.locationId`)}=l.id
+            ORDER BY r.priority IS NULL,r.priority,r.relationshipId)) linkedAddresses,
           coalesce(json_extract(r.facts,'$.common.footprint'),json_extract(r.facts,'$.footprint')) footprint,
           ${fields.names} names,${fields.confirmedUnnamed} confirmedUnnamed,${fields.location} location
         FROM scope CROSS JOIN fieldResearchSessionLocation sl JOIN location l ON l.id=sl.locationId
+        LEFT JOIN locationExteriorModel exterior ON exterior.locationId=l.id
         LEFT JOIN locationRevisionContent r ON r.locationId=l.id AND r.version=(
           SELECT max(version) FROM locationRevisionContent WHERE locationId=l.id AND (l.state!='linked' OR origin='saanseoi'))
         WHERE sl.sessionId=${input.sessionId} AND l.state!='redirect'
@@ -138,6 +150,56 @@ export const getResearchLocations = guardedQuery(
         JSON.parse(row.footprint ?? 'null'),
       )
       const members = JSON.parse(row.members) as PhysicalBuildingMember[]
+      const interiorMaps = JSON.parse(row.interiorMaps) as {
+        id: string
+        name: string
+        hash: string
+      }[]
+      const choices = JSON.parse(row.linkedAddresses) as LocalLocationAddress['i18n'][]
+      const linked = choices.flatMap(locales => {
+        const value = locales.en ?? Object.values(locales)[0]
+        if (!value) return []
+        return researchStreetAddresses(
+          value.formattedAddress ?? '',
+          value.streetName ?? '',
+          value.buildingNumberExpression ||
+            [value.buildingNumberFrom, value.buildingNumberTo]
+              .filter(Boolean)
+              .join(value.buildingNumberConnector || '-'),
+        )
+      })
+      // Prefer the existing English presentation and use a structured local street when only Chinese is available.
+      const streetLocale =
+        (['en', 'zhHant', 'zhHans'] as const).find(locale =>
+          addressComponentValue(addressValue, locale, 'streetName'),
+        ) ?? 'en'
+      const primary = researchStreetAddresses(
+        address || getAddressDisplay(addressValue, streetLocale, [], row.kind),
+        addressComponentValue(addressValue, streetLocale, 'streetName'),
+        addressComponentValue(addressValue, streetLocale, 'buildingNumberExpression'),
+      )
+      // The physical building's default display already summarizes its member addresses by street.
+      const memberAddresses = members.flatMap(member =>
+        member.addresses.flatMap(candidate => {
+          const locale = candidate.display.en ? 'en' : Object.keys(candidate.display)[0]
+          const street = candidate.streets?.[locale]
+          return researchStreetAddresses(
+            candidate.display[locale] ?? '',
+            street?.name,
+            street?.number,
+          ).filter(
+            entry =>
+              entry.street && !primary.some(line => line.street === entry.street),
+          )
+        }),
+      )
+      const streetAddresses = [
+        ...linked,
+        ...memberAddresses,
+        ...primary.filter(
+          line => line.street || (!linked.length && !memberAddresses.length),
+        ),
+      ]
       return {
         id: row.id,
         kind: row.kind,
@@ -147,14 +209,20 @@ export const getResearchLocations = guardedQuery(
         canEditPhysicalBuilding: Boolean(row.editableParent),
         hasRelationships: Boolean(row.hasRelationships),
         inclusion: JSON.parse(row.inclusion) as { total: number; included: number },
-        hasExteriorMap: Boolean(row.hasExteriorMap),
-        hasInteriorMap: Boolean(row.hasInteriorMap),
+        hasExteriorMap: Boolean(row.assetId),
+        exteriorUrl:
+          row.assetId && row.sourceModelId
+            ? `/api/location-exterior/${encodeURIComponent(row.id)}/${encodeURIComponent(row.assetId)}/${encodeURIComponent(row.sourceModelId)}.gltf`
+            : null,
+        hasInteriorMap: interiorMaps.length > 0,
+        interiorMaps,
         members: members.map(member => ({
           locationId: member.childLocationId,
           source: member.source,
           coordinates: member.coordinates,
           addresses: member.addresses.map(({ id, display }) => ({ id, display })),
         })),
+        streetAddresses,
         coordinates: location.geometry?.coordinates ?? null,
         footprint:
           footprint.success && footprint.data.mode === 'inline'
