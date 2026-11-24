@@ -32,7 +32,9 @@ it('retains a numeric example in narrow fields and restores the full examples wh
       disconnect(): void {}
     },
   )
-  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+  const canvas2d: { getContext(type: '2d'): CanvasRenderingContext2D | null } =
+    HTMLCanvasElement.prototype
+  vi.spyOn(canvas2d, 'getContext').mockReturnValue({
     measureText: (text: string) => ({ width: text.length * 10 }),
   } as CanvasRenderingContext2D)
   vi.spyOn(window, 'getComputedStyle').mockReturnValue({

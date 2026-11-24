@@ -31,7 +31,8 @@ const installLargeImageStub = (): HTMLCanvasElement => {
   })
   const canvas = document.createElement('canvas')
   vi.spyOn(document, 'createElement').mockReturnValue(canvas)
-  vi.spyOn(canvas, 'getContext').mockReturnValue({
+  const canvas2d: { getContext(type: '2d'): CanvasRenderingContext2D | null } = canvas
+  vi.spyOn(canvas2d, 'getContext').mockReturnValue({
     drawImage: vi.fn(),
   } as unknown as CanvasRenderingContext2D)
   vi.spyOn(canvas, 'toBlob').mockImplementation((callback, type) => {
