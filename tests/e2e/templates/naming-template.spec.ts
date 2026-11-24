@@ -99,3 +99,31 @@ test('edits fixed blocks and keeps options visible while editing surrounding tex
   await page.getByRole('button', { name: 'About template components' }).hover()
   await expect(page.getByText('Build a name with components')).toBeVisible()
 })
+
+test('chooses case values and removes a mapping', async ({ page }) => {
+  await page.goto('/')
+  const session = await (
+    await page.context().request.get('/api/auth/get-session')
+  ).json()
+  expect(session.user.id).toBe('hype-local-agent-admin')
+  expect((await page.context().request.get('/admin')).status()).toBe(200)
+  await page.route('**/__template-check.html', route =>
+    route.fulfill({
+      contentType: 'text/html',
+      body: '<html lang="en"><head><script>globalThis.__sveltekit_dev={env:{}}</script></head><body class="bits-theme"><div id="app"></div><script type="module" src="/src/tests/fixtures/displayTemplateCheck.ts"></script></body></html>',
+    }),
+  )
+  await page.goto('/__template-check.html')
+  await page.getByRole('button', { name: 'Insert Cases' }).click()
+  await page.getByRole('button', { name: /properties.open/ }).click()
+  await expect(
+    page.getByRole('button', { name: /Select .*properties\.opening_status/ }),
+  ).toBeVisible()
+  await page.getByLabel('Value 1').selectOption('Open')
+  await page.getByLabel('Replacement 1').fill('O')
+  await page.getByRole('button', { name: 'Add mapping' }).click()
+  await page.getByLabel('Value 2').selectOption('Closed')
+  await page.getByRole('button', { name: 'Remove mapping 1' }).click()
+  await expect(page.getByLabel('Value 1')).toHaveValue('Closed')
+  await expect(page.getByRole('button', { name: 'Remove mapping 1' })).toHaveCount(0)
+})

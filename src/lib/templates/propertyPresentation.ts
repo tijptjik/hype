@@ -2,7 +2,9 @@
 export type TemplateProperty = {
   path: string
   label: string
+  code?: string
   component?: string
+  options?: { value: string; label: string }[]
   examples?: Record<string, string>
   test?: 'boolean' | 'hasValue'
 }

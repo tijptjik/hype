@@ -135,3 +135,42 @@ it('provides the field catalogue and returns from LLM help to a pasteable expres
   await fireEvent.click(view.getByRole('button', { name: 'Back to expression' }))
   expect(view.getByRole('textbox', { name: 'Expression' })).toBeTruthy()
 })
+
+it('selects case values and removes individual mappings', async () => {
+  const view = render(Fixture)
+  await fireEvent.click(view.getByRole('button', { name: 'Insert Cases' }))
+  await fireEvent.click(view.getByRole('button', { name: /properties.open/ }))
+  await fireEvent.change(view.getByRole('combobox', { name: 'Value 1' }), {
+    target: { value: 'Open' },
+  })
+  await fireEvent.input(view.getByRole('textbox', { name: 'Replacement 1' }), {
+    target: { value: 'O' },
+  })
+  await fireEvent.click(view.getByRole('button', { name: 'Add mapping' }))
+  await fireEvent.change(view.getByRole('combobox', { name: 'Value 2' }), {
+    target: { value: 'Closed' },
+  })
+  await fireEvent.click(view.getByRole('button', { name: 'Remove mapping 1' }))
+  expect(
+    (view.getByRole('combobox', { name: 'Value 1' }) as HTMLSelectElement).value,
+  ).toBe('Closed')
+  expect(view.queryByRole('button', { name: 'Remove mapping 1' })).toBeNull()
+})
+
+it('shows property codes in blocks while preserving stored paths and literal text', async () => {
+  const view = render(Fixture)
+  await fireEvent.click(view.getByRole('button', { name: 'Edit expression as text' }))
+  await fireEvent.input(view.getByRole('textbox', { name: 'Expression' }), {
+    target: { value: '{{ cases(properties.open, "properties.open", "Open") }}' },
+  })
+  await fireEvent.click(view.getByRole('button', { name: 'Show blocks' }))
+  expect(
+    view.getByRole('button', {
+      name: 'Select {{ cases(properties.opening_status, "properties.open", "Open") }}',
+    }),
+  ).toBeTruthy()
+  await fireEvent.click(view.getByRole('button', { name: 'Edit expression as text' }))
+  expect(
+    (view.getByRole('textbox', { name: 'Expression' }) as HTMLTextAreaElement).value,
+  ).toBe('{{ cases(properties.open, "properties.open", "Open") }}')
+})

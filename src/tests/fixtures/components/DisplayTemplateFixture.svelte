@@ -14,7 +14,18 @@ let {
 } = $props()
 let value = $state('{{ pair(brand.name, branch, " - ") ?? source.name }}')
 const properties = ['source.name', 'brand.name', 'branch', 'properties.open'].map(
-  path => ({ path, label: path }),
+  path => ({
+    path,
+    label: path,
+    code: path === 'properties.open' ? 'opening_status' : undefined,
+    options:
+      path === 'properties.open'
+        ? [
+            { value: 'Open', label: 'Open' },
+            { value: 'Closed', label: 'Closed' },
+          ]
+        : undefined,
+  }),
 )
 </script>
 <main class="mx-auto max-w-3xl p-6">

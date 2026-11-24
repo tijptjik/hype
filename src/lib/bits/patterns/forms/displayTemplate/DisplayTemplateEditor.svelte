@@ -11,6 +11,7 @@ import type { FeatureNamingExample } from '#lib/db/services/featureNamingExample
 import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 import InfoIcon from 'virtual:icons/lucide/info'
 import XIcon from 'virtual:icons/lucide/x'
+import TrashIcon from 'virtual:icons/proicons/delete'
 // ICONS
 import TextIcon from 'virtual:icons/proicons/text'
 import CheckIcon from 'virtual:icons/proicons/checkmark'
@@ -226,6 +227,37 @@ const activeComponent = $derived(
 const fields = $derived(
   activeComponent ? componentFields(activeComponent.expression) : [],
 )
+const caseOptions = $derived.by(() => {
+  const node = activeComponent?.expression
+  if (node?.kind !== 'call' || node.name !== 'cases' || node.args.length === 4)
+    return undefined
+  const property = node.args[0]
+  return property?.kind === 'property'
+    ? properties.find(item => item.path === property.path)?.options
+    : undefined
+})
+/** Show property codes in a block without changing its stored references.
+ * @param source Original block text. @param start Block position.
+ * @returns Readable block text, retaining the original when no code is available.
+ */
+function displayBlock(source: string, start: number): string {
+  const component = parsed.components.find(item => item.start === start)
+  if (!component) return source
+  let expression = component.expression
+  let changed = false
+  for (const field of componentFields(expression)) {
+    if (field.kind !== 'property') continue
+    const property = properties.find(item => item.path === field.value)
+    if (!property?.code || !field.value.startsWith('properties.')) continue
+    expression = updateComponentField(
+      expression,
+      field.path,
+      `properties.${property.code}`,
+    )
+    changed = true
+  }
+  return changed ? `{{ ${expressionSource(expression)} }}` : source
+}
 const componentKinds = $derived([
   'property',
   'pair',
@@ -681,7 +713,7 @@ function changeMapping(index?: number): void {
                       onkeydown={event => moveWithKeyboard(event, segment.start)}
                       disabled={disabled || !isEditing}
                       aria-pressed={activeStart === segment.start}
-                      aria-label={`Select ${parsed.components.find(component => component.start === segment.start)?.expression.kind === 'sequence' ? 'Sequence' : segment.text}`}
+                      aria-label={`Select ${parsed.components.find(component => component.start === segment.start)?.expression.kind === 'sequence' ? 'Sequence' : displayBlock(segment.text, segment.start)}`}
                       onclick={() => selectBlock(segment.start, segment.end)}
                       class="focus-visible:outline-primary min-w-0 rounded-md px-2 py-1.5 text-left font-mono text-sm break-words focus-visible:outline-2"
                     >
@@ -689,13 +721,13 @@ function changeMapping(index?: number): void {
                         component => component.start === segment.start,
                       )?.expression.kind === 'sequence'
                         ? 'Sequence'
-                        : segment.text}
+                        : displayBlock(segment.text, segment.start)}
                     </button>
                     {#if isEditing}
                       <button
                         type="button"
                         {disabled}
-                        aria-label={`Remove ${segment.text}`}
+                        aria-label={`Remove ${displayBlock(segment.text, segment.start)}`}
                         onclick={() => removeBlock(segment.start, segment.end)}
                         class="from-muted via-muted absolute inset-y-0 right-0 flex w-10 items-center justify-end rounded-r-md bg-linear-to-l from-65% via-80% to-transparent pr-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
                       >
@@ -804,16 +836,66 @@ function changeMapping(index?: number): void {
                 >
               </label>
             {:else}
-              <TextInput
-                id={`${uid}-component-${index}`}
-                name=""
-                label={field.label}
-                value={field.value}
-                trimOnBlur={false}
-                {disabled}
-                {...typeInputAppearance}
-                onValueChange={next => updateField(field, next)}
-              />
+              {@const caseIndex =
+                activeComponent?.expression.kind === 'call' &&
+                activeComponent.expression.name === 'cases' &&
+                activeComponent.expression.args.length !== 4 &&
+                field.path.length === 1
+                  ? field.path[0]
+                  : 0}
+              <div class="flex min-w-0 items-end gap-2">
+                {#if caseIndex > 0 && caseIndex % 2 === 1 && caseOptions?.length}
+                  <label
+                    class="grid min-w-0 flex-1 gap-2 text-sm"
+                    for={`${uid}-component-${index}`}
+                  >
+                    {field.label}
+                    <select
+                      id={`${uid}-component-${index}`}
+                      value={field.value}
+                      {disabled}
+                      class="border-border/50 w-full rounded-md border bg-transparent px-3 py-2"
+                      onchange={event => updateField(field, event.currentTarget.value)}
+                    >
+                      <option value="">Select a value</option>
+                      {#if field.value &&
+                        !caseOptions.some(option => option.value === field.value)}
+                        <option value={field.value}>{field.value}</option>
+                      {/if}
+                      {#each caseOptions as option}
+                        <option value={option.value}>{option.label}</option>
+                      {/each}
+                    </select>
+                  </label>
+                {:else}
+                  <div class="min-w-0 flex-1">
+                    <TextInput
+                      id={`${uid}-component-${index}`}
+                      name=""
+                      label={field.label}
+                      value={field.value}
+                      trimOnBlur={false}
+                      {disabled}
+                      {...typeInputAppearance}
+                      onValueChange={next => updateField(field, next)}
+                    />
+                  </div>
+                {/if}
+                {#if caseIndex > 0 &&
+                  caseIndex % 2 === 0 &&
+                  activeComponent?.expression.kind === 'call' &&
+                  activeComponent.expression.args.length > 3}
+                  <button
+                    type="button"
+                    {disabled}
+                    aria-label={`Remove mapping ${caseIndex / 2}`}
+                    class="hover:text-destructive flex size-9 shrink-0 items-center justify-center rounded-md disabled:opacity-50"
+                    onclick={() => changeMapping(caseIndex - 1)}
+                  >
+                    <TrashIcon class="size-4" aria-hidden="true" />
+                  </button>
+                {/if}
+              </div>
             {/if}
           {/each}
           {#if activeComponent?.expression.kind === 'call' &&
@@ -828,21 +910,6 @@ function changeMapping(index?: number): void {
                 {disabled}
                 onClick={() => changeMapping()}
               />
-              {#each Array.from(
-                { length: (activeComponent.expression.args.length - 1) / 2 },
-                (_, i) => i,
-              ) as index}
-                {#if activeComponent.expression.args.length > 3}
-                  <Button
-                    type="button"
-                    text={`Remove mapping ${index + 1}`}
-                    style="outline"
-                    size="sm"
-                    {disabled}
-                    onClick={() => changeMapping(index * 2 + 1)}
-                  />
-                {/if}
-              {/each}
             </div>
           {/if}
         </fieldset>

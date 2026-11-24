@@ -27,6 +27,7 @@ import ResearchSessionFilterBar from '#lib/bits/patterns/fieldResearch/ResearchS
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import ResearchConfiguration from '#lib/bits/patterns/fieldResearch/ResearchConfiguration.svelte'
 import ResearchLocations from '#lib/bits/patterns/fieldResearch/ResearchLocations.svelte'
+import ResearchSessionSkeleton from '#lib/bits/patterns/fieldResearch/ResearchSessionSkeleton.svelte'
 import { researchConfigurationVersion } from '#lib/fieldResearch/configuration.js'
 // TYPES
 import type { ResearchSession } from '#lib/fieldResearch/model.js'
@@ -341,7 +342,17 @@ async function create(): Promise<void> {
       {hasRecords}
       bind:count={sessionCount}
     />
-  {:else if !failure && ((creating && !ready) || (sessionId && !current))}
+  {:else if !failure && sessionId && !current}
+    <FormSurface>
+      <ResearchSessionSkeleton
+        section={facet === 'fields'
+          ? 'fields'
+          : facet === 'locations'
+            ? 'locations'
+            : 'core'}
+      />
+    </FormSurface>
+  {:else if !failure && creating && !ready}
     <div
       class="bg-base-200 mt-6 h-64 animate-pulse rounded-xl"
       aria-busy="true"

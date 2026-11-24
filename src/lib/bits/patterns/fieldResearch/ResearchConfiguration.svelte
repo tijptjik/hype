@@ -24,6 +24,7 @@ import FeatureFieldLinks from '#lib/bits/patterns/forms/formFeatureField/compone
 import FeatureFieldInterval from '#lib/bits/patterns/forms/formFeatureField/components/FeatureFieldInterval.svelte'
 import FormProjectLayersSection from '#lib/bits/patterns/forms/formProjectLayersSection/FormProjectLayersSection.svelte'
 import DisplayTemplateEditor from '#lib/bits/patterns/forms/displayTemplate/DisplayTemplateEditor.svelte'
+import ResearchSessionSkeleton from './ResearchSessionSkeleton.svelte'
 import ResearchMultiSelectDefault from './ResearchMultiSelectDefault.svelte'
 import * as PropertyCard from '#lib/bits/patterns/cards/layerPropertyCard/components/index.js'
 import { Card, Switch } from '#lib/bits/custom/index.js'
@@ -133,6 +134,14 @@ const templateProperties = $derived([
   ...(data?.properties ?? []).map(property => ({
     path: `properties.${property.id}`,
     label: property.i18n?.en?.label || property.key,
+    code: property.key,
+    options:
+      property.cardinality !== 'many' && property.values?.length
+        ? property.values.map(value => {
+            const label = value.i18n?.en?.value || value.value || value.id
+            return { value: label, label }
+          })
+        : undefined,
   })),
 ])
 
@@ -477,12 +486,7 @@ onDestroy(() => {
   {:else if failure && (!settings || !data)}
     <p role="alert" class="text-error mt-4">{failure}</p>
   {:else if !settings || !data}
-    <div
-      class="bg-base-200 mt-4 h-40 animate-pulse rounded-lg"
-      role="status"
-      aria-busy="true"
-      aria-label="Loading session configuration"
-    ></div>
+    <ResearchSessionSkeleton {section} />
   {:else}
     <div class="min-w-0">
       {#if failure}
