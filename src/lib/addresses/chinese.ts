@@ -8,13 +8,6 @@ import type { LocaleKey } from '#lib/types.js'
 
 export { simplifiedChinese }
 
-// Keep the exact OpenCC normalization and segmentation rules for the reverse conversion.
-const Converter = ConverterBuilder({
-  from: { cn: cn2t.from.cn },
-  to: { hk: cn2t.to.hk },
-  configs: { s2hk: cn2t.configs.s2hk },
-})
-
 /** Read a published name, preferring Chinese script fallback before English.
  * @param names Published names keyed by locale tag. @param locale Requested display language.
  * @returns Localized label, or undefined when no usable name is available.
@@ -50,12 +43,17 @@ export function withSimplifiedChinese(
     : names
 }
 
-let traditionalize: ReturnType<typeof Converter> | undefined
+let traditionalize: ((value: string) => string) | undefined
 
 /** Convert published Simplified Chinese to Hong Kong Traditional script for presentation.
  * @param value Published Simplified text. @returns Script-converted text; source evidence stays intact.
  */
 export function traditionalChinese(value: string): string {
-  traditionalize ??= Converter({ from: 'cn', to: 'hk' })
+  // Keep the exact OpenCC normalization and segmentation rules for the reverse conversion.
+  traditionalize ??= ConverterBuilder({
+    from: { cn: cn2t.from.cn },
+    to: { hk: cn2t.to.hk },
+    configs: { s2hk: cn2t.configs.s2hk },
+  })({ from: 'cn', to: 'hk' })
   return traditionalize(value)
 }
