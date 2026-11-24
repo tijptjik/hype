@@ -6,9 +6,11 @@ import { join } from 'node:path'
 import { openSqliteDomain } from '../../../scripts/locations/lib/sqlite-domain'
 import {
   applyGroups,
+  fingerprint,
   journal,
   markVerified,
   pause,
+  readRows,
   verifyRows,
   verifySchema,
 } from '../../../scripts/revisions/production/contract'
@@ -43,6 +45,10 @@ async function rehearse(
     await verifyRows(domain.binding, plan.initial)
     await pause(domain.binding, plan)
     await applyGroups(domain.binding, plan, install)
+    // Earlier journal groups may have applied pending schema migrations before curation.
+    const beforeInstall: Plan['expected'] = {}
+    for (const table of Object.keys(plan.expected))
+      beforeInstall[table] = fingerprint(await readRows(domain.binding, table))
     const table = '_matchingBrandingReleaseRows'
     const row = domain.sqlite
       .query<{ ord: number; b: string }, []>(
@@ -79,7 +85,7 @@ async function rehearse(
     const stopped = await journal(domain.binding)
     if (!staleRejected || stopped?.nextGroup !== install || stopped.writable !== 0)
       throw new Error('Stale installation did not roll back to the fenced stage cursor')
-    await verifyRows(domain.binding, plan.initial)
+    await verifyRows(domain.binding, beforeInstall)
     replaceBefore(row.b)
     await applyGroups(domain.binding, plan)
     await markVerified(domain.binding, plan)

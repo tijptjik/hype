@@ -641,7 +641,9 @@ function prepareCurrentLifecycleRelease(
         {
           planHash,
           target,
-          convertedLegacyDrafts: groups.length,
+          convertedLegacyDrafts: cleanup.length,
+          curationGroups: groups.filter(group => group.label.startsWith('curation/'))
+            .length,
           remoteWrites: false,
         },
         null,
