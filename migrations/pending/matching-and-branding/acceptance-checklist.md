@@ -172,12 +172,24 @@ all remaining groups. These interruptions did not change the selected data scope
 
 ### Ongoing sync and remaining acceptance
 
-The existing incremental Feature sync planner targets legacy Place tables and must not
-be enabled against the deployed Location schema. Port and rehearse that recurring
-planner before enabling it; run the supported current-schema donor curation step after
-source reconciliation. Raw source hashes remain unchanged. The accepted user-sync
-manifest was advanced after verified production application and zero-write readback.
+The incremental Feature sync planner now selects the current Location adapter and has
+passed private production-copy update/create/replay rehearsal. Explicitly adopt the
+verified legacy checkpoint into a separate version 2 state before its first use; never
+submit a legacy Place plan to production. Recurring scheduling is not enabled by this
+port. Run the supported donor curation step after source reconciliation. Raw source
+hashes remain unchanged. The accepted user-sync manifest was advanced after verified
+production application and zero-write readback.
 
 Stratigraphy is already multi-select (`many`) in production; no additional migration is
 required for that field. Private inputs, phone values, identity decisions and backup
 exports stay in the ignored operator directories.
+
+Planner-port evidence is retained privately under
+`.local/breadline/location-sync-20261124/`: `adoption-v2/baseline-adoption.json`,
+`accepted-v2.json`, `changed/verification.json` and `changed/readback.json`. The
+production accepted-sync manifest still points at its historical checkpoint; select the
+adopted version 2 checkpoint explicitly for the next reviewed run. Managed job
+`job-yUJIB12uPK` passed 13 focused tests. Its TypeScript phase reported only the
+existing Cloudflare/Miniflare D1 type mismatches in `src/lib/auth.ts` and
+`src/lib/db/index.ts`; the overall typecheck is not green. No production database writes
+or recurring schedule activation were performed for this planner port.

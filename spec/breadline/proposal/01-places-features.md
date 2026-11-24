@@ -4670,11 +4670,46 @@ Reviewed operator corrections in `scripts/breadline/lib/donor-curation.ts` are k
 stable donor identity and override later imported values until explicitly revised. Raw
 source hashes remain unchanged; generated Features retain curation provenance. Existing
 donors receive attributed shared Location corrections and Feature adoption. The legacy
-Place sync planner must not be applied to the deployed Location schema; current-schema
-sync replay remains an acceptance requirement.
+Place plan format remains blocked on the deployed Location schema. The recurring planner
+now selects a revision-aware Location adapter (see below).
 
 The post-cutover correction step is `scripts/breadline/prepare-donor-curations.ts`. Run
 it after source reconciliation on the private working target, include its guarded
 revision groups in the release, and require a zero-group repeat. Production application
 uses the existing maintenance journal and restores the retained application identity; it
 does not require an application redeployment.
+
+### Recurring Location sync (24 November 2026, Refs #194)
+
+`scripts/breadline/sync-features.ts` detects the target schema and produces version 2
+plans for Location targets. Explicit `--adopt-state PRIVATE_LEGACY_STATE` adoption
+requires unchanged accepted source rows, the same target and all original Feature
+identities with valid current revisions. It creates a separate private checkpoint; it
+does not write production. Retain the legacy checkpoint and adoption receipt.
+
+Planning snapshots the complete donor/drop-off/run mirror and copies the target. Version
+2 checkpoints pin source-to-Feature identities and normalized source facts. Updates
+append attributed Feature revisions through the production lifecycle. New identities use
+the existing importer and revision initializer. Source evidence is retained in the new
+Feature revision's `placement.addressMeta.breadlineSource`; existing canonical Location
+source revisions are not rewritten.
+
+Three-way reconciliation preserves independently curated values. Changed addresses,
+coordinates or brand identity, missing sources, newly excluded records and competing
+edits produce review exceptions. Accepted Location matches, naming templates and
+placement evidence survive routine source changes. Blank phones preserve known contacts.
+Changed nonblank phones fill an empty linked Location through attributed shared
+corrections; differing contacts retain a Feature override, removed only on exact
+equality. Durable donor rules remain applied to source projections.
+
+The existing hash-pinned apply commands accept both plan versions and verify the schema,
+checkpoint and target. Each Location group has atomic source/revision guards; retry
+accepts an already committed revision and rejects subsequent independent edits. The
+private checkpoint advances only after remote application and local replay.
+
+Verification: focused legacy/current-schema tests cover rollback, stale revisions,
+lost-response retry, three-way conflicts and identity adoption. A private production
+copy rehearsal preserved all 330 existing identities and naming templates, applied three
+updates and one new drop-off, and replayed with zero writes. Integrity was OK, with zero
+foreign-key violations; donor corrections and authentication rows survived. This tooling
+change does not deploy an application or schedule recurring execution.

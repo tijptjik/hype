@@ -183,8 +183,12 @@ Run
 after source reconciliation. It reapplies reviewed donor rules through shared Location
 and Feature revisions, preserves raw source hashes, and emits zero groups when the rules
 are already accepted. This is the supported correction step for the current Location
-schema; the legacy Place incremental planner is not suitable for a post-cutover
-production apply.
+schema. `sync-features.ts` now selects a revision-aware Location planner. Its first use
+requires `--adopt-state PRIVATE_LEGACY_STATE` with a new `--state` path and an unchanged
+verified source; retain both checkpoints. Subsequent plans use the version 2 state and
+the existing hash-pinned apply commands. Legacy Place plans remain blocked on Location
+targets. See the recurring sync section of
+`spec/breadline/proposal/01-places-features.md` for ownership and review boundaries.
 
 The approved City Recorder/EUNIC removal is prepared by
 `detach-excluded-locations.ts PRIVATE_WORKING_DATABASE PRIVATE_GROUPS_JSON`, followed by
