@@ -94,7 +94,7 @@ async function copyPrompt(): Promise<void> {
 }
 
 let activeStart = $state<number | null>(null)
-let expressionElement: HTMLFieldSetElement | undefined
+let expressionElement = $state<HTMLFieldSetElement | undefined>()
 let selectionStart: number | undefined
 let selectionEnd: number | undefined
 const uid = $props.id()
@@ -136,7 +136,7 @@ let examples = $state<FeatureNamingExample[]>([])
 const llmPrompt = $derived(
   namingPrompt({ locale, expression: value, properties, examples }),
 )
-let exampleSource = $state(value)
+let exampleSource = $state(untrack(() => value))
 let loadedKey = $state('')
 const examplePaths = $derived.by(() => {
   try {
@@ -467,7 +467,7 @@ function updateField(field: TemplateComponentField, next: string): void {
       readonly
       value={llmPrompt}
       class="border-border/50 min-h-96 w-full resize-y rounded-md border bg-transparent p-3 font-mono text-sm"
-    />
+    ></textarea>
   {:else}
     {#if isEditing && !textMode}
       <div class="flex items-center gap-2">
@@ -590,7 +590,7 @@ function updateField(field: TemplateComponentField, next: string): void {
                 selectionEnd = undefined
                 onChange(event.currentTarget.value)
               }}
-            />
+            ></textarea>
           {:else}
             <fieldset
               bind:this={expressionElement}
