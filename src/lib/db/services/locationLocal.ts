@@ -57,6 +57,7 @@ import type { Database } from '#lib/types.js'
  * @param input Local facts, the manual/unresolved distinction and explicit sharing preference.
  * @param actorId Authenticated author retained in baseline provenance.
  * @param verified Verified server-side import identity and provenance; never client-supplied facts.
+ * @param buildingEvidence Server-reviewed contributing records retained independently of matching identity.
  * @returns Stable local Location identity and initial revision identity.
  * @remarks The caller must authorize organisation management. No Feature is linked or
  * rewritten; canonical identities and addresses require separate verified workflows.
@@ -74,6 +75,7 @@ export async function createLocalLocation(
     locationId: string
     buildingSource: import('#lib/locations/buildingSource.js').BuildingSource
   },
+  buildingEvidence?: { references: unknown[]; review: 'explicit-physical-building' },
 ): Promise<{ locationId: string; revisionId: string }> {
   const parsed = LocalLocationInputSchema.parse(input)
   // A newly authored historic record may point only to a visible existing successor.
@@ -133,7 +135,12 @@ export async function createLocalLocation(
       throw new Error('Operating host unavailable or incompatible')
   }
   const rawSource = {
-    kind: verified ? 'building-export-baseline' : 'local-baseline',
+    kind: buildingEvidence
+      ? 'reviewed-building-evidence'
+      : verified
+        ? 'building-export-baseline'
+        : 'local-baseline',
+    ...(buildingEvidence ? { buildingEvidence } : {}),
     ...(verified ? { buildingSource: verified.buildingSource } : {}),
     actorId,
     organisationId,
