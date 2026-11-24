@@ -1,6 +1,6 @@
 <script lang="ts">
 // SVELTE
-import { onDestroy, onMount, untrack } from 'svelte'
+import { onDestroy, untrack } from 'svelte'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
 // CONTEXT
@@ -18,10 +18,10 @@ import {
   getResearchProjects,
   getResearchLayers,
   getResearchSession,
-  getResearchSessions,
 } from '#lib/api/fieldResearch.remote.js'
 import { refreshRemoteQuery } from '#lib/remote/index.js'
 // COMPONENTS
+import ResearchSessionIndex from '#lib/bits/patterns/fieldResearch/ResearchSessionIndex.svelte'
 import ResearchSessionFilterBar from '#lib/bits/patterns/fieldResearch/ResearchSessionFilterBar.svelte'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import ResearchConfiguration from '#lib/bits/patterns/fieldResearch/ResearchConfiguration.svelte'
@@ -38,7 +38,7 @@ let sorting = $state<{ sortBy: 'createdAt' | 'name'; sortOrder: 'asc' | 'desc' }
 })
 const adminCtx = getAdminCtx()
 const isSuperAdmin = $derived(Boolean(adminCtx.view.user?.superAdmin))
-let sessions = $state<Awaited<ReturnType<typeof getResearchSessions>>>([])
+let sessionCount = $state(0)
 let layers = $state<Awaited<ReturnType<typeof getResearchLayers>>>([])
 let current = $state<ResearchSession | null>(null)
 let projectId = $state('')
@@ -47,7 +47,8 @@ let name = $state('')
 let busy = $state(false)
 let ready = $state(false)
 let failure = $state('')
-const control = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm'
+const control =
+  'border-border bg-panel text-base-content w-full rounded-lg border px-3 py-2 text-sm'
 const matchingProjects = $derived.by(() => {
   const query = projectSearch.trim().toLocaleLowerCase()
   return projects.filter(project =>
@@ -142,7 +143,6 @@ async function toggleArchive(): Promise<void> {
       archived: !current.isArchived,
     })
     await goto(indexPath)
-    await load()
   } catch (error) {
     failure = error instanceof Error ? error.message : String(error)
   } finally {
@@ -181,12 +181,10 @@ $effect(() => {
 function changeSorting(value: { sortBy: string; sortOrder: 'asc' | 'desc' }): void {
   if (value.sortBy !== 'createdAt' && value.sortBy !== 'name') return
   sorting = { sortBy: value.sortBy, sortOrder: value.sortOrder }
-  void load()
 }
 /** Apply the shared status filter and refresh the index. @param value Archive state. @returns Nothing. */
 function filterArchive(value: boolean | null): void {
   archived = isSuperAdmin ? value : false
-  void load()
 }
 $effect(() => {
   if (!sessionId && !creating) {
@@ -194,7 +192,7 @@ $effect(() => {
       ResearchSessionFilterBar,
       {
         archived,
-        count: sessions.length,
+        count: sessionCount,
         onChange: filterArchive,
         showArchive: isSuperAdmin,
         sorting,
@@ -209,28 +207,25 @@ onDestroy(() => {
   header.setViewActions([])
   header.setFormActions({ showDeleteAction: false, toggleDelete: () => {} })
 })
-/** Load authorized project and session choices. @returns Once the list is ready. */
-async function load(): Promise<void> {
-  try {
-    ;[projects, sessions] = await Promise.all([
-      getResearchProjects({}),
-      refreshRemoteQuery(
-        getResearchSessions({
-          ...sorting,
-          archive:
-            !isSuperAdmin || archived === false
-              ? 'active'
-              : archived === true
-                ? 'archived'
-                : 'all',
-        }),
-      ),
-    ])
-    ready = true
-  } catch (error) {
-    failure = error instanceof Error ? error.message : String(error)
+// Only the creation form needs the full set of authorized project choices.
+$effect(() => {
+  if (!creating) return
+  let active = true
+  ready = false
+  getResearchProjects({})
+    .then(choices => {
+      if (active) {
+        projects = choices
+        ready = true
+      }
+    })
+    .catch(error => {
+      if (active) failure = error instanceof Error ? error.message : String(error)
+    })
+  return () => {
+    active = false
   }
-}
+})
 /** Refresh the session revision after a configuration mutation. @returns Once current. */
 async function refresh(): Promise<void> {
   const id = sessionId
@@ -278,30 +273,35 @@ async function create(): Promise<void> {
     await goto(indexPath + '?session=' + encodeURIComponent(session.id), {
       replace: true,
     })
-    await load()
   } catch (error) {
     failure = error instanceof Error ? error.message : String(error)
   } finally {
     busy = false
   }
 }
-onMount(() => void load())
 </script>
 <div
-  class={sessionId
-    ? 'w-full min-w-0'
-    : 'mx-auto w-full max-w-5xl min-w-0 px-4 py-6 sm:px-6'}
+  class={creating
+    ? 'mx-auto w-full max-w-5xl min-w-0 px-4 py-6 sm:px-6'
+    : sessionId
+      ? 'w-full min-w-0'
+      : 'flex min-h-0 min-w-0 flex-1 flex-col'}
 >
-  {#if !sessionId}
-    <h1 class="text-2xl font-semibold">Field Sessions</h1>
-    <p class="text-muted-foreground mt-2 text-sm">
-      Configure project fields, layers and vetted Locations for recording.
-    </p>
-  {/if}
   {#if failure}
     <p role="alert" class="text-error mt-4">{failure}</p>
   {/if}
-  {#if !ready || (sessionId && !current && !failure)}
+  {#if !sessionId && !creating}
+    <ResearchSessionIndex
+      {indexPath}
+      archive={!isSuperAdmin || archived === false
+        ? 'active'
+        : archived === true
+          ? 'archived'
+          : 'all'}
+      {sorting}
+      bind:count={sessionCount}
+    />
+  {:else if !failure && ((creating && !ready) || (sessionId && !current))}
     <div
       class="bg-base-200 mt-6 h-64 animate-pulse rounded-xl"
       aria-busy="true"
@@ -343,9 +343,9 @@ onMount(() => void load())
       </FormSurface>
     {/key}
   {:else if creating}
-    <div class="mt-6 max-w-xl">
+    <div class="max-w-xl">
       <form
-        class="space-y-4 rounded-xl border border-slate-200 bg-white p-5 text-slate-800 shadow-sm"
+        class="border-border bg-panel text-base-content space-y-4 rounded-xl border p-5 shadow-sm"
         onsubmit={event => {
           event.preventDefault()
           void create()
@@ -403,37 +403,13 @@ onMount(() => void load())
         </fieldset>
         <button
           type="submit"
-          class="bg-primary rounded-lg px-4 py-2 text-white disabled:opacity-50"
+          class="bg-primary text-primary-content rounded-lg px-4 py-2 disabled:opacity-50"
           disabled={busy || !projectId || !name.trim()}
         >
           Create session
         </button>
         <a href={indexPath} class="ml-3 text-sm underline">Cancel</a>
       </form>
-    </div>
-  {:else if !sessionId}
-    <div class="mt-6">
-      <section
-        class="rounded-xl border border-slate-200 bg-white p-5 text-slate-800 shadow-sm"
-      >
-        <h2 class="text-lg font-semibold">Existing sessions</h2>
-        <div class="mt-3 space-y-2">
-          {#each sessions as session (session.id)}
-            <a
-              href={indexPath + '?session=' + encodeURIComponent(session.id)}
-              class="border-border hover:bg-base-200 block w-full rounded-lg border p-3 text-left"
-            >
-              <span class="font-medium">{session.name}</span
-              ><span class="text-muted-foreground block text-xs"
-                >{projects.find(project => project.id === session.projectId)?.name ??
-                  session.projectId}</span
-              >
-            </a>
-          {:else}
-            <p class="text-muted-foreground text-sm">No field sessions yet.</p>
-          {/each}
-        </div>
-      </section>
     </div>
   {/if}
 </div>
