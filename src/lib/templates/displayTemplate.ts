@@ -12,7 +12,7 @@ export type TemplateExpression =
   | { kind: 'fallback'; left: TemplateExpression; right: TemplateExpression }
   | {
       kind: 'call'
-      name: 'pair' | 'join' | 'optional' | 'cases'
+      name: 'pair' | 'join' | 'optional' | 'cases' | 'trilean' | 'ternary'
       args: TemplateExpression[]
     }
 export type DisplayTemplate = {
@@ -31,7 +31,10 @@ const forbidden = new Set(['__proto__', 'prototype', 'constructor'])
  * @returns Validated syntax and all dependencies, including inactive cases.
  * @remarks Only flat, explicitly supplied property paths can be read. Parsing is bounded.
  */
-export function parseDisplayTemplate(source: string): DisplayTemplate {
+export function parseDisplayTemplate(
+  source: string,
+  onLegacyName?: (start: number, end: number) => void,
+): DisplayTemplate {
   if (source.length > MAX_SOURCE) throw new Error('Template exceeds 4096 characters')
   let position = 0
   let nodes = 0
@@ -85,6 +88,7 @@ export function parseDisplayTemplate(source: string): DisplayTemplate {
     const match = /^[A-Za-z_][A-Za-z0-9_.-]*/.exec(source.slice(position))
     if (!match) return fail('Expected a property, quoted text or function')
     const name = match[0]
+    const nameStart = position
     position += name.length
     if (name.split('.').some(part => !part || forbidden.has(part)))
       fail('Invalid property path')
@@ -93,7 +97,14 @@ export function parseDisplayTemplate(source: string): DisplayTemplate {
       dependencies.add(name)
       return { kind: 'property', path: name }
     }
-    if (name !== 'pair' && name !== 'join' && name !== 'optional' && name !== 'cases')
+    if (
+      name !== 'pair' &&
+      name !== 'join' &&
+      name !== 'optional' &&
+      name !== 'cases' &&
+      name !== 'trilean' &&
+      name !== 'ternary'
+    )
       return fail('Unknown function')
     position++
     const args: TemplateExpression[] = []
@@ -105,8 +116,18 @@ export function parseDisplayTemplate(source: string): DisplayTemplate {
       position++
     }
     if (source[position++] !== ')') fail('Expected closing parenthesis')
-    const count = name === 'cases' ? 4 : 3
-    if (args.length !== count) fail(`${name} requires ${count} arguments`)
+    if (name === 'cases') {
+      // Four arguments retain the original true/false/missing syntax.
+      if (args.length !== 4 && (args.length < 3 || args.length % 2 === 0))
+        fail('cases requires a property followed by value and output pairs')
+    } else {
+      const count = name === 'trilean' || name === 'ternary' ? 4 : 3
+      if (args.length !== count) fail(`${name} requires ${count} arguments`)
+    }
+    if ((name === 'cases' && args.length === 4) || name === 'trilean') {
+      onLegacyName?.(nameStart, nameStart + name.length)
+      return { kind: 'call', name: 'ternary', args }
+    }
     return { kind: 'call', name, args }
   }
   const expression = (depth: number): TemplateExpression => {
@@ -135,6 +156,26 @@ export function parseDisplayTemplate(source: string): DisplayTemplate {
   return { parts, dependencies: [...dependencies].sort(), components }
 }
 
+/** Convert legacy condition calls to ternary without changing text or other expressions.
+ * @param source Existing template. @returns Equivalent template with current function names.
+ * @remarks Invalid drafts are returned unchanged for the author to repair.
+ */
+export function migrateTemplateConditionals(source: string): string {
+  const ranges: { start: number; end: number }[] = []
+  try {
+    parseDisplayTemplate(source, (start, end) => ranges.push({ start, end }))
+  } catch {
+    return source
+  }
+  return ranges
+    .sort((a, b) => b.start - a.start)
+    .reduce(
+      (result, range) =>
+        result.slice(0, range.start) + 'ternary' + result.slice(range.end),
+      source,
+    )
+}
+
 /** Distinguish absence from false and zero.
  * @param value Property value. @returns Whether a value can contribute display text.
  */
@@ -147,7 +188,8 @@ function present(value: TemplateScalar): boolean {
  * @returns Plain text; callers must render as text, never HTML.
  * @remarks pair requires both sides; optional adds prefix/suffix only when present;
  * join keeps either present side and inserts its separator only between two values;
- * cases distinguishes false from missing and treats other present values as true.
+ * ternary distinguishes false from missing; legacy four-argument cases does the same.
+ * Other cases calls map exact string values and leave unmatched values unchanged.
  */
 export function renderDisplayTemplate(source: string, values: TemplateValues): string {
   const parsed = parseDisplayTemplate(source)
@@ -175,8 +217,20 @@ export function renderDisplayTemplate(source: string, values: TemplateValues): s
       }
       case 'call': {
         const first = evaluate(node.args[0])
-        if (node.name === 'cases')
+        if (
+          node.name === 'trilean' ||
+          node.name === 'ternary' ||
+          (node.name === 'cases' && node.args.length === 4)
+        )
           return evaluate(node.args[!present(first) ? 3 : first === false ? 2 : 1])
+        if (node.name === 'cases') {
+          if (!present(first)) return undefined
+          for (let index = 1; index < node.args.length; index += 2) {
+            if (String(first) === String(evaluate(node.args[index]) ?? ''))
+              return evaluate(node.args[index + 1])
+          }
+          return first
+        }
         const second = evaluate(node.args[1])
         if (node.name === 'join')
           return [first, second]
@@ -239,5 +293,19 @@ export function templateCasesTag(
   missing: string,
 ): string {
   templatePropertyTag(path)
-  return `{{ cases(${path}, ${JSON.stringify(truthy)}, ${JSON.stringify(falsy)}, ${JSON.stringify(missing)}) }}`
+  return templateTernaryTag(path, truthy, falsy, missing)
+}
+
+/** Build a three-state conditional without interpreting entered text as code.
+ * @param path Property. @param truthy Present text. @param falsy False text. @param missing Missing text.
+ * @returns Insertable conditional expression.
+ */
+export function templateTernaryTag(
+  path: string,
+  truthy: string,
+  falsy: string,
+  missing: string,
+): string {
+  templatePropertyTag(path)
+  return `{{ ternary(${path}, ${JSON.stringify(truthy)}, ${JSON.stringify(falsy)}, ${JSON.stringify(missing)}) }}`
 }

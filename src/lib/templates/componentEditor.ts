@@ -60,11 +60,19 @@ export function componentFields(
       ...componentFields(node.right, [...path, 1], 'Fallback'),
     ]
   const labels =
-    node.name === 'pair' || node.name === 'join'
-      ? ['First property', 'Second property', 'Separator']
-      : node.name === 'optional'
-        ? ['Property', 'Prefix', 'Suffix']
-        : ['Property', 'True / present', 'False', 'Missing']
+    node.name === 'cases' && node.args.length !== 4
+      ? node.args.map((_, index) =>
+          index === 0
+            ? 'Property'
+            : index % 2
+              ? `Value ${Math.ceil(index / 2)}`
+              : `Replacement ${index / 2}`,
+        )
+      : node.name === 'pair' || node.name === 'join'
+        ? ['First property', 'Second property', 'Separator']
+        : node.name === 'optional'
+          ? ['Property', 'Prefix', 'Suffix']
+          : ['Property', 'True / present', 'False', 'Missing']
   return node.args.flatMap((arg, index) =>
     componentFields(arg, [...path, index], labels[index]),
   )

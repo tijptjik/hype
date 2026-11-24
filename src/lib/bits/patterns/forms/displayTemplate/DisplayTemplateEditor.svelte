@@ -28,8 +28,9 @@ import { m } from '#lib/i18n.js'
 import {
   type TemplateValues,
   parseDisplayTemplate,
+  migrateTemplateConditionals,
   renderDisplayTemplate,
-  templateCasesTag,
+  templateTernaryTag,
   templatePairTag,
   templatePropertyTag,
 } from '#lib/templates/displayTemplate.js'
@@ -92,6 +93,13 @@ async function copyPrompt(): Promise<void> {
     copyStatus = 'Select the text below and copy it manually.'
   }
 }
+
+// Upgrade editable drafts while preserving immutable stored revisions until the user saves.
+$effect(() => {
+  if (!isEditing || disabled) return
+  const migrated = migrateTemplateConditionals(value)
+  if (migrated !== value) untrack(() => onChange(migrated))
+})
 
 let activeStart = $state<number | null>(null)
 let expressionElement = $state<HTMLFieldSetElement | undefined>()
@@ -223,6 +231,7 @@ const componentKinds = $derived([
   'pair',
   'join',
   'optional',
+  'ternary',
   'cases',
   'fallback',
   ...(allowSequence ? ['sequence' as const] : []),
@@ -232,6 +241,7 @@ const componentLabels = {
   pair: 'Pair',
   join: 'Join',
   optional: 'Optional text',
+  ternary: 'Ternary',
   cases: 'Cases',
   fallback: 'Fallback',
   sequence: 'Sequence',
@@ -252,8 +262,14 @@ const activeHelp = $derived.by(() => {
     join: 'Choose a first property and a second property, then type the separator to place between them. Missing values are skipped, and the separator appears only when both values are present.',
     optional:
       'Choose a property, then enter any text to put before it (Prefix) or after it (Suffix). For example, use “ (” and “)” to put a branch in brackets. If the value is missing, the surrounding text is left out too.',
+    trilean:
+      'Choose a property, then enter text for true or present, false, and missing values.',
+    ternary:
+      'Choose a property, then enter text for true or present, false, and missing values.',
     cases:
-      'Choose a property, then enter the text for each situation: true or present, false, and missing. A missing value is different from a value set to false.',
+      expression.kind === 'call' && expression.args.length === 4
+        ? 'This older component chooses text for true or present, false, and missing values.'
+        : 'Map exact property values to replacement text, such as abbreviations. Unmatched values are kept; missing values add no text.',
     fallback:
       'Choose the property to try first, then the fallback to use if the first has no value. If both are missing, this component adds no text. For a combined component, configure its first and second properties and separator before choosing the fallback.',
   }[kind]
@@ -384,13 +400,15 @@ async function insert(kind: (typeof componentKinds)[number]): Promise<void> {
       ? '{{ sequence(3, true) }}'
       : kind === 'pair' || kind === 'join'
         ? templatePairTag(property, second).replace('pair(', `${kind}(`)
-        : kind === 'cases'
-          ? templateCasesTag(property, '', '', '')
-          : kind === 'optional'
-            ? `{{ optional(${property}, "", "") }}`
-            : kind === 'fallback'
-              ? `{{ ${property} ?? ${second} }}`
-              : templatePropertyTag(property)
+        : kind === 'ternary'
+          ? templateTernaryTag(property, '', '', '')
+          : kind === 'cases'
+            ? `{{ cases(${property}, "", "") }}`
+            : kind === 'optional'
+              ? `{{ optional(${property}, "", "") }}`
+              : kind === 'fallback'
+                ? `{{ ${property} ?? ${second} }}`
+                : templatePropertyTag(property)
   const start = Math.min(selectionStart ?? value.length, value.length)
   const end = Math.min(selectionEnd ?? start, value.length)
   onChange(value.slice(0, start) + text + value.slice(end))
@@ -410,6 +428,29 @@ async function insert(kind: (typeof componentKinds)[number]): Promise<void> {
 function updateField(field: TemplateComponentField, next: string): void {
   if (!activeComponent) return
   const text = `{{ ${expressionSource(updateComponentField(activeComponent.expression, field.path, next))} }}`
+  onChange(
+    value.slice(0, activeComponent.start) + text + value.slice(activeComponent.end),
+  )
+  selectionStart = activeComponent.start + text.length
+  selectionEnd = selectionStart
+}
+/** Add or remove a value mapping from the selected cases component.
+ * @param index Pair index to remove, or undefined to append. @returns Nothing.
+ */
+function changeMapping(index?: number): void {
+  const node = activeComponent?.expression
+  if (
+    !activeComponent ||
+    node?.kind !== 'call' ||
+    node.name !== 'cases' ||
+    node.args.length === 4
+  )
+    return
+  const args = [...node.args]
+  if (index === undefined)
+    args.push({ kind: 'literal', value: '' }, { kind: 'literal', value: '' })
+  else if (args.length > 3) args.splice(index, 2)
+  const text = `{{ ${expressionSource({ ...node, args })} }}`
   onChange(
     value.slice(0, activeComponent.start) + text + value.slice(activeComponent.end),
   )
@@ -526,10 +567,16 @@ function updateField(field: TemplateComponentField, next: string): void {
               </p>
             </li>
             <li>
-              <strong>Cases</strong>
+              <strong>Ternary</strong>
               <p class="text-muted-foreground">
                 Choose different text when a value is true or present, false, or
                 missing.
+              </p>
+            </li>
+            <li>
+              <strong>Cases</strong>
+              <p class="text-muted-foreground">
+                Replace exact values with chosen text, such as abbreviations.
               </p>
             </li>
             <li>
@@ -769,6 +816,35 @@ function updateField(field: TemplateComponentField, next: string): void {
               />
             {/if}
           {/each}
+          {#if activeComponent?.expression.kind === 'call' &&
+            activeComponent.expression.name === 'cases' &&
+            activeComponent.expression.args.length !== 4}
+            <div class="col-span-full flex flex-wrap gap-2">
+              <Button
+                type="button"
+                text="Add mapping"
+                style="outline"
+                size="sm"
+                {disabled}
+                onClick={() => changeMapping()}
+              />
+              {#each Array.from(
+                { length: (activeComponent.expression.args.length - 1) / 2 },
+                (_, i) => i,
+              ) as index}
+                {#if activeComponent.expression.args.length > 3}
+                  <Button
+                    type="button"
+                    text={`Remove mapping ${index + 1}`}
+                    style="outline"
+                    size="sm"
+                    {disabled}
+                    onClick={() => changeMapping(index * 2 + 1)}
+                  />
+                {/if}
+              {/each}
+            </div>
+          {/if}
         </fieldset>
       </div>
     {/if}

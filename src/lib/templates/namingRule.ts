@@ -19,7 +19,7 @@ export function namingRuleExpression(rule: FeatureNameRule, locale: string): str
     const part =
       condition.test === 'hasValue'
         ? `${path} ?? ${JSON.stringify(text.false.trim())}`
-        : `cases(${path}, ${JSON.stringify(text.true.trim())}, ${JSON.stringify(text.false.trim())}, ${JSON.stringify(text.null.trim())})`
+        : `ternary(${path}, ${JSON.stringify(text.true.trim())}, ${JSON.stringify(text.false.trim())}, ${JSON.stringify(text.null.trim())})`
     const fragment = `{{ optional(${part}, ${JSON.stringify(text.placement === 'suffix' ? text.separator : '')}, ${JSON.stringify(text.placement === 'prefix' ? text.separator : '')}) }}`
     source = text.placement === 'prefix' ? fragment + source : source + fragment
   }
