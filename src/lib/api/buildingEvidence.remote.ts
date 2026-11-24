@@ -206,3 +206,16 @@ export const getBuildingCompositionRole = guardedQuery(
     return row?.role ?? null
   },
 )
+
+/** Populate an existing physical building from its pinned constituents.
+ * @param input Owned parent and organisation. @returns The refreshed identity.
+ */
+export const refreshPhysicalBuildingProfile = guardedCommand(
+  z.strictObject({ locationId: z.string().min(1), organisationId: z.string().min(1) }),
+  async (input, ctx) => {
+    await requireLocationOrganisationManager(ctx, input.organisationId)
+    return savePhysicalBuildingMember(ctx.db, input.organisationId, ctx.user.id, {
+      parentId: input.locationId,
+    })
+  },
+)

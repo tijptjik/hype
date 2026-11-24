@@ -585,6 +585,14 @@ function getStructuredAddressDisplay(
     locationKind === 'building' && !hasAuthoredUnit
       ? ''
       : unitDisplayExpression(unitPart, locale)
+  // Preserve the punctuation of a retained building range when its structured projection agrees.
+  const retained = address.source.fallbackDisplay[tag]
+  if (
+    locationKind === 'building' &&
+    retained &&
+    retained.replaceAll('–', '-') === display
+  )
+    display = retained
   const composed = displayUnit
     ? locale === 'en'
       ? [displayUnit, display].filter(Boolean).join(', ')

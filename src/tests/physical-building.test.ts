@@ -17,7 +17,12 @@ vi.mock('#lib/sources/saanseoi.js', async original => ({
 import { sql } from 'drizzle-orm'
 import { archiveLocalLocation } from '#lib/db/services/locationDeletion.js'
 import { probeLocationIdentityScope } from '#lib/db/services/locationIdentityReview.js'
-import { updateLocalLocationAddress } from '#lib/db/services/locationLocal.js'
+import { importBuildingLocation } from '#lib/db/services/locationBuilding.js'
+import { localIdentityFromAddress } from '#lib/locations/addressIdentity.js'
+import {
+  createLocalLocation,
+  updateLocalLocationAddress,
+} from '#lib/db/services/locationLocal.js'
 import { createLocalLocationAddress } from '#lib/addresses/localLocationAddress.js'
 import {
   physicalBuildingMembers,
@@ -25,6 +30,7 @@ import {
 } from '#lib/db/services/physicalBuilding.js'
 import {
   physicalBuildingAddresses,
+  physicalBuildingProfile,
   type PhysicalBuildingMember,
 } from '#lib/locations/physicalBuilding.js'
 import { readLocationFacts } from '#lib/locations/factsSnapshot.js'
@@ -179,7 +185,7 @@ db.execute('SELECT 1 FROM locationDeletionBlocker WHERE locationId=?', ('test',)
     unknown.addresses[0].display.en = 'Market Annex'
     const members = [
       member('a', '10B'),
-      member('b', '2–8'),
+      member('b', '8–2'),
       member('c', '36', 'Second Street'),
       unknown,
     ]
@@ -189,6 +195,18 @@ db.execute('SELECT 1 FROM locationDeletionBlocker WHERE locationId=?', ('test',)
       'Market Annex',
     ])
     expect(physicalBuildingAddresses([{ ...unknown, addresses: [] }])).toEqual({})
+  })
+  it('keeps distinct streets in the display and only promotes agreeing translations', () => {
+    const members: PhysicalBuildingMember[] = [
+      { ...member('a', '31A'), names: { en: 'Tower A', 'zh-hant': '佳景樓' } },
+      { ...member('b', '9'), names: { en: 'Tower B' } },
+      member('c', '1', 'Second Street'),
+    ]
+    const profile = physicalBuildingProfile(members)
+    expect(profile.names).toEqual({ 'zh-hant': '佳景樓' })
+    expect(profile.content.i18n.en).toEqual({
+      formattedAddress: '9–31A Tak Ku Ling Road · 1 Second Street',
+    })
   })
   it('creates once, appends distinct source IDs, reloads the range and limits writes to the owner', async () => {
     const { db } = setupLocationServiceDatabase(true)
@@ -227,11 +245,60 @@ db.execute('SELECT 1 FROM locationDeletionBlocker WHERE locationId=?', ('test',)
     expect(
       joins.every(row => row.pinned === row.child && row.parent !== row.child),
     ).toBe(true)
+    const facts = readLocationFacts(row.facts)
+    expect(facts.names).toEqual({ en: 'First building' })
+    expect(facts.location.address.authored?.i18n.en).toMatchObject({
+      buildingName: 'First building',
+      streetName: 'Tak Ku Ling Road',
+      buildingNumberFrom: '36',
+      buildingNumberTo: '38',
+    })
     const address = emptyFeatureAddress()
     address.source = readLocationFacts(row.facts).location.address
     expect(getAddressDisplay(address, 'en', [], 'building')).toBe(
       '36–38 Tak Ku Ling Road',
     )
+  })
+  it('fills a legacy parent from its pinned member and a second refresh creates no revision', async () => {
+    const { db } = setupLocationServiceDatabase(true)
+    const a = member('first', '57-59', 'Lung Kong Road')
+    const child = await importBuildingLocation(db, 'p', a.source, 'shared', 'user')
+    const placement = emptyFeatureAddress()
+    placement.coordinates = a.coordinates
+    const input = localIdentityFromAddress('building', {}, placement)
+    delete input.facts.location.address.authored
+    input.facts.location.address.fallbackDisplay = physicalBuildingAddresses([a])
+    const { locationId } = await createLocalLocation(db, 'p', input, 'user', {
+      locationId: 'legacy-building',
+      physicalBuildingMember: {
+        ...a,
+        childLocationId: child.locationId,
+        childRevisionId: child.revisionId,
+      },
+    })
+    for (let attempt = 0; attempt < 2; attempt++)
+      await savePhysicalBuildingMember(db, 'p', 'user', { parentId: locationId })
+    const head = await db.get<{ version: number; facts: string; members: string }>(
+      sql`SELECT version,facts,${physicalBuildingMembers(sql`r.locationId`)} members FROM locationRevisionContent r WHERE locationId=${locationId} ORDER BY version DESC LIMIT 1`,
+    )
+    expect(head.version).toBe(2)
+    expect(JSON.parse(head.members)).toHaveLength(1)
+    expect(readLocationFacts(head.facts)).toMatchObject({
+      names: { en: 'First building' },
+      location: {
+        address: {
+          authored: {
+            i18n: {
+              en: {
+                streetName: 'Lung Kong Road',
+                buildingNumberFrom: '57',
+                buildingNumberTo: '59',
+              },
+            },
+          },
+        },
+      },
+    })
   })
   it('retains the edited parent name and custom address when another child is added', async () => {
     const { db } = setupLocationServiceDatabase(true)

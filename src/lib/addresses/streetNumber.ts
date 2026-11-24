@@ -10,12 +10,16 @@ export type StreetNumberParse =
   | { valid: false; error: StreetNumberError }
 
 /** Parse one street number, a range, or a pair without expanding address membership.
- * @param input User-entered number expression.
+ * @param input Street number expression.
+ * @param sortEndpoints Sort a publisher's endpoints when composing a display range.
  * @returns Canonical expression and endpoints, or a format/order error.
  * @remarks A hyphen denotes a range; commas and ampersands denote a pair. Only
  * suffixes with the same numeric base are shortened, and no missing digits are inferred.
  */
-export function parseStreetNumber(input: string): StreetNumberParse {
+export function parseStreetNumber(
+  input: string,
+  sortEndpoints = false,
+): StreetNumberParse {
   const value = input.normalize('NFKC').trim().toUpperCase().replace(/[–—−]/g, '-')
   if (!value)
     return {
@@ -38,24 +42,28 @@ export function parseStreetNumber(input: string): StreetNumberParse {
       value,
     )
   if (!pair) return { valid: false, error: 'format' }
-  const from = pair[1].replace(/\s/g, '')
+  let from = pair[1].replace(/\s/g, '')
   const base = /^\d+/.exec(from)![0]
-  const to = /^[A-Z]$/.test(pair[3]) ? base + pair[3] : pair[3].replace(/\s/g, '')
+  let to = /^[A-Z]$/.test(pair[3]) ? base + pair[3] : pair[3].replace(/\s/g, '')
   const endBase = /^\d+/.exec(to)![0]
   const suffix = from.slice(base.length),
     endSuffix = to.slice(endBase.length)
   if (
     BigInt(endBase) < BigInt(base) ||
     (BigInt(endBase) === BigInt(base) && endSuffix < suffix)
-  )
-    return { valid: false, error: 'descending' }
+  ) {
+    if (!sortEndpoints) return { valid: false, error: 'descending' }
+    ;[from, to] = [to, from]
+  }
   const connector = ['-', 'TO', '至'].includes(pair[2])
     ? '-'
     : pair[2] === '/' || (base === endBase && suffix && endSuffix)
       ? '/'
       : '&'
   const end =
-    connector === '/' && base === endBase && suffix && endSuffix ? endSuffix : to
+    connector === '/' && base === endBase && suffix && endSuffix
+      ? to.slice(base.length)
+      : to
   const expression =
     connector === '&' ? `${from} & ${end}` : `${from}${connector}${end}`
   return { valid: true, number: { expression, from, to, connector } }

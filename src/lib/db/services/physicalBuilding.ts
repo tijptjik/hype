@@ -15,10 +15,11 @@ import { relationshipScopeSql } from './locationRelationships'
 import { createLocalLocation } from './locationLocal'
 // DOMAIN
 import { localIdentityFromAddress } from '#lib/locations/addressIdentity.js'
+import { equalLocationValue } from '#lib/locations/baseline.js'
 import { emptyFeatureAddress } from '#lib/addresses/featureAddress.js'
 import { deriveLocationId } from '#lib/locations/id.server.js'
 import {
-  physicalBuildingAddresses,
+  physicalBuildingProfile,
   type PhysicalBuildingMember,
 } from '#lib/locations/physicalBuilding.js'
 // TYPES
@@ -26,6 +27,13 @@ import type { Database } from '#lib/types.js'
 import type { LocationFactsSnapshot } from '#lib/locations/factsSnapshot.js'
 
 // TOC: Source membership projection | Physical building creation and extension
+
+/** Read published translations from the constituent revision pinned by the membership.
+ * @param revisionId Verified child revision. @returns Localized names as a JSON object.
+ */
+function pinnedNames(revisionId: SQLWrapper): SQL<string> {
+  return sql<string>`(SELECT json_group_object(locale,name) FROM locationRevisionI18n WHERE revisionId=${revisionId} AND name IS NOT NULL AND name!='')`
+}
 
 /** Read member events in review order, independently of subsequent Location edits.
  * @param locationId Physical HYPE identity. @param scope Organisation whose effective assertions to read. @returns JSON array of pinned SaanSeoi children.
@@ -35,7 +43,7 @@ export function physicalBuildingMembers(
   scope: string | null = null,
 ): SQL<string> {
   return sql<string>`(SELECT json_group_array(json(member)) FROM (
-    SELECT json_set(v.rawSource->'$.member','$.childLocationId',${canonicalLocationSQL(sql`r.childLocationId`)},'$.childRevisionId',json_extract(root.provenance,'$.childRevisionId')) member
+    SELECT json_set(v.rawSource->'$.member','$.names',json(${pinnedNames(sql`json_extract(root.provenance,'$.childRevisionId')`)}),'$.childLocationId',${canonicalLocationSQL(sql`r.childLocationId`)},'$.childRevisionId',json_extract(root.provenance,'$.childRevisionId')) member
     FROM locationMembershipHead r JOIN locationMembership root ON root.id=r.relationshipId
     JOIN locationRevision v ON v.id=json_extract(root.provenance,'$.parentRevisionId')
     WHERE ${canonicalLocationSQL(sql`r.parentLocationId`)}=${locationId} AND r.assertionState='asserted' AND r.membershipState='current'
@@ -46,7 +54,7 @@ export function physicalBuildingMembers(
 
 /** Save one verified catalogue member as a child of a new or existing physical building.
  * @param db Request-local database. @param organisationId Authorized owner. @param actorId Authenticated editor.
- * @param target Creation retry key or existing physical building ID. @param member Server-verified published record.
+ * @param target Creation retry key or existing physical building ID. @param member Server-verified published record. Omit to refresh defaults from retained memberships.
  * @returns Stable parent identity. Replaying an action with the same source ID is idempotent.
  */
 export async function savePhysicalBuildingMember(
@@ -54,7 +62,7 @@ export async function savePhysicalBuildingMember(
   organisationId: string,
   actorId: string,
   target: { requestId: string } | { parentId: string },
-  member: PhysicalBuildingMember,
+  member?: PhysicalBuildingMember,
 ): Promise<string> {
   const locationId =
     'parentId' in target
@@ -94,34 +102,41 @@ export async function savePhysicalBuildingMember(
   let head = await read()
   if ('parentId' in target && !head)
     throw new Error('Physical building unavailable for editing.')
-  if (head && 'requestId' in target && head.seed !== member.source.id)
+  if ('requestId' in target && (!member || (head && head.seed !== member.source.id)))
     throw new Error('This creation request already belongs to another building.')
-  if (
-    head &&
-    (JSON.parse(head.members) as PhysicalBuildingMember[]).some(
-      existing => existing.source.id === member.source.id,
+  const members: PhysicalBuildingMember[] = head ? JSON.parse(head.members) : []
+  const duplicate =
+    member && members.find(existing => existing.source.id === member.source.id)
+  if (duplicate) return locationId
+  // Import the child independently and pin its published names to the membership revision.
+  let constituent: PhysicalBuildingMember | undefined
+  if (member) {
+    const child = await importBuildingLocation(
+      db,
+      organisationId,
+      member.source,
+      'shared',
+      actorId,
     )
-  )
-    return locationId
-  // Import the child independently. Retrying a parent write reuses its stable catalogue identity.
-  const child = await importBuildingLocation(
-    db,
-    organisationId,
-    member.source,
-    'shared',
-    actorId,
-  )
-  const constituent = {
-    ...member,
-    childLocationId: child.locationId,
-    childRevisionId: child.revisionId,
+    const names = await db.get<{ names: string }>(
+      sql`SELECT ${pinnedNames(sql`${child.revisionId}`)} names`,
+    )
+    constituent = {
+      ...member,
+      names: JSON.parse(names?.names ?? '{}'),
+      childLocationId: child.locationId,
+      childRevisionId: child.revisionId,
+    }
   }
-  if ('requestId' in target && !head) {
+  const profile = physicalBuildingProfile(
+    constituent ? [...members, constituent] : members,
+  )
+  if ('requestId' in target && !head && constituent) {
     const placement = emptyFeatureAddress()
-    placement.coordinates = member.coordinates
-    const value = localIdentityFromAddress('building', {}, placement)
-    delete value.facts.location.address.authored
-    value.facts.location.address.fallbackDisplay = physicalBuildingAddresses([member])
+    placement.coordinates = constituent.coordinates
+    const value = localIdentityFromAddress('building', profile.names, placement)
+    value.facts.location.address.authored = profile.content
+    value.facts.location.address.fallbackDisplay = profile.display
     // The first member and the separate HYPE identity are committed by the same creation batch.
     try {
       await createLocalLocation(db, organisationId, value, actorId, {
@@ -135,22 +150,47 @@ export async function savePhysicalBuildingMember(
     }
   }
   if (!head) throw new Error('Physical building unavailable for editing.')
-  const members: PhysicalBuildingMember[] = JSON.parse(head.members)
-  if ('requestId' in target && head.seed !== member.source.id)
-    throw new Error('This creation request already belongs to another building.')
-  if (members.some(existing => existing.source.id === member.source.id))
+  if (constituent && 'requestId' in target) {
+    if (head.seed !== constituent.source.id)
+      throw new Error('This creation request already belongs to another building.')
     return locationId
-  // Only the generated default changes. Keep current names, authored address, explicit display overrides and geometry.
-  const snapshot: LocationFactsSnapshot = JSON.parse(head.facts)
-  for (const [locale, label] of Object.entries(
-    physicalBuildingAddresses([...members, member]),
-  )) {
-    snapshot.i18n[locale] ??= {}
-    snapshot.i18n[locale].displayAddress = label
   }
+  // Update generated defaults and preserve the parent's independent corrections and geometry.
+  const snapshot: LocationFactsSnapshot = JSON.parse(head.facts)
+  {
+    const before = physicalBuildingProfile(members)
+    for (const locale of new Set([
+      ...Object.keys(before.names),
+      ...Object.keys(profile.names),
+      ...Object.keys(profile.display),
+    ])) {
+      snapshot.i18n[locale] ??= {}
+      const row = snapshot.i18n[locale]
+      if (
+        snapshot.kind === 'building' &&
+        !snapshot.details.confirmedUnnamed &&
+        (!row.name || row.name === before.names[locale])
+      ) {
+        if (profile.names[locale]) row.name = profile.names[locale]
+        else delete row.name
+      }
+      if (profile.display[locale]) row.displayAddress = profile.display[locale]
+    }
+    const address = snapshot.common.location.address
+    if (
+      address &&
+      (!address.authored || equalLocationValue(address.authored, before.content))
+    )
+      address.authored = profile.content
+  }
+  if (!constituent && equalLocationValue(snapshot, JSON.parse(head.facts)))
+    return locationId
   const raw = JSON.stringify({
-    kind: 'physical-building-member',
+    kind: constituent ? 'physical-building-member' : 'physical-building-profile',
     member: constituent,
+    memberRevisionIds: constituent
+      ? undefined
+      : members.map(row => row.childRevisionId),
     actorId,
     organisationId,
   })
@@ -161,7 +201,8 @@ export async function savePhysicalBuildingMember(
   const committed = await executeRevisionBatch(
     db,
     sql`EXISTS(SELECT 1 FROM location l WHERE ${eligible}
-    AND (SELECT id FROM locationRevision WHERE locationId=l.id ORDER BY version DESC LIMIT 1)=${head.id})`,
+    AND (SELECT id FROM locationRevision WHERE locationId=l.id ORDER BY version DESC LIMIT 1)=${head.id}
+    AND ${physicalBuildingMembers(sql`l.id`)}=${head.members})`,
     [
       db
         .insert(locationRevisionInput)
@@ -174,8 +215,9 @@ export async function savePhysicalBuildingMember(
     const latest = await read()
     if (
       !latest ||
+      !constituent ||
       !(JSON.parse(latest.members) as PhysicalBuildingMember[]).some(
-        row => row.source.id === member.source.id,
+        row => row.source.id === constituent.source.id,
       )
     )
       throw new Error('The physical building changed. Retry adding this member.')

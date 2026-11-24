@@ -6,6 +6,7 @@ import { onDestroy } from 'svelte'
 import {
   attachPhysicalBuildingMember,
   getBuildingCompositionRole,
+  refreshPhysicalBuildingProfile,
 } from '#lib/api/buildingEvidence.remote.js'
 // DOMAIN
 import { submissionErrorMessage } from '#lib/forms/submissionError.js'
@@ -106,6 +107,19 @@ async function save(row?: BuildingSearchResult): Promise<void> {
     busy = false
   }
 }
+/** Fill legacy profile defaults from the existing memberships without adding a child. */
+async function fillProfile(): Promise<void> {
+  busy = true
+  failure = ''
+  try {
+    await refreshPhysicalBuildingProfile({ locationId, organisationId })
+    await onSaved()
+  } catch (e) {
+    failure = submissionErrorMessage(e) ?? 'Could not populate the building profile.'
+  } finally {
+    busy = false
+  }
+}
 onDestroy(() => {
   generation++
 })
@@ -115,6 +129,9 @@ onDestroy(() => {
     Create Physical Building
   </button>
 {:else if role.current === 'parent'}
+  <button type="button" class={control} disabled={busy} onclick={fillProfile}>
+    Fill profile from constituents
+  </button>
   <button
     type="button"
     class={control}
