@@ -1,0 +1,77 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["floors", "warnings"],
+  "properties": {
+    "warnings": { "type": "array", "items": { "type": "string" } },
+    "floors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "label",
+          "page",
+          "width",
+          "height",
+          "boundary",
+          "units",
+          "warnings"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "page": { "type": "integer" },
+          "width": { "type": "number" },
+          "height": { "type": "number" },
+          "boundary": {
+            "type": "array",
+            "items": { "type": "array", "items": { "type": "number" } }
+          },
+          "warnings": { "type": "array", "items": { "type": "string" } },
+          "units": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "label",
+                "category",
+                "polygon",
+                "confidence",
+                "evidence"
+              ],
+              "properties": {
+                "id": { "type": "string" },
+                "label": { "type": "string" },
+                "category": {
+                  "type": "string",
+                  "enum": [
+                    "room",
+                    "corridor",
+                    "stairs",
+                    "elevator",
+                    "toilet",
+                    "kitchen",
+                    "lavatory",
+                    "balcony",
+                    "void",
+                    "unknown"
+                  ]
+                },
+                "polygon": {
+                  "type": "array",
+                  "items": { "type": "array", "items": { "type": "number" } }
+                },
+                "confidence": { "type": "number" },
+                "evidence": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
