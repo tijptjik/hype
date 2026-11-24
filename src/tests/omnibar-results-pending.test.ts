@@ -61,7 +61,10 @@ it('keeps category headings and rows until each replacement settles', async () =
 it('does not invent categories on first load or retain them after removal', async () => {
   const view = render(Results, { sections: [section('layer', 0, true)] })
   expect(view.queryByRole('button', { name: 'maps__layers' })).toBeNull()
-  expect(view.getByText('resource_loading')).toBeTruthy()
+  expect(view.getAllByRole('status', { name: 'resource_loading' })[0]).toHaveAttribute(
+    'aria-busy',
+    'true',
+  )
   await view.rerender({ sections: [section('layer', 1)] })
   await view.rerender({ sections: [] })
   await view.rerender({ sections: [section('layer', 0, true)] })
