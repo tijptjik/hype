@@ -15,6 +15,9 @@ import SliceIcon from 'virtual:icons/lucide/box'
 import { Button } from '#lib/bits/core/index.js'
 import type { ExteriorSlice } from '#lib/locations/exterior/assembly.js'
 import ExteriorFootprintPicker from './ExteriorFootprintPicker.svelte'
+import ExteriorTextureSlider from './ExteriorTextureSlider.svelte'
+import FacadeReview from './FacadeReview.svelte'
+import type { ModelViewerElement } from '@google/model-viewer'
 
 let { locationId, coordinates }: { locationId: string; coordinates: [number, number] } =
   $props()
@@ -108,6 +111,18 @@ let message = $state('')
 let viewerHost = $state<HTMLDivElement>()
 let viewerReady = $state(false)
 let modelLoading = $state(true)
+let failedComparison = $state('')
+const comparisonFile = $derived(
+  model?.comparisonFile && model.comparisonFile !== failedComparison
+    ? model.comparisonFile
+    : null,
+)
+/** Recover the upstream model when comparison resources fail. @returns Nothing. */
+function useGovernmentModel(): void {
+  failedComparison = model?.comparisonFile ?? ''
+  message = 'Facade comparison unavailable. Showing the government model.'
+}
+let analysisViewer = $state.raw<ModelViewerElement>()
 
 /** Refresh the linked model after loading or importing. @returns Completion. */
 async function refresh(): Promise<void> {
@@ -136,20 +151,34 @@ onMount(() => {
 $effect(() => {
   if (!viewerHost || !viewerReady || !model) return
   modelLoading = true
+  analysisViewer = undefined
   const viewer = document.createElement('model-viewer')
-  viewer.addEventListener('load', () => (modelLoading = false))
-  viewer.addEventListener('error', () => {
+  let disposed = false
+  viewer.addEventListener('load', () => {
+    if (disposed) return
     modelLoading = false
-    message = 'Could not display the exterior model.'
+    analysisViewer = viewer as ModelViewerElement
   })
-  viewer.setAttribute('src', model.url)
+  viewer.addEventListener('error', () => {
+    if (disposed) return
+    modelLoading = false
+    if (comparisonFile) useGovernmentModel()
+    else message = 'Could not display the exterior model.'
+  })
+  viewer.setAttribute(
+    'src',
+    comparisonFile ? model.url.replace(/[^/]+$/, comparisonFile) : model.url,
+  )
   viewer.setAttribute('camera-controls', '')
   viewer.setAttribute('auto-rotate', '')
   viewer.setAttribute('alt', 'Building exterior model')
   viewer.style.width = '100%'
   viewer.style.height = '100%'
   viewerHost.replaceChildren(viewer)
-  return () => viewer.remove()
+  return () => {
+    disposed = true
+    viewer.remove()
+  }
 })
 
 /** Re-fetch every reviewed slice with its current upstream textures. @returns Completion. */
@@ -255,7 +284,7 @@ async function importModel(): Promise<void> {
 }
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col bg-white">
+<div class="flex min-h-0 flex-1 flex-col">
   {#if message}
     <p role="alert" class="text-destructive border-b px-5 py-3 text-sm">{message}</p>
   {/if}
@@ -565,7 +594,17 @@ async function importModel(): Promise<void> {
       </div>
     {/if}
   {:else if model}
-    <div class="border-border flex flex-wrap justify-end gap-3 border-b px-5 py-3">
+    <div
+      class="border-border flex flex-wrap items-center justify-end gap-3 border-b px-5 py-3"
+    >
+      {#if comparisonFile && analysisViewer}
+        <div class="mr-auto w-full max-w-72">
+          <ExteriorTextureSlider
+            viewer={analysisViewer}
+            onfailure={useGovernmentModel}
+          />
+        </div>
+      {/if}
       {#if result.canImport}
         <Button
           text="Refresh models and textures"
@@ -577,7 +616,7 @@ async function importModel(): Promise<void> {
         <Button text="Manage model associations" onClick={search} />
       {/if}
     </div>
-    <div class="relative min-h-48 flex-1">
+    <div class="relative min-h-[32rem] flex-1">
       <div class="absolute inset-0" bind:this={viewerHost}></div>
       {#if modelLoading}
         <div
@@ -586,43 +625,61 @@ async function importModel(): Promise<void> {
           class="bg-muted absolute inset-0 animate-pulse"
         ></div>
       {/if}
-    </div>
-    <section
-      aria-label="Exterior model metadata"
-      aria-busy={refreshing}
-      class="text-muted-foreground max-h-48 overflow-y-auto px-5 py-2 font-mono text-[10px] leading-relaxed"
-    >
-      {#if refreshing}
-        <div
-          role="status"
-          aria-label="Refreshing models and textures"
-          class="bg-muted mb-2 h-8 w-64 animate-pulse rounded"
-        ></div>
+      {#if analysisViewer && !modelLoading}
+        {#key comparisonFile ?? model.assetId}
+          <FacadeReview
+            viewer={analysisViewer}
+            {locationId}
+            sourceAssetId={model.assetId}
+            canSave={result.canImport}
+            assetId={comparisonFile ?? model.assetId}
+            comparisonGeometry={Boolean(comparisonFile)}
+          />
+        {/key}
       {/if}
-      <p>Source: Lands Department, Hong Kong SAR Government.</p>
-      <p>Imported: {model.createdAt} · {result.slices.length} model(s)</p>
-      {#each result.slices as slice (slice.modelId)}
-        <p class="break-words">
-          {slice.label ? `${slice.label} · ` : ''}{slice.modelId} · Sheet
-          {slice.sheet}{slice.footprintId ? ` · CSUID ${slice.footprintId}` : ''}
-        </p>
-        {#if slice.sourceVersion}
-          <p class="break-words">
-            Sheet revision:
-            {slice.sourceVersion.revisionDate
-              ? new Date(slice.sourceVersion.revisionDate).toISOString().slice(0, 10)
-              : 'Not supplied'}
-            · Archive modified: {slice.sourceVersion.lastModified || 'Not supplied'}
-          </p>
-          <p class="break-words">
-            Archive ETag: {slice.sourceVersion.etag} ·
-            {slice.sourceVersion.textureCount} texture image(s)
-          </p>
-        {:else}
-          <p>Source version not recorded · refresh to capture metadata</p>
+      <section
+        aria-label="Exterior model metadata"
+        aria-busy={refreshing}
+        class="text-muted-foreground absolute bottom-2 left-3 z-10 max-h-24 max-w-[min(30%,25rem)] overflow-y-auto bg-transparent font-mono text-[10px] leading-relaxed"
+      >
+        {#if refreshing}
+          <div
+            role="status"
+            aria-label="Refreshing models and textures"
+            class="bg-muted mb-2 h-8 w-64 animate-pulse rounded"
+          ></div>
         {/if}
-      {/each}
-      <p>Archive dates are not texture capture dates.</p>
-    </section>
+        <p>Source: Lands Department, Hong Kong SAR Government.</p>
+        <p>
+          Government assembly: {result.slices.length} model(s) · Imported
+          {model.createdAt}
+        </p>
+        {#if comparisonFile && analysisViewer}
+          <p>Texture comparison revision: {comparisonFile.slice(11, 23)}</p>
+        {/if}
+        {#each result.slices as slice (slice.modelId)}
+          <p class="break-words">
+            {slice.label ? `${slice.label} · ` : ''}{slice.modelId} · Sheet
+            {slice.sheet}{slice.footprintId ? ` · CSUID ${slice.footprintId}` : ''}
+          </p>
+          {#if slice.sourceVersion}
+            <p class="break-words">
+              Sheet revision:
+              {slice.sourceVersion.revisionDate
+                ? new Date(slice.sourceVersion.revisionDate).toISOString().slice(0, 10)
+                : 'Not supplied'}
+              · Archive modified: {slice.sourceVersion.lastModified || 'Not supplied'}
+            </p>
+            <p class="break-words">
+              Archive ETag: {slice.sourceVersion.etag} ·
+              {slice.sourceVersion.textureCount} texture image(s)
+            </p>
+          {:else}
+            <p>Source version not recorded · refresh to capture metadata</p>
+          {/if}
+        {/each}
+        <p>Archive dates are not texture capture dates.</p>
+      </section>
+    </div>
   {/if}
 </div>
