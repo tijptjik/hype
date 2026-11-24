@@ -149,20 +149,47 @@ a fresh release plan.
 [Production cutover](../../../docs/operations/Preview-to-Production-Cutover.md) ·
 [Places and Features](../../../spec/breadline/proposal/01-places-features.md)
 
-## Post-deployment review
+## Post-deployment release
 
-The 24 November post-deployment review and prepared donor corrections are retained in
-`.local/curation-release/20261124-post-deploy/`. DEV and production backups passed
-integrity and foreign-key checks. The scoped DEV records match the earlier frozen
-package. The fresh Breadline export proposes no donor/drop-off source changes. User
-reconciliation proposes 121 creations and 157 updates, with no exceptions.
+The selected combined scope is recorded in the
+[acceptance checklist](acceptance-checklist.md). The optimized private release is
+`.local/curation-release/20261124-production-optimized/`. DEV and fresh production
+backups passed integrity and foreign-key checks. Scoped DEV records matched the frozen
+package. The 24 November 08:42 UTC Breadline snapshot has no donor/drop-off source
+changes; all 311 donor phone rows match the retained amendments. User reconciliation
+proposes 122 creations and 157 updates, with no exceptions.
 
-The prepared target contains 493 active brands, 79 active groups and one archived group.
-It adds the requested Harlan’s contact correction and Wooloomooloo Prime closure through
-attributed Location and Feature revisions. Local workerd verified the curation and user
-reconciliation against this target across 173 tables. Production application and live
-acceptance remain pending. The post-deployment ancestry input and operator corrections
-still require final managed-plan pinning and journal/mirror rehearsal.
+The target contains 493 active brands, 79 active groups and one archived group. It
+includes attributed Harlan and Wooloomooloo Prime corrections, removes the approved 444
+City Recorder/EUNIC Locations while preserving Feature content, and excludes new
+SaanSeoi-owned Locations. Journal rollback/resume and native D1 rehearsals passed for
+the optimized 265-group plan. The checklist distinguishes rehearsal from production
+application and live acceptance; consult its receipts before starting another run.
 
-The [acceptance checklist](acceptance-checklist.md) records completed evidence and the
-remaining scope decisions. Use its current status when resuming this work.
+## Data-only production release
+
+For an already active application, retain its exact `_revisionDeployment` row beside
+`plan.json` as `plan.json.application-journal.json`. A data-only plan has no numbered
+migrations, identical initial/expected schema fingerprints, and pins the application
+hash/cursor in `parentHash`/`parentCursor`. Use the normal fenced journal to apply it.
+Before any group commits, `remote.ts abort-data` restores the exact retained application
+journal, including its cursor. Do not use the schema-cutover abort for a data-only run.
+After complete verification, `remote.ts finish-data` restores the retained application's
+journal atomically; it does not deploy a new application. Keep the data plan hash and
+completion receipt with the private backup. A retry checks the complete after-image.
+
+Run
+`scripts/breadline/prepare-donor-curations.ts PRIVATE_WORKING_DATABASE VERIFIED_ACTOR PRIVATE_GROUPS_JSON`
+after source reconciliation. It reapplies reviewed donor rules through shared Location
+and Feature revisions, preserves raw source hashes, and emits zero groups when the rules
+are already accepted. This is the supported correction step for the current Location
+schema; the legacy Place incremental planner is not suitable for a post-cutover
+production apply.
+
+The approved City Recorder/EUNIC removal is prepared by
+`detach-excluded-locations.ts PRIVATE_WORKING_DATABASE PRIVATE_GROUPS_JSON`, followed by
+`remove-excluded-locations.py PRIVATE_WORKING_DATABASE PRIVATE_OUTPUT_DIRECTORY`. The
+first tool retains Feature content through attributed revisions. The second removes 444
+scoped Locations and dependent Location records, archives exact before-images privately
+and checks referential integrity. Both operate only on disposable snapshots; their SQL
+belongs in the rehearsed, fenced production plan.
