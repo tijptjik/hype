@@ -1,4 +1,9 @@
 {
+  "location_delete_title": "删除“{name}”？",
+  "location_delete_description": "此操作会从目录移除此地点并解除其关系。各组成建筑物会保留各自的记录。",
+  "location_delete_in_use": "仍有地图项目、实地记录、室内地图或地点重定向使用此记录。请先查看相关链接，再删除此地点。",
+  "location_delete_changed": "此地点已更改。请重新加载后再删除。",
+  "location_delete_migration": "删除地点需要先执行数据库迁移 0272。",
   "catalogue_archive": "归档",
   "catalogue_restore": "恢复",
   "catalogue_archived": "已删除",

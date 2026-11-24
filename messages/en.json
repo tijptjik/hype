@@ -1,4 +1,9 @@
 {
+  "location_delete_title": "Delete {name}?",
+  "location_delete_description": "This removes the Location from the directory and releases its relationships. Constituent buildings keep their own records.",
+  "location_delete_in_use": "A Feature, field capture, indoor map, or Location redirect still uses this record. Review its links before deleting it.",
+  "location_delete_changed": "This Location has changed. Reload it before deleting.",
+  "location_delete_migration": "Location deletion requires database migration 0272.",
   "catalogue_archive": "Archive",
   "catalogue_restore": "Restore",
   "catalogue_archived": "Deleted",

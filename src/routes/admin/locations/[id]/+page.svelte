@@ -1,9 +1,11 @@
 <script lang="ts">
 // SVELTE
+import { goto } from '$app/navigation'
 import { page } from '$app/state'
 import { untrack, type Snippet } from 'svelte'
 // COMPONENTS
 import { Button } from '#lib/bits/core/index.js'
+import { DestructiveDialog } from '#lib/bits/core/dialog/index.js'
 import Tabs from '#lib/bits/core/tabs/Tabs.svelte'
 import * as Main from '#lib/bits/custom/main/index.js'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
@@ -17,7 +19,7 @@ import { getAdminFacetTabsForResource } from '#lib/navigation/index.js'
 import { FirstClassResource } from '#lib/enums.js'
 import ScopedFeatureIndex from '#lib/bits/patterns/resource/adminFeatureIndex/ScopedFeatureIndex.svelte'
 // API
-import { getLocation } from '#lib/api/locationDirectory.remote.js'
+import { deleteLocation, getLocation } from '#lib/api/locationDirectory.remote.js'
 // CONTEXT
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
@@ -71,9 +73,73 @@ import AddressEditorSkeleton from '#lib/bits/patterns/forms/localLocationAddress
 
 let editorContent = $state<Snippet | null>(null)
 let pendingEdit = $state(false)
+let deleteTarget = $state<{
+  id: string
+  revisionId: string
+  draftVersion?: string | null
+  name: string
+} | null>(null)
+let confirmingDelete = $state(false)
+let deleting = $state(false)
+let deleteError = $state('')
+
+/** Pin the record and revision displayed when the editor opened its title menu.
+ * @returns Nothing.
+ */
+function confirmDeletion(): void {
+  const place = request.current
+  if (!place?.canDelete || !place.revisionId || place.id !== page.params.id || deleting)
+    return
+  deleteTarget = {
+    id: place.id,
+    revisionId: place.revisionId,
+    draftVersion: place.draftVersion,
+    name: header.state.meta.title || place.id,
+  }
+  deleteError = ''
+  confirmingDelete = true
+}
+
+/** Remove the reviewed identity and return to the directory after the server commits.
+ * @returns Completion of the delete command and navigation.
+ */
+async function submitDeletion(): Promise<void> {
+  const target = deleteTarget
+  if (!target || target.id !== page.params.id || deleting) return
+  deleting = true
+  try {
+    const result = await deleteLocation({
+      locationId: target.id,
+      revisionId: target.revisionId,
+      draftVersion: target.draftVersion,
+    }).updates(request)
+    if (result === 'deleted') admin.view.cache.location.delete(target.id)
+    if (page.params.id !== target.id) return
+    if (result === 'deleted') {
+      const directory = new URL('/admin/locations', page.url)
+      const organisationId = page.url.searchParams.get('organisation')
+      if (organisationId) directory.searchParams.set('organisationId', organisationId)
+      await goto(directory, { replaceState: true, invalidateAll: true })
+    } else {
+      deleteError =
+        result === 'in-use'
+          ? m.location_delete_in_use()
+          : result === 'changed'
+            ? m.location_delete_changed()
+            : m.location_delete_migration()
+    }
+  } catch {
+    if (page.params.id === target.id) deleteError = m.resource_action_failed()
+  } finally {
+    deleting = false
+  }
+}
 // Route changes discard the old record's edit mode before applying explicit edit intent.
 $effect(() => {
   const id = page.params.id
+  confirmingDelete = false
+  deleteTarget = null
+  deleteError = ''
   pendingEdit = untrack(() => page.url.searchParams.get('edit') === 'true')
   if (id) untrack(() => header.setEditing(false))
 })
@@ -109,7 +175,8 @@ $effect(() => {
       content: locationEditorActions,
       canPublish: false,
       showPublishAction: false,
-      showDeleteAction: false,
+      showDeleteAction: Boolean(place?.canDelete && place.id === page.params.id),
+      toggleDelete: confirmDeletion,
     })
     if (place && !place.canEditAddress) header.setEditing(false)
   })
@@ -134,6 +201,22 @@ $effect(() => {
     />
   {/if}
 {/snippet}
+
+<DestructiveDialog
+  bind:open={confirmingDelete}
+  confirmText={m.forms__delete()}
+  onConfirm={submitDeletion}
+>
+  {#snippet title()}
+    {m.location_delete_title({ name: deleteTarget?.name ?? '' })}
+  {/snippet}
+  {#snippet description()}
+    {m.location_delete_description()}
+  {/snippet}
+</DestructiveDialog>
+{#if deleteError}
+  <p role="alert" class="px-6 py-3">{deleteError}</p>
+{/if}
 
 <Main.Root
   class="px-0 pt-0"
@@ -211,6 +294,10 @@ $effect(() => {
                       editorContent = controls.content ?? null
                       header.setFormActions({
                         ...controls,
+                        showDeleteAction: Boolean(
+                          place.canDelete && !controls.isSubmitting,
+                        ),
+                        toggleDelete: confirmDeletion,
                         content: locationEditorActions,
                       })
                     }}

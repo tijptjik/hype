@@ -1970,6 +1970,14 @@ can create a parent from an imported Building or search the SaanSeoi building ca
 to add children. The session card shows one building address, with a range per street
 for a physical parent. Address choices remain available in the editor. Refs #194.
 
+From a local Location’s title menu, **Delete** opens a confirmation naming the record.
+Deleting a physical building releases its constituent memberships. Each constituent
+keeps its own identity and facts. Migration 0272 retains the actor, baseline revision,
+and historical relationship assertions. A current Feature association, accepted
+placement, field capture, indoor map link, or incoming identity redirect blocks
+deletion. Organisation managers can delete their own local Locations. SuperAdmin can
+also delete ownerless drafts. Refs #194.
+
 Migration 0153 extends reviewed identity consolidation with dependency snapshots,
 immutable relationship alias resolution and explicit lineage; it adds atomic address
 ordering receipts and removes address coverage. Migration 0154 applies the v1
