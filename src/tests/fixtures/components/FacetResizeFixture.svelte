@@ -29,11 +29,16 @@ let compact = $state(false)
         attrs={{ 'data-facet-id': String(index) }}
       >
         <div>
-          {#each Array(compact ? 2 : 60) as _, row}
+          {#each Array(compact ? 1 : 30) as _, row}
             <p class="p-3">
               Row {row}: Location policy content which wraps as the available width
               changes. Names and settings remain visible throughout resizing.
             </p>
+          {/each}
+        </div>
+        <div data-last-section>
+          {#each Array(compact ? 1 : 30) as _, row}
+            <p class="p-3">Advanced settings row {row}</p>
           {/each}
         </div>
       </Facet>

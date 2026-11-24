@@ -84,6 +84,9 @@ const bodyStyle = $derived(
     `--facet-overlay-bottom-space: ${overlayBottomSpace}px`,
     // Extra travel must follow the content instead of sitting behind overflowing flex children.
     extraScroll > 0 ? `min-height: ${Math.max(0, bodyMinHeight)}px` : '',
+    // Scrolling bodies must size to their contents before the trailing spacer.
+    // A zero flex basis lets sibling sections shrink and paint over that spacer.
+    navMode === 'centered' && !edgeToEdge ? `flex: ${fillHeight ? 1 : 0} 0 auto` : '',
     navMode !== 'centered' && bodyHeight != null
       ? `flex: 0 0 ${Math.max(0, bodyHeight)}px; height: ${Math.max(0, bodyHeight)}px`
       : '',

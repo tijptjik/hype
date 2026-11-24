@@ -22,6 +22,21 @@ for (const [name, engine] of [
     await page.goto(`${origin}/__facet-resize.html`)
     await page.locator('[data-facet-id="0"] [data-facet-scroll-clearance]').waitFor()
     await page.waitForTimeout(300)
+    const longContentClearance = await page
+      .locator('[data-facet-id="0"]')
+      .evaluate(element => {
+        element.scrollTop = element.scrollHeight
+        const lastSection = element.querySelector('[data-last-section]')
+        if (!lastSection) throw new Error('Missing last facet section')
+        return (
+          element.getBoundingClientRect().bottom -
+          lastSection.getBoundingClientRect().bottom
+        )
+      })
+    assert.ok(
+      longContentClearance >= 319,
+      `Long sibling sections must end before the trailing clearance: ${longContentClearance}`,
+    )
     // Count style writes from intrinsic-height probing, including invisible facets.
     await page.evaluate(() => {
       const counts = [0, 0]
