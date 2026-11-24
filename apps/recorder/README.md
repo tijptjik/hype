@@ -33,8 +33,11 @@ target development database before testing Feature creation. Apply
 
 Android Back returns through the location picker, records and launch screen to the
 sessions overview. The launch screen has an Interior/Exterior selector and a map button
-beside search. Interior drawings reuse the shared station projection, with floor
-selection and zoom. Exterior placement uses the Lands Department street map.
+beside search. Flick the map’s Location selector vertically to move between places, or
+tap it to open the list. Interior shows the linked published floors in 3D with their
+reference artwork. Choose a floor for a top-down pin or use 3D to return to the stack.
+Exterior shows the linked building model with its textures above the Lands Department
+street map, where you can place a geographic pin.
 
 A capture stores its selected realm and Location. Interior pins retain the map ID,
 immutable release hash, floor ID and source coordinates. Exterior pins retain longitude

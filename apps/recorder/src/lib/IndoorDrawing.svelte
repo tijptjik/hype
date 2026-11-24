@@ -3,7 +3,12 @@
 import { t } from './i18n'
 // DOMAIN
 import { connectionAnchor } from '../../../../src/lib/indoor/connectionEditor'
-import { initialLevel, value, type IndoorData } from '../../../../src/lib/indoor/model'
+import {
+  initialLevel,
+  value,
+  type IndoorData,
+  type IndoorFeature,
+} from '../../../../src/lib/indoor/model'
 import { contains } from '../../../../src/lib/indoor/navigation/geometry'
 import { stationProjection, stationFill } from '../../../../src/lib/indoor/scene'
 import { mapHash, validateMapBundle } from '../../../../src/lib/indoor/releases'
@@ -32,6 +37,7 @@ let failed = $state(false)
 let attempt = $state(0)
 let chosenFloor = $state('')
 let zoom = $state(1)
+let stacked = $state(true)
 let hint = $state('')
 let svg = $state<SVGSVGElement>()
 let mapId = $derived(map.id)
@@ -44,6 +50,7 @@ $effect(() => {
   data = undefined
   failed = false
   chosenFloor = ''
+  hint = ''
   zoom = 1
   async function load(): Promise<void> {
     try {
@@ -64,7 +71,12 @@ $effect(() => {
   return () => controller.abort()
 })
 let projection = $derived(
-  data && stationProjection(data, false, { bearing: 0, tilt: 0 }),
+  data &&
+    stationProjection(
+      data,
+      stacked,
+      stacked ? { bearing: 25, tilt: 50 } : { bearing: 0, tilt: 0 },
+    ),
 )
 let levels = $derived(data?.level_polygon.features ?? [])
 $effect(() => {
@@ -82,13 +94,20 @@ let floorId = $derived(
     '',
 )
 let floor = $derived(levels.find(f => f.properties.level_id === floorId))
-let rooms = $derived(
-  data?.unit_polygon.features.filter(f => f.properties.level_id === floorId) ?? [],
+let visibleFloors = $derived(
+  stacked
+    ? [...levels].sort(
+        (a, b) =>
+          Number(a.properties.level_ordinal) - Number(b.properties.level_ordinal),
+      )
+    : floor
+      ? [floor]
+      : [],
 )
-let doors = $derived(
-  data?.opening_line.features.filter(f => f.properties.level_id === floorId) ?? [],
-)
-let box = $derived(floor && projection ? projection.box([floor]) : [0, 0, 1, 1])
+let roomsByFloor = $derived(byFloor(data?.unit_polygon.features ?? []))
+let doorsByFloor = $derived(byFloor(data?.opening_line.features ?? []))
+let rooms = $derived(roomsByFloor.get(floorId) ?? [])
+let box = $derived(floor && projection ? projection.box(visibleFloors) : [0, 0, 1, 1])
 let margin = $derived(Math.max(box[2], box[3]) * 0.025 || 1)
 let spot = $derived(
   pin?.floorId === floorId && projection
@@ -100,6 +119,35 @@ let selectedUnits = $derived(
   new Set(units.filter(unit => unit.id === locationId).map(unit => unit.unitId)),
 )
 
+/** Index drawable features once per release for the floor stack.
+ * @param features Source units or openings. @returns Features keyed by floor.
+ */
+function byFloor(features: IndoorFeature[]): Map<string, IndoorFeature[]> {
+  const groups = new Map<string, IndoorFeature[]>()
+  for (const feature of features) {
+    const key = value(feature.properties, 'level_id')
+    const group = groups.get(key)
+    if (group) group.push(feature)
+    else groups.set(key, [feature])
+  }
+  return groups
+}
+
+/** Fit the retained reference image to its floor in the current camera projection.
+ * @param level Published floor geometry and image dimensions. @returns SVG image transform.
+ */
+function imageTransform(level: IndoorFeature): string | undefined {
+  if (!projection || data?.coordinateSpace !== 'image-pixels') return
+  const width = Number(level.properties.image_width)
+  const height = Number(level.properties.image_height)
+  if (!(width > 0 && height > 0 && level.properties.image_url)) return
+  const id = value(level.properties, 'level_id')
+  const [x, y] = projection.project([0, 0], id)
+  const right = projection.project([width, 0], id)
+  const bottom = projection.project([0, height], id)
+  return `matrix(${right[0] - x} ${right[1] - y} ${bottom[0] - x} ${bottom[1] - y} ${x} ${y})`
+}
+
 function pick(event: MouseEvent): void {
   if (!projection || !floor || !onpick) return
   const transform = svg?.getScreenCTM()
@@ -107,25 +155,30 @@ function pick(event: MouseEvent): void {
   const pixel = new DOMPoint(event.clientX, event.clientY).matrixTransform(
     transform.inverse(),
   )
-  const point: MapPoint = projection.unproject([pixel.x, pixel.y], floorId)
-  selectPoint(point)
+  const id =
+    (event.target as Element).closest('[data-level]')?.getAttribute('data-level') ??
+    floorId
+  const level = levels.find(f => f.properties.level_id === id)
+  if (level) selectPoint(projection.unproject([pixel.x, pixel.y], id), level)
 }
-function selectPoint(point: MapPoint): void {
-  if (!onpick || !floor) return
-  if (!contains(point, floor)) {
+function selectPoint(point: MapPoint, level: IndoorFeature): void {
+  if (!onpick) return
+  const id = value(level.properties, 'level_id')
+  if (!contains(point, level)) {
     hint = t('tap_inside_the_floor_outline')
     return
   }
-  const room = rooms.find(
-    f => assigned.has(value(f.properties, 'unit_id')) && contains(point, f),
-  )
+  const room = roomsByFloor
+    .get(id)
+    ?.find(f => assigned.has(value(f.properties, 'unit_id')) && contains(point, f))
   if (!room && selectedUnits.size) {
     hint = t('tap_a_highlighted_building_part')
     return
   }
   hint = ''
+  chosenFloor = id
   onpick(
-    { realm: 'interior', mapId: map.id, hash: map.hash, floorId, point },
+    { realm: 'interior', mapId: map.id, hash: map.hash, floorId: id, point },
     room ? assigned.get(value(room.properties, 'unit_id'))! : locationId,
   )
 }
@@ -155,6 +208,7 @@ function selectPoint(point: MapPoint): void {
       class="bg-panel min-h-12 w-full min-w-0 rounded-xl px-3 pr-11"
       onchange={event => {
         chosenFloor = event.currentTarget.value
+        stacked = false
         zoom = 1
         hint = ''
       }}
@@ -185,7 +239,7 @@ function selectPoint(point: MapPoint): void {
               rooms.find(room =>
                 selectedUnits.has(value(room.properties, 'unit_id')),
               ) ?? floor
-            selectPoint(connectionAnchor(target))
+            selectPoint(connectionAnchor(target), floor)
           }
         }}
         viewBox={[
@@ -196,50 +250,79 @@ function selectPoint(point: MapPoint): void {
         ].join(' ')}
         style={'width:' + zoom * 100 + '%;height:' + zoom * 100 + '%'}
       >
-        <path
-          d={projection.path(floor)}
-          fill="var(--station-paper)"
-          stroke="var(--station-edge)"
-          vector-effect="non-scaling-stroke"
-          fill-rule="evenodd"
-        />
-        {#each rooms as room (room.properties.unit_id)}
-          {@const id = value(room.properties, 'unit_id')}
-          <path
-            d={projection.path(room)}
-            fill={selectedUnits.has(id)
-              ? 'var(--station-accent)'
-              : assigned.has(id)
-                ? 'var(--station-connector)'
-                : stationFill(room)}
-            fill-rule="evenodd"
-            stroke="var(--station-edge)"
-            stroke-width="0.8"
-            vector-effect="non-scaling-stroke"
-          />
+        {#each visibleFloors as level (level.properties.level_id)}
+          {@const id = value(level.properties, 'level_id')}
+          {@const transform = imageTransform(level)}
+          <g data-level={id} opacity={id === floorId ? 1 : 0.75}>
+            <path
+              d={projection.path(level)}
+              fill="var(--station-paper)"
+              stroke="var(--station-edge)"
+              vector-effect="non-scaling-stroke"
+              fill-rule="evenodd"
+            />
+            {#if transform}
+              <image
+                href={value(level.properties, 'image_url')}
+                width="1"
+                height="1"
+                {transform}
+                preserveAspectRatio="none"
+                pointer-events="none"
+              />
+            {/if}
+            {#each roomsByFloor.get(id) ?? [] as room (room.properties.unit_id)}
+              {@const id = value(room.properties, 'unit_id')}
+              <path
+                d={projection.path(room)}
+                fill={selectedUnits.has(id)
+                  ? 'var(--station-accent)'
+                  : assigned.has(id)
+                    ? 'var(--station-connector)'
+                    : stationFill(room)}
+                fill-rule="evenodd"
+                stroke="var(--station-edge)"
+                fill-opacity={transform ? (selectedUnits.has(id) ? 0.45 : 0.12) : 1}
+                stroke-width="0.8"
+                vector-effect="non-scaling-stroke"
+              />
+            {/each}
+            {#each doorsByFloor.get(id) ?? [] as door}
+              <path
+                d={projection.path(door)}
+                fill="none"
+                stroke="var(--station-ink)"
+                vector-effect="non-scaling-stroke"
+              />
+            {/each}
+            {#if spot && id === pin?.floorId}
+              <circle
+                cx={spot[0]}
+                cy={spot[1]}
+                r={margin * 0.8}
+                fill="#f43f5e"
+                stroke="white"
+                stroke-width="2"
+                vector-effect="non-scaling-stroke"
+              />
+            {/if}
+          </g>
         {/each}
-        {#each doors as door}
-          <path
-            d={projection.path(door)}
-            fill="none"
-            stroke="var(--station-ink)"
-            vector-effect="non-scaling-stroke"
-          />
-        {/each}
-        {#if spot}
-          <circle
-            cx={spot[0]}
-            cy={spot[1]}
-            r={margin * 0.8}
-            fill="#f43f5e"
-            stroke="white"
-            stroke-width="2"
-            vector-effect="non-scaling-stroke"
-          />
-        {/if}
       </svg>
     </div>
     <div class="absolute right-2 bottom-2 flex gap-1">
+      <button
+        type="button"
+        aria-label={t('floor_stack')}
+        aria-pressed={stacked}
+        class="bg-surface aria-pressed:bg-accent aria-pressed:text-on-accent min-h-11 rounded-lg px-3 font-semibold"
+        onclick={() => {
+          stacked = !stacked
+          zoom = 1
+        }}
+      >
+        3D
+      </button>
       {#each [-1, 1] as direction}
         <button
           type="button"

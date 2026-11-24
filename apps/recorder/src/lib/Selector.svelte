@@ -10,11 +10,13 @@ let {
   value,
   onchange,
   disabled = false,
+  wheel = false,
 }: {
   label: string
   options: RecorderOption[]
   value: string
   onchange: (id: string) => void
+  wheel?: boolean
   disabled?: boolean
 } = $props()
 let select: HTMLSelectElement
@@ -26,6 +28,26 @@ function step(direction: number): void {
   const next = options[Math.max(0, Math.min(index + direction, options.length - 1))]
   if (!disabled && next && next.id !== value) onchange(next.id)
 }
+
+// Keep wheel flicks on the closed map selector, including trackpad momentum.
+$effect(() => {
+  if (!wheel || disabled) return
+  let lastStep = -Infinity
+  function scroll(event: WheelEvent): void {
+    if (
+      event.ctrlKey ||
+      !event.deltaY ||
+      Math.abs(event.deltaX) > Math.abs(event.deltaY)
+    )
+      return
+    event.preventDefault()
+    if (event.timeStamp - lastStep < 160) return
+    lastStep = event.timeStamp
+    step(Math.sign(event.deltaY))
+  }
+  select.addEventListener('wheel', scroll, { passive: false })
+  return () => select.removeEventListener('wheel', scroll)
+})
 </script>
 
 <label

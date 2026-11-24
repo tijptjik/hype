@@ -20,6 +20,11 @@ export const en = {
   dark_nebula: 'Dark · Nebula',
   language: 'Language',
   english: 'English',
+  building_model: 'Building exterior model',
+  loading_building_model: 'Loading building exterior model',
+  building_model_failed: 'Could not load the linked building model.',
+  no_linked_building_model: 'No exterior model is linked to this location.',
+  floor_stack: '3D floor view',
   exterior_map: 'Exterior map',
   some_street_tiles_could_not_load: 'Some street tiles could not load.',
   the_street_map_could_not_start_on_this_device:

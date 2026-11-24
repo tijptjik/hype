@@ -80,6 +80,8 @@ describe('Android shared field sessions', () => {
     const { sqlite, maintainer } = fixture()
     sqlite.exec(`CREATE TABLE location(id TEXT PRIMARY KEY,matchingType TEXT,state TEXT,ownerOrganisationId TEXT,redirectTargetId TEXT);
       CREATE TABLE fieldResearchSessionLocation(sessionId TEXT,locationId TEXT);
+      CREATE TABLE locationExteriorModel(locationId TEXT,assetId TEXT,sourceModelId TEXT);
+      INSERT INTO locationExteriorModel VALUES('tower','asset','assembly');
       CREATE TABLE premisesMap(id TEXT,name TEXT,publishedHash TEXT);
       CREATE TABLE premisesMapUnit(locationId TEXT,mapId TEXT,unitId TEXT);
       CREATE TABLE locationPremisesMap(locationId TEXT,mapId TEXT);
@@ -108,6 +110,7 @@ describe('Android shared field sessions', () => {
       building: {
         id: 'tower',
         name: 'East Tower',
+        exteriorUrl: '/api/location-exterior/tower/asset/assembly.gltf',
         maps: [{ id: 'plan', unitId: null }],
       },
       premises: { id: 'mall', name: '商場' },

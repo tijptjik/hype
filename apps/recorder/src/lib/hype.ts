@@ -33,11 +33,15 @@ export function installRemoteTransport(): void {
   const fetchAsset = window.fetch.bind(window)
   window.fetch = async (input, init) => {
     const url = new URL(input instanceof Request ? input.url : input, location.href)
+    const modelFile =
+      /^\/api\/location-exterior\/[^/]+\/[a-f0-9-]{36}\/[a-zA-Z0-9_.-]+\.(?:gltf|bin|jpe?g|png)$/i.test(
+        url.pathname,
+      )
     const mapRelease =
       /^\/api\/premises-maps\/[a-z0-9-]+\/releases\/[a-f0-9]{64}$/.test(url.pathname)
     if (
       url.origin !== location.origin ||
-      (!mapRelease && !url.pathname.startsWith('/_app/remote/'))
+      (!modelFile && !mapRelease && !url.pathname.startsWith('/_app/remote/'))
     ) {
       return fetchAsset(input, init)
     }
@@ -48,9 +52,10 @@ export function installRemoteTransport(): void {
       method: request.method,
       headers,
       body: request.body ? await request.arrayBuffer() : undefined,
-      signal: mapRelease
-        ? AbortSignal.any([request.signal, AbortSignal.timeout(60000)])
-        : requestDeadline(request.signal),
+      signal:
+        modelFile || mapRelease
+          ? AbortSignal.any([request.signal, AbortSignal.timeout(60000)])
+          : requestDeadline(request.signal),
       maxRedirections: 0,
     })
   }

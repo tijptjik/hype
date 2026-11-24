@@ -144,15 +144,27 @@ export async function listRecorderLocations(
   }
   // Bind the reachable identity set once. Geometry and translated labels use independent D1 budgets.
   const reached = JSON.stringify([...new Set(rows.map(row => row.id))])
-  const points = await ctx.db.all<{
+  const assets = await ctx.db.all<{
     id: string
     point: string | null
-  }>(sql`SELECT l.id,json_extract(${fields.location},'$.geometry.coordinates') point
+    assetId: string | null
+    sourceModelId: string | null
+  }>(sql`SELECT l.id,json_extract(${fields.location},'$.geometry.coordinates') point,e.assetId,e.sourceModelId
     FROM json_each(${reached}) ids JOIN location l ON l.id=ids.value
+    LEFT JOIN locationExteriorModel e ON e.locationId=l.id
     LEFT JOIN locationRevision r ON r.id=(SELECT current.id FROM locationRevision current WHERE current.locationId=l.id
       AND (l.state!='linked' OR current.origin='saanseoi') ORDER BY current.version DESC LIMIT 1)`)
-  const coordinates = new Map(
-    points.map(row => [row.id, row.point ? (JSON.parse(row.point) as MapPoint) : null]),
+  const assetsById = new Map(
+    assets.map(row => [
+      row.id,
+      {
+        point: row.point ? (JSON.parse(row.point) as MapPoint) : null,
+        exteriorUrl:
+          row.assetId && row.sourceModelId
+            ? `/api/location-exterior/${encodeURIComponent(row.id)}/${row.assetId}/${row.sourceModelId}.gltf`
+            : null,
+      },
+    ]),
   )
   const links = await ctx.db.all<
     RecorderMap & { locationId: string }
@@ -174,7 +186,8 @@ export async function listRecorderLocations(
     const names = locationFacilityNames(row.kind, JSON.parse(row.names ?? '{}'))
     return {
       id: row.id,
-      point: coordinates.get(row.id) ?? null,
+      point: assetsById.get(row.id)?.point ?? null,
+      exteriorUrl: assetsById.get(row.id)?.exteriorUrl ?? null,
       maps: maps.get(row.id) ?? [],
       name: names.en || Object.values(names).find(Boolean) || row.id,
     }

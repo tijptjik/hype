@@ -48,6 +48,54 @@ async function useLocationFixture(page: Page): Promise<void> {
       properties,
     })),
   })
+  const texture = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aXkAAAAASUVORK5CYII=',
+    'base64',
+  )
+  const exterior = '/api/location-exterior/north/11111111-1111-4111-8111-111111111111/'
+  const model = {
+    asset: { version: '2.0' },
+    scene: 0,
+    scenes: [{ nodes: [0] }],
+    nodes: [{ mesh: 0 }],
+    meshes: [
+      { primitives: [{ attributes: { POSITION: 0, TEXCOORD_0: 1 }, material: 0 }] },
+    ],
+    buffers: [{ uri: 'mesh.bin', byteLength: 60 }],
+    bufferViews: [
+      { buffer: 0, byteOffset: 0, byteLength: 36 },
+      { buffer: 0, byteOffset: 36, byteLength: 24 },
+    ],
+    accessors: [
+      {
+        bufferView: 0,
+        componentType: 5126,
+        count: 3,
+        type: 'VEC3',
+        min: [0, 0, 0],
+        max: [1, 1, 0],
+      },
+      { bufferView: 1, componentType: 5126, count: 3, type: 'VEC2' },
+    ],
+    materials: [
+      { doubleSided: true, pbrMetallicRoughness: { baseColorTexture: { index: 0 } } },
+    ],
+    textures: [{ source: 0 }],
+    images: [{ uri: 'wall.png' }],
+  }
+  await page.route('**' + exterior + 'assembly.gltf', route =>
+    route.fulfill({ json: model }),
+  )
+  await page.route('**' + exterior + 'mesh.bin', route =>
+    route.fulfill({
+      body: Buffer.from(
+        new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1]).buffer,
+      ),
+    }),
+  )
+  await page.route('**' + exterior + 'wall.png', route =>
+    route.fulfill({ body: texture, contentType: 'image/png' }),
+  )
   const bundle = JSON.stringify({
     schemaVersion: 1,
     documents: [],
@@ -56,11 +104,17 @@ async function useLocationFixture(page: Page): Promise<void> {
       coordinateSpace: 'image-pixels',
       connections: [],
       venue_polygon: layer({}),
-      level_polygon: layer({
-        level_id: 'g',
-        level_ordinal: 0,
-        level_name_en: 'Ground',
-      }),
+      level_polygon: layer(
+        {
+          level_id: 'g',
+          level_ordinal: 0,
+          level_name_en: 'Ground',
+          image_width: 100,
+          image_height: 100,
+          image_url: 'data:image/png;base64,' + texture.toString('base64'),
+        },
+        { level_id: 'upper', level_ordinal: 1, level_name_en: 'Upper' },
+      ),
       unit_polygon: layer({
         level_id: 'g',
         unit_id: 'lift-unit',
@@ -160,6 +214,7 @@ async function useLocationFixture(page: Page): Promise<void> {
       kind: 'building_part',
       premises: null,
       building: {
+        exteriorUrl: exterior + 'assembly.gltf',
         id: 'north',
         name: 'North Tower',
         maps: [map],
@@ -168,6 +223,17 @@ async function useLocationFixture(page: Page): Promise<void> {
       maps: [{ ...map, unitId: 'lift-unit' }],
       point: [114.17, 22.3],
       iconPath: 'M4 8h16v14H4zM12 8v14',
+    },
+    {
+      id: 'unmapped',
+      name: 'Annex',
+      kind: 'building',
+      premises: null,
+      building: null,
+      exteriorUrl: null,
+      maps: [],
+      point: null,
+      iconPath: null,
     },
   ]
   await page.route('**/_app/remote/**', async route => {
@@ -262,37 +328,69 @@ test('opens a shared session, swipes, selects a building part and persists a rec
   // Chrome shares the backend origin here; use its authenticated fetch in place of Tauri IPC.
   await page.addInitScript(() => {
     Object.defineProperty(window, 'isTauri', { value: true })
+    const browserFetch = window.fetch.bind(window)
+    const requests = new Map<number, Response>()
+    let serial = 0
     Object.defineProperty(window, '__TAURI_INTERNALS__', {
       value: {
         invoke: async (
           command: string,
-          _args: unknown,
+          args: Uint8Array | { rid: number },
           options?: { headers?: Record<string, string> },
         ) => {
           if (command === 'plugin:http|fetch') {
             const config = JSON.parse(
-              decodeURIComponent(options?.headers?.['client-config'] || '{}'),
+              decodeURIComponent(options?.headers?.['client-config'] ?? ''),
             )
-            if (!config.url?.endsWith('/api/auth/sign-out'))
-              throw new Error('Unexpected native request')
-            return 1
-          }
-          if (command === 'plugin:http|fetch_send')
-            return {
-              status: 200,
-              statusText: 'OK',
-              url: 'https://hype.hk/api/auth/sign-out',
-              headers: [],
-              rid: 2,
+            const url = new URL(config.url)
+            if (
+              !['https://hype.hk', 'https://fi.tailb49776.ts.net:9443'].includes(
+                url.origin,
+              )
+            )
+              throw new Error('Unexpected native origin')
+            const id = ++serial
+            if (url.pathname === '/api/auth/sign-out') {
+              requests.set(id, new Response())
+            } else {
+              const response = await browserFetch(url.pathname + url.search, {
+                method: config.method,
+                headers: config.headers,
+                body:
+                  config.method === 'POST'
+                    ? (args as Uint8Array<ArrayBuffer>)
+                    : undefined,
+              })
+              requests.set(id, response)
             }
+            return id
+          }
+          const { rid } = args as { rid: number }
+          const response = requests.get(rid)
+          if (command === 'plugin:http|fetch_send' && response)
+            return {
+              status: response.status,
+              statusText: response.statusText,
+              url: response.url,
+              headers: [...response.headers],
+              rid,
+            }
+          if (command === 'plugin:http|fetch_read_body' && response) {
+            requests.delete(rid)
+            const bytes = new Uint8Array(await response.arrayBuffer())
+            const chunk = new Uint8Array(bytes.length + 1)
+            chunk.set(bytes)
+            return bytes.length ? chunk : [1]
+          }
           if (command === 'plugin:http|fetch_read_body') return [1]
-          if (command === 'plugin:http|fetch_cancel_body') return
+          if (command.startsWith('plugin:http|fetch_cancel')) {
+            requests.delete(rid)
+            return
+          }
           throw new Error('Unexpected native command')
         },
       },
     })
-    const fetch = window.fetch.bind(window)
-    Object.defineProperty(window, 'fetch', { get: () => fetch, set: () => {} })
   })
   const build = join(process.cwd(), 'apps/recorder/build')
   await page.route('**/preferences.js', route =>
@@ -411,8 +509,44 @@ test('opens a shared session, swipes, selects a building part and persists a rec
       'aria-pressed',
       'true',
     )
+    const location = page.getByRole('combobox', { name: 'Location', exact: true })
+    const model = page.locator('model-viewer')
+    await expect(model).toHaveJSProperty('loaded', true, { timeout: 30000 })
+    if (themeArtifacts)
+      await model.screenshot({
+        path: join(themeArtifacts, 'recorder-building-model.png'),
+      })
+    await location.scrollIntoViewIfNeeded()
+    const box = (await location.boundingBox())!
+    const touch = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [touch],
+    })
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ ...touch, y: touch.y - 32 }],
+    })
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    await expect(location).toHaveValue('north')
+    await location.hover()
+    await page.mouse.wheel(0, 80)
+    await expect(location).toHaveValue('unmapped')
+    await expect(model).toHaveCount(0)
+    await expect(
+      page.getByText('No exterior model is linked to this location.'),
+    ).toBeVisible()
+    await location.selectOption('lift')
     await page.getByRole('button', { name: /^interior$/i }).click()
-    await page.getByRole('button', { name: 'Floor plan' }).click()
+    const plan = page.getByRole('button', { name: 'Floor plan' })
+    await expect(plan.locator('g[data-level]')).toHaveCount(2)
+    await expect(plan.locator('image')).toBeVisible()
+    await page
+      .getByRole('combobox', { name: 'Floor', exact: true })
+      .selectOption('upper')
+    await expect(plan.locator('g[data-level]')).toHaveCount(1)
+    await page.getByRole('combobox', { name: 'Floor', exact: true }).selectOption('g')
+    await plan.click()
     await expect(page.getByText('Pin placed.')).toBeVisible()
     if (themeArtifacts)
       await page.screenshot({ path: join(themeArtifacts, 'indoor-milque.png') })

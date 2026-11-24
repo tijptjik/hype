@@ -27,6 +27,7 @@ export type SpatialRealm = 'interior' | 'exterior'
 export type MapPoint = [number, number]
 export type RecorderMap = RecorderOption & { hash: string; unitId: string | null }
 export type RecorderPlace = RecorderOption & {
+  exteriorUrl: string | null
   maps: RecorderMap[]
   point: MapPoint | null
 }

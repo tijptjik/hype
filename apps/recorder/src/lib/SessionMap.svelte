@@ -2,6 +2,8 @@
 // I18N
 import { t } from './i18n'
 // COMPONENTS
+import Selector from './Selector.svelte'
+import BuildingModel from './BuildingModel.svelte'
 import IndoorDrawing from './IndoorDrawing.svelte'
 import ExteriorDrawing from './ExteriorDrawing.svelte'
 import RealmSelector from './RealmSelector.svelte'
@@ -43,10 +45,14 @@ let locations = $derived([
   ).values(),
 ])
 let activeId = $derived(
-  record?.locationId || draftId || selectedId || places[0]?.id || '',
+  record ? (record.locationId ?? '') : draftId || selectedId || places[0]?.id || '',
 )
-let place = $derived(
-  places.find(row => row.id === activeId) ?? locations.find(row => row.id === activeId),
+let assignment = $derived(places.find(row => row.id === activeId))
+let place = $derived(assignment ?? locations.find(row => row.id === activeId))
+let exteriorUrl = $derived(
+  place?.exteriorUrl ??
+    assignment?.building?.exteriorUrl ??
+    assignment?.premises?.exteriorUrl,
 )
 let maps = $derived(place ? recorderMaps(place) : [])
 let currentPin = $derived(record ? record.pin : draftId ? draftPin : pin)
@@ -79,19 +85,13 @@ function choose(id: string, point: RecorderPin | null): void {
       }
     }}
   />
-  <label class="text-muted grid min-w-0 gap-1 text-sm"
-    >{t('location')}
-    <select
-      data-recorder-select
-      class="bg-panel min-h-12 w-full min-w-0 rounded-xl px-3 pr-11"
-      value={activeId}
-      onchange={event => choose(event.currentTarget.value, null)}
-    >
-      {#each locations as row (row.id)}
-        <option value={row.id}>{row.name}</option>
-      {/each}
-    </select>
-  </label>
+  <Selector
+    label={t('location')}
+    options={locations}
+    wheel
+    value={activeId}
+    onchange={id => choose(id, null)}
+  />
 {/if}
 {#if (record?.spatialRealm ?? realm) === 'interior'}
   {#if map}
@@ -128,6 +128,13 @@ function choose(id: string, point: RecorderPin | null): void {
     <p role="status">{t('no_published_floor_plan_is_linked_to_this_location')}</p>
   {/if}
 {:else}
+  {#if exteriorUrl}
+    {#key exteriorUrl}
+      <BuildingModel url={exteriorUrl} />
+    {/key}
+  {:else}
+    <p role="status">{t('no_linked_building_model')}</p>
+  {/if}
   <ExteriorDrawing
     places={record ? [] : locations}
     locationId={activeId}
