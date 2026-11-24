@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit'
 // VALIDATION
 import { z } from 'zod'
 // DRIZZLE
-import { eq, sql } from 'drizzle-orm'
+import { and, eq, sql, type SQL } from 'drizzle-orm'
 // API
 import { guardedCommand, guardedQuery } from './server/guarded'
 // DATABASE
@@ -33,6 +33,36 @@ import {
   getAddressDisplay,
 } from '#lib/addresses/featureAddress.js'
 import { locationRevision } from '#lib/db/schema/location.js'
+
+// TYPES
+import type { GuardedCommandContext } from '#lib/api/guarded.types.js'
+
+// +++ Table Of Contents
+// ═══════════════════════
+// TABLE OF CONTENTS
+// ═══════════════════════
+//
+// 1. EXTERIOR QUERIES
+// - getLocationExterior
+// - findLocationExteriorCandidates
+//
+// 2. SLICE ASSOCIATIONS
+// - importLocationExterior
+// - removeLocationExteriorSlice
+//
+// 3. ASSET STORAGE
+// - readSources
+// - copyDependencies
+// - currentAssociation
+// - publishAssembly
+// ---
+
+/********************
+ *  1. EXTERIOR QUERIES
+ ************/
+// +++ Exterior Queries
+type ExteriorModel = typeof locationExteriorModel.$inferSelect
+type ExteriorBucket = ReturnType<typeof premisesMapBucket>
 
 const sliceSchema = z.object({
   modelId: z
@@ -180,6 +210,11 @@ export const findLocationExteriorCandidates = guardedQuery(
   },
 )
 
+// ---
+/********************
+ *  2. SLICE ASSOCIATIONS
+ ************/
+// +++ Slice Associations
 /** Add reviewed model slices and atomically publish their assembled scene.
  * @param input Building, coordinates, expected asset and reviewed slice mappings.
  * @returns Updated immutable asset pointer.
@@ -227,31 +262,7 @@ export const importLocationExterior = guardedCommand(
         error(400, 'Unknown building evidence reference.')
     }
     const bucket = premisesMapBucket(ctx.event.locals.platform)
-    let sources: ExteriorSource[] = []
-    if (current) {
-      if (current.sourceModelId === 'assembly') {
-        const manifest = await bucket.get(
-          `location-exteriors/${current.assetId}/assembly.json`,
-        )
-        if (!manifest) error(409, 'Existing model manifest is unavailable.')
-        sources = (await manifest.json<{ sources: ExteriorSource[] }>()).sources
-      } else {
-        const object = await bucket.get(
-          `location-exteriors/${current.assetId}/${current.sourceModelId}.gltf`,
-        )
-        if (!object) error(409, 'Existing model is unavailable.')
-        sources = [
-          {
-            slice: {
-              modelId: current.sourceModelId,
-              sheet: current.sourceSheet,
-              evidenceKeys: [],
-            },
-            document: await object.json<ExteriorSource['document']>(),
-          },
-        ]
-      }
-    }
+    let sources = current ? await readSources(bucket, current) : []
     if (
       new Set([
         ...sources.map(item => item.slice.modelId),
@@ -275,25 +286,11 @@ export const importLocationExterior = guardedCommand(
         ? await loadExteriorFootprints(sheet.x, sheet.y)
         : null
     const assetId = crypto.randomUUID()
-    // Copy retained dependencies to the new immutable asset before switching the database pointer.
-    for (const source of sources.filter(
-      source => !slices.some(slice => slice.modelId === source.slice.modelId),
-    )) {
-      for (const item of [
-        ...(source.document.buffers ?? []),
-        ...(source.document.images ?? []),
-      ]) {
-        if (!item.uri) continue
-        const name = dependencyName(source.slice.modelId, item.uri)
-        const previousName = current?.sourceModelId === 'assembly' ? name : item.uri
-        const object = await bucket.get(
-          `location-exteriors/${current!.assetId}/${previousName}`,
-        )
-        if (!object) error(409, 'Existing model dependency is unavailable.')
-        await bucket.put(`location-exteriors/${assetId}/${name}`, object.body, {
-          httpMetadata: object.httpMetadata,
-        })
-      }
+    if (current) {
+      const retained = sources.filter(
+        source => !slices.some(slice => slice.modelId === source.slice.modelId),
+      )
+      await copyDependencies(bucket, current, assetId, retained)
     }
     for (const slice of slices) {
       const previous = sources.find(source => source.slice.modelId === slice.modelId)
@@ -346,37 +343,171 @@ export const importLocationExterior = guardedCommand(
         )
       }
     }
-    const assembled = assembleExterior(sources)
-    await bucket.put(
-      `location-exteriors/${assetId}/assembly.gltf`,
-      JSON.stringify(assembled),
-      { httpMetadata: { contentType: 'model/gltf+json' } },
-    )
-    await bucket.put(
-      `location-exteriors/${assetId}/assembly.json`,
-      JSON.stringify({ sources }),
-    )
-    const value = {
-      locationId: input.locationId,
-      assetId,
-      sourceModelId: 'assembly',
-      sourceSheet: [...new Set(sources.map(source => source.slice.sheet))].join(','),
-      actorId: ctx.user.id,
-      createdAt: new Date().toISOString(),
-    }
-    // Fence concurrent imports so neither reviewer silently discards the other's slices.
-    const saved = await ctx.db
-      .insert(locationExteriorModel)
-      .values(value)
-      .onConflictDoUpdate({
-        target: locationExteriorModel.locationId,
-        set: value,
-        setWhere: input.expectedAssetId
-          ? eq(locationExteriorModel.assetId, input.expectedAssetId)
-          : sql`0`,
-      })
-      .returning({ assetId: locationExteriorModel.assetId })
-    if (!saved.length) error(409, 'Exterior changed; refresh before importing.')
-    return value
+    return publishAssembly(ctx, bucket, input.locationId, current, assetId, sources)
   },
 )
+
+/** Remove a reviewed slice from this Location's exterior.
+ * @param input Location, selected model ID and the asset the reviewer saw.
+ * @returns Nothing once the retained assembly or final unlink has been saved.
+ */
+export const removeLocationExteriorSlice = guardedCommand(
+  inputSchema.extend({
+    expectedAssetId: z.string().min(1),
+    modelId: sliceSchema.shape.modelId,
+  }),
+  async ({ locationId, expectedAssetId, modelId }, ctx) => {
+    await authorizeExteriorLocation(ctx, locationId)
+    if (!ctx.user.superAdmin) error(403, 'INSUFFICIENT_ROLE')
+    const current = await ctx.db
+      .select()
+      .from(locationExteriorModel)
+      .where(eq(locationExteriorModel.locationId, locationId))
+      .get()
+    if (!current || current.assetId !== expectedAssetId)
+      error(409, 'Exterior changed. Reload before removing a slice.')
+
+    // Legacy single-model links carry the slice ID directly on the Location association.
+    if (current.sourceModelId === 'assembly') {
+      const bucket = premisesMapBucket(ctx.event.locals.platform)
+      const sources = await readSources(bucket, current)
+      const retained = sources.filter(source => source.slice.modelId !== modelId)
+      if (retained.length === sources.length) error(404, 'Slice is not associated.')
+      if (retained.length) {
+        const assetId = crypto.randomUUID()
+        await copyDependencies(bucket, current, assetId, retained)
+        await publishAssembly(ctx, bucket, locationId, current, assetId, retained)
+        return
+      }
+    } else if (current.sourceModelId !== modelId) error(404, 'Slice is not associated.')
+
+    // Unlink the last slice only if the reviewer is still editing the same assembly.
+    const removed = await ctx.db
+      .delete(locationExteriorModel)
+      .where(currentAssociation(current))
+      .returning({ assetId: locationExteriorModel.assetId })
+    if (!removed.length) error(409, 'Exterior changed. Reload before removing a slice.')
+  },
+)
+
+// ---
+/********************
+ *  3. ASSET STORAGE
+ ************/
+// +++ Asset Storage
+/** Load the immutable source documents needed to rebuild an existing exterior.
+ * @param bucket Exterior asset storage.
+ * @param current Linked asset metadata.
+ * @returns Reviewed source documents including older single-model assets.
+ */
+async function readSources(
+  bucket: ExteriorBucket,
+  current: ExteriorModel,
+): Promise<ExteriorSource[]> {
+  const prefix = `location-exteriors/${current.assetId}`
+  if (current.sourceModelId === 'assembly') {
+    const manifest = await bucket.get(`${prefix}/assembly.json`)
+    if (!manifest) error(409, 'Existing model manifest is unavailable.')
+    return (await manifest.json<{ sources: ExteriorSource[] }>()).sources
+  }
+  const object = await bucket.get(`${prefix}/${current.sourceModelId}.gltf`)
+  if (!object) error(409, 'Existing model is unavailable.')
+  return [
+    {
+      slice: {
+        modelId: current.sourceModelId,
+        sheet: current.sourceSheet,
+        evidenceKeys: [],
+      },
+      document: await object.json<ExteriorSource['document']>(),
+    },
+  ]
+}
+
+/** Copy retained dependencies to the new immutable asset before switching the database pointer.
+ * @param bucket Exterior asset storage.
+ * @param current Linked asset containing the source files.
+ * @param assetId Destination asset ID.
+ * @param retained Sources to keep in the replacement assembly.
+ * @returns Completion after all retained buffers and textures are written.
+ */
+async function copyDependencies(
+  bucket: ExteriorBucket,
+  current: ExteriorModel,
+  assetId: string,
+  retained: ExteriorSource[],
+): Promise<void> {
+  for (const source of retained) {
+    for (const item of [
+      ...(source.document.buffers ?? []),
+      ...(source.document.images ?? []),
+    ]) {
+      if (!item.uri) continue
+      const name = dependencyName(source.slice.modelId, item.uri)
+      const previousName = current.sourceModelId === 'assembly' ? name : item.uri
+      const object = await bucket.get(
+        `location-exteriors/${current.assetId}/${previousName}`,
+      )
+      if (!object) error(409, 'Existing model dependency is unavailable.')
+      await bucket.put(`location-exteriors/${assetId}/${name}`, object.body, {
+        httpMetadata: object.httpMetadata,
+      })
+    }
+  }
+}
+
+/** Match the exact association a reviewer opened.
+ * @param current Linked asset metadata.
+ * @returns Location and asset predicate for an atomic replacement or unlink.
+ */
+function currentAssociation(current: ExteriorModel): SQL | undefined {
+  return and(
+    eq(locationExteriorModel.locationId, current.locationId),
+    eq(locationExteriorModel.assetId, current.assetId),
+  )
+}
+
+/** Publish the complete assembly, then switch the Location to its new asset.
+ * @param ctx Authorized request.
+ * @param bucket Exterior asset storage.
+ * @param locationId Building being edited.
+ * @param current Association observed before staging the replacement.
+ * @param assetId New immutable asset ID.
+ * @param sources Complete set of reviewed slices.
+ * @returns Updated association.
+ */
+async function publishAssembly(
+  ctx: GuardedCommandContext,
+  bucket: ExteriorBucket,
+  locationId: string,
+  current: ExteriorModel | undefined,
+  assetId: string,
+  sources: ExteriorSource[],
+): Promise<ExteriorModel> {
+  const assembled = assembleExterior(sources)
+  await bucket.put(
+    `location-exteriors/${assetId}/assembly.gltf`,
+    JSON.stringify(assembled),
+    { httpMetadata: { contentType: 'model/gltf+json' } },
+  )
+  await bucket.put(
+    `location-exteriors/${assetId}/assembly.json`,
+    JSON.stringify({ sources }),
+  )
+  const value = {
+    locationId,
+    assetId,
+    sourceModelId: 'assembly',
+    sourceSheet: [...new Set(sources.map(source => source.slice.sheet))].join(','),
+    actorId: ctx.user.id,
+    createdAt: new Date().toISOString(),
+  }
+  // Fence concurrent edits, including a final unlink while an import is staging files.
+  const write = current
+    ? ctx.db.update(locationExteriorModel).set(value).where(currentAssociation(current))
+    : ctx.db.insert(locationExteriorModel).values(value).onConflictDoNothing()
+  const saved = await write.returning({ assetId: locationExteriorModel.assetId })
+  if (!saved.length) error(409, 'Exterior changed. Reload before editing.')
+  return value
+}
+// ---
