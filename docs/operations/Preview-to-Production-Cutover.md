@@ -1,12 +1,15 @@
 # Hype preview-to-production cutover plan
 
-**Decision on 24 November 2026 — hold the production deploy.** Promote a single reviewed
-application release and migrate the existing production D1 database in place. The
-release needs a repaired, resumable revision runner, a manifest covering the data
-conversions, and a full rehearsal. A push to either deployment branch starts a live
-workflow.
+**Production cutover completed on 24 November 2026.** The application at `c0fb7f8b5`
+activated after D1 committed 154 initial schema groups and 5,681 subsequent groups.
+Production readback verified all 172 final application tables, zero foreign-key
+violations, and a guest session written and read through the app. Both render queues
+resumed and both scheduled refresh Workers completed a run. The local
+`cutover-receipt.json` in the run directory below records the release and Worker
+versions. The first cutover is closed. Breadline curation has a
+[separate acceptance checklist](../../migrations/pending/matching-and-branding/acceptance-checklist.md).
 
-## Starting point
+## Starting point at planning time
 
 | Read-only observation                                                                                                                                                                                                                                                                                                          | Consequence                                                                                                                                                                       |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -65,6 +68,60 @@ and the four original Feature revisions retain their exact authored content. A f
 revision records the catalogue conversion. The ten required objects were missing in the
 production raw bucket at preflight. Stage them with create-only writes and verify their
 hashes and sizes before fencing production.
+
+### Rehearsal results for candidate `c0fb7f8b5`
+
+The hosted D1 rehearsal accepted the 948-statement transaction and rejected a lifecycle
+payload exceeding its 32 MiB RPC limit. The repaired runner stages revision data behind
+the database write fence. It then changes the schema, restores the guards and removes
+the staging table in one transaction. A 35.9 MB synthetic rehearsal passed on hosted D1.
+It resumed after interruption, activated, and verified delivery from both test queues.
+The temporary database, Worker and queues were removed after readback.
+
+The private production-copy rehearsal of this candidate applied 154 numbered migration
+groups, replanned from the migrated rows and completed 5,681 subsequent groups. The
+result reached `active` with a clean integrity check, zero foreign-key violations and
+zero unexplained differences across 172 tables under the recorded clock comparison. Both
+bookstore submissions remained open with their prior visibility and archive flags. The
+seven recovery baselines matched their approved original hashes and reasons. Revealing
+Arrow retained four authored revisions and both gallery pins. Its version 12 head
+records Material = Tiles. All ten required production media objects have since been
+staged and verified by SHA-256 readback.
+
+The private run directory is `.local/revision-deployments/20261124-candidate-c0fb7f8b`.
+Its `initial/release/receipt.json` identifies the prepared plan and its `replay/`
+directory holds the independent local activation and comparison receipts. Production
+activation requires its own live journal and health readback.
+
+Li built the exact candidate and passed its production Wrangler dry run. Full typecheck
+returned zero errors and four warnings. The run directory retains that build under
+`application/`, its archive under `exact-build/`, and its SHA-256 and provenance in
+`application.json`. The original production export, schema sidecar and restored SQLite
+file matched the local backup receipt again.
+
+All five managed Chrome checks passed against the candidate. They covered brand
+catalogue filters and navigation, station draft editing, and the 98 station release
+files in the local development fixture. The test now checks the catalogue's own Status
+and Independent controls when returning from the Feature filters. The production-copy
+replay has zero premises maps. At 11:32 HKT on 24 November, neither live database had a
+premises map table. Publishing the local maps would require a separate selection of
+records, release objects and verification of their references.
+
+In a local Workers runtime, the retained build returned HTTP 503 for application
+requests during maintenance. Its health endpoint recognized the verified and active
+release. On a separate copy of the activated replay, the public Revealing Arrow page
+rendered its title, anonymous sign-in created one user, and the new session was read
+back through the app and D1. The run directory records those results under
+`maintenance-test/receipt.json` and `maintenance-test/active-copy.json`.
+
+At the production fence, migration `0169` exceeded hosted D1's CPU budget. The operator
+rebuilt its dependency check from the frozen schema using a separate foreign-key lookup
+for each table and moved the parent user insert ahead of dependent inserts. The original
+and repaired transactions produced equivalent rows across 92 tables, schema definitions
+and sequence values. An unexpected foreign-key dependency still caused rollback.
+Enrollment then planned against the actual production IDs. The private repair receipt
+and selected plan are referenced by the cutover receipt. The local freeze backup and its
+checksums are in `freeze-backup/`.
 
 ## 1. Freeze the candidate and control deployment
 
