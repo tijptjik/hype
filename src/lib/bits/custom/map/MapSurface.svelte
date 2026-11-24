@@ -1,6 +1,7 @@
 <script lang="ts">
 import type { Snippet } from 'svelte'
 import { MapLibre } from 'svelte-maplibre-gl'
+import 'svelte-maplibre-gl/vite'
 import type { Map as MapLibreMap, MapOptions } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import '#lib/styles/map.css'
