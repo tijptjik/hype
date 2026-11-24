@@ -17,7 +17,7 @@ import type { DraftLocationSearchResult as Result } from '#lib/bits/patterns/for
  */
 function premisesRadio(hidden = false): HTMLElement {
   const radio = screen
-    .getAllByRole('radio', { name: 'Complex', hidden })
+    .getAllByRole('radio', { name: 'Premises', hidden })
     .find(element => element.getAttribute('data-association-kind') === 'premises')
   if (!radio) throw new Error('Missing physical premises radio')
   return radio
@@ -219,7 +219,7 @@ it('discards late matches after the name changes and supports keyboard notch sel
   await fireEvent.keyDown(screen.getByRole('radio', { name: 'Address' }), {
     key: 'ArrowLeft',
   })
-  const input = screen.getByRole('textbox', { name: 'Complex · Name' })
+  const input = screen.getByRole('textbox', { name: 'Premises · Name' })
   await fireEvent.input(input, { target: { value: 'Other premises' } })
   complete({ candidates: [candidate('premises')], incomplete: false })
   expect(screen.queryByRole('button', { name: /Hollywood Terrace/ })).toBeNull()

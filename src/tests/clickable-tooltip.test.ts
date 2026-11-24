@@ -74,12 +74,12 @@ it('opens visibility help on click with separate choices and a final paragraph',
   const help = await screen.findByRole('tooltip', { hidden: true })
   expect(
     [...help.querySelectorAll('strong')].map(element => element.textContent),
-  ).toEqual(['Shared', 'Organisation-only'])
+  ).toEqual(['Community', 'Internal'])
   expect(help.querySelectorAll('ul > li')).toHaveLength(2)
   expect(help.querySelectorAll('p')).toHaveLength(2)
-  expect(help.textContent).toContain('Visibility defines reuse')
+  expect(help.textContent).toContain('Visibility controls who can use the Location')
   expect(help.textContent).toContain(
-    'Your edits stay yours. Changes by other organisations won’t replace them.',
+    'whether your changes contribute to community curations or remain internal',
   )
 })
 

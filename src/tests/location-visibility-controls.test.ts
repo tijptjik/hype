@@ -8,17 +8,17 @@ import { toOrganisationFormInput } from '#lib/client/services/organisation.js'
 beforeEach(() => vi.useRealTimers())
 afterEach(cleanup)
 
-it('defaults to Shared and requires an explicit choice to select Organisation-only', async () => {
+it('defaults to Community and requires an explicit choice to select Internal', async () => {
   const onChange = vi.fn()
   render(VisibilitySelect, { onChange })
   const control = screen.getByRole('combobox')
-  expect(control.textContent).toContain('Shared')
+  expect(control.textContent).toContain('Community')
   expect(onChange).not.toHaveBeenCalled()
   await fireEvent.click(control)
   await fireEvent.keyDown(control, { key: 'ArrowDown' })
   await fireEvent.keyDown(control, { key: 'Enter' })
   expect(onChange).toHaveBeenCalledWith('exclusive')
-  expect(control.textContent).toContain('Organisation-only')
+  expect(control.textContent).toContain('Internal')
 })
 
 it('retains the organisation default when loading the editable form', () => {
