@@ -210,7 +210,9 @@ const sections = $derived(
                   <dt class="text-muted-foreground mb-1 text-xs">
                     {labels[field]}
                     {#if row.primary && field === 'buildingNumberExpression'}
-                      <span class="ml-2">{m.building_street_primary()}</span>
+                      <span class="text-primary ml-2"
+                        >{m.building_street_primary()}</span
+                      >
                     {/if}
                   </dt>
                   {#each values as { tag, value } (tag)}
