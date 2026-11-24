@@ -140,6 +140,26 @@ export async function retainResolvedAddress(
     !reference.snapshotId
   )
     return null
+  return retainPublishedAddress(
+    db,
+    reference.address2dId,
+    reference.snapshotId,
+    reference.rawSource,
+    guard,
+  )
+}
+
+/** Retain full publisher content only when it matches the reviewed address and snapshot.
+ * @param db Request database. @param addressId Reviewed source identity. @param snapshotId Reviewed snapshot.
+ * @param rawSource Trusted full-profile response. @param guard Write fence. @returns Retained revision, or null on a mismatch.
+ */
+export async function retainPublishedAddress(
+  db: Database,
+  addressId: string,
+  snapshotId: string,
+  rawSource: Record<string, unknown>,
+  guard: SQL,
+): Promise<typeof addressRevision.$inferSelect | null> {
   const response = z
     .object({
       data: z.object({
@@ -164,11 +184,11 @@ export async function retainResolvedAddress(
       }),
       meta: z.object({ apiReleaseSet: z.string().min(1) }),
     })
-    .safeParse(reference.rawSource)
+    .safeParse(rawSource)
   if (
     !response.success ||
-    response.data.data.id !== reference.address2dId ||
-    response.data.data.attributes.snapshotId !== reference.snapshotId
+    response.data.data.id !== addressId ||
+    response.data.data.attributes.snapshotId !== snapshotId
   )
     return null
   const attributes = response.data.data.attributes
@@ -178,7 +198,7 @@ export async function retainResolvedAddress(
       sourceKey: {
         provider: 'saanseoi',
         family: 'addresses',
-        id: reference.address2dId,
+        id: addressId,
       },
       components: {
         ...createLocalLocationAddress(),
@@ -186,17 +206,17 @@ export async function retainResolvedAddress(
         i18n: attributes.i18n,
       },
       geometry: attributes.geometry ?? null,
-      sourceVersion: reference.snapshotId,
+      sourceVersion: snapshotId,
       sourceReferences: [
         {
           provider: 'saanseoi',
           dataset: 'addresses',
           apiVersion: null,
           releaseId: response.data.meta.apiReleaseSet,
-          snapshotId: reference.snapshotId,
+          snapshotId: snapshotId,
         },
       ],
-      rawSource: reference.rawSource,
+      rawSource,
     },
     guard,
   )

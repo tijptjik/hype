@@ -4,6 +4,8 @@ import type { LocationFacts } from './model'
 
 /** Standalone Location projection; source payloads and Feature associations stay private. */
 export type LocationResource = {
+  linkedAddresses?: string[]
+  catalogueBuildingId?: string | null
   /** Explicit, accessible current parent; absent when containment is ambiguous. */
   parentLocation?: {
     id: string

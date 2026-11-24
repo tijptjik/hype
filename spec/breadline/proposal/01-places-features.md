@@ -1953,6 +1953,13 @@ contains footprint-matched address alternatives, without a designated whole-buil
 address or division memberships; these must not be inferred from a numeric span. Refs
 #194.
 
+In the Building editor, **Relationships → Address choices → Link addresses** opens the
+imported footprint's published address alternatives. Editors can also search by street
+address or building name. Saving attaches the reviewed SaanSeoi address revisions to the
+existing HYPE Building as current, unranked address relationships in the editor's scope.
+Field Research finds the same Location when a researcher searches for a linked address.
+The Building card shows its display address.
+
 Migration 0153 extends reviewed identity consolidation with dependency snapshots,
 immutable relationship alias resolution and explicit lineage; it adds atomic address
 ordering receipts and removes address coverage. Migration 0154 applies the v1

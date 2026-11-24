@@ -3,6 +3,8 @@ import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
 import type { PlaceSearchFilters } from '#lib/locations/placeSearchFilters.js'
 
 export type DraftLocationSearchResult = {
+  linkedAddresses?: string[]
+  catalogueBuildingId?: string | null
   id: string
   kind:
     | 'establishment'

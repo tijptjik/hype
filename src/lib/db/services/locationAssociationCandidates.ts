@@ -7,6 +7,7 @@ import { location, locationRevision } from '../schema/location'
 import { LocationFactsSchema } from '#lib/locations/validation.js'
 import { locationDistance } from '#lib/locations/searchPresentation.js'
 // SERVICES
+import { linkedAddressLabels, sharedBuildingSourceId } from './buildingAddressLinks'
 import { locationOwnerForProject } from './locationScope'
 // TYPES
 import type { Database } from '#lib/types.js'
@@ -29,6 +30,8 @@ export async function nearbyAssociationLocations(
     ssId: string | null
     kind: AssociationKind
     recordMode: 'manual' | 'unlinked' | 'linked'
+    linkedAddresses: string[]
+    catalogueBuildingId: string | null
     facts: LocationFacts
   }[]
   limited: boolean
@@ -56,6 +59,14 @@ export async function nearbyAssociationLocations(
       revisionId: locationRevision.id,
       ssId: location.ssId,
       state: location.state,
+      addressChoices:
+        input.kind === 'building'
+          ? linkedAddressLabels(location.id, organisationId)
+          : sql<string>`'[]'`,
+      catalogueBuildingId:
+        input.kind === 'building'
+          ? sharedBuildingSourceId(location.id, location.state)
+          : sql<null>`NULL`,
       facts: locationRevision.facts,
     })
     .from(location)
@@ -79,8 +90,9 @@ export async function nearbyAssociationLocations(
   return {
     rows: (
       await Promise.all(
-        rows.slice(0, 200).map(async row => ({
+        rows.slice(0, 200).map(async ({ addressChoices, ...row }) => ({
           ...row,
+          linkedAddresses: JSON.parse(addressChoices) as string[],
           kind: input.kind,
           recordMode:
             row.state === 'manual'

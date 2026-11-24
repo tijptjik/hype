@@ -1,3 +1,9 @@
+import {
+  currentAddressLinks,
+  linkedAddressLabels,
+  sharedBuildingSourceId,
+} from './buildingAddressLinks'
+import { canonicalLocationSQL } from './locationRedirect'
 import { locationBuildingPartContext } from './locationBuildingPart'
 import { locationReadFields } from './locationReadProjection'
 import { sharedLocationFacts } from './locationShared'
@@ -63,6 +69,8 @@ export async function listLocationResources(
     q?: string
     /** Include retained address labels when discovering reconciliation candidates. */
     searchAddress?: boolean
+    /** Include explicitly reviewed building addresses in discovery and presentation. */
+    linkedBuildingAddresses?: boolean
     after?: string
     id?: string
     lifecycleStatus?: LifecycleStatus
@@ -174,6 +182,12 @@ export async function listLocationResources(
     input.q
       ? or(
           eq(locationTable.id, input.q),
+          input.linkedBuildingAddresses
+            ? sql`${locationTable.id} IN (SELECT ${canonicalLocationSQL(sql`r.locationId`)}
+              ${currentAddressLinks(input.organisationId ?? null)} AND EXISTS (
+                SELECT 1 FROM json_each(ar.components,'$.i18n') i WHERE
+                instr(lower(json_extract(i.value,'$.formattedAddress')),lower(${input.q}))>0))`
+            : undefined,
           eq(locationTable.ssId, input.q),
           input.searchAddress
             ? sql`(EXISTS (SELECT 1 FROM json_tree(${locationRevision.facts}) a WHERE a.type='text' AND (a.fullkey LIKE '%address%' OR a.fullkey LIKE '%Address%') AND instr(replace(lower(a.value),' ',''),replace(lower(${input.q}),' ',''))>0) OR EXISTS (SELECT 1 FROM json_each(${fields.names}) n WHERE n.type='text' AND instr(replace(replace(lower(n.value),'-',''),' ',''),replace(replace(lower(${input.q}),'-',''),' ',''))>0))`
@@ -256,6 +270,12 @@ export async function listLocationResources(
     .select({
       sortValue: directory.sortValue,
       id: locationTable.id,
+      addressChoices: input.linkedBuildingAddresses
+        ? linkedAddressLabels(locationTable.id, input.organisationId ?? null)
+        : sql<string | null>`NULL`,
+      catalogueBuildingId: input.linkedBuildingAddresses
+        ? sharedBuildingSourceId(locationTable.id, locationTable.state)
+        : sql<null>`NULL`,
       operatorId: operator.id,
       operatorReferenceCode: locationOperator.referenceCode,
       premisesMapId: locationPremisesMap.mapId,
@@ -329,6 +349,8 @@ export async function listLocationResources(
           apiVersion,
           releaseId,
           snapshotId,
+          addressChoices,
+          catalogueBuildingId,
           ...row
         }) => {
           let facts =
@@ -391,6 +413,12 @@ export async function listLocationResources(
           return {
             ...row,
             ...partContext,
+            ...(addressChoices
+              ? {
+                  linkedAddresses: JSON.parse(addressChoices) as string[],
+                  catalogueBuildingId,
+                }
+              : {}),
             premisesMap: availablePremisesMap(row.premisesMapId, mapRegistry),
             operator: operatorId
               ? {

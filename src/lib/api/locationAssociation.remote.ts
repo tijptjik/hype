@@ -60,6 +60,7 @@ export const searchTargetLocations = guardedQuery(
       q: input.q,
       organisationId: project.organisationId,
       includeCount: false,
+      linkedBuildingAddresses: input.kind === 'building',
     })
   },
 )

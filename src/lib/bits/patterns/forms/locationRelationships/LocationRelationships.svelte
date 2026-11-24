@@ -13,6 +13,7 @@ import { Button } from '#lib/bits/core/button/index.js'
 import { SelectField, TextInput, TextArea } from '#lib/bits/custom/form/index.js'
 import RelationshipLocationPicker from './RelationshipLocationPicker.svelte'
 // COMPONENTS
+import BuildingAddressLinks from './BuildingAddressLinks.svelte'
 import RelationshipPage from './RelationshipPage.svelte'
 import LocationLineage from './LocationLineage.svelte'
 // TYPES
@@ -35,6 +36,7 @@ let {
 let refreshVersion = $state(0)
 const uid = $props.id()
 let adding = $state(false)
+let linkingAddresses = $state(false)
 let selected = $state<{ id: string; label: string }[]>([])
 const targetId = $derived(selected[0]?.id ?? '')
 let relation = $state<'locationMembership' | 'locationOccupancy'>('locationMembership')
@@ -225,6 +227,17 @@ async function save(
       >
         {#snippet actions()}
           {#if canEdit &&
+            table === 'locationAddress' &&
+            kind === 'building' &&
+            !linkingAddresses}
+            <Button
+              text="Link addresses"
+              size="sm"
+              style="ghost"
+              onClick={() => (linkingAddresses = true)}
+            />
+          {/if}
+          {#if canEdit &&
             ((table === 'locationOccupancy' && canOccupy) ||
               (table === 'locationMembership' && canContain))}
             <Button
@@ -241,6 +254,27 @@ async function save(
           {/if}
         {/snippet}
         {#snippet editor()}
+          {#if canEdit &&
+            table === 'locationAddress' &&
+            kind === 'building' &&
+            linkingAddresses}
+            <BuildingAddressLinks
+              {locationId}
+              {organisationId}
+              onCancel={() => (linkingAddresses = false)}
+              onSaved={async () => {
+                await getRelationshipPage({
+                  locationId,
+                  organisationId,
+                  table: 'locationAddress',
+                  history: false,
+                  afterId: undefined,
+                }).refresh()
+                linkingAddresses = false
+                refreshVersion++
+              }}
+            />
+          {/if}
           {#if adding &&
             canEdit &&
             ((table === 'locationOccupancy' && canOccupy) ||
