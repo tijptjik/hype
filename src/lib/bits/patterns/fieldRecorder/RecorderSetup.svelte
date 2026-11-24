@@ -141,6 +141,7 @@ const showModelViews = $derived(
       current?.configurationVersion === researchConfigurationVersion,
   ),
 )
+const showModelMap = $derived(showModelViews && modelView?.id === 'map')
 $effect(() => {
   adminCtx.setResourceRef(sessionId || false)
 })
@@ -371,7 +372,7 @@ async function create(): Promise<void> {
 <div
   class={creating
     ? 'mx-auto w-full max-w-5xl min-w-0 px-4 py-6 sm:px-6'
-    : sessionId
+    : sessionId && !showModelMap
       ? 'w-full min-w-0'
       : 'flex min-h-0 min-w-0 flex-1 flex-col'}
 >
@@ -407,7 +408,7 @@ async function create(): Promise<void> {
     ></div>
   {:else if current}
     {#key current.id}
-      <FormSurface>
+      <FormSurface class={showModelMap ? 'mb-0 flex min-h-0 flex-1 flex-col' : ''}>
         <div
           hidden={facet === 'locations' &&
             current.configurationVersion === researchConfigurationVersion}

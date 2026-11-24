@@ -58,24 +58,43 @@ const columns =
   'grid grid-cols-[repeat(auto-fill,minmax(min(100%,520px),1fr))] gap-4 p-4'
 </script>
 
-<section aria-label={title}>
-  <SectionHeader {title} {icon}>
-    {#snippet right()}
-      <button
-        type="button"
-        class="text-muted-foreground hover:text-foreground rounded-md px-3 py-2 text-sm"
-        onclick={onClose}
-      >
-        Back to locations
-      </button>
-    {/snippet}
-  </SectionHeader>
+{#snippet mapSkeleton()}
+  <div
+    role="status"
+    aria-label="Loading building map"
+    class="bg-muted min-h-0 flex-1 motion-safe:animate-pulse"
+  ></div>
+{/snippet}
+
+<section
+  aria-label={title}
+  class={view === 'map' ? 'flex min-h-0 flex-1 flex-col' : ''}
+>
+  {#if view !== 'map'}
+    <SectionHeader {title} {icon}>
+      {#snippet right()}
+        <button
+          type="button"
+          class="text-muted-foreground hover:text-foreground rounded-md px-3 py-2 text-sm"
+          onclick={onClose}
+        >
+          Back to locations
+        </button>
+      {/snippet}
+    </SectionHeader>
+  {/if}
   {#await query}
-    <div class={columns} role="status" aria-label={'Loading ' + title}>
-      {#each [1, 2, 3] as n (n)}
-        <div class="bg-muted aspect-[16/10] rounded-xl motion-safe:animate-pulse"></div>
-      {/each}
-    </div>
+    {#if view === 'map'}
+      {@render mapSkeleton()}
+    {:else}
+      <div class={columns} role="status" aria-label={'Loading ' + title}>
+        {#each [1, 2, 3] as n (n)}
+          <div
+            class="bg-muted aspect-[16/10] rounded-xl motion-safe:animate-pulse"
+          ></div>
+        {/each}
+      </div>
+    {/if}
   {:then}
     {#if !buildings.length}
       <p class="text-muted-foreground p-6 text-sm">
@@ -83,11 +102,7 @@ const columns =
       </p>
     {:else if view === 'map'}
       {#await import('./ResearchModelMap.svelte')}
-        <div
-          role="status"
-          aria-label="Loading building map"
-          class="bg-muted h-[max(28rem,70dvh)] motion-safe:animate-pulse"
-        ></div>
+        {@render mapSkeleton()}
       {:then { default: ModelMap }}
         <ModelMap {buildings} />
       {:catch}

@@ -79,7 +79,7 @@ test('opens read-only session galleries and assembles the exterior models on the
   await page.screenshot({
     path: join(process.env.DEV_RUNNER_ARTIFACTS, 'session-model-map.png'),
   })
-  await page.getByRole('button', { name: 'Back to locations' }).click()
+  await map.click()
   await expect(
     page.getByRole('complementary', { name: 'Included Locations' }),
   ).toBeVisible()
@@ -110,6 +110,39 @@ test('opens the model facing its front and links its caption to the Location', a
   expect(Math.cos(actual - expected)).toBeCloseTo(1)
   await caption.click()
   await expect(page).toHaveURL(url => url.pathname + url.search === href)
+})
+
+test('fills the session workspace with the building map', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 940 })
+  await page.goto(session + '&models=map#locations', {
+    waitUntil: 'domcontentloaded',
+  })
+  const region = page.getByRole('region', { name: 'Session building map' })
+  const canvas = region.locator('canvas').first()
+  const main = page.locator('main[data-responsive-main]')
+  await expect(region.getByRole('status')).toHaveText(
+    /^[1-9]\d* of \d+ exterior models/,
+    {
+      timeout: 60_000,
+    },
+  )
+  await expect(page.getByRole('button', { name: 'Back to locations' })).toHaveCount(0)
+  for (const viewport of [
+    { width: 490, height: 844 },
+    { width: 1600, height: 940 },
+  ]) {
+    await page.setViewportSize(viewport)
+    await expect
+      .poll(async () => {
+        const workspace = await main.boundingBox()
+        const map = await canvas.boundingBox()
+        return Math.max(
+          Math.abs(map.y - workspace.y),
+          Math.abs(map.y + map.height - workspace.y - workspace.height),
+        )
+      })
+      .toBeLessThan(3)
+  }
 })
 
 test('renders a published interior bundle in a read-only card', async ({ page }) => {

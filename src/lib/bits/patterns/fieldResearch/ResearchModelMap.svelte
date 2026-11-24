@@ -143,7 +143,7 @@ $effect(() => {
 </script>
 
 {#if located.length}
-  <section aria-label="Session building map" class="relative h-[max(28rem,70dvh)]">
+  <section aria-label="Session building map" class="relative min-h-0 flex-1">
     <MapSurface
       bind:map
       {style}
