@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import {
   getImageEdgeGaps,
   getImageEdgeInset,
+  getUploadImagePresentation,
   normalizeImagePresentation,
   resolveImagePresentation,
 } from '#lib/images/presentation.js'
@@ -11,6 +12,13 @@ import {
 import { ImageUpdate, UpdateImageSchema } from '#lib/db/zod/schema/image.js'
 
 describe('image presentation policy', () => {
+  it('defaults Feature uploads to blur and other resource uploads to cast edges', () => {
+    expect(getUploadImagePresentation('feature')).toBe('contain')
+    for (const ctxType of ['organisation', 'project', 'hub', 'user']) {
+      expect(getUploadImagePresentation(ctxType)).toBe('cast-edges')
+    }
+  })
+
   it.each(['organisation', 'project', 'hub', 'feature'] as const)(
     'accepts edge casting through the %s metadata update contract',
     ctxType => {

@@ -2272,7 +2272,9 @@ export const finalizeImageUpload = guardedCommand(
           }
         : params.persist?.featureImage
     const imageData: ImageNew = {
-      presentationMode: 'contain',
+      presentationMode: payload.replaceImageId
+        ? 'contain'
+        : getUploadImagePresentation(payload.ctxType),
       cdn: 'cloudflareR2',
       env: stage,
       cdnId: null,
