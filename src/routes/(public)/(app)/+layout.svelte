@@ -9,7 +9,7 @@ import { useNavigationPanelModel } from '#lib/adapters/panels/useNavigationPanel
 import { getThemeModel } from '#lib/themes/theme.svelte.js'
 // SVELTE
 import { browser } from '$app/env'
-import { untrack, type Snippet } from 'svelte'
+import { onMount, untrack, type Snippet } from 'svelte'
 // NAVIGATION
 import { goto, beforeNavigate } from '$app/navigation'
 import { page } from '$app/state'
@@ -137,6 +137,15 @@ $effect(() => {
     hasRequestedOverworld = true
     // Download the renderer while identity and layer defaults resolve. LazyMapCanvas owns retry.
     void import('#lib/bits/patterns/maps/MapCanvas.svelte').catch(() => {})
+  }
+})
+// Keep the document in sync when client navigation enters or leaves the public map.
+onMount(() => {
+  const root = document.documentElement
+  root.dataset.entry = 'map'
+  return () => {
+    root.dataset.entry = 'default'
+    root.style.removeProperty('--map-sea-color')
   }
 })
 let hasPaintedMap = $state(false)
@@ -589,6 +598,8 @@ $effect(() => {
       {#if hasRequestedOverworld && dataReady}
         <MapCanvas
           intro={!hasPaintedMap}
+          onSeaColorChange={color =>
+            document.documentElement.style.setProperty('--map-sea-color', color)}
           onVisualReady={() => {
             hasPaintedMap = true
           }}

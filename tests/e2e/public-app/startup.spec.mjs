@@ -17,6 +17,7 @@ for (const width of [390, 1440]) {
         const page = await context.newPage()
         expect((await page.goto('/')).status()).toBe(200)
         await expect(page.locator('html')).toHaveAttribute('data-entry', 'map')
+        await expect(page.locator('html')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
         await expect(
           page.locator(
             '#omni-search-bar, [data-app-intro-item="nav"], [data-map-shell-skeleton]',
@@ -43,11 +44,7 @@ for (const width of [390, 1440]) {
       const signingIn = page.waitForRequest('**/api/auth/sign-in/anonymous')
       await page.addInitScript(() => {
         localStorage.setItem('hype-theme', 'hype-light')
-        window.canvasFrames = []
         function sample() {
-          const root = document.documentElement
-          if (root?.dataset.entry === 'map')
-            window.canvasFrames.push(getComputedStyle(root).backgroundColor)
           const input = document
             .querySelector('#omni-search-bar')
             ?.getBoundingClientRect()
@@ -61,8 +58,7 @@ for (const width of [390, 1440]) {
               bottomGutter: parseFloat(getComputedStyle(nav).bottom),
             }
           }
-          if (!window.firstControls || performance.now() < 5000)
-            requestAnimationFrame(sample)
+          if (!window.firstControls) requestAnimationFrame(sample)
         }
         requestAnimationFrame(sample)
       })
@@ -110,16 +106,39 @@ for (const width of [390, 1440]) {
         await expect(page.getByRole('heading', { name: 'Settings' })).toHaveCount(0)
         await expect(page.getByRole('status', { name: 'Loading panel' })).toHaveCount(0)
         await expect(page.locator('.maplibregl-canvas')).toHaveCount(0)
-        await expect(page.locator('html')).toHaveCSS(
-          'background-color',
-          'rgb(245, 243, 250)',
+        await expect(page.locator('html')).toHaveCSS('background-color', 'rgb(0, 0, 0)')
+        // A new guest can inherit the active hub's style independently of the UI theme.
+        const firstStyle = page.waitForResponse(
+          response =>
+            new URL(response.url()).pathname.startsWith('/api/mapStyles/') &&
+            response.ok(),
         )
-        const colors = await page.evaluate(() => [...new Set(window.canvasFrames)])
-        expect(colors.length).toBeGreaterThan(2)
         release()
+        const style = await (await firstStyle).json()
+        await expect(page.locator('html')).toHaveCSS(
+          '--map-sea-color',
+          style.layers.find(layer => layer.id === 'water').paint['fill-color'],
+        )
         await expect(page.locator('#right-panel fieldset').first()).toBeAttached({
           timeout: 30000,
         })
+        // Changing only the map palette must update the sea under the existing canvas too.
+        const nextStyleCode = width === 390 ? 'midnight' : 'quercus'
+        const nextStyle = page.waitForResponse(
+          response =>
+            new URL(response.url()).pathname === `/api/mapStyles/${nextStyleCode}` &&
+            response.ok(),
+        )
+        await page.locator(`label:has(input[value="${nextStyleCode}"])`).click()
+        const selected = await (await nextStyle).json()
+        await expect(page.locator('html')).toHaveCSS(
+          '--map-sea-color',
+          selected.layers.find(layer => layer.id === 'water').paint['fill-color'],
+        )
+        const canvas = page.locator('canvas.maplibregl-canvas')
+        await expect(canvas).toBeAttached()
+        const sea = await canvas.evaluate(element => element.style.backgroundColor)
+        await expect(page.locator('html')).toHaveCSS('background-color', sea)
         await page.getByRole('button', { name: 'Close panel' }).click()
         await expect(page.locator('[data-map-visual-ready="true"]')).toBeVisible({
           timeout: 60000,

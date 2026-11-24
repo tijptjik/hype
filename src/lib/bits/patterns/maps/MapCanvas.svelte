@@ -48,6 +48,7 @@ import {
 import { featureQueryKey } from '#lib/client/services/featureQuery.js'
 import {
   applyMapCanvasBackground,
+  getMapStyleSeaColor,
   resolveRuntimeMapStyle,
 } from '#lib/map/styles/runtime.js'
 import { createMapController, type MapController } from '#lib/map/controller.js'
@@ -95,6 +96,7 @@ type MapCanvasProps = {
   onMapReady?: (controller: MapController | null) => void
   /** Fade the first visual frame on the public app's initial entrance. */
   intro?: boolean
+  onSeaColorChange?: (color: string) => void
   onVisualReady?: () => void
 }
 
@@ -119,6 +121,7 @@ let {
   showControls = true,
   onMapReady,
   intro = false,
+  onSeaColorChange,
   onVisualReady,
 }: MapCanvasProps = $props()
 
@@ -739,6 +742,7 @@ $effect(() => {
   })
     .then(style => {
       if (serial === styleRequestSerial && !abortController.signal.aborted) {
+        onSeaColorChange?.(getMapStyleSeaColor(style))
         initialStyle = style
       }
     })
