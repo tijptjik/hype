@@ -34,7 +34,7 @@ export type BuildingSearchResult = {
  * @remarks No nearest-address guess or canonical association is created.
  */
 export async function searchBuildingNames(
-  query: string,
+  query: string | string[],
   locale: LocaleKey,
   isCurrent: () => boolean = () => true,
   options?: {
@@ -60,8 +60,20 @@ export async function searchBuildingNames(
   if (!isCurrent()) return []
   if (options?.release && options.release !== bundle.release)
     throw new BuildingSearchPageError()
-  const needle = normalizeNameSearch(query)
-  if (!needle) return []
+  const needles = [
+    ...new Set(
+      (typeof query === 'string' ? [query] : query)
+        .map(normalizeNameSearch)
+        .filter(Boolean),
+    ),
+  ]
+  if (!needles.length) return []
+  const matchesText = (value: string, exact = false): boolean => {
+    const normalized = normalizeNameSearch(value)
+    return exact
+      ? needles.includes(normalized)
+      : needles.some(needle => normalized.includes(needle))
+  }
   // Search the complete pinned address inventory before paging, so unnamed buildings remain discoverable by street.
   const addressMatches = new Set<string>()
   if (options?.includeAddresses) {
@@ -70,9 +82,7 @@ export async function searchBuildingNames(
     for (const row of addresses) {
       if (
         row.addresses.some(candidate =>
-          Object.values(candidate.display).some(label =>
-            normalizeNameSearch(label).includes(needle),
-          ),
+          Object.values(candidate.display).some(label => matchesText(label)),
         )
       )
         addressMatches.add(row.id)
@@ -82,30 +92,35 @@ export async function searchBuildingNames(
     bundle.records
       .filter(row =>
         [row.name, ...Object.values(row.names)].some(
-          name =>
-            name &&
-            (options?.exact
-              ? normalizeNameSearch(name) === needle
-              : normalizeNameSearch(name).includes(needle)),
+          name => name && matchesText(name, options?.exact),
         ),
       )
       .map(row => row.id),
   )
-  const named = bundle.records
-    .filter(row => nameMatches.has(row.id) || addressMatches.has(row.id))
-    .sort(
-      (a, b) =>
-        Number(
-          [b.name, ...Object.values(b.names)].some(
-            name => name && normalizeNameSearch(name) === needle,
-          ),
-        ) -
-        Number(
-          [a.name, ...Object.values(a.names)].some(
-            name => name && normalizeNameSearch(name) === needle,
-          ),
+  const named = bundle.records.filter(
+    row => nameMatches.has(row.id) || addressMatches.has(row.id),
+  )
+  // An address can identify a published footprint missing entirely from the names projection.
+  for (const row of named) addressMatches.delete(row.id)
+  for (const id of addressMatches)
+    named.push({
+      id,
+      names: { en: null, 'zh-Hant': null, 'zh-Hans': null },
+      divisionCodes: [],
+    })
+  named.sort(
+    (a, b) =>
+      Number(
+        [b.name, ...Object.values(b.names)].some(
+          name => name && matchesText(name, true),
         ),
-    )
+      ) -
+      Number(
+        [a.name, ...Object.values(a.names)].some(
+          name => name && matchesText(name, true),
+        ),
+      ),
+  )
   const limit = options?.candidateLimit ?? (options?.coordinates ? named.length : 10)
   const offset = options?.offset ?? 0
   if (options?.candidateLimit && named.length > offset + limit) options.onLimited?.()
@@ -132,9 +147,7 @@ export async function searchBuildingNames(
               ? details.addresses
               : [undefined]
             : details.addresses.filter(candidate =>
-                Object.values(candidate.display).some(label =>
-                  normalizeNameSearch(label).includes(needle),
-                ),
+                Object.values(candidate.display).some(label => matchesText(label)),
               )
           return candidates.map(candidate => {
             const projected = fillBuildingDetails(
@@ -204,16 +217,17 @@ export type BuildingSearchPage = {
  * @remarks Names and addresses share one pinned release. Matching alternatives are never split across pages; changed publications require restart.
  */
 export async function searchBuildingNamesPage(
-  query: string,
+  query: string | string[],
   locale: LocaleKey,
   isCurrent: () => boolean = () => true,
   cursor?: string,
 ): Promise<BuildingSearchPage> {
+  const queryKey = typeof query === 'string' ? query : JSON.stringify(query)
   let position: z.infer<typeof buildingCursorSchema> | undefined
   if (cursor) {
     try {
       position = buildingCursorSchema.parse(JSON.parse(decodeURIComponent(cursor)))
-      if (position.query !== query || position.locale !== locale)
+      if (position.query !== queryKey || position.locale !== locale)
         throw new Error('Changed query')
     } catch {
       throw new BuildingSearchPageError()
@@ -234,7 +248,7 @@ export async function searchBuildingNamesPage(
           : encodeURIComponent(
               JSON.stringify({
                 matching: 'names-and-addresses',
-                query,
+                query: queryKey,
                 locale,
                 release: page.release,
                 offset: page.nextOffset,

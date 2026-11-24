@@ -1,5 +1,6 @@
 import { expect, it, vi, afterEach } from 'vitest'
-import { getAddressLocale } from '#lib/addresses/featureAddress.js'
+import { buildingPreviewTerms } from '#lib/locations/buildingPreview.js'
+import { emptyFeatureAddress, getAddressLocale } from '#lib/addresses/featureAddress.js'
 import {
   resetAddressComponent,
   clearAddressComponent,
@@ -239,6 +240,28 @@ it('finds nearby named buildings beyond the initial detail slice', async () => {
   expect(result.map(row => row.buildingSource.id)).toEqual(['tower-44'])
 })
 
+it('previews paired numbers, suffixes and additional street frontages independently', () => {
+  const address = emptyFeatureAddress()
+  address.source.fallbackDisplay.en = 'Annex, 12, 14 North Street, Kowloon'
+  const terms = buildingPreviewTerms({}, address, [
+    {
+      head: null,
+      priority: null,
+      number: '22A/B',
+      names: { en: 'South Road', 'zh-hant': '南道' },
+    },
+  ])
+  expect(terms).toEqual(
+    expect.arrayContaining([
+      '12 North Street',
+      '14 North Street',
+      '22A South Road',
+      '22B South Road',
+      '南道22A號',
+      '南道22B號',
+    ]),
+  )
+})
 it('finds named and unnamed buildings by published street and number without changing name-only matching', async () => {
   source.names.mockResolvedValue({
     release: 'r1',
@@ -309,6 +332,28 @@ it('finds named and unnamed buildings by published street and number without cha
   expect(chinese.rows).toHaveLength(3)
   const numbered = await searchBuildingNamesPage('32 Hollywood Road', 'en')
   expect(numbered.rows.map(row => row.buildingSource.addressId)).toEqual(['a32'])
+
+  // Preview the name plus both endpoints, including footprints absent from the names projection.
+  source.names.mockResolvedValue({
+    release: 'r1',
+    records: [{ id: 'named', name: 'Example House', names: {} }],
+  })
+  const address = emptyFeatureAddress()
+  address.source.fallbackDisplay.en = '32–36 Hollywood Road'
+  const terms = buildingPreviewTerms({ en: 'Example House' }, address, [])
+  expect(terms).toEqual(
+    expect.arrayContaining(['Example House', '32 Hollywood Road', '36 Hollywood Road']),
+  )
+  expect(terms).not.toContain('33 Hollywood Road')
+  const preview = await searchBuildingNamesPage(terms, 'en')
+  expect(preview.total).toBe(2)
+  expect(new Set(preview.rows.map(row => row.buildingSource.id))).toEqual(
+    new Set(['named', 'unnamed']),
+  )
+  source.names.mockResolvedValue({
+    release: 'r1',
+    records: [{ id: 'substation', name: 'Hollywood Road 32 Substation', names: {} }],
+  })
 
   source.addresses.mockClear()
   const namesOnly = await searchBuildingNames('Hollywood Road', 'en')

@@ -28,6 +28,7 @@ let {
   organisationId = null,
   queryScope = '',
   canEdit = false,
+  previewTerms = [],
   onCompositionSaved,
   onAddressChanged,
 }: {
@@ -37,6 +38,7 @@ let {
   queryScope?: string
   canEdit?: boolean
   onAddressChanged?: () => Promise<void>
+  previewTerms?: string[]
   onCompositionSaved?: () => Promise<void>
 } = $props()
 let refreshVersion = $state(0)
@@ -273,6 +275,7 @@ async function save(
             organisationId &&
             kind === 'building'}
             <BuildingComposition
+              {previewTerms}
               {locationId}
               {organisationId}
               onSaved={async () => {

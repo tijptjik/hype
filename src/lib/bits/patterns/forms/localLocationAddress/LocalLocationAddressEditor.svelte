@@ -72,6 +72,7 @@ import type { LocationKind } from '#lib/locations/kinds.js'
 import type { LocationDiscoveryType } from '#lib/locations/kinds.js'
 // DOMAIN
 import { addressBuildingNames } from '#lib/locations/addressIdentity.js'
+import { buildingPreviewTerms } from '#lib/locations/buildingPreview.js'
 import { buildingPartDisplay } from '#lib/locations/buildingPartDisplay.js'
 import {
   emptyFeatureAddress,
@@ -1115,6 +1116,13 @@ $effect(() => {
       {:else if view === 'relationships'}
         <div class="space-y-6 px-6 py-6">
           <LocationRelationships
+            previewTerms={place.kind === 'building'
+              ? buildingPreviewTerms(
+                  place.facts?.names ?? {},
+                  presentationAddress,
+                  place.buildingStreets ?? [],
+                )
+              : []}
             onCompositionSaved={onSaved}
             onAddressChanged={async () => {
               await onSaved()

@@ -1979,6 +1979,13 @@ can create a parent from an imported Building or search the SaanSeoi building ca
 to add children. The session card shows one building address, with a range per street
 for a physical parent. Address choices remain available in the editor. Refs #194.
 
+In **Relationships → Physical membership**, **Place in physical building** adds the
+current import to a selected existing parent. **Use as physical building** designates
+the current import as the parent under its existing HYPE ID (migration 0273). Its
+profile stays independent of its constituents. The owning organisation manages the
+parent. **Preview matches** searches the SaanSeoi catalogue for the building's names,
+addresses and each explicit street-number endpoint. Reviewing a match is read-only.
+
 From a local Location’s title menu, **Delete** opens a confirmation naming the record.
 Deleting a physical building releases its constituent memberships. Each constituent
 keeps its own identity and facts. Migration 0272 retains the actor, baseline revision,
