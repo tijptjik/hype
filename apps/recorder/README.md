@@ -23,7 +23,18 @@ retry identity. Sessions with an older schema can be browsed while a manager rev
 upgrade in Field Sessions.
 
 Apply `0265_field_research_record.sql` and `0266_field_research_features.sql` to the
-target development database before testing Feature creation.
+target development database before testing Feature creation. Apply
+`0267_field_research_record_placement.sql` for realm, Location and map pins.
+
+Android Back returns through the location picker, records and launch screen to the
+sessions overview. The launch screen has an Interior/Exterior selector and a map button
+beside search. Interior drawings reuse the shared station projection, with floor
+selection and zoom. Exterior placement uses the Lands Department street map.
+
+A capture stores its selected realm and Location. Interior pins retain the map ID,
+immutable release hash, floor ID and source coordinates. Exterior pins retain longitude
+and latitude. See Records can reopen a saved pin on its original drawing. Interior is
+the initial realm for each session.
 
 ## Android development
 

@@ -1,8 +1,12 @@
 <script lang="ts">
 // SVELTE
-import { onMount } from 'svelte'
+import { onDestroy, untrack } from 'svelte'
+import { pushState, replaceState } from '$app/navigation'
+import { page } from '$app/state'
 // COMPONENTS
 import Selector from './Selector.svelte'
+import RealmSelector from './RealmSelector.svelte'
+import SessionMap from './SessionMap.svelte'
 // API
 import {
   recordFeature,
@@ -14,6 +18,9 @@ import {
 import type {
   RecorderLocation,
   RecorderRecord,
+  RecorderPin,
+  RecorderPlacement,
+  SpatialRealm,
   RecorderOption,
   RecorderSession,
 } from '../../../../src/lib/fieldResearch/recorder'
@@ -28,16 +35,29 @@ let session = $state<RecorderSession | null>(null)
 let places = $state<RecorderLocation[]>([])
 let records = $state<RecorderRecord[]>([])
 let screen = $state<'sessions' | 'session' | 'records'>('sessions')
+let route = $derived(page.state.recorder)
+let realm = $state<SpatialRealm>('interior')
+let pin = $state<RecorderPin | null>(null)
+let recordOnMap = $derived(records.find(row => row.id === route?.recordId))
 let loading = $state(true)
 let saving = $state(false)
 let failure = $state('')
 let notice = $state('')
 let layerId = $state('')
-let pendingRecord: { sessionId: string; id: string; layerId: string } | null = null
+let pendingRecord: {
+  sessionId: string
+  id: string
+  layerId: string
+  placement: RecorderPlacement
+} | null = null
 let request = 0
+onDestroy(() => {
+  request++
+})
 let premises = $state('')
 let building = $state('')
 let part = $state('')
+let selectedId = $derived(part || building || premises)
 let search = $state('')
 let dialog: HTMLDialogElement
 const kinds = {
@@ -79,11 +99,13 @@ let matches = $derived(
 )
 
 function choosePlace(p: RecorderLocation): void {
+  pin = null
   premises = p.kind === 'premises' ? p.id : (p.premises?.id ?? '')
   building = p.kind === 'building' ? p.id : (p.building?.id ?? '')
   part = p.kind === 'building_part' ? p.id : ''
 }
 function chooseBuilding(id: string): void {
+  pin = null
   const place =
     places.find(p => p.id === id) ?? withinPremises.find(p => p.building?.id === id)
   if (place) premises = place.premises?.id ?? ''
@@ -124,39 +146,74 @@ async function load(): Promise<void> {
     if (current === request) loading = false
   }
 }
-onMount(() => {
-  void load()
-  return () => {
-    request++
-  }
+// Shallow history gives the Android WebView one back entry per screen, including the location picker.
+$effect(() => {
+  const next = route
+  untrack(() => {
+    const target = next?.sessionId
+      ? sessions.find(item => item.id === next.sessionId)
+      : undefined
+    if (!target) {
+      screen = 'sessions'
+      session = null
+      notice = ''
+      if (next && !sessions.length) replaceState('', {})
+      void load()
+      return
+    }
+    if (session?.id !== target.id) {
+      session = target
+      layerId =
+        target.layers.find(row => row.id === target.defaultLayerId)?.id ??
+        (target.layers.length === 1 ? target.layers[0].id : '')
+      places = []
+      premises = building = part = notice = ''
+      realm = 'interior'
+      pin = null
+    }
+    const nextScreen =
+      next?.view === 'records' || next?.view === 'recordMap' ? 'records' : 'session'
+    const reload = screen !== nextScreen || (next?.view === 'session' && !places.length)
+    screen = nextScreen
+    if (reload) void load()
+  })
 })
-
+$effect(() => {
+  if (route?.view === 'search' && !dialog.open) dialog.showModal()
+  else if (route?.view !== 'search' && dialog.open) dialog.close()
+})
 function openSession(id: string): void {
-  const next = sessions.find(item => item.id === id)
-  if (!next || saving) return
-  layerId =
-    next.layers.find(row => row.id === next.defaultLayerId)?.id ??
-    (next.layers.length === 1 ? next.layers[0].id : '')
-  session = next
-  screen = 'session'
-  places = []
-  premises = building = part = notice = ''
-  void load()
+  if (saving || session?.id === id) return
+  const next = { recorder: { sessionId: id, view: 'session' as const } }
+  if (screen === 'sessions') pushState('', next)
+  else replaceState('', next)
+}
+function navigate(
+  view: 'map' | 'search' | 'records' | 'recordMap',
+  recordId?: string,
+): void {
+  if (session) pushState('', { recorder: { view, sessionId: session.id, recordId } })
 }
 function back(): void {
-  if (saving) return
-  notice = ''
-  if (screen === 'records') screen = 'session'
-  else {
-    screen = 'sessions'
-    session = null
-  }
-  void load()
+  history.back()
 }
 function seeRecords(): void {
-  screen = 'records'
-  records = []
-  void load()
+  navigate('records')
+}
+function changeRealm(value: SpatialRealm): void {
+  if (realm !== value) pin = null
+  realm = value
+}
+function useMapPlace(id: string, point: RecorderPin | null): void {
+  const place = places.find(row => row.id === id)
+  if (place) choosePlace(place)
+  else if (places.some(row => row.building?.id === id)) chooseBuilding(id)
+  else {
+    premises = id
+    building = part = ''
+  }
+  pin = point
+  back()
 }
 async function capture(): Promise<void> {
   if (!session || session.completed || session.captureIssue || !layerId || saving)
@@ -164,13 +221,20 @@ async function capture(): Promise<void> {
   saving = true
   notice = ''
   const sessionId = session.id
-  if (pendingRecord?.sessionId !== sessionId)
-    pendingRecord = { sessionId, id: crypto.randomUUID(), layerId }
+  const placement = { spatialRealm: realm, locationId: selectedId || null, pin }
+  if (
+    pendingRecord?.sessionId !== sessionId ||
+    pendingRecord.layerId !== layerId ||
+    JSON.stringify(pendingRecord.placement) !== JSON.stringify(placement)
+  )
+    pendingRecord = { sessionId, id: crypto.randomUUID(), layerId, placement }
   try {
     await recordFeature(pendingRecord)
     pendingRecord = null
-    notice = 'Record saved.'
-    seeRecords()
+    if (route?.view === 'session' && session?.id === sessionId) {
+      notice = 'Record saved.'
+      seeRecords()
+    }
   } catch (error) {
     const message = (error as { body?: { message?: string } })?.body?.message
     notice = message || 'Could not confirm the record. Tap Record to retry.'
@@ -180,190 +244,252 @@ async function capture(): Promise<void> {
 }
 </script>
 
-<header class="flex items-center justify-between gap-3">
-  {#if screen === 'sessions'}
-    <h1 class="text-3xl font-semibold">Sessions</h1>
-    <button
-      type="button"
-      disabled={busy}
-      class="min-h-12 px-3 text-sm text-slate-300"
-      onclick={signOut}
-    >
-      Sign out
-    </button>
-  {:else}
-    <button
-      type="button"
-      disabled={saving}
-      class="min-h-12 text-slate-300"
-      onclick={back}
-    >
-      ‹ {screen === 'records' ? 'Session' : 'Sessions'}
-    </button>
-  {/if}
-</header>
+{#if screen === 'sessions' || screen === 'records' || route?.view === 'map'}
+  <header class="flex items-center justify-between gap-3">
+    {#if screen === 'sessions'}
+      <h1 class="text-3xl font-semibold">Sessions</h1>
+      <button
+        type="button"
+        disabled={busy}
+        class="min-h-12 px-3 text-sm text-slate-300"
+        onclick={signOut}
+      >
+        Sign out
+      </button>
+    {:else}
+      <button
+        type="button"
+        disabled={saving}
+        class="min-h-12 text-slate-300"
+        onclick={back}
+      >
+        ‹ {route?.view === 'recordMap' ? 'Records' : 'Session'}
+      </button>
+    {/if}
+  </header>
+{/if}
 {#if message}
   <p role="status">{message}</p>
 {/if}
-{#if screen === 'session' && session}
-  <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-    <Selector
-      label="Session"
-      options={sessions}
-      value={session.id}
-      onchange={openSession}
-      disabled={saving}
-    />
-    <button
-      aria-label="Search session locations"
-      type="button"
-      disabled={loading || !places.length || saving}
-      class="grid w-12 place-items-center rounded-2xl border border-slate-700 disabled:opacity-40"
-      onclick={() => {
-        search = ''
-        dialog.showModal()
-      }}
-    >
-      <svg
-        aria-hidden="true"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.6"
-      >
-        <circle cx="10" cy="10" r="6" />
-        <path d="m15 15 6 6" />
-      </svg>
-    </button>
-  </div>
-{:else if screen === 'records' && session}
-  <h1 class="text-3xl font-semibold">Records</h1>
-  <p class="text-slate-300">{session.name}</p>
-{/if}
-{#if loading}
-  <div class="grid gap-2" role="status" aria-label="Loading {screen}" aria-busy="true">
-    {#each [1, 2, 3] as n (n)}
-      <div class="h-16 animate-pulse rounded-2xl bg-slate-900"></div>
-    {/each}
-  </div>
-{:else if failure}
-  <p role="alert">{failure}</p>
-  <button
-    type="button"
-    class="min-h-12 rounded-xl border border-slate-700"
-    onclick={load}
-  >
-    Retry
-  </button>
-{:else if screen === 'sessions'}
-  <ul class="grid gap-2">
-    {#each sessions as item (item.id)}
-      <li>
-        <button
-          type="button"
-          class="flex min-h-16 w-full items-center justify-between gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-left font-semibold"
-          onclick={() => openSession(item.id)}
-        >
-          <span class="min-w-0 break-words">{item.name}</span
-          ><span aria-hidden="true">›</span>
-        </button>
-      </li>
-    {:else}
-      <li class="text-slate-300">No sessions available.</li>
-    {/each}
-  </ul>
-{:else if screen === 'records'}
-  <ol class="grid gap-2">
-    {#each records.toReversed() as row, i (row.id)}
-      <li class="rounded-2xl bg-slate-900 px-4 py-3">
-        <strong>{row.title || `Record ${records.length - i}`}</strong
-        ><small class="block break-all text-slate-400">{row.id}</small>
-      </li>
-    {:else}
-      <li class="text-slate-300">No records yet.</li>
-    {/each}
-  </ol>
+{#if session && (route?.view === 'map' || (route?.view === 'recordMap' && recordOnMap))}
+  <h1 class="text-2xl font-semibold">{recordOnMap?.title ?? 'Location map'}</h1>
+  <SessionMap
+    {places}
+    {selectedId}
+    {realm}
+    {pin}
+    onrealm={changeRealm}
+    onuse={useMapPlace}
+    record={route.view === 'recordMap' ? recordOnMap : undefined}
+  />
 {:else}
-  {#if premisesOptions.length}
-    <Selector
-      label="Premises"
-      options={premisesOptions}
-      value={premises}
-      disabled={saving}
-      onchange={id => {
-        premises = id
-        building = part = ''
-      }}
-    />
+  {#if screen === 'session' && session}
+    <div class="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2">
+      <Selector
+        label="Session"
+        options={sessions}
+        value={session.id}
+        onchange={openSession}
+        disabled={saving}
+      />
+      <button
+        aria-label="Search session locations"
+        type="button"
+        disabled={loading || !places.length || saving}
+        class="grid w-12 place-items-center rounded-2xl border border-slate-700 disabled:opacity-40"
+        onclick={() => {
+          search = ''
+          navigate('search')
+        }}
+      >
+        <svg
+          aria-hidden="true"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+        >
+          <circle cx="10" cy="10" r="6" />
+          <path d="m15 15 6 6" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        aria-label="Open location map"
+        disabled={loading || !places.length || saving}
+        class="grid w-12 place-items-center rounded-2xl border border-slate-700 disabled:opacity-40"
+        onclick={() => navigate('map')}
+      >
+        <svg
+          aria-hidden="true"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+        >
+          <path d={icons.premises} />
+        </svg>
+      </button>
+    </div>
+  {:else if screen === 'records' && session}
+    <h1 class="text-3xl font-semibold">Records</h1>
+    <p class="text-slate-300">{session.name}</p>
   {/if}
-  {#if buildingOptions.length}
-    <Selector
-      label="Building"
-      options={buildingOptions}
-      value={building}
-      disabled={saving}
-      onchange={chooseBuilding}
-    />
-  {/if}
-  {#if partOptions.length}
-    <Selector
-      label="Building part"
-      options={partOptions}
-      value={part}
-      disabled={saving}
-      onchange={id => {
-        const p = places.find(row => row.id === id)
-        if (p) choosePlace(p)
-      }}
-    />
-  {/if}
-{/if}
-{#if notice}
-  <p role="status">{notice}</p>
-{/if}
-{#if screen === 'session' && session}
-  {#if session.captureIssue}
-    <p role="status">{session.captureIssue}</p>
-  {:else if session.layers.length > 1}
-    <Selector
-      label="Recording layer"
-      options={session.layers}
-      value={layerId}
-      onchange={id => (layerId = id)}
-      disabled={saving}
-    />
-  {/if}
-  <footer class="sticky bottom-0 mt-auto flex items-center gap-3 bg-[#08090e] py-4">
+  {#if loading}
+    <div
+      class="grid gap-2"
+      role="status"
+      aria-label="Loading {screen}"
+      aria-busy="true"
+    >
+      {#each [1, 2, 3] as n (n)}
+        <div class="h-16 animate-pulse rounded-2xl bg-slate-900"></div>
+      {/each}
+    </div>
+  {:else if failure}
+    <p role="alert">{failure}</p>
     <button
       type="button"
-      disabled={saving ||
-        session.completed ||
-        !!session.captureIssue ||
-        !layerId ||
-        !!failure ||
-        loading}
-      class="min-h-14 flex-1 rounded-2xl bg-white font-semibold text-black disabled:opacity-40"
-      onclick={capture}
+      class="min-h-12 rounded-xl border border-slate-700"
+      onclick={load}
     >
-      Record
+      Retry
     </button>
-    <button
-      type="button"
-      disabled={saving}
-      class="min-h-12 rounded-xl border border-slate-700 px-4 text-sm"
-      onclick={seeRecords}
-    >
-      See Records
-    </button>
-  </footer>
-  {#if session.completed}
-    <p class="text-slate-400">Session completed.</p>
+  {:else if screen === 'sessions'}
+    <ul class="grid gap-2">
+      {#each sessions as item (item.id)}
+        <li>
+          <button
+            type="button"
+            class="flex min-h-16 w-full items-center justify-between gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-left font-semibold"
+            onclick={() => openSession(item.id)}
+          >
+            <span class="min-w-0 break-words">{item.name}</span
+            ><span aria-hidden="true">›</span>
+          </button>
+        </li>
+      {:else}
+        <li class="text-slate-300">No sessions available.</li>
+      {/each}
+    </ul>
+  {:else if screen === 'records'}
+    <ol class="grid gap-2">
+      {#each records.toReversed() as row, i (row.id)}
+        <li class="rounded-2xl bg-slate-900 px-4 py-3">
+          <strong>{row.title || `Record ${records.length - i}`}</strong
+          ><small class="block break-all text-slate-400">{row.id}</small>
+          {#if row.spatialRealm}
+            <span class="block text-sm text-slate-300 capitalize"
+              >{row.spatialRealm}</span
+            >
+          {/if}
+          {#if row.pin}
+            <button
+              type="button"
+              class="min-h-11 text-cyan-300"
+              onclick={() => navigate('recordMap', row.id)}
+            >
+              View on map
+            </button>
+          {/if}
+        </li>
+      {:else}
+        <li class="text-slate-300">No records yet.</li>
+      {/each}
+    </ol>
+  {:else}
+    {#if premisesOptions.length}
+      <Selector
+        label="Premises"
+        options={premisesOptions}
+        value={premises}
+        disabled={saving}
+        onchange={id => {
+          premises = id
+          pin = null
+          building = part = ''
+        }}
+      />
+    {/if}
+    {#if buildingOptions.length}
+      <Selector
+        label="Building"
+        options={buildingOptions}
+        value={building}
+        disabled={saving}
+        onchange={chooseBuilding}
+      />
+    {/if}
+    {#if partOptions.length}
+      <Selector
+        label="Building part"
+        options={partOptions}
+        value={part}
+        disabled={saving}
+        onchange={id => {
+          const p = places.find(row => row.id === id)
+          if (p) choosePlace(p)
+        }}
+      />
+    {/if}
+  {/if}
+  {#if notice}
+    <p role="status">{notice}</p>
+  {/if}
+  {#if screen === 'session' && session}
+    <RealmSelector value={realm} onchange={changeRealm} disabled={saving} />
+    {#if pin}
+      <p class="text-sm text-slate-300">Map pin selected.</p>
+    {/if}
+    {#if session.captureIssue}
+      <p role="status">{session.captureIssue}</p>
+    {:else if session.layers.length > 1}
+      <Selector
+        label="Recording layer"
+        options={session.layers}
+        value={layerId}
+        onchange={id => (layerId = id)}
+        disabled={saving}
+      />
+    {/if}
+    <footer class="sticky bottom-0 mt-auto flex items-center gap-3 bg-[#08090e] py-4">
+      <button
+        type="button"
+        disabled={saving ||
+          session.completed ||
+          !!session.captureIssue ||
+          !layerId ||
+          !!failure ||
+          loading}
+        class="min-h-14 flex-1 rounded-2xl bg-white font-semibold text-black disabled:opacity-40"
+        onclick={capture}
+      >
+        Record
+      </button>
+      <button
+        type="button"
+        disabled={saving}
+        class="min-h-12 rounded-xl border border-slate-700 px-4 text-sm"
+        onclick={seeRecords}
+      >
+        See Records
+      </button>
+    </footer>
+    {#if session.completed}
+      <p class="text-slate-400">Session completed.</p>
+    {/if}
   {/if}
 {/if}
 
 <dialog
+  oncancel={event => {
+    event.preventDefault()
+    back()
+  }}
   bind:this={dialog}
   aria-label="Session locations"
   class="m-auto max-h-[80dvh] w-[min(92vw,30rem)] rounded-2xl border border-slate-700 bg-slate-950 p-4 text-white backdrop:bg-black/70"
@@ -371,9 +497,7 @@ async function capture(): Promise<void> {
   <div class="sticky top-0 grid gap-3 bg-slate-950 pb-3">
     <div class="flex items-center justify-between">
       <h2 class="text-xl font-semibold">Session locations</h2>
-      <button type="button" class="min-h-11 px-3" onclick={() => dialog.close()}>
-        Close
-      </button>
+      <button type="button" class="min-h-11 px-3" onclick={back}>Close</button>
     </div>
     <input
       type="search"
@@ -389,7 +513,7 @@ async function capture(): Promise<void> {
       class="flex min-h-14 w-full items-center gap-3 border-b border-slate-800 py-2 text-left"
       onclick={() => {
         choosePlace(p)
-        dialog.close()
+        back()
       }}
     >
       <svg

@@ -7,6 +7,7 @@
     {
       "identifier": "http:default",
       "allow": [
+        { "url": "https://fi.tailb49776.ts.net:9443/api/premises-maps/*/releases/*" },
         {
           "url": "https://fi.tailb49776.ts.net:9443/api/auth/device/code"
         },

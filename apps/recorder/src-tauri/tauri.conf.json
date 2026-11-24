@@ -13,7 +13,7 @@
     "windows": [{ "title": "Hype Recorder", "width": 420, "height": 800 }],
     "security": {
       "capabilities": ["recorder"],
-      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://mapapi.geodata.gov.hk; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://mapapi.geodata.gov.hk"
     }
   },
   "bundle": { "icon": ["icons/icon.png"] }

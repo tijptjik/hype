@@ -7,6 +7,7 @@
     {
       "identifier": "http:default",
       "allow": [
+        { "url": "https://hype.hk/api/premises-maps/*/releases/*" },
         { "url": "https://hype.hk/api/auth/device/code" },
         { "url": "https://hype.hk/api/auth/device/token" },
         { "url": "https://hype.hk/api/auth/sign-out" },

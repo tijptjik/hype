@@ -147,6 +147,7 @@
       "name": "@hype/recorder",
       "version": "0.1.0",
       "dependencies": {
+        "maplibre-gl": "^6.19.0",
         "@tauri-apps/api": "^2",
         "@tauri-apps/plugin-http": "^2",
         "@tauri-apps/plugin-opener": "^2",

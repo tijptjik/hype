@@ -31,17 +31,24 @@ export function installRemoteTransport(): void {
   const fetchAsset = window.fetch.bind(window)
   window.fetch = async (input, init) => {
     const url = new URL(input instanceof Request ? input.url : input, location.href)
-    if (url.origin !== location.origin || !url.pathname.startsWith('/_app/remote/')) {
+    const mapRelease =
+      /^\/api\/premises-maps\/[a-z0-9-]+\/releases\/[a-f0-9]{64}$/.test(url.pathname)
+    if (
+      url.origin !== location.origin ||
+      (!mapRelease && !url.pathname.startsWith('/_app/remote/'))
+    ) {
       return fetchAsset(input, init)
     }
-    const request = new Request(input, init)
+    const request = new Request(input instanceof Request ? input : url, init)
     const headers = new Headers(request.headers)
     headers.set('origin', origin)
     return nativeFetch(origin + url.pathname + url.search, {
       method: request.method,
       headers,
       body: request.body ? await request.arrayBuffer() : undefined,
-      signal: requestDeadline(request.signal),
+      signal: mapRelease
+        ? AbortSignal.any([request.signal, AbortSignal.timeout(60000)])
+        : requestDeadline(request.signal),
       maxRedirections: 0,
     })
   }
