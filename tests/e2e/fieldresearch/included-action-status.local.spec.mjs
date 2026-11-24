@@ -20,13 +20,15 @@ test('shows saved relationships and distinguishes partial and complete session i
     const data = parse(body.data)
     const base = data._.find(row => row.kind === 'building' && row.hasRelationships)
     expect(base.inclusion.total).toBeGreaterThanOrEqual(base.inclusion.included)
-    data._ = [0, 1, 2].map(included => ({
+    const fixtures = [0, 1, 2].map(included => ({
       ...base,
       id: 'fixture-' + included,
       names: { en: 'Fixture ' + included },
       hasRelationships: included !== 0,
       inclusion: { included, total: 2 },
     }))
+    // The query result and SvelteKit refresh entry share this array.
+    data._.splice(0, data._.length, ...fixtures)
     await route.fulfill({ response, json: { ...body, data: stringify(data) } })
   })
   await page.goto(
