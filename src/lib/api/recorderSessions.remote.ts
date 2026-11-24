@@ -4,6 +4,8 @@ import { error } from '@sveltejs/kit'
 // VALIDATION
 import { z } from 'zod'
 // API
+import { mapIdSchema, releaseHashSchema } from '#lib/indoor/releases.js'
+import { premisesMapBucket } from '#lib/indoor/server/storage.js'
 import { setupRequestHandler } from '#lib/api/index.js'
 // SERVICES
 import { createRecorderRecord } from '#lib/db/services/fieldResearchFeature.js'
@@ -40,15 +42,47 @@ export const recorderRecords = query(sessionId, async id =>
   listRecorderRecords(await recorderContext(), id),
 )
 
+const placement = z.object({
+  spatialRealm: z.enum(['interior', 'exterior']),
+  locationId: sessionId.nullable(),
+  pin: z
+    .discriminatedUnion('realm', [
+      z.object({
+        realm: z.literal('exterior'),
+        point: z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]),
+      }),
+      z.object({
+        realm: z.literal('interior'),
+        mapId: mapIdSchema,
+        hash: releaseHashSchema,
+        floorId: z.string().min(1).max(200),
+        point: z.tuple([z.number(), z.number()]),
+      }),
+    ])
+    .nullable(),
+})
+
 /** @param input Session and retry-stable capture identity. @returns Persisted record identity. */
 export const recordFeature = command(
   z.object({
     sessionId,
     id: z.uuid(),
     layerId: sessionId.optional(),
+    placement: placement.optional(),
   }),
   async input => {
     const ctx = await recorderContext()
-    return createRecorderRecord(ctx, input.sessionId, input.id, input.layerId)
+    const bucket =
+      input.placement?.pin?.realm === 'interior'
+        ? premisesMapBucket(getRequestEvent().locals.platform)
+        : undefined
+    return createRecorderRecord(
+      ctx,
+      input.sessionId,
+      input.id,
+      input.layerId,
+      input.placement,
+      bucket,
+    )
   },
 )

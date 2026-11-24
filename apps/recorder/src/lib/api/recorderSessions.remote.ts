@@ -4,6 +4,7 @@ import { command, query } from '$app/server'
 import type {
   RecorderLocation,
   RecorderRecord,
+  RecorderPlacement,
   RecorderSession,
 } from '../../../../../src/lib/fieldResearch/recorder'
 
@@ -25,5 +26,10 @@ export const recorderRecords = query('unchecked', (_id: string): RecorderRecord[
 /** @param input Session and capture identity. @returns The persisted capture ID. */
 export const recordFeature = command(
   'unchecked',
-  (_input: { id: string; sessionId: string; layerId?: string }): string => remoteOnly(),
+  (_input: {
+    id: string
+    sessionId: string
+    layerId?: string
+    placement?: RecorderPlacement
+  }): string => remoteOnly(),
 )

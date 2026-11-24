@@ -69,6 +69,10 @@ async function fixture() {
   )
   f.sqlite.exec(readFileSync('migrations/0265_field_research_record.sql', 'utf8'))
   f.sqlite.exec(readFileSync('migrations/0266_field_research_features.sql', 'utf8'))
+  f.sqlite.exec('CREATE TABLE IF NOT EXISTS location(id TEXT PRIMARY KEY)')
+  f.sqlite.exec(
+    readFileSync('migrations/0267_field_research_record_placement.sql', 'utf8'),
+  )
   await f.db.insert(fieldResearchSession).values({
     id: 'session',
     name: 'Internal outing',

@@ -36,6 +36,9 @@ function fixture() {
     CREATE TABLE feature(id TEXT PRIMARY KEY);
     CREATE TABLE featureI18n(featureId TEXT,locale TEXT,title TEXT);`)
   sqlite.exec(readFileSync('migrations/0266_field_research_features.sql', 'utf8'))
+  sqlite.exec(
+    readFileSync('migrations/0267_field_research_record_placement.sql', 'utf8'),
+  )
   const actor = (role: object) => ({
     db: store.db as unknown as Database,
     user: { id: 'reader' },
@@ -77,6 +80,12 @@ describe('Android shared field sessions', () => {
     const { sqlite, maintainer } = fixture()
     sqlite.exec(`CREATE TABLE location(id TEXT PRIMARY KEY,matchingType TEXT,state TEXT,ownerOrganisationId TEXT,redirectTargetId TEXT);
       CREATE TABLE fieldResearchSessionLocation(sessionId TEXT,locationId TEXT);
+      CREATE TABLE premisesMap(id TEXT,name TEXT,publishedHash TEXT);
+      CREATE TABLE premisesMapUnit(locationId TEXT,mapId TEXT,unitId TEXT);
+      CREATE TABLE locationPremisesMap(locationId TEXT,mapId TEXT);
+      INSERT INTO premisesMap VALUES('plan','Tower','published'),('draft','Draft',NULL);
+      INSERT INTO premisesMapUnit VALUES('lift','plan','unit-one'),('solo','draft','draft-unit');
+      INSERT INTO locationPremisesMap VALUES('tower','plan');
       CREATE TABLE locationMembershipHead(childLocationId TEXT,parentLocationId TEXT,scopeOrganisationId TEXT,relationshipId TEXT,assertionState TEXT,membershipState TEXT,effectiveFrom TEXT,effectiveTo TEXT);
       CREATE TABLE locationRevision(id TEXT,locationId TEXT,version INTEGER,origin TEXT,facts TEXT,rawSource TEXT);
       CREATE TABLE locationRevisionI18n(revisionId TEXT,locale TEXT,name TEXT);
@@ -95,9 +104,11 @@ describe('Android shared field sessions', () => {
     const rows = await listRecorderLocations(maintainer, 'a')
     expect(rows.map(r => r.id).sort()).toEqual(['lift', 'solo'])
     expect(rows.find(r => r.id === 'lift')).toMatchObject({
+      maps: [{ id: 'plan', unitId: 'unit-one', hash: 'published' }],
       building: {
         id: 'tower',
         name: 'East Tower',
+        maps: [{ id: 'plan', unitId: null }],
       },
       premises: { id: 'mall', name: '商場' },
       iconPath: expect.any(String),
@@ -106,6 +117,7 @@ describe('Android shared field sessions', () => {
       building: null,
       premises: null,
       iconPath: null,
+      maps: [],
     })
     sqlite.exec(
       "INSERT INTO location VALUES ('second','building','linked',NULL,NULL); INSERT INTO locationMembershipHead VALUES ('lift','second',NULL,'6','asserted','current',NULL,NULL);",

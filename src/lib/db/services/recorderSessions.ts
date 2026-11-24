@@ -17,6 +17,9 @@ import type { Database } from '#lib/types.js'
 import type {
   RecorderLocation,
   RecorderRecord,
+  RecorderPlace,
+  RecorderMap,
+  MapPoint,
   RecorderOption,
   RecorderSession,
 } from '#lib/fieldResearch/recorder.js'
@@ -139,13 +142,40 @@ export async function listRecorderLocations(
     if (group) group.push(row)
     else groups.set(row.origin, [row])
   }
+  // Bind the reachable identity set once. Geometry and translated labels use independent D1 budgets.
+  const reached = JSON.stringify([...new Set(rows.map(row => row.id))])
+  const points = await ctx.db.all<{
+    id: string
+    point: string | null
+  }>(sql`SELECT l.id,json_extract(${fields.location},'$.geometry.coordinates') point
+    FROM json_each(${reached}) ids JOIN location l ON l.id=ids.value
+    LEFT JOIN locationRevision r ON r.id=(SELECT current.id FROM locationRevision current WHERE current.locationId=l.id
+      AND (l.state!='linked' OR current.origin='saanseoi') ORDER BY current.version DESC LIMIT 1)`)
+  const coordinates = new Map(
+    points.map(row => [row.id, row.point ? (JSON.parse(row.point) as MapPoint) : null]),
+  )
+  const links = await ctx.db.all<
+    RecorderMap & { locationId: string }
+  >(sql`WITH reached(id) AS (SELECT value FROM json_each(${reached})),
+    links(locationId,mapId,unitId) AS (
+      SELECT l.locationId,l.mapId,NULL FROM locationPremisesMap l JOIN reached r ON r.id=l.locationId
+      UNION ALL SELECT u.locationId,u.mapId,u.unitId FROM premisesMapUnit u JOIN reached r ON r.id=u.locationId
+    ) SELECT links.locationId,m.id,m.name,m.publishedHash hash,links.unitId FROM links JOIN premisesMap m ON m.id=links.mapId WHERE m.publishedHash IS NOT NULL ORDER BY m.name,m.id,links.unitId`)
+  const maps = new Map<string, RecorderMap[]>()
+  for (const { locationId, ...map } of links) {
+    const group = maps.get(locationId) ?? []
+    group.push(map)
+    maps.set(locationId, group)
+  }
   /** Choose a readable retained label in any available language.
    * @param row Projected location. @returns Identity and display name.
    */
-  function option(row: Row): RecorderOption {
+  function option(row: Row): RecorderPlace {
     const names = locationFacilityNames(row.kind, JSON.parse(row.names ?? '{}'))
     return {
       id: row.id,
+      point: coordinates.get(row.id) ?? null,
+      maps: maps.get(row.id) ?? [],
       name: names.en || Object.values(names).find(Boolean) || row.id,
     }
   }
@@ -184,7 +214,8 @@ export async function listRecorderRecords(
   id: string,
 ): Promise<RecorderRecord[]> {
   await sessionOrganisation(ctx, id)
-  return ctx.db.all<RecorderRecord>(
-    sql`SELECT r.id,r.featureId,(SELECT i.title FROM featureI18n i WHERE i.featureId=r.featureId ORDER BY i.locale='en' DESC LIMIT 1) title FROM fieldResearchRecord r WHERE r.sessionId=${id} ORDER BY r.rowid`,
+  const rows = await ctx.db.all<Omit<RecorderRecord, 'pin'> & { pin: string | null }>(
+    sql`SELECT r.id,r.featureId,r.spatialRealm,r.locationId,r.pin,(SELECT i.title FROM featureI18n i WHERE i.featureId=r.featureId ORDER BY i.locale='en' DESC LIMIT 1) title FROM fieldResearchRecord r WHERE r.sessionId=${id} ORDER BY r.rowid`,
   )
+  return rows.map(row => ({ ...row, pin: row.pin ? JSON.parse(row.pin) : null }))
 }

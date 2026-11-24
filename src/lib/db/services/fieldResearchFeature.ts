@@ -31,6 +31,9 @@ import {
 import { normalizeLinkValue, displayLinkValue } from '#lib/properties/value.js'
 import { encodePropertySelection } from '#lib/properties/selection.js'
 // SERVICES
+import { resolveRecorderPoint } from './recorderPlacement'
+import type { RecorderPlacement } from '#lib/fieldResearch/recorder.js'
+import type { R2Bucket } from '@cloudflare/workers-types'
 import { prepareFeatureCreationContent } from './featureCreationRevision'
 import { prepareNewLifecycleFeature } from './featureLifecycleIdentity'
 import { readFeatureIntentPolicy } from './featureIntentPolicy'
@@ -138,13 +141,15 @@ async function prepareRecordingFields(
 
 /** Create an unpublished Feature and session receipt in one transaction. Device IDs are retry keys.
  * @param ctx Signed-in contributor. @param sessionId Session identity. @param id Stable device request.
- * @param requestedLayer Configured recording layer. @returns Persisted record ID.
+ * @param requestedLayer Configured recording layer. @param placement Optional device placement. @param bucket Indoor release storage. @returns Persisted record ID.
  */
 export async function createRecorderRecord(
   ctx: Context,
   sessionId: string,
   id: string,
   requestedLayer?: string,
+  placement?: RecorderPlacement,
+  bucket?: R2Bucket,
 ): Promise<string> {
   const access = researchProjectAccess(ctx, sql`s.projectId`)
   const receipt = () =>
@@ -168,6 +173,7 @@ export async function createRecorderRecord(
       409,
       'Save the session settings and choose a configured layer before recording.',
     )
+  const point = await resolveRecorderPoint(ctx, sessionId, placement, bucket)
   const settings = resolveResearchConfiguration(
     researchConfigurationSchema.parse({
       ...JSON.parse(session.configuration),
@@ -204,7 +210,9 @@ export async function createRecorderRecord(
       kind,
       associationRelation:
         type.relation ?? (kind === 'place' ? 'represents' : 'locatedAt'),
-      geometry: { type: 'GeometryCollection', geometries: [] },
+      geometry: point
+        ? { type: 'Point', coordinates: point }
+        : { type: 'GeometryCollection', geometries: [] },
       addressMeta: {},
       isPublished: false,
       isArchived: false,
@@ -244,9 +252,11 @@ export async function createRecorderRecord(
     existing
       ? ctx.db
           .update(fieldResearchRecord)
-          .set({ featureId })
+          .set({ featureId, ...placement })
           .where(eq(fieldResearchRecord.id, id))
-      : ctx.db.insert(fieldResearchRecord).values({ id, sessionId, featureId }),
+      : ctx.db
+          .insert(fieldResearchRecord)
+          .values({ id, sessionId, featureId, ...placement }),
     ctx.db
       .update(fieldResearchSession)
       .set({ recordSequence: sequence, updatedAt: new Date().toISOString() })

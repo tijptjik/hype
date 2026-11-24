@@ -9,6 +9,8 @@ import {
   text,
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core'
+import { location } from './location'
+import type { RecorderPin } from '#lib/fieldResearch/recorder.js'
 import { feature } from './feature'
 // TYPES
 import type {
@@ -50,6 +52,9 @@ export const fieldResearchRecord = sqliteTable(
   {
     id: text('id').primaryKey(),
     featureId: text('featureId').references(() => feature.id),
+    spatialRealm: text('spatialRealm', { enum: ['interior', 'exterior'] }),
+    locationId: text('locationId').references(() => location.id),
+    pin: text('pin', { mode: 'json' }).$type<RecorderPin>(),
     sessionId: text('sessionId')
       .notNull()
       .references(() => fieldResearchSession.id),
