@@ -78,7 +78,7 @@ const columns =
           class="text-muted-foreground hover:text-foreground rounded-md px-3 py-2 text-sm"
           onclick={onClose}
         >
-          Close gallery
+          Back to locations
         </button>
       {/snippet}
     </SectionHeader>
@@ -90,8 +90,13 @@ const columns =
       <div class={columns} role="status" aria-label={'Loading ' + title}>
         {#each [1, 2, 3] as n (n)}
           <div
-            class="bg-muted aspect-[16/10] rounded-xl motion-safe:animate-pulse"
-          ></div>
+            class="border-border overflow-hidden rounded-xl border motion-safe:animate-pulse"
+          >
+            <div class="bg-muted aspect-square"></div>
+            <div class="border-border bg-panel border-t px-4 py-3">
+              <div class="bg-muted h-5 w-1/3 rounded"></div>
+            </div>
+          </div>
         {/each}
       </div>
     {/if}
@@ -134,7 +139,7 @@ const columns =
               aria-label={building.title}
               class="border-border bg-panel min-w-0 overflow-hidden rounded-xl border"
             >
-              <div class="bg-surface relative grid aspect-[16/9] place-items-center">
+              <div class="bg-surface relative grid aspect-square place-items-center">
                 {#if preview.url}
                   <ResearchModelPreview
                     url={preview.url}

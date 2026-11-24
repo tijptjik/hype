@@ -138,6 +138,30 @@ test('opens the model facing its front and links its caption to the Location', a
   await expect(page).toHaveURL(url => url.pathname + url.search === href)
 })
 
+test('sizes the model preview as a square at two admin widths', async ({ page }) => {
+  await page.setViewportSize({ width: 2160, height: 1024 })
+  await page.goto(session + '&models=exterior#locations', {
+    waitUntil: 'domcontentloaded',
+  })
+  const cards = page.getByRole('region', { name: 'Exterior gallery cards' })
+  const card = cards.getByRole('article', { name: 'Kai King Mansion' })
+  for (const width of [2160, 1280]) {
+    await page.setViewportSize({ width, height: 1024 })
+    await card.scrollIntoViewIfNeeded()
+    const preview = card.locator('model-viewer')
+    await expect(preview).toBeVisible({ timeout: 60_000 })
+    await expect
+      .poll(() => preview.evaluate(el => el.loaded), { timeout: 60_000 })
+      .toBe(true)
+    const bounds = await preview.boundingBox()
+    expect(Math.abs(bounds.width - bounds.height)).toBeLessThan(2)
+    expect(bounds.width).toBeGreaterThan(500)
+    await card.screenshot({
+      path: join(process.env.DEV_RUNNER_ARTIFACTS, `session-gallery-card-${width}.png`),
+    })
+  }
+})
+
 test('fills the session workspace and lowers the camera to view facades', async ({
   page,
 }) => {
