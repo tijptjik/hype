@@ -76,6 +76,7 @@ let configured = $state<LayerChoice[]>([])
 let active = $state('session')
 let busy = $state(false)
 let failure = $state('')
+let validateCode = $state(false)
 let migration = $state<Awaited<ReturnType<typeof previewResearchMigration>> | null>(
   null,
 )
@@ -87,6 +88,9 @@ const defaultSelectClass =
   'h-auto! min-h-12 w-full! max-w-full min-w-0 border-0! px-0! [&>div]:gap-2! [&>div]:p-0! [&>div>span]:overflow-visible! [&>div>span]:pl-0! [&>div>span]:whitespace-normal! [&>span]:overflow-visible! [&>span]:pl-0! [&>span]:whitespace-normal!'
 const editing = $derived(header?.state.isEditing ?? true)
 const disabled = $derived(locked || !editing || busy)
+const codeIssue = $derived(
+  validateCode && !settings?.code.trim() ? 'Enter a session code.' : undefined,
+)
 let baseline = $state('')
 const draft = $derived(JSON.stringify([settings, configured]))
 let mounted = false
@@ -112,6 +116,7 @@ function restore(): void {
   configured = layers
   if (!layers.some(layer => layer.layerId === active)) active = 'session'
   failure = ''
+  validateCode = false
 }
 const labels = {
   isVisitable: 'Visitable',
@@ -304,8 +309,10 @@ function countOverrides(overrides: ResearchLayerOverrides): number {
  */
 async function save(): Promise<void> {
   if (!settings || disabled) return
-  busy = true
   failure = ''
+  validateCode = true
+  if (!settings.code.trim()) return
+  busy = true
   try {
     const nextRevision = revision + 1
     for (const choices of [
@@ -336,6 +343,7 @@ async function save(): Promise<void> {
     })
     await onSaved()
     await load(nextRevision)
+    validateCode = false
     if (mounted && !failure) header?.setEditing(false)
   } catch (error) {
     failure = error instanceof Error ? error.message : String(error)
@@ -479,6 +487,9 @@ onDestroy(() => {
       {#if failure}
         <p role="alert" class="text-error">{failure}</p>
       {/if}
+      {#if codeIssue && section === 'fields'}
+        <p role="alert" class="text-error">Enter a session code on the Profile tab.</p>
+      {/if}
       {#if section !== 'fields'}
         <div class="grid grid-cols-1 xl:grid-cols-2">
           <section class="min-w-0">
@@ -495,8 +506,16 @@ onDestroy(() => {
                 bind:value={settings.code}
                 isEditing={editing}
                 trimOnBlur={false}
+                required
+                issues={codeIssue ? [codeIssue] : undefined}
+                errorId={inputId + '-code-error'}
                 {disabled}
-                inputAttrs={{ maxlength: 100 }}
+                inputAttrs={{
+                  maxlength: 100,
+                  'aria-required': true,
+                  'aria-invalid': codeIssue ? 'true' : undefined,
+                  'aria-describedby': codeIssue ? inputId + '-code-error' : undefined,
+                }}
               />
             </div>
           </section>

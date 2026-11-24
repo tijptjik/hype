@@ -72,6 +72,31 @@ test('keeps Field Sessions accessible after Field Entries is moved', async ({
   await profile.click()
   await expect(code).toBeVisible()
 
+  // Validate the required code even when the save action is on another tab.
+  await page
+    .getByRole('banner')
+    .getByRole('button', { name: 'Edit', exact: true })
+    .click()
+  await code.fill('  ')
+  await fields.click()
+  await page
+    .getByRole('banner')
+    .getByRole('button', { name: 'Save', exact: true })
+    .click()
+  await expect(page.getByRole('alert')).toContainText(
+    'Enter a session code on the Profile tab.',
+  )
+  await profile.click()
+  await expect(code).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByRole('alert')).toContainText('Enter a session code.')
+  await code.fill('SURVEY')
+  await expect(code).not.toHaveAttribute('aria-invalid', 'true')
+  await expect(page.getByText('Enter a session code.', { exact: true })).toHaveCount(0)
+  await page
+    .getByRole('banner')
+    .getByRole('button', { name: 'Reset', exact: true })
+    .click()
+
   await page.goto('/admin/fieldresearch', { waitUntil: 'domcontentloaded' })
   await expect(page).toHaveURL(/\/admin\/field-recorder$/)
   await expect(editor).toBeVisible({ timeout: 60_000 })
