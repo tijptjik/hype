@@ -71,12 +71,12 @@ it('shows inherited defaults without writing and supports an explicit false over
   })
   expect(view.queryByRole('button', { name: 'Reset to defaults' })).toBeNull()
   const content = view.getByRole('switch', {
-    name: 'Always show multilingual values for content',
+    name: 'Always show content translations',
   })
   expect(content.getAttribute('aria-checked')).toBe('true')
   expect(
     view
-      .getByRole('switch', { name: 'Always show multilingual values for addresses' })
+      .getByRole('switch', { name: 'Always show address translations' })
       .getAttribute('aria-checked'),
   ).toBe('false')
   await fireEvent.click(content)
@@ -91,7 +91,7 @@ it('shows inherited defaults without writing and supports an explicit false over
   expect(content.getAttribute('aria-checked')).toBe('false')
   expect(
     view
-      .getByRole('switch', { name: 'Always show multilingual values for addresses' })
+      .getByRole('switch', { name: 'Always show address translations' })
       .getAttribute('aria-checked'),
   ).toBe('true')
 })

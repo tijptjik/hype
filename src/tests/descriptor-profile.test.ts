@@ -93,14 +93,14 @@ it('translates only empty values in the chosen descriptor, including hidden lang
   await waitFor(() =>
     expect(
       within(description).getAllByRole('button', {
-        name: 'Accept translation',
+        name: /^Accept translation$/i,
         hidden: true,
       }).length,
     ).toBeGreaterThan(0),
   )
   expect(snapshot(view.container).data.i18n.ja.description ?? '').toBe('')
   for (const button of within(description).getAllByRole('button', {
-    name: 'Accept translation',
+    name: /^Accept translation$/i,
     hidden: true,
   }))
     await fireEvent.click(button)
@@ -154,14 +154,14 @@ it('shares one locale toolbar with subscription benefits and translates hidden e
   await waitFor(() =>
     expect(
       within(benefits).getAllByRole('button', {
-        name: 'Accept translation',
+        name: /^Accept translation$/i,
         hidden: true,
       }).length,
     ).toBeGreaterThan(0),
   )
   expect(snapshot(view.container).data.i18n.ja.subscriptionBenefits ?? '').toBe('')
   for (const button of within(benefits).getAllByRole('button', {
-    name: 'Accept translation',
+    name: /^Accept translation$/i,
     hidden: true,
   }))
     await fireEvent.click(button)
@@ -269,14 +269,14 @@ it('edits policy markdown inline, cancels safely and translates only the chosen 
   await waitFor(() =>
     expect(
       within(privacy).getAllByRole('button', {
-        name: 'Accept translation',
+        name: /^Accept translation$/i,
         hidden: true,
       }).length,
     ).toBeGreaterThan(0),
   )
   expect(snapshot(view.container).data.i18n.zhHant.privacyPolicy ?? '').toBe('')
   for (const button of within(privacy).getAllByRole('button', {
-    name: 'Accept translation',
+    name: /^Accept translation$/i,
     hidden: true,
   }))
     await fireEvent.click(button)

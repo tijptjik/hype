@@ -126,7 +126,7 @@ it('proposes empty selected values without publishing, then accepts individual f
   await waitFor(() =>
     expect(
       within(description).getAllByRole('button', {
-        name: 'Accept translation',
+        name: /^Accept translation$/i,
         hidden: true,
       }),
     ).toHaveLength(2),
@@ -134,7 +134,7 @@ it('proposes empty selected values without publishing, then accepts individual f
   expect(state(view.container).values.zhHant.description).toBe('')
   expect(state(view.container).values.ja?.description ?? '').toBe('')
   for (const button of within(description).getAllByRole('button', {
-    name: 'Accept translation',
+    name: /^Accept translation$/i,
     hidden: true,
   }))
     await fireEvent.click(button)
@@ -144,7 +144,7 @@ it('proposes empty selected values without publishing, then accepts individual f
   expect(state(view.container).values.en.title).toBe('')
   expect(screen.queryByRole('button', { name: 'description ja' })).toBeNull()
   expect(within(description).getByRole('status').textContent).toContain(
-    'Filled 2 translations.',
+    'Suggestions ready to review.',
   )
 })
 it('preserves verification, dynamic field registration, reorder and draft recovery across hidden locales', async () => {
@@ -198,10 +198,10 @@ it('protects a user starting an empty target edit during translation', async () 
   await fireEvent.click(screen.getByRole('button', { name: 'description ja' }))
   for (const complete of requests) complete({ status: 'translated', text: 'Machine' })
   await waitFor(() =>
-    expect(screen.getByRole('button', { name: 'Accept translation' })).toBeTruthy(),
+    expect(screen.getByRole('button', { name: /^Accept translation$/i })).toBeTruthy(),
   )
   expect(state(view.container).values.zhHant.description).toBe('')
-  await fireEvent.click(screen.getByRole('button', { name: 'Accept translation' }))
+  await fireEvent.click(screen.getByRole('button', { name: /^Accept translation$/i }))
   expect(state(view.container).values.zhHant.description).toBe('Machine')
   expect(state(view.container).values.ja?.description ?? '').toBe('')
 })
@@ -262,9 +262,12 @@ it('omits only the first displayed locale prefix and relabels rows after reorder
     'zh-Hans',
   ])
   expect(prefix('ja')).toBe('')
-  expect(prefixElement('ja').parentElement).toHaveStyle({
-    gridTemplateColumns: '0rem minmax(0,1fr) 2.5rem',
-  })
+  const prefixTrack = (locale: string) =>
+    required(prefixElement(locale).parentElement).style.gridTemplateColumns.split(
+      ' ',
+    )[0]
+  expect(prefixTrack('ja')).toBe('0rem')
+  expect(prefixTrack('en')).toBe('3rem')
   expect(prefix('en')).toBe('En')
 })
 
@@ -296,7 +299,7 @@ it('animates only the chosen source and fades completion in the field header aft
   await vi.advanceTimersByTimeAsync(0)
   const status = within(section as HTMLElement).getByRole('status')
   expect(status.parentElement?.querySelector('h3')?.textContent).toBe('Description')
-  expect(status.textContent).toContain('Filled 2 translations.')
+  expect(status.textContent).toContain('Suggestions ready to review.')
   expect(source.getAttribute('aria-busy')).toBe('false')
   await vi.advanceTimersByTimeAsync(3001)
   expect(status.getAttribute('aria-hidden')).toBe('true')
