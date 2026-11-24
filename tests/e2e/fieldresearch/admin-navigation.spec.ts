@@ -19,7 +19,6 @@ test('keeps Field Sessions accessible after Field Entries is moved', async ({
   await expect(menu.getByRole('link', { name: 'Field Entries' })).toHaveCount(0)
   await menu.getByRole('link', { name: 'Field Sessions' }).click()
   const editor = page.getByRole('region', { name: 'Field sessions' })
-  const session = editor.getByRole('link').first()
   await expect(editor).toBeVisible({ timeout: 60_000 })
 
   const toolbarTitle = page
@@ -29,66 +28,6 @@ test('keeps Field Sessions accessible after Field Entries is moved', async ({
   await expect(
     page.getByRole('heading', { level: 1, name: 'Field Sessions', exact: true }),
   ).toHaveCount(0)
-  await expect(session).toBeVisible({ timeout: 60_000 })
-  await expect(session).toContainText(/\d+\s+records?/)
-  await expect(session).toContainText(/Created by .+/)
-  await expect(session.locator('time')).toHaveAttribute('datetime', /\d{4}-\d{2}-\d{2}/)
-
-  // Check the actual rendered row against its column headings in the dark palette.
-  await page.evaluate(() =>
-    document.documentElement.setAttribute('data-theme', 'hype-dark'),
-  )
-  const heading = editor.getByText('Session', { exact: true }).first()
-  await expect(heading).toBeVisible()
-  const starts = (element: Element) =>
-    Array.from(element.children, child =>
-      Math.round(child.getBoundingClientRect().left),
-    )
-  expect(await session.evaluate(starts)).toEqual(
-    await heading.locator('..').evaluate(starts),
-  )
-  const contrast = await session.evaluate(row => {
-    const ctx = document.createElement('canvas').getContext('2d')!
-    const luminance = (color: string) => {
-      ctx.fillStyle = color
-      ctx.fillRect(0, 0, 1, 1)
-      const rgb = Array.from(ctx.getImageData(0, 0, 1, 1).data)
-        .slice(0, 3)
-        .map(v => v / 255)
-        .map(v => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
-      return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722
-    }
-    const background = luminance(getComputedStyle(row).backgroundColor)
-    return Array.from(
-      row.querySelectorAll('span, time'),
-      cell => (luminance(getComputedStyle(cell).color) + 0.05) / (background + 0.05),
-    )
-  })
-  expect(Math.min(...contrast)).toBeGreaterThanOrEqual(4.5)
-  const artifacts = process.env.DEV_RUNNER_ARTIFACTS
-  if (artifacts)
-    await page.screenshot({ path: join(artifacts, 'field-sessions-dark-desktop.png') })
-
-  // Lengthen the displayed title without changing the persisted session.
-  const title = session.locator(':scope > span').first().locator('span').first()
-  const original = await title.innerText()
-  await title.evaluate(el => {
-    el.textContent = 'A long field session title '.repeat(8)
-  })
-  expect(await session.evaluate(starts)).toEqual(
-    await heading.locator('..').evaluate(starts),
-  )
-  await page.setViewportSize({ width: 390, height: 844 })
-  await expect(heading).toBeHidden()
-  await expect(session.locator('time')).toBeInViewport()
-  expect(await session.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
-  if (artifacts)
-    await page.screenshot({ path: join(artifacts, 'field-sessions-dark-mobile.png') })
-  await title.evaluate((el, value) => {
-    el.textContent = value
-  }, original)
-  await page.setViewportSize({ width: 1600, height: 1000 })
-
   await expect(page.getByLabel('Session name')).toHaveCount(0)
   await page.getByRole('button', { name: 'New', exact: true }).click()
   await expect(page.getByLabel('Session name')).toBeVisible()
@@ -115,7 +54,7 @@ test('keeps Field Sessions accessible after Field Entries is moved', async ({
   await expect(code).toBeVisible()
   await expect(sectionTitle('Title template')).toBeVisible()
   await expect(
-    surface.getByRole('switch', { name: /Visible.*Feature type/ }),
+    surface.getByRole('switch', { name: 'Include · Feature type', exact: true }),
   ).toBeDisabled()
   await expect(surface.getByText('Recording settings', { exact: true })).toHaveCount(0)
   await expect(
@@ -171,4 +110,100 @@ test('shows and clears the required session code error', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText(
     'Enter a session code on the Profile tab.',
   )
+})
+
+test('aligns field session metadata in dark mode at different index widths', async ({
+  page,
+}) => {
+  test.setTimeout(420_000)
+  await page.setViewportSize({ width: 1600, height: 1000 })
+  await page.goto('/admin/field-recorder', { waitUntil: 'domcontentloaded' })
+  const auth = await (await page.request.get('/api/auth/get-session')).json()
+  expect(auth.user.id).toBe('hype-local-agent-admin')
+  await expect(page).toHaveURL(/\/admin\/field-recorder$/)
+  const editor = page.getByRole('region', { name: 'Field sessions' })
+  const session = editor.getByRole('link').first()
+  await expect(session).toBeVisible({ timeout: 360_000 })
+  await expect(session).toHaveAccessibleName(/\d+ records? Created by .+ Last updated/)
+  const updated = session.locator('time')
+  await expect(updated).toHaveText(/ago$/)
+  await expect(updated).toHaveAttribute('datetime', /\d{4}-\d{2}-\d{2}/)
+  await expect(updated).toHaveAttribute('title', /\d{4}/)
+
+  // Check the actual rendered row against its column headings in the dark palette.
+  await page.evaluate(() =>
+    document.documentElement.setAttribute('data-theme', 'hype-dark'),
+  )
+  const heading = editor.getByText('Session', { exact: true }).first()
+  await expect(heading).toBeVisible()
+  const starts = (element: Element) =>
+    Array.from(element.children, child =>
+      Math.round(child.getBoundingClientRect().left),
+    )
+  expect(await session.evaluate(starts)).toEqual(
+    await heading.locator('..').evaluate(starts),
+  )
+  const minimumContrast = () =>
+    session.evaluate(row => {
+      const ctx = document.createElement('canvas').getContext('2d')!
+      const luminance = (color: string) => {
+        ctx.fillStyle = color
+        ctx.fillRect(0, 0, 1, 1)
+        const rgb = Array.from(ctx.getImageData(0, 0, 1, 1).data)
+          .slice(0, 3)
+          .map(v => v / 255)
+          .map(v => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+        return rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722
+      }
+      const background = luminance(getComputedStyle(row).backgroundColor)
+      return Math.min(
+        ...Array.from(
+          row.querySelectorAll('span, time'),
+          cell =>
+            (luminance(getComputedStyle(cell).color) + 0.05) / (background + 0.05),
+        ),
+      )
+    })
+  await expect.poll(minimumContrast).toBeGreaterThanOrEqual(4.5)
+  const artifacts = process.env.DEV_RUNNER_ARTIFACTS
+  if (artifacts)
+    await page.screenshot({ path: join(artifacts, 'field-sessions-dark-desktop.png') })
+
+  // Lengthen the displayed title without changing the persisted session.
+  const title = session.locator(':scope > span').first().locator('span').first()
+  const original = await title.textContent()
+  await title.evaluate(el => {
+    el.textContent =
+      'Historic shopfront lettering and painted signs along the Central and Western District survey route'
+  })
+  expect(await session.evaluate(starts)).toEqual(
+    await heading.locator('..').evaluate(starts),
+  )
+  // The admin shell requires a 1200px viewport. Exercise the compact index inside it.
+  await page.setViewportSize({ width: 1200, height: 844 })
+  await expect(session.locator('time')).toBeInViewport()
+  await editor.evaluate(el => {
+    el.style.width = '390px'
+  })
+  await expect(heading).toBeHidden()
+  await expect(session.locator('time')).toBeInViewport()
+  expect(await session.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+  if (artifacts)
+    await session.screenshot({
+      path: join(artifacts, 'field-sessions-dark-compact.png'),
+    })
+  await editor.evaluate(el => {
+    el.style.removeProperty('width')
+  })
+  await title.evaluate((el, value) => {
+    el.textContent = value
+  }, original)
+  await page.setViewportSize({ width: 1600, height: 1000 })
+
+  const href = await session.getAttribute('href')
+  await session.focus()
+  await page.keyboard.press('Enter')
+  expect(href).toBeTruthy()
+  await expect(page).toHaveURL(new URL(href!, page.url()).href)
+  await expect(page.getByRole('button', { name: 'Profile', exact: true })).toBeVisible()
 })

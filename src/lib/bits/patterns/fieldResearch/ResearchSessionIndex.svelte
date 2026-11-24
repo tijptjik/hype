@@ -1,8 +1,10 @@
 <script lang="ts">
 // SVELTE
-import { untrack } from 'svelte'
+import { onMount, untrack } from 'svelte'
+// DATE FORMATTING
+import { formatDistance } from 'date-fns'
 // I18N
-import { getLocale } from '#lib/i18n.js'
+import { getLocale, toDateFnsLocale } from '#lib/i18n.js'
 // BITS COMPONENTS
 import { cx } from '#lib/bits/utils.js'
 import Avatar from '#lib/bits/core/avatar/Avatar.svelte'
@@ -31,6 +33,14 @@ let ready = $state(false)
 let failure = $state('')
 let hasMore = $state(false)
 let generation = 0
+let now = $state(Date.now())
+const dateLocale = $derived(toDateFnsLocale())
+onMount(() => {
+  const timer = setInterval(() => {
+    now = Date.now()
+  }, 30_000)
+  return () => clearInterval(timer)
+})
 const updatedFormat = $derived(
   new Intl.DateTimeFormat(getLocale(), {
     dateStyle: 'medium',
@@ -117,6 +127,7 @@ $effect(() => {
     >
       {#snippet row(session)}
         {@const creator = session.creatorName || session.createdBy}
+        {@const updatedAt = new Date(session.updatedAt)}
         <a
           class={rowClass}
           href={`${indexPath}?session=${encodeURIComponent(session.id)}`}
@@ -129,7 +140,7 @@ $effect(() => {
           </span>
           <span class="text-sm tabular-nums"
             >{session.recordCount}<span class="@min-[44rem]/sessions:sr-only">
-              {session.recordCount === 1 ? 'record' : 'records'}</span
+              {session.recordCount === 1 ? ' record' : ' records'}</span
             ></span
           >
           <span class="flex min-w-0 items-center gap-2 text-sm">
@@ -146,8 +157,11 @@ $effect(() => {
           </span>
           <span class="text-muted-foreground min-w-0 text-sm">
             <span class="sr-only">Last updated </span
-            ><time datetime={session.updatedAt}
-              >{updatedFormat.format(new Date(session.updatedAt))}</time
+            ><time datetime={session.updatedAt} title={updatedFormat.format(updatedAt)}
+              >{formatDistance(updatedAt, now, {
+                addSuffix: true,
+                locale: dateLocale,
+              })}</time
             >
           </span>
         </a>
