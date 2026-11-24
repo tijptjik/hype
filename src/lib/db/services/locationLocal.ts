@@ -12,6 +12,9 @@ import { serializeLocationFacts } from '#lib/locations/factsSnapshot.js'
 
 // DRIZZLE
 import { and, eq, sql } from 'drizzle-orm'
+import { prepareBuildingStreets } from './buildingStreetAddresses'
+import { prepareRevisionCheck } from './revisionBatch'
+import type { BuildingStreetsEdit } from '#lib/locations/buildingStreetAddresses.js'
 // IDENTITY
 import { nanoid } from 'nanoid'
 // SCHEMA
@@ -268,6 +271,7 @@ export async function updateLocalLocationAddress(
     branchId?: string
     kind?: LocationKind
     expectedKind?: LocationKind
+    buildingStreets?: BuildingStreetsEdit
     address?: unknown
     coordinates?: [number, number]
     divisionOverrides?: AddressDivisionOverrides
@@ -455,6 +459,20 @@ export async function updateLocalLocationAddress(
           ),
         ),
     )
+  if (input.buildingStreets) {
+    if (baseline.location.state !== 'manual' || kind !== 'building') return null
+    // Check that the profile correction committed before writing its street designations.
+    correction.queries.push(
+      prepareRevisionCheck(db, correction.guard),
+      ...(await prepareBuildingStreets(
+        db,
+        input.locationId,
+        input.organisationId,
+        input.buildingStreets,
+        input.actorId,
+      )),
+    )
+  }
   if (correction.queries.length)
     await db.batch(
       correction.queries as [

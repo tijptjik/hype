@@ -190,6 +190,7 @@ export async function updateCanonicalLocationDraft(
     sourceRevisionId: string
     expectedDraftVersion: string
     facts: LocationFacts
+    statements?: import('drizzle-orm/batch').BatchItem<'sqlite'>[]
   },
 ): Promise<string | null> {
   const current = await db.get<{ kind: string; rawSource: string }>(
@@ -216,6 +217,7 @@ export async function updateCanonicalLocationDraft(
       AND r.contentHash=${input.expectedDraftVersion}
       AND r.version=(SELECT max(version) FROM locationRevision WHERE locationId=l.id))`
   const result = await executeRevisionBatch(db, guard, [
+    ...(input.statements ?? []),
     db
       .update(locationRevisionInput)
       .set({ facts: sql`${serialized}`, contentHash })

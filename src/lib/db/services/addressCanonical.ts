@@ -62,7 +62,7 @@ function stable(value: unknown): string {
 /** Hash canonical content, not mutable publication metadata.
  * @param value Validated canonical JSON. @returns SHA-256 hexadecimal digest.
  */
-async function digest(value: unknown): Promise<string> {
+export async function canonicalAddressDigest(value: unknown): Promise<string> {
   return Array.from(
     new Uint8Array(
       await crypto.subtle.digest('SHA-256', new TextEncoder().encode(stable(value))),
@@ -82,7 +82,7 @@ export async function retainCanonicalAddress(
   expectedPreviousRevisionId?: string | null,
 ): Promise<typeof addressRevision.$inferSelect> {
   const input = CanonicalAddressInputSchema.parse(raw)
-  const addressId = 'address:' + (await digest(input.sourceKey))
+  const addressId = 'address:' + (await canonicalAddressDigest(input.sourceKey))
   if (expectedPreviousRevisionId !== undefined) {
     guard = and(
       guard,
@@ -91,7 +91,7 @@ export async function retainCanonicalAddress(
   }
   if (!(await db.get(sql`SELECT 1 WHERE ${guard}`)))
     throw new Error('Canonical address head changed; reload before importing')
-  const contentHash = await digest({
+  const contentHash = await canonicalAddressDigest({
     components: input.components,
     geometry: input.geometry,
   })
