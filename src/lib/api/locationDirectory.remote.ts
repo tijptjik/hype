@@ -33,7 +33,10 @@ import { AddressDivisionOverridesSchema } from '#lib/addresses/divisions.js'
 import { updateLocalLocationAddress } from '#lib/db/services/locationLocal.js'
 import { LocalLocationFootprintSchema } from '#lib/locations/footprint.js'
 // DB
+import { BuildingStreetsEditSchema } from '#lib/locations/buildingStreetAddresses.js'
+import { canManageSharedLocationIdentity } from '#lib/api/services/authz/location.js'
 import { physicalBuildingMembers } from '#lib/db/services/physicalBuilding.js'
+import { readBuildingStreets } from '#lib/db/services/buildingStreetAddresses.js'
 import { readLocationCurationLocks } from '#lib/db/services/locationCurationLocks.js'
 import { probeLocationIdentityScope } from '#lib/db/services/locationIdentityReview.js'
 import { archiveLocalLocation } from '#lib/db/services/locationDeletion.js'
@@ -186,6 +189,18 @@ export const getLocation = guardedQuery(
                     )
                   )?.members ?? '[]',
                 ) as import('#lib/locations/physicalBuilding.js').PhysicalBuildingMember[],
+                canEditBuildingStreets: Boolean(
+                  editingOrganisationId ||
+                    canManageSharedLocationIdentity({
+                      ...ctx.user,
+                      userRoles: ctx.userRoles,
+                    }),
+                ),
+                buildingStreets: await readBuildingStreets(
+                  ctx.db,
+                  input.id,
+                  editingOrganisationId,
+                ),
               }
             : {}),
           editingOrganisationId,
@@ -298,6 +313,7 @@ export const saveLocalLocationAddress = guardedCommand(
     kind: LocationKindSchema.optional(),
     expectedKind: LocationKindSchema.optional(),
     address: LocalLocationAddressSchema.optional(),
+    buildingStreets: BuildingStreetsEditSchema.optional(),
     coordinates: z
       .tuple([
         z.number().finite().min(-180).max(180),

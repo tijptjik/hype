@@ -11,6 +11,9 @@ import { guardedCommand, guardedQuery } from './server/guarded'
 import { probeFeatureForUpdate } from '#lib/db/services/feature.js'
 import { buildFeatureCommandScopeGuard } from '#lib/db/services/featureCommandScope.js'
 // DOMAIN / SERVICES
+import { canManageSharedLocationIdentity } from '#lib/api/services/authz/location.js'
+import { prepareBuildingStreets } from '#lib/db/services/buildingStreetAddresses.js'
+import { BuildingStreetsEditSchema } from '#lib/locations/buildingStreetAddresses.js'
 import { isCanonicalLocationDraft } from '#lib/locations/canonicalDraft.js'
 import { probeLocationIdentityScope } from '#lib/db/services/locationIdentityReview.js'
 import { updateCanonicalLocationDraft } from '#lib/db/services/locationCanonicalDraft.js'
@@ -201,7 +204,8 @@ export const saveSharedLocationDirectoryCorrection = guardedCommand(
     sourceRevisionId: z.string().min(1),
     expectedRevision: z.string().nullable(),
     expectedDraftVersion: z.string().min(1).optional(),
-    patch: SharedCorrectionPatchSchema,
+    patch: SharedCorrectionPatchSchema.optional(),
+    buildingStreets: BuildingStreetsEditSchema.optional(),
   }),
   async (input, ctx) => {
     if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
@@ -209,12 +213,40 @@ export const saveSharedLocationDirectoryCorrection = guardedCommand(
     const draft = identity && isCanonicalLocationDraft(identity)
     if (draft && !ctx.user.superAdmin) error(403, 'SUPER_ADMIN_REQUIRED')
     if (draft && !input.expectedDraftVersion) error(409, 'DRAFT_VERSION_REQUIRED')
-    if (!ctx.user.superAdmin) {
-      if (!input.organisationId) error(403, 'ORGANISATION_CONTEXT_REQUIRED')
+    if (!input.organisationId && !ctx.user.superAdmin)
+      error(403, 'ORGANISATION_CONTEXT_REQUIRED')
+    if (input.organisationId && (!ctx.user.superAdmin || input.buildingStreets))
       await requireLocationOrganisationManager(ctx, input.organisationId)
+    // Profile address relationships use the same authoring scope as Address choices.
+    if (
+      input.buildingStreets &&
+      !input.organisationId &&
+      !canManageSharedLocationIdentity({ ...ctx.user, userRoles: ctx.userRoles })
+    )
+      error(403, 'INSUFFICIENT_ROLE')
+    const streets = input.buildingStreets
+      ? await prepareBuildingStreets(
+          ctx.db,
+          input.locationId,
+          input.organisationId ?? null,
+          input.buildingStreets,
+          ctx.user.id,
+        )
+      : []
+    if (!input.patch) {
+      if (!streets.length) error(400, 'Choose a field to change')
+      // A streets-only save still checks the displayed community identity and source revision.
+      const guard = sql`EXISTS(SELECT 1 FROM location WHERE id=${input.locationId} AND state IN ('linked','unresolved'))
+        AND (SELECT id FROM locationSharedHead WHERE locationId=${input.locationId}) IS ${input.expectedRevision}
+        AND (SELECT id FROM locationRevisionContent WHERE locationId=${input.locationId} ORDER BY version DESC LIMIT 1)=${input.sourceRevisionId}
+        AND (${!draft ? 1 : 0} OR (SELECT contentHash FROM locationRevisionContent WHERE id=${input.sourceRevisionId})=${input.expectedDraftVersion ?? null})`
+      if (!(await executeRevisionBatch(ctx.db, guard, streets)))
+        error(409, 'SHARED_LOCATION_CHANGED')
+      return { revisionId: input.sourceRevisionId }
     }
     const shared = await prepareSharedLocationCorrection(ctx.db, {
       ...input,
+      patch: input.patch,
       draftWorkingCopy: Boolean(draft),
       actorId: ctx.user.id,
       rights: { canEdit: true, superAdmin: Boolean(ctx.user.superAdmin) },
@@ -228,6 +260,7 @@ export const saveSharedLocationDirectoryCorrection = guardedCommand(
         sourceRevisionId: input.sourceRevisionId,
         expectedDraftVersion: input.expectedDraftVersion!,
         facts: shared.facts,
+        statements: streets,
       })
       if (!version) error(409, 'SHARED_LOCATION_CHANGED')
       return { revisionId: input.sourceRevisionId, draftVersion: version }
@@ -244,7 +277,7 @@ export const saveSharedLocationDirectoryCorrection = guardedCommand(
       !(await executeRevisionBatch(
         ctx.db,
         sql`(${shared.guard}) AND (${propagation.guard})`,
-        [...shared.queries, ...propagation.statements],
+        [...streets, ...shared.queries, ...propagation.statements],
       ))
     )
       error(409, 'SHARED_LOCATION_CHANGED')
