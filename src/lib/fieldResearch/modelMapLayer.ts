@@ -56,12 +56,14 @@ function disposeModel(root: Object3D): void {
 /** Render the session's CSDI meshes together in the basemap's own WebGL context.
  * @param buildings Buildings with a geographic anchor.
  * @param onProgress Loaded and failed model counts for the current layer.
+ * @param onSurveyedPosition Position the building label on its imported geometry.
  * @returns A disposable MapLibre custom layer.
  * @remarks CSDI glTF is Y-up, with HK1980 easting on X and negative northing on Z.
  */
 export function sessionModelLayer(
   buildings: LocatedBuilding[],
   onProgress: (loaded: number, failed: number) => void,
+  onSurveyedPosition: (id: string, coordinates: [number, number]) => void,
 ): CustomLayerInterface {
   const scene = new Scene()
   const camera = new Camera()
@@ -115,6 +117,10 @@ export function sessionModelLayer(
             ) {
               model.position.x -= east
               model.position.z += north
+              onSurveyedPosition(
+                building.id,
+                grid.forward<[number, number]>([center.x, -center.z]),
+              )
             } else {
               model.position.set(
                 pointEast - east - center.x,

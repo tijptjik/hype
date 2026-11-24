@@ -2,7 +2,8 @@
 // SVELTE
 import { untrack } from 'svelte'
 // MAP
-import { LngLatBounds, type Map as LibreMap } from 'maplibre-gl'
+import { LngLatBounds, type GeoJSONSource, type Map as LibreMap } from 'maplibre-gl'
+import type { FeatureCollection, Point } from 'geojson'
 import { AttributionControl, NavigationControl } from 'svelte-maplibre-gl'
 import MapSurface from '#lib/bits/custom/map/MapSurface.svelte'
 import {
@@ -68,17 +69,16 @@ $effect(() => {
       return
     loaded = 0
     failed = 0
-    instance.addSource('session-buildings', {
-      type: 'geojson',
-      data: {
-        type: 'FeatureCollection',
-        features: points.map(b => ({
-          type: 'Feature',
-          geometry: { type: 'Point', coordinates: b.coordinates },
-          properties: { title: b.title, hasModel: Boolean(b.exteriorUrl) },
-        })),
-      },
-    })
+    const labels: FeatureCollection<Point> = {
+      type: 'FeatureCollection',
+      features: points.map(b => ({
+        type: 'Feature',
+        id: b.id,
+        geometry: { type: 'Point', coordinates: b.coordinates },
+        properties: { title: b.title, hasModel: Boolean(b.exteriorUrl) },
+      })),
+    }
+    instance.addSource('session-buildings', { type: 'geojson', data: labels })
     instance.addLayer({
       id: 'session-unmodelled',
       type: 'circle',
@@ -92,10 +92,19 @@ $effect(() => {
       },
     })
     instance.addLayer(
-      sessionModelLayer(points, (visible, errors) => {
-        loaded = visible
-        failed = errors
-      }),
+      sessionModelLayer(
+        points,
+        (visible, errors) => {
+          loaded = visible
+          failed = errors
+        },
+        (id, coordinates) => {
+          const label = labels.features.find(feature => feature.id === id)
+          if (!label) return
+          label.geometry.coordinates = coordinates
+          instance.getSource<GeoJSONSource>('session-buildings')?.setData(labels)
+        },
+      ),
     )
     instance.addLayer({
       id: 'session-model-labels',
