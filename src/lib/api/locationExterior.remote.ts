@@ -9,6 +9,7 @@ import { guardedCommand, guardedQuery } from './server/guarded'
 // DATABASE
 import { locationExteriorModel } from '#lib/db/schema/locationExteriorModel.js'
 // STORAGE
+import { textureComparisonFile } from '#lib/locations/exterior/textureComparison.server.js'
 import { premisesMapBucket } from '#lib/indoor/server/storage.js'
 import {
   extractModel,
@@ -150,6 +151,10 @@ export const getLocationExterior = guardedQuery(inputSchema, async (input, ctx) 
     model: model
       ? {
           ...model,
+          comparisonFile: await textureComparisonFile(
+            ctx.event.locals.platform,
+            model.assetId,
+          ),
           url: `/api/location-exterior/${encodeURIComponent(input.locationId)}/${model.assetId}/${model.sourceModelId}.gltf`,
         }
       : null,

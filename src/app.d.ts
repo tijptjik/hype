@@ -71,6 +71,7 @@ declare global {
         ROUTING_TOKEN?: string
         MAP_RENDER_QUEUE: Queue<MapRenderJob>
         ASSET_RENDER_QUEUE: Queue<AssetRenderJob>
+        LOCAL_EXTERIOR_COMPARISONS?: R2Bucket
         ASSET_RAW_DEV: R2Bucket
         ASSET_RAW_PREVIEW: R2Bucket
         ASSET_RAW_PRODUCTION: R2Bucket

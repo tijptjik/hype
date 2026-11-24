@@ -7,17 +7,19 @@ import { locationExteriorModel } from '#lib/db/schema/locationExteriorModel.js'
 // AUTHORIZATION
 import { authorizeExteriorLocation } from '#lib/locations/exterior/authorize.server.js'
 // STORAGE
+import { textureComparisonBucket } from '#lib/locations/exterior/textureComparison.server.js'
 import { premisesMapBucket } from '#lib/indoor/server/storage.js'
 
 /** Serve a file from the current authorized exterior model. @param event Request context. @returns Model file. */
 export const GET: RequestHandler = async event => {
   const { params, locals, platform, request } = event
+  const comparison = /^comparison-[0-9a-f]{64}\.glb$/.test(params.file ?? '')
   if (
     !params.id ||
     !params.asset ||
     !params.file ||
     !/^[a-f0-9-]{36}$/.test(params.asset) ||
-    !/^[a-zA-Z0-9_.-]+\.(gltf|bin|jpg|jpeg|png)$/i.test(params.file)
+    (!comparison && !/^[a-zA-Z0-9_.-]+\.(gltf|bin|jpg|jpeg|png)$/i.test(params.file))
   )
     error(404, 'MODEL_NOT_FOUND')
   const ctx = {
@@ -35,9 +37,10 @@ export const GET: RequestHandler = async event => {
     .where(eq(locationExteriorModel.locationId, params.id))
     .get()
   if (!model || model.assetId !== params.asset) error(404, 'MODEL_NOT_FOUND')
-  const object = await premisesMapBucket(locals.platform).get(
-    `location-exteriors/${params.asset}/${params.file}`,
-  )
+  const bucket = comparison
+    ? textureComparisonBucket(locals.platform)
+    : premisesMapBucket(locals.platform)
+  const object = await bucket.get(`location-exteriors/${params.asset}/${params.file}`)
   if (!object) error(404, 'MODEL_NOT_FOUND')
   return new Response(object.body as unknown as ReadableStream<Uint8Array>, {
     headers: {

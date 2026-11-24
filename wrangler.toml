@@ -70,6 +70,12 @@ binding = "ASSET_RAW_PRODUCTION"
 bucket_name = "hype-assets-raw-prod"
 remote = true
 
+# Local facade comparisons are available to both desktop development personas.
+[[r2_buckets]]
+binding = "LOCAL_EXTERIOR_COMPARISONS"
+bucket_name = "hype-assets-raw-dev"
+remote = false
+
 # Local catalogue research shares the importer persistence without changing published assets.
 [[r2_buckets]]
 binding = "CATALOGUE_LOCAL_ASSETS"
