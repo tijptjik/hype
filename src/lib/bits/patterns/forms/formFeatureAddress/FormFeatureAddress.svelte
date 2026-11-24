@@ -69,6 +69,7 @@ let {
   centerLocationControl = false,
   coordinatesInLocationControl = false,
   displayAddressInToolbar = false,
+  primaryDisplay,
   locationActions,
   toolbarControls,
   toolbarInfo,
@@ -126,6 +127,7 @@ let {
   identityInfo?: Snippet
   coordinatesInLocationControl?: boolean
   displayAddressInToolbar?: boolean
+  primaryDisplay?: (tag: string) => string
   locationControl?: Snippet<[Snippet?]>
   centerLocationControl?: boolean
   toolbarControls?: Snippet
@@ -663,7 +665,8 @@ $effect(() => {
         {divisions}
         {address}
         locale={displayLocale}
-        {isEditing}
+        displayText={primaryDisplay?.(addressLocaleState.selectedLocales[0] ?? 'en')}
+        isEditing={isEditing && !primaryDisplay}
         alignEnd={false}
         scrollWhenConstrained={true}
         {onChange}
@@ -675,7 +678,7 @@ $effect(() => {
   bind:toolbarWidth
   bind:coordinatesCompact
   measurementCoordinates={expandedCoordinatesControl}
-  measurementKey={`${getAddressDisplay(address, displayLocale, divisions, locationKind)}:${Object.hasOwn(address.overrides[ADDRESS_LOCALES[displayLocale]] ?? {}, 'formattedAddress')}`}
+  measurementKey={`${primaryDisplay?.(addressLocaleState.selectedLocales[0] ?? 'en') ?? getAddressDisplay(address, displayLocale, divisions, locationKind)}:${Object.hasOwn(address.overrides[ADDRESS_LOCALES[displayLocale]] ?? {}, 'formattedAddress')}`}
   singleRowToolbar={displayAddressInToolbar}
   {centerLocationControl}
   locationControl={displayAddressInToolbar ? addressToolbar : locationControl}

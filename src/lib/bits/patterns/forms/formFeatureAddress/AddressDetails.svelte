@@ -54,6 +54,7 @@ import { normalizeNameSearch } from '#lib/addresses/nameSearch.js'
 import AddressDisplayField from './AddressDisplayField.svelte'
 import { ADDRESS_BLOCK_TYPES } from '@saanseoi/address/content'
 import AddressReadOnly from './AddressReadOnly.svelte'
+import type { BuildingStreet } from '#lib/locations/buildingStreetAddresses.js'
 import { Button } from '#lib/bits/core/index.js'
 import { TextInput, SelectField } from '#lib/bits/custom/form/index.js'
 // ICONS
@@ -139,6 +140,9 @@ let {
   coordinates,
   locationKind,
   identityFields,
+  streetAddresses,
+  buildingStreets = [],
+  primaryDisplay,
   identityControls,
   identityInfo,
   divisions = [],
@@ -182,6 +186,9 @@ let {
   coordinates?: readonly number[] | null
   locationKind?: string
   identityFields?: Snippet<[boolean]>
+  streetAddresses?: Snippet<[string[]]>
+  buildingStreets?: BuildingStreet[]
+  primaryDisplay?: (tag: string) => string
   identityControls?: Snippet
   identityInfo?: Snippet
   divisions?: AddressDivision[]
@@ -823,11 +830,15 @@ const labels = $derived<Record<EditableAddressField, string>>({
   accessHint: m.feature_address_accessHint(),
 })
 // Display text and access directions do not constitute structured address components.
-const hasStructuredAddress = $derived(hasStructuredAddressComponents(address))
+const hasStructuredAddress = $derived(
+  buildingStreets.length > 0 || hasStructuredAddressComponents(address),
+)
 const availableFields = $derived(
   EDITABLE_ADDRESS_FIELDS.filter(
     field =>
       (!hideDisplayAddress || field !== 'formattedAddress') &&
+      (!buildingStreets.length ||
+        (field !== 'streetName' && field !== 'buildingNumberExpression')) &&
       ((showAccessHints && locationKind !== 'address') || field !== 'accessHint') &&
       (show3dAddressOptions ||
         !['floorExpression', 'unitExpression', 'unitPortion'].includes(field)),
@@ -921,9 +932,11 @@ const shownLocales = $derived(
 const displayAddressRows = $derived(
   shownLocales.flatMap(tag => {
     const locale = addressLocaleKey(tag)
-    const value = locale
-      ? getAddressDisplay(address, locale, divisions, locationKind)
-      : additionalLocaleValue(tag, 'formattedAddress')
+    const value =
+      primaryDisplay?.(tag) ??
+      (locale
+        ? getAddressDisplay(address, locale, divisions, locationKind)
+        : additionalLocaleValue(tag, 'formattedAddress'))
     return value.trim() ? [{ tag, value }] : []
   }),
 )
@@ -957,6 +970,7 @@ function changeLocaleState(state: ProfileLocaleState): void {
  */
 function additionalLocaleValue(tag: string, field: EditableAddressField): string {
   const key = tag.toLowerCase()
+  if (field === 'formattedAddress' && primaryDisplay) return primaryDisplay(tag)
   if (field === 'accessHint') return address.accessHints?.[key] ?? ''
   const content =
     address.association?.content ??
@@ -1071,9 +1085,14 @@ const visibleGroups = $derived(
   fieldGroups
     .map(group => ({
       ...group,
+      streetSection: group.fields.includes('streetName'),
       fields: group.fields.filter(field => visibleFields.includes(field)),
     }))
-    .filter(group => group.fields.length),
+    .filter(
+      group =>
+        group.fields.length ||
+        (group.streetSection && (streetAddresses || buildingStreets.length)),
+    ),
 )
 /** Invalidate pending building-detail responses before an authored name edit.
  * @returns Nothing; no Location association is changed.
@@ -1659,6 +1678,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
       primaryLocale={selectedLocales[0]}
       additionalValue={additionalLocaleValue}
       groups={fieldGroups}
+      {buildingStreets}
       displayRows={viewerDisplayAddressRows}
       {displayStale}
       {labels}
@@ -1714,7 +1734,8 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                     {divisions}
                     {address}
                     {locale}
-                    {isEditing}
+                    displayText={primaryDisplay?.(tag)}
+                    isEditing={isEditing && !primaryDisplay}
                     showLocale={translations}
                     localeLabelOutside
                     compact={true}
@@ -1725,6 +1746,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                   <input
                     aria-label={labels.formattedAddress}
                     class="border-border bg-panel h-12 min-w-0 rounded-lg border px-3"
+                    readonly={Boolean(primaryDisplay)}
                     value={additionalLocaleValue(tag, 'formattedAddress')}
                     oninput={event =>
                       editAdditionalLocale(
@@ -1752,17 +1774,18 @@ function blockTypeFirst(locale: LocaleKey): boolean {
           <LinkedFieldToggle field="location" label={m.feature_address_title()} />
         </h3>
       {/if}
-      {#each visibleGroups as { fields: group, title }, groupIndex (group[0])}
+      {#each visibleGroups as { fields: group, title, streetSection }, groupIndex (title ??
+        group[0])}
         {@const streetWithNumber =
           group.includes('streetName') && group.includes('buildingNumberExpression')}
         <div
           hidden={linkedFields && !linkedFields.visible('location')}
-          data-address-group={group[0]}
+          data-address-group={streetSection ? 'buildingNumberExpression' : group[0]}
           class="col-span-6 min-w-0 {groupIndex
             ? 'border-t border-border/40 pt-6'
             : ''}"
         >
-          {#if title}
+          {#if title && !(streetSection && buildingStreets.length && !streetAddresses)}
             <h3 class="text-muted-foreground mb-2 text-xs font-medium">{title()}</h3>
           {/if}
           {#if group[0] === 'accessHint'}
@@ -1774,6 +1797,7 @@ function blockTypeFirst(locale: LocaleKey): boolean {
             </div>
           {/if}
           <div
+            hidden={!group.length}
             class={group.length > 1
               ? 'max-w-full min-w-0 overflow-x-auto [contain:inline-size_paint]'
               : ''}
@@ -1869,6 +1893,8 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                           <input
                             class="border-border bg-panel h-12 min-w-0 rounded-lg border px-3 text-base font-medium"
                             aria-label={labels[field]}
+                            readonly={field === 'formattedAddress' &&
+                              Boolean(primaryDisplay)}
                             value={additionalLocaleValue(rowTag, field)}
                             oninput={event =>
                               editAdditionalLocale(
@@ -2146,7 +2172,8 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                                       {divisions}
                                       {address}
                                       {locale}
-                                      {isEditing}
+                                      displayText={primaryDisplay?.(rowTag)}
+                                      isEditing={isEditing && !primaryDisplay}
                                       showLocale={translations}
                                       localeLabelOutside
                                       {onChange}
@@ -2699,6 +2726,21 @@ function blockTypeFirst(locale: LocaleKey): boolean {
               {/each}
             </div>
           </div>
+          {#if streetSection}
+            {#if streetAddresses}
+              {@render streetAddresses(shownLocales)}
+            {:else if buildingStreets.length}
+              <AddressReadOnly
+                {address}
+                {buildingStreets}
+                {labels}
+                locales={shownLocales.map(tag => ({ tag, key: addressLocaleKey(tag) }))}
+                primaryLocale={selectedLocales[0]}
+                additionalValue={additionalLocaleValue}
+                groups={fieldGroups.filter(item => item.fields.includes('streetName'))}
+              />
+            {/if}
+          {/if}
           {#if group.includes('buildingName') && selectedBuilding?.mismatch}
             <div
               role="status"

@@ -26,6 +26,14 @@ import LocalAddressParseReview from './LocalAddressParseReview.svelte'
 import LocationRecordDetails from './LocationRecordDetails.svelte'
 import LocationLocaleField from './LocationLocaleField.svelte'
 import { TextInput } from '#lib/bits/custom/form/index.js'
+import BuildingStreetAddresses from './BuildingStreetAddresses.svelte'
+import {
+  BuildingStreetsEditSchema,
+  buildingStreetLabel,
+  primaryBuildingStreet,
+  streetFromContent,
+  type BuildingStreet,
+} from '#lib/locations/buildingStreetAddresses.js'
 import BuildingUnnamedField from './BuildingUnnamedField.svelte'
 import DraftLocationNameFields from '../featureLocation/DraftLocationNameFields.svelte'
 import LocaleToolbar from '#lib/bits/custom/localeControls/LocaleToolbar.svelte'
@@ -130,6 +138,32 @@ const editableFacts = $derived(
   communityRecord ? (place.sharedFacts ?? place.facts) : place.facts,
 )
 let draft = $state<FeatureAddress | null>(null)
+let editing = $state(false)
+let kind = $state<LocationKind>('unknown')
+const activeKind = $derived(editing ? kind : place.kind)
+let streetDraft = $state<BuildingStreet[]>([])
+let originalStreets = $state<BuildingStreet[]>([])
+const streetRows = $derived(editing ? streetDraft : (place.buildingStreets ?? []))
+const streetChange = $derived(
+  activeKind === 'building' &&
+    editing &&
+    JSON.stringify(streetDraft) !== JSON.stringify(originalStreets)
+    ? {
+        expectedHeads: originalStreets.flatMap(row => (row.head ? [row.head] : [])),
+        rows: streetDraft,
+      }
+    : undefined,
+)
+const invalidStreets = $derived(
+  streetChange && !BuildingStreetsEditSchema.safeParse(streetChange).success,
+)
+const primaryStreet = $derived(
+  activeKind === 'building' ? primaryBuildingStreet(streetRows) : undefined,
+)
+const primaryDisplay = $derived.by(() => {
+  const selected = primaryStreet
+  return selected ? (tag: string) => buildingStreetLabel(selected, tag) : undefined
+})
 let names = $state<Record<string, string>>({})
 let localeState = $state<ProfileLocaleState>({
   selectedLocales: normalizeContentLocales([
@@ -144,7 +178,6 @@ let localeState = $state<ProfileLocaleState>({
 let lifecycle = $state<LocationLifecycleSummary>({})
 let successorLocationId = $state<string | null>(null)
 let initialLifecycleSignature = $state('')
-let kind = $state<LocationKind>('unknown')
 let unnamedChoice = $state(false)
 const hasDraftName = $derived(Object.values(names).some(value => value.trim()))
 const confirmedUnnamed = $derived(kind === 'building' && !hasDraftName && unnamedChoice)
@@ -156,7 +189,6 @@ let coordinates = $state<[number, number]>([0, 0])
 let expectedRevisionId = $state('')
 let expectedOrganisationRevision = $state<string | null>(null)
 let parseReview = $state.raw<AddressParseResult | undefined>()
-let editing = $state(false)
 let busy = $state(false)
 let failed = $state(false)
 let saved = $state(false)
@@ -223,7 +255,6 @@ const address = $derived(editing && draft ? draft : presentationAddress)
 const point = $derived(
   editing ? coordinates : (place.facts?.location.geometry.coordinates ?? [0, 0]),
 )
-const activeKind = $derived(editing ? kind : place.kind)
 const kindLabel = $derived(
   activeKind === 'building_part' && place.indoorSource?.category
     ? canonicalFacilityLabel(facilitySymbol(place.indoorSource.category).label)
@@ -241,6 +272,8 @@ function edit(): void {
     !place.revisionId
   )
     return
+  originalStreets = structuredClone(place.buildingStreets ?? [])
+  streetDraft = structuredClone(place.buildingStreets ?? [])
   branch = structuredClone(editableFacts?.branch ?? {})
   format = structuredClone(editableFacts?.format ?? {})
   branchId = editableFacts?.branchId ?? ''
@@ -433,6 +466,7 @@ async function save(): Promise<void> {
     coordinateInvalid ||
     !editedNames.success ||
     lifecycleInvalid ||
+    invalidStreets ||
     !draft
   )
     return
@@ -507,20 +541,22 @@ async function save(): Promise<void> {
         patch.groupId = groupLink
           ? { mode: 'override', value: groupLink }
           : { mode: 'inherit' }
-      if (Object.keys(patch).length)
+      if (Object.keys(patch).length || streetChange)
         await saveSharedLocationDirectoryCorrection({
           locationId: place.id,
           organisationId: place.editingOrganisationId ?? undefined,
           sourceRevisionId: expectedRevisionId,
           expectedDraftVersion: place.draftVersion ?? undefined,
           expectedRevision: place.sharedRevision ?? null,
-          patch,
+          patch: Object.keys(patch).length ? patch : undefined,
+          buildingStreets: streetChange && $state.snapshot(streetChange),
         })
     } else
       await saveLocalLocationAddress({
         locationId: place.id,
         organisationId: place.editingOrganisationId ?? undefined,
         expectedOrganisationRevision,
+        buildingStreets: streetChange && $state.snapshot(streetChange),
         expectedRevisionId,
         kind: kind !== expectedKind ? kind : undefined,
         expectedKind,
@@ -592,6 +628,7 @@ const title = $derived(
 const contentLocales = $derived(
   normalizeContentLocales([
     ...Object.keys(editing ? names : (place.facts?.names ?? {})),
+    ...streetRows.flatMap(row => Object.keys(row.names)),
     ...Object.keys(address.overrides),
     ...Object.keys(address.accessHints ?? {}),
     ...Object.keys(
@@ -641,7 +678,8 @@ $effect(() => {
   onControlsChange({
     dirty:
       editing &&
-      (Object.keys(profileValues).length > 0 ||
+      (Boolean(streetChange) ||
+        Object.keys(profileValues).length > 0 ||
         Boolean(sharedBrandEdit) ||
         Object.keys(changedLinks).length > 0 ||
         JSON.stringify(branch) !== JSON.stringify(editableFacts?.branch ?? {}) ||
@@ -657,8 +695,12 @@ $effect(() => {
           successorLocationId,
         ]) !== initialSignature),
     isSubmitting: busy || lookingUp,
+    disableSave: Boolean(invalidStreets),
     hasIssues:
-      coordinateInvalid || (editing && !editedNames.success) || lifecycleInvalid,
+      coordinateInvalid ||
+      (editing && !editedNames.success) ||
+      lifecycleInvalid ||
+      Boolean(invalidStreets),
     canEdit: Boolean(canEditRecord && place.state !== 'redirect' && place.facts),
     content: place.canManageCommunityLocks ? lockControls : null,
     canPublish: false,
@@ -688,6 +730,20 @@ $effect(() => {
         openFields,
       })
       await onSaved()
+    }}
+  />
+{/snippet}
+
+{#snippet buildingStreetList(locales: string[])}
+  <BuildingStreetAddresses
+    rows={streetRows}
+    invalid={Boolean(invalidStreets)}
+    {locales}
+    onChange={rows => (streetDraft = rows)}
+    seed={() => {
+      if (!draft) return null
+      const row = streetFromContent(localAddressContent($state.snapshot(draft)))
+      return row.number && Object.keys(row.names).length ? row : null
     }}
   />
 {/snippet}
@@ -959,6 +1015,12 @@ $effect(() => {
                 class="@container grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] items-start gap-8"
               >
                 <AddressDetails
+                  {primaryDisplay}
+                  buildingStreets={activeKind === 'building' ? streetRows : undefined}
+                  streetAddresses={activeKind === 'building' &&
+                  place.canEditBuildingStreets
+                    ? buildingStreetList
+                    : undefined}
                   localeState={editorLocaleState}
                   translations={localeState.expanded}
                   showLocaleToolbar={false}
@@ -999,7 +1061,7 @@ $effect(() => {
                   isEditing={editing}
                   onChange={next => (draft = next)}
                 />
-                {#if editing && draft}
+                {#if editing && draft && !primaryStreet}
                   <details class="border-border col-span-full border-t pt-4">
                     <summary class="text-muted-foreground cursor-pointer text-sm">
                       {m.location_address_parse()}
@@ -1039,6 +1101,14 @@ $effect(() => {
         <div class="space-y-6 px-6 py-6">
           <LocationRelationships
             onCompositionSaved={onSaved}
+            onAddressChanged={async () => {
+              await onSaved()
+              // A relationship reorder can refresh a clean street draft while another profile field is being edited.
+              if (!streetChange) {
+                originalStreets = structuredClone(place.buildingStreets ?? [])
+                streetDraft = structuredClone(place.buildingStreets ?? [])
+              }
+            }}
             locationId={place.id}
             kind={place.kind}
             organisationId={place.editingOrganisationId ?? null}
@@ -1070,6 +1140,8 @@ $effect(() => {
 >
   {#if place.facts}
     <FormFeatureAddress
+      localeState={editorLocaleState}
+      {primaryDisplay}
       displayAddressInToolbar={true}
       locationKind={activeKind}
       {address}

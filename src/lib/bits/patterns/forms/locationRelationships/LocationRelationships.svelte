@@ -29,12 +29,14 @@ let {
   queryScope = '',
   canEdit = false,
   onCompositionSaved,
+  onAddressChanged,
 }: {
   locationId: string
   kind: LocationKind
   organisationId?: string | null
   queryScope?: string
   canEdit?: boolean
+  onAddressChanged?: () => Promise<void>
   onCompositionSaved?: () => Promise<void>
 } = $props()
 let refreshVersion = $state(0)
@@ -183,6 +185,7 @@ async function save(
       history: false,
       afterId: undefined,
     }).refresh()
+    if (table === 'locationAddress') await onAddressChanged?.()
     // Membership withdrawals must also refresh the visible constituents and add picker.
     if (table === 'locationMembership') {
       if (organisationId && kind === 'building')
@@ -232,6 +235,7 @@ async function save(
         {organisationId}
         {canEdit}
         table={table as 'locationMembership' | 'locationOccupancy' | 'locationAddress'}
+        {onAddressChanged}
         onSave={save}
         {saving}
       >
@@ -300,6 +304,7 @@ async function save(
                   history: false,
                   afterId: undefined,
                 }).refresh()
+                await onAddressChanged?.()
                 linkingAddresses = false
                 refreshVersion++
               }}

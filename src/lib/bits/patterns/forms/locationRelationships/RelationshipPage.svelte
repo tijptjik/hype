@@ -28,11 +28,13 @@ let {
   canEdit,
   saving,
   onSave,
+  onAddressChanged,
   actions,
   showOperatingHosts = false,
   editor,
 }: {
   showOperatingHosts?: boolean
+  onAddressChanged?: () => Promise<void>
   actions?: Snippet
   editor?: Snippet
   locationId: string
@@ -160,6 +162,7 @@ async function saveOrder(clear = false): Promise<void> {
       afterId = undefined
       order = []
       await request.refresh()
+      await onAddressChanged?.()
     }
   } catch (error) {
     failure = error instanceof Error ? error.message : m.relationship_conflict()

@@ -18,6 +18,10 @@ import StreetIcon from 'virtual:icons/lucide/signpost'
 import { shortLocaleLabel } from '#lib/bits/custom/localeControls/localeControls.js'
 // ADDRESS
 import { addressComponentValue } from '#lib/addresses/presentation.js'
+import {
+  primaryBuildingStreet,
+  type BuildingStreet,
+} from '#lib/locations/buildingStreetAddresses.js'
 import { formatFloor } from '#lib/addresses/address3d.js'
 // TYPES
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
@@ -31,9 +35,11 @@ let {
   additionalValue,
   groups,
   labels,
+  buildingStreets = [],
   displayRows = [],
   displayStale = false,
 }: {
+  buildingStreets?: BuildingStreet[]
   displayRows?: { tag: string; value: string }[]
   displayStale?: boolean
   address: FeatureAddress
@@ -58,6 +64,48 @@ const sections = $derived(
   groups.flatMap(group => {
     const key = group.fields[0]
     if (!(key in icons)) return []
+    const header = {
+      key,
+      title: group.title?.(),
+      Icon: icons[key as keyof typeof icons],
+    }
+    if (key === 'buildingNumberExpression' && buildingStreets.length) {
+      const primary = primaryBuildingStreet(buildingStreets)
+      return [
+        {
+          ...header,
+          rows: buildingStreets.map(street => {
+            const names = locales.flatMap(({ tag }) =>
+              street.names[tag.toLowerCase()]
+                ? [{ tag, value: street.names[tag.toLowerCase()] }]
+                : [],
+            )
+            if (!names.length) {
+              const fallback = Object.entries(street.names)[0]
+              if (fallback) names.push({ tag: fallback[0], value: fallback[1] })
+            }
+            return {
+              primary: primary === street,
+              fields: [
+                {
+                  field: key,
+                  shared: true,
+                  values: [{ tag: primaryLocale, value: street.number }],
+                },
+                {
+                  field: 'streetName' as const,
+                  shared: false,
+                  values: names.filter(
+                    (name, index) =>
+                      names.findIndex(other => other.value === name.value) === index,
+                  ),
+                },
+              ],
+            }
+          }),
+        },
+      ]
+    }
     const fields = group.fields.flatMap(field => {
       // Match the editor's shared fields; localized names retain only distinct values.
       const shared =
@@ -83,10 +131,8 @@ const sections = $derived(
     return fields.length
       ? [
           {
-            key,
-            title: group.title?.(),
-            Icon: icons[key as keyof typeof icons],
-            fields,
+            ...header,
+            rows: [{ fields, primary: false }],
           },
         ]
       : []
@@ -155,31 +201,40 @@ const sections = $derived(
           <h3 class="text-muted-foreground text-xs font-semibold tracking-wide">
             {section.title}
           </h3>
-          <dl class="grid min-w-0 grid-cols-1 gap-x-6 gap-y-3 @min-[24rem]:grid-cols-2">
-            {#each section.fields as { field, values, shared } (field)}
-              <div class="min-w-0" data-address-part={field}>
-                <dt class="text-muted-foreground mb-1 text-xs">{labels[field]}</dt>
-                {#each values as { tag, value } (tag)}
-                  <dd
-                    animate:flip={{ duration: reducedMotion.current ? 0 : 200 }}
-                    transition:slide={{
-                      duration: reducedMotion.current ? 0 : 200,
-                      easing: cubicInOut,
-                    }}
-                    lang={tag}
-                    class="text-foreground flex min-w-0 items-baseline gap-2 text-base leading-relaxed font-medium"
-                  >
-                    {#if !shared && tag !== primaryLocale}
-                      <span class="text-muted-foreground shrink-0 font-mono text-xs"
-                        >{shortLocaleLabel(tag)}</span
-                      >
+          {#each section.rows as row, index (index)}
+            <dl
+              class="grid min-w-0 grid-cols-1 gap-x-6 gap-y-3 @min-[24rem]:grid-cols-2"
+            >
+              {#each row.fields as { field, values, shared } (field)}
+                <div class="min-w-0" data-address-part={field}>
+                  <dt class="text-muted-foreground mb-1 text-xs">
+                    {labels[field]}
+                    {#if row.primary && field === 'buildingNumberExpression'}
+                      <span class="ml-2">{m.building_street_primary()}</span>
                     {/if}
-                    <span class="min-w-0 break-words whitespace-normal">{value}</span>
-                  </dd>
-                {/each}
-              </div>
-            {/each}
-          </dl>
+                  </dt>
+                  {#each values as { tag, value } (tag)}
+                    <dd
+                      animate:flip={{ duration: reducedMotion.current ? 0 : 200 }}
+                      transition:slide={{
+                        duration: reducedMotion.current ? 0 : 200,
+                        easing: cubicInOut,
+                      }}
+                      lang={tag}
+                      class="text-foreground flex min-w-0 items-baseline gap-2 text-base leading-relaxed font-medium"
+                    >
+                      {#if !shared && tag !== primaryLocale}
+                        <span class="text-muted-foreground shrink-0 font-mono text-xs"
+                          >{shortLocaleLabel(tag)}</span
+                        >
+                      {/if}
+                      <span class="min-w-0 break-words whitespace-normal">{value}</span>
+                    </dd>
+                  {/each}
+                </div>
+              {/each}
+            </dl>
+          {/each}
         </div>
       </section>
     {/each}

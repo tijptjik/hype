@@ -1960,6 +1960,15 @@ existing HYPE Building as current, unranked address relationships in the editor'
 Field Research finds the same Location when a researcher searches for a linked address.
 The Building card shows its display address.
 
+In **Profile → Address → Street**, an editor can save a building's own street numbers or
+ranges and localized street names. Each confirmed row has an authored HYPE address
+identity and an immutable `locationAddress` relationship in the selected scope. **Set as
+primary** gives that row the highest priority among the building's authored street
+addresses. The Profile display uses the uniquely highest ranked row and falls back to
+the existing display when all rows are unranked or the best rank is tied. Profile Save
+commits the address changes together with the other profile edits. Individual published
+house numbers remain available in **Relationships**. Refs #194.
+
 In **Field Research → Locations → Buildings**, **Use Building** includes the selected
 record. **Create Physical Building** creates a separate HYPE identity and imports or
 reuses the selected SaanSeoi Building as its first constituent. **Add to Physical

@@ -30,6 +30,7 @@ import type { LocaleKey } from '#lib/types.js'
 
 let {
   address,
+  displayText,
   locationKind,
   coordinates,
   divisions = [],
@@ -47,6 +48,7 @@ let {
   onChange,
 }: {
   address: FeatureAddress
+  displayText?: string
   coordinates?: readonly number[] | null
   locationKind?: string
   divisions?: AddressDivision[]
@@ -74,7 +76,8 @@ $effect(() => {
 })
 const uid = $props.id()
 const value = $derived(
-  getAddressDisplay(address, locale, divisions, locationKind, coordinates),
+  displayText ??
+    getAddressDisplay(address, locale, divisions, locationKind, coordinates),
 )
 const unlocked = $derived(
   Object.hasOwn(address.overrides[ADDRESS_LOCALES[locale]] ?? {}, 'formattedAddress'),
