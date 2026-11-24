@@ -10,6 +10,8 @@ export type LocationSearchMarker = {
   number: number
   /** Fit this result subset independently of the Feature pin. */
   fitGroup?: string
+  /** Context markers must not move the camera as selections change. */
+  skipAutoFit?: boolean
   color?: string
   coordinates: [number, number]
   label: string

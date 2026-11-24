@@ -1,10 +1,12 @@
 <script lang="ts">
 // SVELTE
-import { onDestroy } from 'svelte'
+import { onDestroy, untrack } from 'svelte'
 // COMPONENTS
 import DraftFeatureLocationSearch from '#lib/bits/patterns/forms/featureLocation/DraftFeatureLocationSearch.svelte'
 import MapPrimitive from '#lib/bits/patterns/forms/formMapSection/components/MapPrimitive.svelte'
 // API
+import { createBuildingFromEvidence } from '#lib/api/buildingEvidence.remote.js'
+import type { BuildingEvidence } from '#lib/locations/buildingEvidence.js'
 import {
   createLocalLocation,
   importDraftLocationCandidate,
@@ -28,29 +30,121 @@ import type { SelectedBuilding } from '#lib/map/buildingAddress.js'
 
 let {
   projectId,
+  included = [],
   mode,
   kind,
   disabled,
   onSelect,
 }: {
   projectId: string
+  included?: Array<{
+    id: string
+    name: string
+    coordinates: [number, number] | null
+    footprint: import('geojson').Polygon | import('geojson').MultiPolygon | null
+  }>
   mode: 'search' | 'map'
   kind: 'premises' | 'building' | 'building_part'
   disabled: boolean
   onSelect: (id: string) => Promise<void>
 } = $props()
+let combining = $state(false)
+let evidence = $state<Array<{ key: string; label: string; value: BuildingEvidence }>>(
+  [],
+)
+let combinedName = $state('')
+let combinedAddress = $state('')
+let combinedIdentity = $state<string | null>(null)
 let picked = $state<Result | null>(null)
 let footprint = $state<SelectedBuilding | null>(null)
 let candidates = $state<Result[]>([])
-let coordinates = $state<[number, number]>([114.1694, 22.3193])
+// Center once when the picker opens; later selections should not move the map.
+const initialCenter: [number, number] = untrack(() => {
+  const points = included.flatMap(item => (item.coordinates ? [item.coordinates] : []))
+  return points.length
+    ? [
+        points.reduce((sum, point) => sum + point[0], 0) / points.length,
+        points.reduce((sum, point) => sum + point[1], 0) / points.length,
+      ]
+    : [114.1694, 22.3193]
+})
+let coordinates = $state<[number, number]>(initialCenter)
 let busy = $state(false)
 let failure = $state('')
 let name = $state('')
 let pickerKey = $state(0)
-let controller: MapController | null = null
+let controller = $state<MapController | null>(null)
 let cleanup: (() => void) | undefined
 let version = 0
 const control = 'border-border rounded-lg border px-3 py-2 text-sm disabled:opacity-50'
+
+/** Retain an explicitly selected piece without claiming identity equivalence.
+ * @param value Source reference or map geometry. @param label Review label. @returns Nothing.
+ */
+function collectEvidence(value: BuildingEvidence, label: string): void {
+  if (combinedIdentity || evidence.length >= 30) return
+  const key =
+    value.type === 'map'
+      ? 'map:' + value.source + ':' + value.id
+      : value.type === 'location'
+        ? 'location:' + value.locationId
+        : 'saanseoi:' +
+          value.source.release +
+          ':' +
+          value.source.id +
+          ':' +
+          (value.source.addressId ?? '')
+  if (!evidence.some(row => row.key === key))
+    evidence = [...evidence, { key, label, value }]
+}
+/** Collect a known identity as evidence rather than adding a separate building.
+ * @param result Explicitly selected candidate. @returns Nothing.
+ */
+function collectResult(result: Result): void {
+  const label =
+    result.names.en ||
+    Object.values(result.names).find(Boolean) ||
+    getAddressDisplay(result.address, 'en')
+  if (result.identity?.locationId && result.identity.revisionId)
+    collectEvidence({ type: 'location', ...result.identity }, label)
+  else if (result.buildingSource)
+    collectEvidence({ type: 'saanseoi', source: result.buildingSource }, label)
+  else failure = 'Select a published building or a map footprint as evidence.'
+}
+/** Persist the reviewed physical building, then add it to this session.
+ * @returns Once creation and session selection finish; retries retain a created identity.
+ */
+async function saveCombined(): Promise<void> {
+  if (busy || disabled) return
+  busy = true
+  failure = ''
+  try {
+    if (!combinedIdentity) {
+      const result = await createBuildingFromEvidence({
+        projectId,
+        name: combinedName,
+        address: combinedAddress,
+        coordinates,
+        evidence: evidence.map(row => row.value),
+      })
+      combinedIdentity = result.locationId
+    }
+    await onSelect(combinedIdentity)
+    combinedIdentity = null
+    evidence = []
+    combining = false
+    combinedName = ''
+    combinedAddress = ''
+    picked = null
+    footprint = null
+    candidates = []
+    pickerKey++
+  } catch (error) {
+    failure = error instanceof Error ? error.message : String(error)
+  } finally {
+    busy = false
+  }
+}
 
 /** Resolve a clicked footprint using existing building and address discovery.
  * @param point Explicit clicked point. @returns Once the review choices are ready.
@@ -159,6 +253,10 @@ function mapReady(map: MapController | null): void {
  */
 async function accept(result: Result): Promise<void> {
   if (busy || disabled) return
+  if (combining) {
+    collectResult(result)
+    return
+  }
   busy = true
   failure = ''
   try {
@@ -197,12 +295,135 @@ async function accept(result: Result): Promise<void> {
     busy = false
   }
 }
+
+// Persisted geometry is authoritative; missing outlines remain visible as Location markers.
+$effect(() => {
+  const features: import('geojson').FeatureCollection = {
+    type: 'FeatureCollection',
+    features: [
+      ...included.flatMap(item =>
+        item.footprint
+          ? [
+              {
+                type: 'Feature' as const,
+                id: item.id,
+                properties: { name: item.name },
+                geometry: item.footprint,
+              },
+            ]
+          : [],
+      ),
+      ...evidence.flatMap(row =>
+        combining && row.value.type === 'map'
+          ? [
+              {
+                type: 'Feature' as const,
+                id: row.key,
+                properties: { name: row.label },
+                geometry: row.value.geometry,
+              },
+            ]
+          : [],
+      ),
+    ],
+  }
+  return controller?.showLocationOutlines?.(features)
+})
+const includedMarkers = $derived(
+  included.flatMap((item, index) =>
+    item.coordinates
+      ? [
+          {
+            id: item.id,
+            number: index + 1,
+            coordinates: item.coordinates,
+            label: item.name,
+            selected: true,
+            skipAutoFit: true,
+          },
+        ]
+      : [],
+  ),
+)
+
 onDestroy(() => {
   version++
   cleanup?.()
 })
 </script>
 <div class="space-y-4">
+  <button
+    type="button"
+    class={control}
+    aria-pressed={combining}
+    disabled={busy || disabled || Boolean(combinedIdentity)}
+    onclick={() => {
+      combining = !combining
+    }}
+  >
+    {combining ? 'Exit combine evidence' : 'Combine evidence into one building'}
+  </button>
+  {#if combining}
+    <section
+      aria-label="Combined building evidence"
+      class="border-border space-y-3 rounded-lg border bg-white p-4"
+    >
+      <h3 class="font-semibold">One physical building</h3>
+      <p class="text-muted-foreground text-sm">
+        Select the contributing buildings and map footprints. Source records stay
+        separate; these references support your reviewed building.
+      </p>
+      <ul class="space-y-2">
+        {#each evidence as row (row.key)}
+          <li class="flex items-center justify-between gap-3 text-sm">
+            <span class="min-w-0 break-words"
+              >{row.value.type === 'map'
+                ? 'Map footprint'
+                : row.value.type === 'saanseoi'
+                  ? 'SaanSeoi'
+                  : 'HYPE'}
+              · {row.label}</span
+            >
+            <button
+              type="button"
+              class={control}
+              disabled={busy || Boolean(combinedIdentity)}
+              onclick={() => (evidence = evidence.filter(item => item.key !== row.key))}
+            >
+              Remove
+            </button>
+          </li>
+        {/each}
+      </ul>
+      <label class="grid gap-1 text-sm"
+        >Building name (optional)
+        <input
+          class={control}
+          bind:value={combinedName}
+          disabled={busy || Boolean(combinedIdentity)}
+        >
+      </label>
+      <label class="grid gap-1 text-sm"
+        >Building addresses or ranges
+        <input
+          class={control}
+          bind:value={combinedAddress}
+          placeholder="Include each street and preserve any gaps"
+          disabled={busy || Boolean(combinedIdentity)}
+        >
+      </label>
+      <button
+        type="button"
+        class={control}
+        disabled={busy || disabled || evidence.length < 2 || !combinedAddress.trim()}
+        onclick={saveCombined}
+      >
+        {combinedIdentity
+          ? 'Retry adding building to session'
+          : 'Create combined building and add'}
+      </button>
+    </section>
+  {/if}
   {#if failure}
     <p role="alert" class="text-error text-sm">{failure}</p>
   {/if}
@@ -210,6 +431,7 @@ onDestroy(() => {
     {#key `${kind}-${pickerKey}`}
       <DraftFeatureLocationSearch
         active={true}
+        selectExistingImmediately
         {projectId}
         preferredKind={kind}
         initialSearchKinds={['building', 'address']}
@@ -220,19 +442,29 @@ onDestroy(() => {
         focusRequest={0}
         allowManualEntry={false}
         onSelect={result => {
-          picked = result
+          if (busy || disabled) return
           footprint = null
+          if (combining) {
+            collectResult(result)
+            pickerKey++
+            return
+          }
+          if (result.identity?.locationId) void accept(result)
+          else picked = result
         }}
       />
     {/key}
   {:else}
     <p class="text-muted-foreground text-sm">
       Select a building footprint to review its SaanSeoi matches or create a HYPE
-      building.
+      building. Included Locations are marked; known outlines are shaded teal.
     </p>
     <div class="relative h-[28rem] overflow-hidden rounded-lg border">
       <MapPrimitive
         {coordinates}
+        {initialCenter}
+        showMarker={false}
+        locationCandidates={includedMarkers}
         initialZoom={17}
         addressMeta={null}
         onMapReady={mapReady}
@@ -252,17 +484,41 @@ onDestroy(() => {
         disabled={busy || disabled}
         onclick={() => accept(candidate)}
       >
-        Use {candidate.identity ? 'HYPE' : 'SaanSeoi'} building:
+        {combining ? 'Add evidence from' : 'Use'}
+        {candidate.identity ? 'HYPE' : 'SaanSeoi'} building:
         {candidate.names.en ?? Object.values(candidate.names)[0]} ·
         {getAddressDisplay(candidate.address, 'en')}
       </button>
     {/each}
   {/if}
-  {#if picked}
+  {#if combining && footprint}
+    <button
+      type="button"
+      class={control}
+      disabled={busy || disabled || Boolean(combinedIdentity)}
+      onclick={() =>
+        footprint &&
+        collectEvidence(
+          {
+            type: 'map',
+            id: footprint.id,
+            source: footprint.source,
+            geometry: LocalLocationFootprintSchema.parse({
+              mode: 'inline',
+              geometry: footprint.geometry,
+            }).geometry,
+          },
+          picked ? getAddressDisplay(picked.address, 'en') : 'Selected footprint',
+        )}
+    >
+      Add selected footprint to evidence
+    </button>
+  {/if}
+  {#if picked && !combining}
     <div class="border-border space-y-3 rounded-lg border p-4">
       {#if footprint}
         <label class="grid gap-1 text-sm"
-          >Building name<input class={control} bind:value={name}></label
+          >Building name (optional)<input class={control} bind:value={name}></label
         >
         <p class="text-muted-foreground text-sm">
           {getAddressDisplay(picked.address, 'en') ||
@@ -278,9 +534,7 @@ onDestroy(() => {
       <button
         type="button"
         class={control}
-        disabled={busy ||
-          disabled ||
-          Boolean(footprint && (!name.trim() || candidates.length))}
+        disabled={busy || disabled || Boolean(footprint && candidates.length)}
         onclick={() => picked && accept(picked)}
       >
         {footprint ? 'Create HYPE building and add' : 'Add to session'}

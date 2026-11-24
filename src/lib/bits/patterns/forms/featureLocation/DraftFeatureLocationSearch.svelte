@@ -106,6 +106,7 @@ let {
   onAssociationSpaceNeeded,
   onReturnToResults,
   onSelectionStart,
+  selectExistingImmediately = false,
   onResultsChange,
   onResultsEnd,
   onScrollEndChange,
@@ -148,6 +149,8 @@ let {
   onAcceptedChange?: (accepted: boolean) => void
   onAssociationSpaceNeeded?: (overflow: number) => void
   onReturnToResults?: () => void
+  /** Add known identities directly when used as a session picker. */
+  selectExistingImmediately?: boolean
   onSelectionStart?: () => void
   onResolutionPendingChange?: (pending: boolean) => void
   onResultsChange?: (hasResults: boolean) => void
@@ -1442,6 +1445,14 @@ $effect(publishMarkers)
  * @param result Selected row. @returns Nothing.
  */
 function choose(result: Result): void {
+  if (
+    selectExistingImmediately &&
+    result.identity?.locationId &&
+    (!allowedLocationKinds || allowedLocationKinds.includes(result.kind))
+  ) {
+    onSelect(result)
+    return
+  }
   onSelectionStart?.()
   moreLoading = { establishment: false, building: false }
   moreErrors = { establishment: null, building: null }

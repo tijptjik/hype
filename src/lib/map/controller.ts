@@ -14,6 +14,8 @@ import type {
 } from 'maplibre-gl'
 
 export type MapController = {
+  /** Show persisted Location outlines; returns cleanup for this overlay. */
+  showLocationOutlines?: (features: import('geojson').FeatureCollection) => () => void
   /** Observe explicit map clicks; returns cleanup for the owning picker. */
   onPointSelect?: (callback: (point: [number, number]) => void) => () => void
   projectToViewport?: (
@@ -60,6 +62,41 @@ export const createMapController = (
   }
 
   return {
+    showLocationOutlines: features => {
+      const map = getMap()
+      if (!map) return () => {}
+      const sourceId = 'included-location-outlines'
+      const fillId = sourceId + '-fill'
+      const lineId = sourceId + '-line'
+      /** Restore the overlay after a style change. @returns Nothing. */
+      const draw = (): void => {
+        if (!map.isStyleLoaded()) return
+        if (!map.getSource(sourceId))
+          map.addSource(sourceId, { type: 'geojson', data: features })
+        if (!map.getLayer(fillId))
+          map.addLayer({
+            id: fillId,
+            type: 'fill',
+            source: sourceId,
+            paint: { 'fill-color': '#087f8c', 'fill-opacity': 0.22 },
+          })
+        if (!map.getLayer(lineId))
+          map.addLayer({
+            id: lineId,
+            type: 'line',
+            source: sourceId,
+            paint: { 'line-color': '#087f8c', 'line-width': 3 },
+          })
+      }
+      map.on('styledata', draw)
+      draw()
+      return () => {
+        map.off('styledata', draw)
+        if (map.getLayer(lineId)) map.removeLayer(lineId)
+        if (map.getLayer(fillId)) map.removeLayer(fillId)
+        if (map.getSource(sourceId)) map.removeSource(sourceId)
+      }
+    },
     onPointSelect: callback => {
       const map = getMap()
       if (!map) return () => {}

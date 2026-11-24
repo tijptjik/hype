@@ -395,8 +395,11 @@ $effect(() => {
   const key = candidateFitKey
   if (!target || !key) return
   const candidates = untrack(() =>
-    (mapProps.locationCandidates ?? []).filter(candidate => !candidate.hidden),
+    (mapProps.locationCandidates ?? []).filter(
+      candidate => !candidate.hidden && !candidate.skipAutoFit,
+    ),
   )
+  if (!candidates.length) return
   const review = candidates.some(candidate =>
     candidate.fitGroup?.startsWith('association:'),
   )
