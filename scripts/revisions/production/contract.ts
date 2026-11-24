@@ -199,6 +199,14 @@ export async function pause(db: D1Database, plan: Plan): Promise<void> {
   for (let offset = 0; offset < declarations.length; offset += 300)
     await atomic(db, declarations.slice(offset, offset + 300))
   await atomic(db, [
+    ...(plan.parentHash && state?.phase === 'active'
+      ? [
+          guard(
+            `EXISTS(SELECT 1 FROM ${CONTROL} WHERE planHash=? AND nextGroup=? AND phase='active' AND writable=0)`,
+            [plan.parentHash, plan.parentCursor ?? -1],
+          ),
+        ]
+      : []),
     {
       sql: `INSERT INTO ${CONTROL} VALUES(1,?,0,'paused',0,NULL,0,?) ON CONFLICT(singleton) DO UPDATE SET previousHash=planHash,planHash=excluded.planHash,nextGroup=0,phase='paused',writable=0,irreversible=0,schemaBoundary=excluded.schemaBoundary WHERE ${CONTROL}.phase='active' AND ${CONTROL}.planHash<>excluded.planHash`,
       params: [digest(plan), schemaMigrationBoundary(plan)],

@@ -14,6 +14,7 @@ import {
   verifyRows,
   verifySchema,
 } from './contract'
+import { finishDataRelease, rebaseDataRelease } from './data-release'
 // TYPES
 import type { D1Database } from '@cloudflare/workers-types'
 import type { Plan } from './contract'
@@ -25,9 +26,18 @@ import type { Plan } from './contract'
 async function main(): Promise<void> {
   const [operation, planPath, configPath, output] = process.argv.slice(2)
   if (
-    !['pause', 'apply', 'verify', 'status', 'abort', 'rebase', 'source'].includes(
-      operation,
-    ) ||
+    ![
+      'rebase-data',
+      'check',
+      'finish-data',
+      'pause',
+      'apply',
+      'verify',
+      'status',
+      'abort',
+      'rebase',
+      'source',
+    ].includes(operation) ||
     !output
   )
     throw new Error('Invalid rollout operation')
@@ -53,6 +63,32 @@ async function main(): Promise<void> {
   })
   try {
     const db = proxy.env.DB
+    if (operation === 'check') {
+      const state = await journal(db)
+      if (
+        state?.phase !== 'active' ||
+        state.planHash !== plan.parentHash ||
+        state.nextGroup !== plan.parentCursor
+      )
+        throw new Error('Active application differs from data release parent')
+      await verifySchema(db, plan.initialSchema)
+      await verifyRows(db, plan.initial)
+    }
+    if (operation === 'rebase-data') {
+      const original = JSON.parse(
+        readFileSync(planPath + '.application-journal.json', 'utf8'),
+      )
+      const predecessor = JSON.parse(
+        readFileSync(planPath + '.predecessor.json', 'utf8'),
+      ).planHash
+      await rebaseDataRelease(db, plan, predecessor, original)
+    }
+    if (operation === 'finish-data') {
+      const original = JSON.parse(
+        readFileSync(planPath + '.application-journal.json', 'utf8'),
+      )
+      await finishDataRelease(db, plan, original)
+    }
     if (operation === 'rebase') await rebaseUnstarted(db, plan)
     let sourceMatches = true
     if (operation === 'source') {
