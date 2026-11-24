@@ -17,10 +17,15 @@ hidden. Completed sessions retain their record list.
 Tap a selector to open its choices, or swipe up or down to step through them. The
 location search includes the premises, buildings and building parts assigned in Field
 Sessions administration. Selecting a part also displays its known building or premises.
-Record creates an unpublished Feature using the selected layer's session defaults. See
-Records lists the resulting Feature titles. Each capture retains its session link and
-retry identity. Sessions with an older schema can be browsed while a manager reviews the
-upgrade in Field Sessions.
+Record creates an unpublished Feature using the selected layer's session defaults, then
+opens its editor. Status starts collapsed with summary tags; Fields starts expanded. The
+editor supports selections, text, numbers, dates, booleans, multiple phone numbers,
+labelled links, and date/time ranges. Save changes persists a versioned revision. Draft
+marks unfinished work and does not control publication. Queue for review is an
+independent flag. Published or linked Features use HYPE's editorial workflow. See
+Records lists the resulting Feature titles and reopens their editors. Each capture
+retains its session link and retry identity. Sessions with an older schema can be
+browsed while a manager reviews the upgrade in Field Sessions.
 
 Apply `0265_field_research_record.sql` and `0266_field_research_features.sql` to the
 target development database before testing Feature creation. Apply
@@ -35,6 +40,10 @@ A capture stores its selected realm and Location. Interior pins retain the map I
 immutable release hash, floor ID and source coordinates. Exterior pins retain longitude
 and latitude. See Records can reopen a saved pin on its original drawing. Interior is
 the initial realm for each session.
+
+The bottom menu uses the account avatar and reveals account details and Sign out. It
+hides when scrolling down and returns when scrolling up. Google avatar image hosts are
+explicitly permitted by the native CSP; unavailable images use the user icon.
 
 ## Android development
 

@@ -76,6 +76,83 @@ async function useLocationFixture(page: Page): Promise<void> {
   await page.route('**/api/premises-maps/north-tower/releases/' + hash, route =>
     route.fulfill({ body: bundle, contentType: 'application/json' }),
   )
+  const editor = {
+    id: '',
+    title: 'Survey 1',
+    revisionId: 'revision-1',
+    version: 1,
+    modifiedAt: '2026-11-24',
+    editable: true,
+    status: {
+      featureType: 'object',
+      isVisitable: true,
+      isIntangible: false,
+      isDraft: true,
+      isPendingReview: true,
+    },
+    types: [
+      { id: 'object', label: 'Object', kind: 'object' },
+      { id: 'place', label: 'Place', kind: 'place' },
+    ],
+    fields: [
+      {
+        id: 'vitality',
+        key: 'vitality',
+        type: 'classifier',
+        component: 'SelectField',
+        dataType: 'text',
+        cardinality: 'one',
+        values: [
+          { id: 'good', value: 'Good' },
+          { id: 'poor', value: 'Poor' },
+        ],
+      },
+      {
+        id: 'notes',
+        key: 'notes',
+        type: 'specifier',
+        component: 'TextareaField',
+        dataType: 'text',
+      },
+      {
+        id: 'count',
+        key: 'count',
+        type: 'specifier',
+        component: 'InputField',
+        dataType: 'number',
+      },
+      {
+        id: 'hours',
+        key: 'hours',
+        type: 'specifier',
+        component: 'TimeRangeField',
+        dataType: 'timeRange',
+        timeMaxHour: 36,
+      },
+      {
+        id: 'phone',
+        key: 'phone',
+        type: 'specifier',
+        component: 'PhoneField',
+        dataType: 'text',
+      },
+      {
+        id: 'links',
+        key: 'links',
+        type: 'specifier',
+        component: 'LinkField',
+        dataType: 'link',
+      },
+    ],
+    values: {
+      vitality: 'good',
+      notes: null,
+      count: null,
+      hours: null,
+      phone: null,
+      links: null,
+    },
+  }
   const locations = [
     {
       id: 'lift',
@@ -100,10 +177,16 @@ async function useLocationFixture(page: Page): Promise<void> {
     if (method === 'recorderLocations')
       await new Promise(resolve => setTimeout(resolve, 500))
     const data: Record<string, unknown> = {
-      recorderAccount: { id: 'device-user', name: 'Researcher' },
+      recorderAccount: {
+        id: 'device-user',
+        name: 'Researcher',
+        email: 'researcher@example.test',
+        image: '/icon.png',
+      },
       recorderSessions: sessions,
       recorderLocations: locations,
       recorderRecords: records,
+      recorderEditor: editor,
     }
     if (method === 'recordFeature') {
       const payload = parse(
@@ -128,7 +211,16 @@ async function useLocationFixture(page: Page): Promise<void> {
         featureId: 'feature-' + payload.id,
         title: 'Survey ' + (records.length + 1),
       })
+      editor.id = payload.id
       data.recordFeature = payload.id
+    }
+    if (method === 'saveRecorder') {
+      const payload = parse(
+        Buffer.from(request.postDataJSON().payload, 'base64url').toString(),
+      )
+      expect(payload.id).toBe(editor.id)
+      Object.assign(editor, payload, { version: editor.version + 1 })
+      data.saveRecorder = editor
     }
     if (!method || !Object.hasOwn(data, method))
       throw new Error('Unexpected Recorder remote call')
@@ -170,10 +262,48 @@ test('opens a shared session, swipes, selects a building part and persists a rec
   // Chrome shares the backend origin here; use its authenticated fetch in place of Tauri IPC.
   await page.addInitScript(() => {
     Object.defineProperty(window, 'isTauri', { value: true })
+    Object.defineProperty(window, '__TAURI_INTERNALS__', {
+      value: {
+        invoke: async (
+          command: string,
+          _args: unknown,
+          options?: { headers?: Record<string, string> },
+        ) => {
+          if (command === 'plugin:http|fetch') {
+            const config = JSON.parse(
+              decodeURIComponent(options?.headers?.['client-config'] || '{}'),
+            )
+            if (!config.url?.endsWith('/api/auth/sign-out'))
+              throw new Error('Unexpected native request')
+            return 1
+          }
+          if (command === 'plugin:http|fetch_send')
+            return {
+              status: 200,
+              statusText: 'OK',
+              url: 'https://hype.hk/api/auth/sign-out',
+              headers: [],
+              rid: 2,
+            }
+          if (command === 'plugin:http|fetch_read_body') return [1]
+          if (command === 'plugin:http|fetch_cancel_body') return
+          throw new Error('Unexpected native command')
+        },
+      },
+    })
     const fetch = window.fetch.bind(window)
     Object.defineProperty(window, 'fetch', { get: () => fetch, set: () => {} })
   })
   const build = join(process.cwd(), 'apps/recorder/build')
+  await page.route('**/preferences.js', route =>
+    route.fulfill({
+      path: join(build, 'preferences.js'),
+      contentType: 'text/javascript',
+    }),
+  )
+  await page.route('**/icon.png', route =>
+    route.fulfill({ path: join(build, 'icon.png') }),
+  )
   await page.route('**/_app/immutable/**', route =>
     route.fulfill({ path: join(build, new URL(route.request().url()).pathname) }),
   )
@@ -187,6 +317,38 @@ test('opens a shared session, swipes, selects a building part and persists a rec
   await expect(page.getByRole('button', { name: 'Sign out' })).toHaveCount(0)
   const menu = page.getByRole('navigation', { name: 'Main menu' })
   await expect(menu).toBeVisible()
+  await page.getByRole('button', { name: 'User', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Account' })).toBeVisible()
+  await expect(page.getByText('researcher@example.test')).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Sign out', exact: true }),
+  ).toBeEnabled()
+  const themeArtifacts = process.env.DEV_RUNNER_ARTIFACTS
+  await expect(
+    page.getByRole('combobox', { name: 'Language', exact: true }),
+  ).toHaveValue('en')
+  await expect(
+    page.getByRole('combobox', { name: 'Language', exact: true }).locator('option'),
+  ).toHaveCount(1)
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'hype-dark')
+  if (themeArtifacts)
+    await page.screenshot({ path: join(themeArtifacts, 'account-nebula.png') })
+  await page.getByRole('button', { name: 'Light · Milque', exact: true }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'breadline-light')
+  await expect(page.locator('html')).toHaveCSS('background-color', 'rgb(248, 244, 237)')
+  await expect(page.getByRole('dialog', { name: 'Account' })).toHaveCSS(
+    'background-color',
+    'rgb(255, 253, 250)',
+  )
+  if (themeArtifacts)
+    await page.screenshot({ path: join(themeArtifacts, 'account-milque.png') })
+  await page.getByRole('button', { name: 'Close account' }).click()
+  await page.reload()
+  await expect(testSession).toBeVisible()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'breadline-light')
+  if (themeArtifacts)
+    await page.screenshot({ path: join(themeArtifacts, 'sessions-milque.png') })
   await page.evaluate(() => window.scrollTo(0, 400))
   await expect(menu).toHaveClass(/translate-y-full/)
   await page.evaluate(() => window.scrollTo(0, 150))
@@ -252,6 +414,8 @@ test('opens a shared session, swipes, selects a building part and persists a rec
     await page.getByRole('button', { name: /^interior$/i }).click()
     await page.getByRole('button', { name: 'Floor plan' }).click()
     await expect(page.getByText('Pin placed.')).toBeVisible()
+    if (themeArtifacts)
+      await page.screenshot({ path: join(themeArtifacts, 'indoor-milque.png') })
     await page.getByRole('button', { name: 'Use location' }).click()
     await expect(page.getByRole('button', { name: /^interior$/i })).toHaveAttribute(
       'aria-pressed',
@@ -268,12 +432,58 @@ test('opens a shared session, swipes, selects a building part and persists a rec
   const before = await page.getByRole('list').locator('li small').count()
   await page.getByRole('button', { name: '‹ Session', exact: true }).click()
   await page.getByRole('button', { name: 'Record', exact: true }).click()
-  await expect(
-    page.getByRole('heading', { name: 'Records', exact: true }),
-  ).toBeVisible()
-  await expect(page.getByText('Record saved.')).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Status/ })).toHaveAttribute(
+    'aria-expanded',
+    'false',
+  )
+  await expect(page.getByRole('button', { name: /^Fields/ })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  )
+  if (fixture) {
+    await page.getByLabel('vitality', { exact: true }).selectOption('poor')
+    await page.getByLabel('notes', { exact: true }).fill('Observed during survey')
+    await expect(page.getByRole('button', { name: 'Save changes' })).toBeEnabled()
+    await page.goBack()
+    await page.getByRole('button', { name: 'See Records' }).click()
+    await page.getByRole('button', { name: 'Survey 1', exact: true }).click()
+    await expect(page.getByLabel('notes', { exact: true })).toHaveValue(
+      'Observed during survey',
+    )
+    await page.getByLabel('count', { exact: true }).fill('0')
+    await page.getByLabel('From', { exact: true }).fill('24:00')
+    await page.getByLabel('To', { exact: true }).fill('25:00')
+    await page.getByRole('button', { name: 'Add number' }).click()
+    await page.getByLabel('phone 1', { exact: true }).fill('+85212345678')
+    await page.getByRole('button', { name: 'Add link', exact: true }).click()
+    await page.getByLabel('Label', { exact: true }).fill('Reference')
+    await page.getByLabel('URL', { exact: true }).fill('https://example.com')
+    await page.getByRole('button', { name: /^Status/ }).click()
+    await page.getByRole('button', { name: 'Place', exact: true }).click()
+    await page
+      .getByRole('group', { name: 'Draft', exact: true })
+      .getByRole('button', { name: 'No', exact: true })
+      .click()
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await expect(page.getByText('Changes saved.')).toBeVisible()
+    if (artifacts)
+      await page.screenshot({
+        path: join(artifacts, 'recorder-editor.png'),
+        fullPage: true,
+      })
+  }
+  await page.goBack()
+  if (!fixture) await page.getByRole('button', { name: 'See Records' }).click()
   await expect(page.getByRole('list').locator('li small')).toHaveCount(before + 1)
   if (fixture) {
+    await page.getByRole('button', { name: 'Survey 1', exact: true }).click()
+    await expect(page.getByLabel('vitality', { exact: true })).toHaveValue('poor')
+    await expect(page.getByLabel('notes', { exact: true })).toHaveValue(
+      'Observed during survey',
+    )
+    await expect(page.getByLabel('From', { exact: true })).toHaveValue('24:00')
+    await expect(page.getByLabel('To', { exact: true })).toHaveValue('25:00')
+    await page.goBack()
     await page.getByRole('button', { name: 'View on map' }).click()
     await expect(page.getByRole('img', { name: 'Floor plan' })).toBeVisible()
     await page.goBack()
@@ -283,4 +493,14 @@ test('opens a shared session, swipes, selects a building part and persists a rec
   await testSession.click()
   await page.getByRole('button', { name: 'See Records' }).click()
   await expect(page.getByRole('list').locator('li small')).toHaveCount(before + 1)
+  if (fixture) {
+    await page.getByRole('button', { name: 'User', exact: true }).click()
+    await expect(
+      page.getByRole('dialog', { name: 'Account' }).locator('img'),
+    ).toHaveJSProperty('complete', true)
+    await page.getByRole('button', { name: 'Dark · Nebula', exact: true }).click()
+    await expect(page.locator('html')).toHaveCSS('background-color', 'rgb(8, 9, 14)')
+    await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Sign in with HYPE' })).toBeVisible()
+  }
 })

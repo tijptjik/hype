@@ -3,8 +3,11 @@
 import { onDestroy, untrack } from 'svelte'
 import { pushState, replaceState } from '$app/navigation'
 import { page } from '$app/state'
+// I18N
+import { t, errorMessage } from './i18n'
 // COMPONENTS
 import Selector from './Selector.svelte'
+import RecordEditor from './RecordEditor.svelte'
 import BottomMenu from './BottomMenu.svelte'
 import RealmSelector from './RealmSelector.svelte'
 import SessionMap from './SessionMap.svelte'
@@ -26,7 +29,31 @@ import type {
   RecorderSession,
 } from '../../../../src/lib/fieldResearch/recorder'
 
-let { message }: { message: string } = $props()
+let {
+  message,
+  account = null,
+  onSignOut,
+}: {
+  message: string
+  account?: { name: string | null; image?: string | null; email?: string | null } | null
+  onSignOut?: () => Promise<void>
+} = $props()
+let editorDirty = $state(false)
+const drafts = new Map<
+  string,
+  {
+    record: import('../../../../src/lib/fieldResearch/recorderEditor').RecorderEditor
+    saved: string
+  }
+>()
+async function signOut(): Promise<void> {
+  if (
+    (editorDirty || drafts.size > 0) &&
+    !window.confirm(t('discard_unsaved_record_changes_and_sign_out'))
+  )
+    return
+  await onSignOut?.()
+}
 let sessions = $state<RecorderSession[]>([])
 let session = $state<RecorderSession | null>(null)
 let places = $state<RecorderLocation[]>([])
@@ -58,9 +85,9 @@ let selectedId = $derived(part || building || premises)
 let search = $state('')
 let dialog: HTMLDialogElement
 const kinds = {
-  premises: 'Premises',
-  building: 'Building',
-  building_part: 'Building part',
+  premises: t('premises'),
+  building: t('building'),
+  building_part: t('building_part'),
 }
 const icons = {
   premises: 'M3 21V7l6-4 6 4 6-4v14l-6 4-6-4-6 4ZM9 3v14M15 7v14',
@@ -135,10 +162,13 @@ async function load(): Promise<void> {
     }
   } catch {
     if (current === request)
-      failure =
-        'Could not load ' +
-        (view === 'session' ? 'locations' : view) +
-        '. Check your connection and session access.'
+      failure = t(
+        view === 'session'
+          ? 'load_failed_locations'
+          : view === 'sessions'
+            ? 'load_failed_sessions'
+            : 'load_failed_records',
+      )
   } finally {
     if (current === request) loading = false
   }
@@ -187,7 +217,7 @@ function openSession(id: string): void {
   else replaceState('', next)
 }
 function navigate(
-  view: 'map' | 'search' | 'records' | 'recordMap',
+  view: 'map' | 'search' | 'records' | 'recordMap' | 'edit',
   recordId?: string,
 ): void {
   if (session) pushState('', { recorder: { view, sessionId: session.id, recordId } })
@@ -227,15 +257,13 @@ async function capture(): Promise<void> {
   )
     pendingRecord = { sessionId, id: crypto.randomUUID(), layerId, placement }
   try {
-    await recordFeature(pendingRecord)
+    const recordId = await recordFeature(pendingRecord)
     pendingRecord = null
     if (route?.view === 'session' && session?.id === sessionId) {
-      notice = 'Record saved.'
-      seeRecords()
+      navigate('edit', recordId)
     }
   } catch (error) {
-    const message = (error as { body?: { message?: string } })?.body?.message
-    notice = message || 'Could not confirm the record. Tap Record to retry.'
+    notice = errorMessage(error, 'could_not_confirm_the_record_tap_record_to_retry')
   } finally {
     saving = false
   }
@@ -245,15 +273,15 @@ async function capture(): Promise<void> {
 {#if screen === 'sessions' || screen === 'records' || route?.view === 'map'}
   <header class="flex items-center justify-between gap-3">
     {#if screen === 'sessions'}
-      <h1 class="text-3xl font-semibold">Sessions</h1>
+      <h1 class="text-3xl font-semibold">{t('sessions')}</h1>
     {:else}
       <button
         type="button"
         disabled={saving}
-        class="min-h-12 text-slate-300"
+        class="text-muted min-h-12"
         onclick={back}
       >
-        ‹ {route?.view === 'recordMap' ? 'Records' : 'Session'}
+        ‹ {route?.view === 'recordMap' ? t('records') : t('session')}
       </button>
     {/if}
   </header>
@@ -261,8 +289,21 @@ async function capture(): Promise<void> {
 {#if message}
   <p role="status">{message}</p>
 {/if}
-{#if session && (route?.view === 'map' || (route?.view === 'recordMap' && recordOnMap))}
-  <h1 class="text-2xl font-semibold">{recordOnMap?.title ?? 'Location map'}</h1>
+{#if session && route?.view === 'edit' && route.recordId}
+  {#key route.recordId}
+    <RecordEditor
+      id={route.recordId}
+      draft={drafts.get(route.recordId)}
+      onleave={(id, draft) => {
+        if (draft) drafts.set(id, draft)
+        else drafts.delete(id)
+      }}
+      ondirty={value => (editorDirty = value)}
+    />
+  {/key}
+{:else if session &&
+  (route?.view === 'map' || (route?.view === 'recordMap' && recordOnMap))}
+  <h1 class="text-2xl font-semibold">{recordOnMap?.title ?? t('location_map')}</h1>
   <SessionMap
     {places}
     {selectedId}
@@ -276,17 +317,17 @@ async function capture(): Promise<void> {
   {#if screen === 'session' && session}
     <div class="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2">
       <Selector
-        label="Session"
+        label={t('session')}
         options={sessions}
         value={session.id}
         onchange={openSession}
         disabled={saving}
       />
       <button
-        aria-label="Search session locations"
+        aria-label={t('search_session_locations')}
         type="button"
         disabled={loading || !places.length || saving}
-        class="grid w-12 place-items-center rounded-2xl border border-slate-700 disabled:opacity-40"
+        class="border-line grid w-12 place-items-center rounded-2xl border disabled:opacity-40"
         onclick={() => {
           search = ''
           navigate('search')
@@ -307,9 +348,9 @@ async function capture(): Promise<void> {
       </button>
       <button
         type="button"
-        aria-label="Open location map"
+        aria-label={t('open_location_map')}
         disabled={loading || !places.length || saving}
-        class="grid w-12 place-items-center rounded-2xl border border-slate-700 disabled:opacity-40"
+        class="border-line grid w-12 place-items-center rounded-2xl border disabled:opacity-40"
         onclick={() => navigate('map')}
       >
         <svg
@@ -326,8 +367,8 @@ async function capture(): Promise<void> {
       </button>
     </div>
   {:else if screen === 'records' && session}
-    <h1 class="text-3xl font-semibold">Records</h1>
-    <p class="text-slate-300">{session.name}</p>
+    <h1 class="text-3xl font-semibold">{t('records')}</h1>
+    <p class="text-muted">{session.name}</p>
   {/if}
   {#if loading}
     <div
@@ -335,38 +376,40 @@ async function capture(): Promise<void> {
         ? 'grid min-h-[16.5rem] content-start gap-3'
         : 'grid gap-2'}
       role="status"
-      aria-label="Loading {screen}"
+      aria-label={t(
+        screen === 'sessions'
+          ? 'loading_sessions'
+          : screen === 'session'
+            ? 'loading_session'
+            : 'loading_records',
+      )}
       aria-busy="true"
     >
       {#each [1, 2, 3] as n (n)}
         <div
           class={[
-            'grid content-center gap-2 rounded-2xl bg-slate-900 px-4 py-3',
+            'bg-panel grid content-center gap-2 rounded-2xl px-4 py-3',
             screen === 'session'
-              ? 'min-h-20 border border-slate-700'
+              ? 'border-line min-h-20 border'
               : screen === 'records'
                 ? 'min-h-24'
                 : 'min-h-16',
           ]}
         >
           {#if screen === 'session'}
-            <div class="h-3 w-20 animate-pulse rounded bg-slate-800"></div>
+            <div class="bg-surface h-3 w-20 animate-pulse rounded"></div>
           {/if}
-          <div class="h-5 w-2/3 animate-pulse rounded bg-slate-800"></div>
+          <div class="bg-surface h-5 w-2/3 animate-pulse rounded"></div>
           {#if screen === 'records'}
-            <div class="h-3 w-4/5 animate-pulse rounded bg-slate-800"></div>
+            <div class="bg-surface h-3 w-4/5 animate-pulse rounded"></div>
           {/if}
         </div>
       {/each}
     </div>
   {:else if failure}
     <p role="alert">{failure}</p>
-    <button
-      type="button"
-      class="min-h-12 rounded-xl border border-slate-700"
-      onclick={load}
-    >
-      Retry
+    <button type="button" class="border-line min-h-12 rounded-xl border" onclick={load}>
+      {t('retry')}
     </button>
   {:else if screen === 'sessions'}
     <ul class="grid gap-2">
@@ -374,7 +417,7 @@ async function capture(): Promise<void> {
         <li>
           <button
             type="button"
-            class="flex min-h-16 w-full items-center justify-between gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-left font-semibold"
+            class="bg-panel flex min-h-16 w-full items-center justify-between gap-3 rounded-2xl px-4 py-3 text-left font-semibold"
             onclick={() => openSession(item.id)}
           >
             <span class="min-w-0 break-words">{item.name}</span
@@ -382,39 +425,44 @@ async function capture(): Promise<void> {
           </button>
         </li>
       {:else}
-        <li class="text-slate-300">No sessions available.</li>
+        <li class="text-muted">{t('no_sessions_available')}</li>
       {/each}
     </ul>
   {:else if screen === 'records'}
     <ol class="grid gap-2">
       {#each records.toReversed() as row, i (row.id)}
-        <li class="rounded-2xl bg-slate-900 px-4 py-3">
-          <strong>{row.title || `Record ${records.length - i}`}</strong
-          ><small class="block break-all text-slate-400">{row.id}</small>
+        <li class="bg-panel rounded-2xl px-4 py-3">
+          <button
+            type="button"
+            class="min-h-12 text-left font-semibold"
+            onclick={() => navigate('edit', row.id)}
+          >
+            {row.title || t('record_number', { number: records.length - i })}
+          </button><small class="text-muted block break-all">{row.id}</small>
           {#if row.spatialRealm}
-            <span class="block text-sm text-slate-300 capitalize"
-              >{row.spatialRealm}</span
+            <span class="text-muted block text-sm capitalize"
+              >{t(row.spatialRealm)}</span
             >
           {/if}
           {#if row.pin}
             <button
               type="button"
-              class="min-h-11 text-cyan-300"
+              class="text-accent min-h-11"
               onclick={() => navigate('recordMap', row.id)}
             >
-              View on map
+              {t('view_on_map')}
             </button>
           {/if}
         </li>
       {:else}
-        <li class="text-slate-300">No records yet.</li>
+        <li class="text-muted">{t('no_records_yet')}</li>
       {/each}
     </ol>
   {:else}
     <div class="grid min-h-[16.5rem] content-start gap-3">
       {#if premisesOptions.length}
         <Selector
-          label="Premises"
+          label={t('premises')}
           options={premisesOptions}
           value={premises}
           disabled={saving}
@@ -427,7 +475,7 @@ async function capture(): Promise<void> {
       {/if}
       {#if buildingOptions.length}
         <Selector
-          label="Building"
+          label={t('building')}
           options={buildingOptions}
           value={building}
           disabled={saving}
@@ -436,7 +484,7 @@ async function capture(): Promise<void> {
       {/if}
       {#if partOptions.length}
         <Selector
-          label="Building part"
+          label={t('building_part')}
           options={partOptions}
           value={part}
           disabled={saving}
@@ -454,13 +502,18 @@ async function capture(): Promise<void> {
   {#if screen === 'session' && session}
     <RealmSelector value={realm} onchange={changeRealm} disabled={saving} />
     {#if pin}
-      <p class="text-sm text-slate-300">Map pin selected.</p>
+      <p class="text-muted text-sm">{t('map_pin_selected')}</p>
     {/if}
     {#if session.captureIssue}
-      <p role="status">{session.captureIssue}</p>
+      <p role="status">
+        {errorMessage(
+          session.captureIssue,
+          'configure_the_session_and_a_recording_layer_in_field_sessions',
+        )}
+      </p>
     {:else if session.layers.length > 1}
       <Selector
-        label="Recording layer"
+        label={t('recording_layer')}
         options={session.layers}
         value={layerId}
         onchange={id => (layerId = id)}
@@ -468,7 +521,7 @@ async function capture(): Promise<void> {
       />
     {/if}
     <footer
-      class="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] mt-auto flex items-center gap-3 bg-[#08090e] py-4"
+      class="bg-canvas sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] mt-auto flex items-center gap-3 py-4"
     >
       <button
         type="button"
@@ -478,22 +531,22 @@ async function capture(): Promise<void> {
           !layerId ||
           !!failure ||
           loading}
-        class="min-h-14 flex-1 rounded-2xl bg-white font-semibold text-black disabled:opacity-40"
+        class="bg-accent text-on-accent min-h-14 flex-1 rounded-2xl font-semibold disabled:opacity-40"
         onclick={capture}
       >
-        Record
+        {t('record')}
       </button>
       <button
         type="button"
         disabled={saving}
-        class="min-h-12 rounded-xl border border-slate-700 px-4 text-sm"
+        class="border-line min-h-12 rounded-xl border px-4 text-sm"
         onclick={seeRecords}
       >
-        See Records
+        {t('see_records')}
       </button>
     </footer>
     {#if session.completed}
-      <p class="text-slate-400">Session completed.</p>
+      <p class="text-muted">{t('session_completed')}</p>
     {/if}
   {/if}
 {/if}
@@ -504,26 +557,26 @@ async function capture(): Promise<void> {
     back()
   }}
   bind:this={dialog}
-  aria-label="Session locations"
-  class="m-auto max-h-[80dvh] w-[min(92vw,30rem)] rounded-2xl border border-slate-700 bg-slate-950 p-4 text-white backdrop:bg-black/70"
+  aria-label={t('session_locations')}
+  class="border-line bg-canvas text-ink m-auto max-h-[80dvh] w-[min(92vw,30rem)] rounded-2xl border p-4 backdrop:bg-black/70"
 >
-  <div class="sticky top-0 grid gap-3 bg-slate-950 pb-3">
+  <div class="bg-canvas sticky top-0 grid gap-3 pb-3">
     <div class="flex items-center justify-between">
-      <h2 class="text-xl font-semibold">Session locations</h2>
-      <button type="button" class="min-h-11 px-3" onclick={back}>Close</button>
+      <h2 class="text-xl font-semibold">{t('session_locations')}</h2>
+      <button type="button" class="min-h-11 px-3" onclick={back}>{t('close')}</button>
     </div>
     <input
       type="search"
-      aria-label="Filter locations"
-      placeholder="Filter locations"
+      aria-label={t('filter_locations')}
+      placeholder={t('filter_locations')}
       bind:value={search}
-      class="min-h-12 rounded-xl border border-slate-700 bg-slate-900 px-3"
+      class="border-line bg-panel min-h-12 rounded-xl border px-3"
     >
   </div>
   {#each matches as p (p.id)}
     <button
       type="button"
-      class="flex min-h-14 w-full items-center gap-3 border-b border-slate-800 py-2 text-left"
+      class="border-line flex min-h-14 w-full items-center gap-3 border-b py-2 text-left"
       onclick={() => {
         choosePlace(p)
         back()
@@ -542,7 +595,7 @@ async function capture(): Promise<void> {
         <path d={p.iconPath ?? icons[p.kind]} />
       </svg>
       <span class="min-w-0 break-words"
-        >{p.name}<small class="block text-slate-400"
+        >{p.name}<small class="text-muted block"
           >{[kinds[p.kind], p.building?.name, p.premises?.name]
             .filter(Boolean)
             .join(' · ')}</small
@@ -550,8 +603,12 @@ async function capture(): Promise<void> {
       >
     </button>
   {:else}
-    <p class="py-4 text-slate-400">No matching locations.</p>
+    <p class="text-muted py-4">{t('no_matching_locations')}</p>
   {/each}
 </dialog>
 
-<BottomMenu view={route?.view ?? screen} />
+<BottomMenu
+  view={route?.view ?? screen}
+  {account}
+  onSignOut={onSignOut ? signOut : undefined}
+/>

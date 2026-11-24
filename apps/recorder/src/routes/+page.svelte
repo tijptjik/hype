@@ -3,8 +3,10 @@
 import { onDestroy, onMount } from 'svelte'
 // TAURI
 import { isTauri } from '@tauri-apps/api/core'
+// I18N
+import { t, errorMessage } from '#lib/i18n/index.js'
 // API
-import { connect, connectionHint } from '#lib/hype.js'
+import { connect, disconnect, connectionHint } from '#lib/hype.js'
 import { recorderAccount } from '#lib/api/recorderAccount.remote.js'
 import SessionWorkspace from '#lib/SessionWorkspace.svelte'
 // STYLES
@@ -13,6 +15,7 @@ import '../app.css'
 let code = $state('')
 let busy = $state(false)
 let signedIn = $state(false)
+let account = $state<Awaited<ReturnType<typeof recorderAccount>>>(null)
 let message = $state('')
 let pending = $state<AbortController>()
 onDestroy(() => pending?.abort())
@@ -25,7 +28,7 @@ async function restoreSession(): Promise<void> {
   try {
     const identity = recorderAccount()
     await identity.refresh()
-    const account = await identity
+    account = await identity
     signedIn = Boolean(account)
   } catch {
     message = connectionHint
@@ -36,7 +39,7 @@ async function restoreSession(): Promise<void> {
 
 async function signIn(): Promise<void> {
   if (!isTauri()) {
-    message = 'Open Hype Recorder on your device to sign in.'
+    message = t('open_hype_recorder_on_your_device_to_sign_in')
     return
   }
   const attempt = new AbortController()
@@ -49,49 +52,57 @@ async function signIn(): Promise<void> {
     }, attempt.signal)
     const identity = recorderAccount()
     await identity.refresh()
-    const account = await identity
+    account = await identity
     if (!account)
-      throw new Error('Could not verify the connected account. Sign out and try again.')
+      throw new Error(
+        t('could_not_verify_the_connected_account_sign_out_and_try_again'),
+      )
     signedIn = true
   } catch (cause) {
     if (!attempt.signal.aborted)
-      message = cause instanceof Error ? cause.message : 'Could not connect to HYPE.'
+      message = errorMessage(cause, 'could_not_connect_to_hype')
   } finally {
     pending = undefined
     busy = false
     code = ''
   }
 }
+async function signOut(): Promise<void> {
+  await disconnect()
+  account = null
+  signedIn = false
+  message = ''
+}
 </script>
 
-<svelte:head><title>Hype Recorder</title></svelte:head>
+<svelte:head><title>{t('hype_recorder')}</title></svelte:head>
 {#if signedIn}
   <main
     class="mx-auto flex min-h-svh max-w-lg flex-col gap-3 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))]"
   >
-    <SessionWorkspace {message} />
+    <SessionWorkspace {message} {account} onSignOut={signOut} />
   </main>
 {:else}
   <main
     class="mx-auto flex min-h-svh max-w-lg flex-col justify-between gap-10 px-7 pt-[max(3rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]"
   >
     <header class="flex items-center gap-3 text-sm font-bold tracking-widest">
-      <img src="/icon.png" width="32" height="32" alt=""> HYPE
+      <img src="/icon.png" width="32" height="32" alt=""> {t('hype')}
     </header>
     <section class="grid gap-5">
-      <h1 class="text-6xl font-semibold tracking-tight">Recorder</h1>
-      <p class="text-lg text-slate-300">
-        Sign in with your HYPE account to get ready for field recording.
+      <h1 class="text-6xl font-semibold tracking-tight">{t('recorder')}</h1>
+      <p class="text-muted text-lg">
+        {t('sign_in_with_your_hype_account_to_get_ready_for_field_recording')}
       </p>
       {#if pending}
         {#if code}
-          <p>Match this code in your browser to connect your account.</p>
+          <p>{t('match_this_code_in_your_browser_to_connect_your_account')}</p>
           <strong class="text-2xl tracking-widest">{code}</strong>
         {:else}
           <div
-            class="h-8 w-40 animate-pulse rounded bg-slate-700"
+            class="bg-raised h-8 w-40 animate-pulse rounded"
             role="status"
-            aria-label="Requesting a sign-in code"
+            aria-label={t('requesting_a_sign_in_code')}
             aria-busy="true"
           ></div>
         {/if}
@@ -100,22 +111,22 @@ async function signIn(): Promise<void> {
           class="rounded-xl border p-3"
           onclick={() => pending?.abort()}
         >
-          Cancel sign-in
+          {t('cancel_sign_in')}
         </button>
       {:else if busy}
         <div
-          class="h-12 animate-pulse rounded-xl bg-slate-700"
+          class="bg-raised h-12 animate-pulse rounded-xl"
           role="status"
-          aria-label="Connecting"
+          aria-label={t('connecting')}
           aria-busy="true"
         ></div>
       {:else}
         <button
           type="button"
-          class="rounded-xl bg-white p-3 font-semibold text-black"
+          class="bg-accent text-on-accent rounded-xl p-3 font-semibold"
           onclick={signIn}
         >
-          Sign in with HYPE
+          {t('sign_in_with_hype')}
         </button>
       {/if}
       {#if message}
