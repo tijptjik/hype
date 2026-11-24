@@ -77,8 +77,20 @@ export const getResearchLocations = guardedQuery(
       confirmedUnnamed: number | null
       footprint: string | null
       location: string
+      hasExteriorMap: number
+      hasInteriorMap: number
     }>(
-      sql`WITH scope(organisationId) AS (VALUES (${session.organisationId})) SELECT l.id,l.matchingType kind,coalesce(json_extract(r.facts,'$.common.footprint'),json_extract(r.facts,'$.footprint')) footprint,${fields.names} names,${fields.confirmedUnnamed} confirmedUnnamed,${fields.location} location FROM scope CROSS JOIN fieldResearchSessionLocation sl JOIN location l ON l.id=sl.locationId LEFT JOIN locationRevisionContent r ON r.locationId=l.id AND r.version=(SELECT max(version) FROM locationRevisionContent WHERE locationId=l.id AND (l.state!='linked' OR origin='saanseoi')) WHERE sl.sessionId=${input.sessionId} AND l.state!='redirect' AND (l.state!='manual' OR l.ownerOrganisationId=${session.organisationId}) ORDER BY l.id`,
+      sql`WITH scope(organisationId) AS (VALUES (${session.organisationId}))
+        SELECT l.id,l.matchingType kind,
+          EXISTS(SELECT 1 FROM locationExteriorModel WHERE locationId=l.id) hasExteriorMap,
+          EXISTS(
+            SELECT 1 FROM locationPremisesMap link JOIN premisesMap m ON m.id=link.mapId
+            WHERE link.locationId=l.id AND m.publishedHash IS NOT NULL
+            UNION ALL
+            SELECT 1 FROM premisesMapUnit unit JOIN premisesMap m ON m.id=unit.mapId
+            WHERE unit.locationId=l.id AND m.publishedHash IS NOT NULL
+          ) hasInteriorMap,
+          coalesce(json_extract(r.facts,'$.common.footprint'),json_extract(r.facts,'$.footprint')) footprint,${fields.names} names,${fields.confirmedUnnamed} confirmedUnnamed,${fields.location} location FROM scope CROSS JOIN fieldResearchSessionLocation sl JOIN location l ON l.id=sl.locationId LEFT JOIN locationRevisionContent r ON r.locationId=l.id AND r.version=(SELECT max(version) FROM locationRevisionContent WHERE locationId=l.id AND (l.state!='linked' OR origin='saanseoi')) WHERE sl.sessionId=${input.sessionId} AND l.state!='redirect' AND (l.state!='manual' OR l.ownerOrganisationId=${session.organisationId}) ORDER BY l.id`,
     )
     return rows.map(row => {
       const names: Record<string, string> = JSON.parse(row.names ?? '{}')
@@ -98,6 +110,8 @@ export const getResearchLocations = guardedQuery(
         names,
         confirmedUnnamed: row.confirmedUnnamed === 1,
         address,
+        hasExteriorMap: Boolean(row.hasExteriorMap),
+        hasInteriorMap: Boolean(row.hasInteriorMap),
         coordinates: location.geometry?.coordinates ?? null,
         footprint:
           footprint.success && footprint.data.mode === 'inline'
