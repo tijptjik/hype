@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit'
 // REMOTE
 import { guardedQuery } from '#lib/api/server/guarded.js'
 // DRIZZLE
-import { and, eq, ne } from 'drizzle-orm'
+import { and, eq, isNotNull, ne, or } from 'drizzle-orm'
 // DOMAIN
 import { BuildingSourceSchema } from '#lib/locations/buildingSource.js'
 import { sharedBuildingImportId } from '#lib/db/services/buildingImportIdentity.js'
@@ -27,7 +27,13 @@ export const getBuildingLocationDetails = guardedQuery(
     const existing = await ctx.db
       .select({ id: location.id })
       .from(location)
-      .where(and(eq(location.id, id), ne(location.state, 'manual')))
+      .where(
+        and(
+          eq(location.id, id),
+          ne(location.state, 'manual'),
+          or(ne(location.state, 'redirect'), isNotNull(location.redirectTargetId)),
+        ),
+      )
       .get()
     if (existing) return { type: 'location' as const, locationId: existing.id }
 

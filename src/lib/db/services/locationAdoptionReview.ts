@@ -128,9 +128,9 @@ export async function readLocationAdoptionReview(
   if (!rows) return null
   if (rows.proposal.evidence.placement) {
     const allowed =
-      await db.get(sql`SELECT 1 FROM feature f JOIN project p ON p.id=f.projectId JOIN location l ON l.id=${rows.proposal.locationId} WHERE f.id=${input.featureId} AND p.id=${input.projectId} AND (l.state!='manual' OR l.ownerOrganisationId=p.organisationId)
-      AND NOT EXISTS(SELECT 1 FROM locationOccupancy o JOIN location c ON c.id=o.containerLocationId WHERE o.id=${rows.proposal.occupancyRevisionId} AND c.state='manual' AND c.ownerOrganisationId!=p.organisationId)
-      AND NOT EXISTS(SELECT 1 FROM json_each(${JSON.stringify(rows.proposal.evidence.placement.membershipRevisionIds)}) j JOIN locationMembership m ON m.id=j.value JOIN location c ON c.id=m.parentLocationId OR c.id=m.childLocationId WHERE c.state='manual' AND c.ownerOrganisationId!=p.organisationId)`)
+      await db.get(sql`SELECT 1 FROM feature f JOIN project p ON p.id=f.projectId JOIN location l ON l.id=${rows.proposal.locationId} WHERE f.id=${input.featureId} AND p.id=${input.projectId} AND (l.state!='redirect' OR l.redirectTargetId IS NOT NULL) AND (l.state!='manual' OR l.ownerOrganisationId=p.organisationId)
+      AND NOT EXISTS(SELECT 1 FROM locationOccupancy o JOIN location c ON c.id=o.containerLocationId WHERE o.id=${rows.proposal.occupancyRevisionId} AND ((c.state='redirect' AND c.redirectTargetId IS NULL) OR (c.state='manual' AND c.ownerOrganisationId!=p.organisationId)))
+      AND NOT EXISTS(SELECT 1 FROM json_each(${JSON.stringify(rows.proposal.evidence.placement.membershipRevisionIds)}) j JOIN locationMembership m ON m.id=j.value JOIN location c ON c.id=m.parentLocationId OR c.id=m.childLocationId WHERE (c.state='redirect' AND c.redirectTargetId IS NULL) OR (c.state='manual' AND c.ownerOrganisationId!=p.organisationId))`)
     if (!allowed) return null
   }
   const decisions = await db

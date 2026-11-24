@@ -68,6 +68,7 @@ export const location = sqliteTable(
     ownerOrganisationId: text('ownerOrganisationId').references(() => organisation.id, {
       onDelete: 'restrict',
     }),
+    // Inactive identities have a merge target or a terminal locationDeletion receipt.
     state: text('state', {
       enum: ['linked', 'unresolved', 'manual', 'redirect'],
     }).notNull(),

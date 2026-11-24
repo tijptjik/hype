@@ -131,6 +131,10 @@ export function setupLocationServiceDatabase(
         'utf8',
       ).split('DROP TRIGGER identity_catalogue_i18n_revision;')[0],
     )
+    // The Location deletion guard also checks the independently recorded capture placement.
+    sqlite.exec(
+      'CREATE TABLE fieldResearchRecord(id TEXT PRIMARY KEY, locationId TEXT REFERENCES location(id))',
+    )
     for (const name of [
       '0250_location_canonical_drafts',
       '0252_location_mutable_drafts',
@@ -140,6 +144,7 @@ export function setupLocationServiceDatabase(
       '0256_premises_map_draft_history',
       '0257_premises_map_correction',
       '0271_physical_building_membership',
+      '0272_location_deletion',
     ])
       sqlite.exec(readFileSync('migrations/' + name + '.sql', 'utf8'))
   }

@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { spawnSync } from 'node:child_process'
 import { describe, expect, it, vi } from 'vitest'
 vi.mock('#lib/sources/saanseoi.js', async original => ({
   ...(await original<typeof import('#lib/sources/saanseoi.js')>()),
@@ -14,6 +15,8 @@ vi.mock('#lib/sources/saanseoi.js', async original => ({
   }),
 }))
 import { sql } from 'drizzle-orm'
+import { archiveLocalLocation } from '#lib/db/services/locationDeletion.js'
+import { probeLocationIdentityScope } from '#lib/db/services/locationIdentityReview.js'
 import { updateLocalLocationAddress } from '#lib/db/services/locationLocal.js'
 import { createLocalLocationAddress } from '#lib/addresses/localLocationAddress.js'
 import {
@@ -70,6 +73,105 @@ describe('physical building source membership', () => {
       body: { message: expect.stringContaining('migration 0271') },
     })
     expect(count()).toEqual(before)
+  })
+  it('prepares the deletion blocker under D1’s five-term compound SELECT limit', () => {
+    const { sqlite } = setupLocationServiceDatabase(true)
+    const definitions = sqlite
+      .prepare(`
+      SELECT sql FROM sqlite_master
+      WHERE (type='table' AND name NOT LIKE 'sqlite_%') OR name='locationDeletionBlocker'
+      ORDER BY type
+    `)
+      .all() as { sql: string }[]
+    // Node's SQLite accepts longer UNION chains. Compile the actual migrated view with D1's limit.
+    const result = spawnSync(
+      'python3',
+      [
+        '-c',
+        `
+import sqlite3, sys
+db = sqlite3.connect(':memory:')
+db.setlimit(sqlite3.SQLITE_LIMIT_COMPOUND_SELECT, 5)
+db.executescript(sys.stdin.read())
+db.execute('SELECT 1 FROM locationDeletionBlocker WHERE locationId=?', ('test',)).fetchall()
+`,
+      ],
+      { input: definitions.map(row => row.sql + ';').join('\n'), encoding: 'utf8' },
+    )
+    expect(result.stderr).toBe('')
+    expect(result.status).toBe(0)
+  })
+  it('deletes only the unused parent and retains constituent identities and evidence', async () => {
+    const { db, sqlite } = setupLocationServiceDatabase(true)
+    const locationId = await savePhysicalBuildingMember(
+      db,
+      'p',
+      'user',
+      { requestId: 'delete-parent' },
+      member('first', '25'),
+    )
+    const edge = sqlite
+      .prepare(
+        'SELECT childLocationId FROM locationMembershipHead WHERE parentLocationId=?',
+      )
+      .get(locationId) as { childLocationId: string }
+    const { id: revisionId } = sqlite
+      .prepare('SELECT id FROM locationRevision WHERE locationId=?')
+      .get(locationId) as { id: string }
+    const input = {
+      locationId,
+      revisionId,
+      actorId: 'curator',
+      state: 'unresolved' as const,
+      ownerOrganisationId: 'p',
+    }
+    expect(await archiveLocalLocation(db, { ...input, revisionId: 'stale' })).toBe(
+      'changed',
+    )
+    expect(
+      await archiveLocalLocation(db, { ...input, ownerOrganisationId: 'other' }),
+    ).toBe('changed')
+    const link = sqlite.prepare(
+      "INSERT INTO featureLocation(featureId,locationId,factsRevisionId,locationRevisionId) VALUES('f',?,?,?)",
+    )
+    link.run(locationId, revisionId, revisionId)
+    expect(await archiveLocalLocation(db, input)).toBe('in-use')
+    sqlite.exec("DELETE FROM featureLocation WHERE featureId='f'")
+    sqlite
+      .prepare("INSERT INTO fieldResearchRecord(id,locationId) VALUES('capture',?)")
+      .run(locationId)
+    expect(await archiveLocalLocation(db, input)).toBe('in-use')
+    sqlite.exec("UPDATE fieldResearchRecord SET locationId=NULL WHERE id='capture'")
+    expect(await archiveLocalLocation(db, input)).toBe('deleted')
+    expect(() =>
+      sqlite
+        .prepare("UPDATE fieldResearchRecord SET locationId=? WHERE id='capture'")
+        .run(locationId),
+    ).toThrow('Location was deleted')
+    expect(await probeLocationIdentityScope(db, locationId)).toBeNull()
+    expect(await probeLocationIdentityScope(db, edge.childLocationId)).toMatchObject({
+      state: 'unresolved',
+    })
+    expect(
+      sqlite
+        .prepare('SELECT actorId FROM locationDeletion WHERE locationId=?')
+        .get(locationId),
+    ).toEqual({ actorId: 'curator' })
+    expect(
+      sqlite
+        .prepare('SELECT id FROM locationMembershipHead WHERE parentLocationId=?')
+        .get(locationId),
+    ).toBeUndefined()
+    expect(
+      sqlite
+        .prepare('SELECT id FROM locationMembership WHERE parentLocationId=?')
+        .get(locationId),
+    ).toBeTruthy()
+    expect(
+      sqlite.prepare('SELECT id FROM locationRevision WHERE id=?').get(revisionId),
+    ).toBeTruthy()
+    expect(() => link.run(locationId, revisionId, revisionId)).toThrow()
+    expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([])
   })
   it('groups distinct frontages, ranges and suffixes numerically, retaining unparsed addresses', () => {
     const unknown = member('unknown', '')

@@ -66,7 +66,12 @@ export async function probeLocationIdentityScope(
         ownerOrganisationId: locationTable.ownerOrganisationId,
       })
       .from(locationTable)
-      .where(eq(locationTable.id, locationId))
+      .where(
+        and(
+          eq(locationTable.id, locationId),
+          sql`(${locationTable.state}!='redirect' OR ${locationTable.redirectTargetId} IS NOT NULL)`,
+        ),
+      )
       .get()) ?? null
   )
 }

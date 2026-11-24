@@ -53,7 +53,7 @@ async function validateEvidence(
     const { resourceType, revisionId } = item.source
     let guard: SQL
     if (resourceType === 'locationRevision')
-      guard = sql`SELECT 1 FROM locationRevisionContent r JOIN location l ON l.id=r.locationId WHERE r.id=${revisionId} AND (l.state!='manual' OR l.ownerOrganisationId IS ${scope})`
+      guard = sql`SELECT 1 FROM locationRevisionContent r JOIN location l ON l.id=r.locationId WHERE r.id=${revisionId} AND (l.state!='redirect' OR l.redirectTargetId IS NOT NULL) AND (l.state!='manual' OR l.ownerOrganisationId IS ${scope})`
     else if (resourceType === 'addressRevision')
       guard = sql`SELECT 1 FROM addressRevision WHERE id=${revisionId}`
     else
