@@ -73,13 +73,17 @@ for (const width of [390, 1440]) {
         const first = await page.evaluate(() => window.firstControls)
         if (width >= 768) {
           expect(first.width).toBeLessThan(width / 2)
+          expect(first.top).toBeGreaterThan(10)
+          expect(first.bottomGutter).toBeGreaterThan(10)
         } else {
           expect(first.width).toBeGreaterThan(width * 0.85)
+          expect(first.top).toBeLessThan(10)
+          expect(first.bottomGutter).toBeLessThan(5)
         }
         // Check final placement after the bars finish their vertical entrance.
         await expect(page.locator('[data-app-intro-item="nav"]')).toHaveCSS(
           'translate',
-          'none',
+          /^(?:none|0px(?: 0px){0,2})$/,
         )
         const settled = await page.evaluate(() => ({
           top: document.querySelector('#omni-search-bar').getBoundingClientRect().top,
