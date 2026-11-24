@@ -14,7 +14,8 @@ let { localeKey, isReady, children }: AppShellProps = $props()
 const classes = $derived(
   cx(
     'bits-theme',
-    'flex h-lvh min-h-0 w-lvw min-w-0 flex-row overflow-hidden overscroll-contain bg-panel',
+    'flex h-lvh min-h-0 w-lvw min-w-0 flex-row overflow-hidden overscroll-contain',
+    page.route.id?.startsWith('/(public)/(app)') ? 'bg-transparent' : 'bg-panel',
     localeKey === 'zhHant' ? 'font-(--font-hant)' : '',
     localeKey === 'zhHans' ? 'font-(--font-hans)' : '',
   ),

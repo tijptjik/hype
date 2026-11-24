@@ -483,6 +483,10 @@ const translation: Handle = ({ event, resolve }) =>
       {
         transformPageChunk: ({ html }) => {
           return html
+            .replace(
+              '%entry%',
+              event.route.id?.startsWith('/(public)/(app)') ? 'map' : 'default',
+            )
             .replace('lang="en"', `lang="${event.locals.user?.locale || locale}"`)
             .replace(
               '%theme%',

@@ -1,8 +1,6 @@
 <script lang="ts">
 // SVELTE
 import { onMount, type ComponentProps } from 'svelte'
-// COMPONENTS
-import MapLoading from './MapLoading.svelte'
 // I18N
 import { m } from '#lib/i18n.js'
 // TYPES
@@ -18,9 +16,7 @@ onMount(() => {
 </script>
 
 {#if renderer}
-  {#await renderer}
-    <MapLoading />
-  {:then module}
+  {#await renderer then module}
     <module.default {...props} />
   {:catch}
     <div class="bg-base-200 absolute inset-0 flex items-center justify-center">
@@ -35,6 +31,4 @@ onMount(() => {
       </button>
     </div>
   {/await}
-{:else}
-  <MapLoading />
 {/if}

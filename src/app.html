@@ -2,10 +2,27 @@
 <html
   lang="en"
   data-theme="%theme%"
+  data-entry="%entry%"
   style="background-color: var(--theme-canvas, #08090e)"
 >
   <head>
     <meta charset="utf-8">
+    <style>
+    /* The document paints before the map. Its controls never participate in this fade. */
+    @media (prefers-reduced-motion: no-preference) {
+      html[data-entry="map"] {
+        animation: public-canvas-entry 360ms ease-out backwards;
+      }
+      @keyframes public-canvas-entry {
+        from {
+          background-color: black;
+        }
+        to {
+          background-color: var(--theme-canvas, #08090e);
+        }
+      }
+    }
+    </style>
     <link rel="icon" href="%sveltekit.assets%/favicon.png">
     <meta
       name="viewport"
