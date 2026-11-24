@@ -1102,7 +1102,9 @@ $effect(() => {
     remotePending = true
     remotePageError = null
     matchingCount = null
-    adminCtx.rememberFeatureIndexCount(null)
+    // Embedded brand and location indexes own their counts independently of the main menu.
+    const shareCountWithMenu = !brandId && !locationScope
+    if (shareCountWithMenu) adminCtx.rememberFeatureIndexCount(null)
     matchingCountLoading = true
     const input: FeatureIndexQuery = {
       location: locationScope,
@@ -1131,7 +1133,7 @@ $effect(() => {
           nextQuery === normalizedTextQuery
         ) {
           matchingCount = result.totalCount
-          adminCtx.rememberFeatureIndexCount(result.totalCount)
+          if (shareCountWithMenu) adminCtx.rememberFeatureIndexCount(result.totalCount)
         }
       })
       .catch(() => {

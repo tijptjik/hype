@@ -15,6 +15,8 @@ const state = vi.hoisted(() => ({
   user: null as SessionUser | null,
   listCount: null as number | null,
   getTasks: vi.fn(),
+  getFeatureIndexPage: vi.fn(() => ({ current: { totalCount: 27 } })),
+  url: new URL('http://localhost/admin/features'),
   navigateOnAdmin: vi.fn(),
   togglePrism: vi.fn(),
   prisms: {
@@ -27,14 +29,19 @@ vi.mock('#lib/api/tasks.remote.js', () => ({
   getTasks: state.getTasks,
 }))
 vi.mock('#lib/api/featureIndex.remote.js', () => ({
-  getFeatureIndexPage: () => ({ current: { totalCount: 0 }, loading: false }),
+  getFeatureIndexPage: state.getFeatureIndexPage,
 }))
 const taskRows = new SvelteMap<string, unknown[]>([['task', []]])
 vi.mock('$app/state', () => ({
-  page: { url: new URL('http://localhost/admin/features') },
+  page: {
+    get url() {
+      return state.url
+    },
+  },
 }))
 vi.mock('#lib/context/admin.svelte.js', () => ({
   getAdminCtx: () => ({
+    featureIndexCount: 19,
     filteredTasks: [],
     filteredFeatures: [],
     tasksQueryKey: ['task'],
@@ -87,6 +94,8 @@ afterEach(() => {
   Reflect.deleteProperty(HTMLElement.prototype, 'scrollTo')
   Reflect.deleteProperty(HTMLElement.prototype, 'animate')
   state.getTasks.mockReset()
+  state.getFeatureIndexPage.mockClear()
+  state.url = new URL('http://localhost/admin/features')
   state.navigateOnAdmin.mockReset()
   state.togglePrism.mockReset()
   state.prisms = { organisation: [], project: [], layer: [] }
@@ -193,6 +202,21 @@ it('does not request task counts for a member without queue access', () => {
   } as SessionUser
   render(AdminMenu, { isNarrow: false })
   expect(state.getTasks).not.toHaveBeenCalled()
+})
+
+it.each([
+  ['/admin/features', '19', 0],
+  ['/admin/tasks', '27', 1],
+] as const)('uses the correct feature count on %s', (pathname, count, requests) => {
+  state.url = new URL(pathname, 'http://localhost')
+  state.user = {
+    id: 'member',
+    isAnonymous: false,
+    roles: [{ type: 'organisation', organisationId: 'org-a', role: 'member' }],
+  } as SessionUser
+  render(AdminMenu, { isNarrow: false })
+  expect(screen.getByText(count)).toBeTruthy()
+  expect(state.getFeatureIndexPage).toHaveBeenCalledTimes(requests)
 })
 
 it('refreshes the badge after queue rows change without duplicating the initial request', async () => {

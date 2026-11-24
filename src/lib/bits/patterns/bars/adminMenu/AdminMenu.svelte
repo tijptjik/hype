@@ -79,9 +79,12 @@ const taskCountQuery = $derived(
     : null,
 )
 const taskCount = $derived(taskCountQuery?.current?.totalCount ?? null)
-// Count independently of the mounted view; matching index requests share the remote cache.
+// The Features landing page already fetches and publishes the matching total for its rows.
+const onFeatureIndex = $derived(
+  page.url.pathname.replace(/\/$/, '') === '/admin/features',
+)
 const featureCountQuery = $derived(
-  adminCtx.view.user && !adminCtx.view.user.isAnonymous
+  !onFeatureIndex && adminCtx.view.user && !adminCtx.view.user.isAnonymous
     ? getFeatureIndexPage({
         conditions: adminCtx.view.isSuperAdmin()
           ? { isArchived: null, isPublished: null }
@@ -98,7 +101,11 @@ const featureCountQuery = $derived(
       })
     : null,
 )
-const featureCount = $derived(featureCountQuery?.current?.totalCount ?? null)
+const featureCount = $derived(
+  (onFeatureIndex
+    ? adminCtx.featureIndexCount
+    : featureCountQuery?.current?.totalCount) ?? null,
+)
 const countOwner = $derived(
   JSON.stringify([adminCtx.view.user?.id, adminCtx.view.hub?.id, canListTasks]),
 )
