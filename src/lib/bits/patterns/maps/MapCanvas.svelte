@@ -1072,7 +1072,7 @@ $effect(() => {
   inert={appCtx.station.active}
   aria-hidden={appCtx.station.active}
   class="map absolute! inset-0 overflow-hidden caret-transparent {shouldFadeOnFirstFrame
-    ? 'transition-opacity duration-420 ease-out motion-reduce:transition-none'
+    ? 'transition-opacity delay-400 duration-300 ease-out motion-reduce:transition-none motion-reduce:delay-0'
     : ''}"
   style:opacity={shouldFadeOnFirstFrame && !hasRendered ? 0 : undefined}
   data-map-visual-ready={hasRendered}

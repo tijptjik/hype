@@ -1,6 +1,7 @@
 <script lang="ts">
 // BITS
 import { cx } from '#lib/bits/utils.js'
+import '#lib/styles/app-surface-entrance.css'
 
 type AppSurfaceProps = {
   children: import('svelte').Snippet

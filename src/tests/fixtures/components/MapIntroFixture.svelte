@@ -121,7 +121,7 @@ function watchFirstFrame(
 
 <main class="bits-theme bg-surface text-base-content h-dvh w-full overflow-hidden">
   {#key generation}
-    <AppSurface intro="complete">
+    <AppSurface intro={generation === 0 ? 'complete' : 'waiting'}>
       <div
         data-intro-map
         data-generation={generation}
@@ -130,7 +130,7 @@ function watchFirstFrame(
         class={[
           'absolute inset-0',
           fadeCurrentMap &&
-            'transition-opacity duration-420 ease-out motion-reduce:transition-none',
+            'transition-opacity delay-400 duration-300 ease-out motion-reduce:transition-none motion-reduce:delay-0',
         ]}
         style:opacity={fadeCurrentMap && !painted ? 0 : undefined}
         use:watchFirstFrame={{ map }}

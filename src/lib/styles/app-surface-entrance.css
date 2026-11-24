@@ -1,0 +1,28 @@
+/* Animate only the initially mounted bars, preserving their existing transforms. */
+@layer components {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-app-intro="complete"] [data-app-intro-item="search"],
+    [data-app-intro="complete"] [data-app-intro-item="nav"] {
+      animation: app-bar-entrance 500ms cubic-bezier(0.645, 0.045, 0.355, 1) both;
+    }
+
+    [data-app-intro="complete"] [data-app-intro-item="search"] {
+      --app-bar-entrance-y: -24px;
+    }
+
+    [data-app-intro="complete"] [data-app-intro-item="nav"] {
+      --app-bar-entrance-y: 24px;
+    }
+  }
+
+  @keyframes app-bar-entrance {
+    from {
+      opacity: 0;
+      translate: 0 var(--app-bar-entrance-y);
+    }
+    to {
+      opacity: 1;
+      translate: none;
+    }
+  }
+}

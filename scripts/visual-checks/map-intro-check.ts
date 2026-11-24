@@ -115,7 +115,7 @@ async function initialFrames(page: Page): Promise<Frame[]> {
 }
 
 /**
- * Checks immediate controls, a fading map and stable horizontal anchors.
+ * Checks the bar entrances, delayed map fade and stable horizontal anchors.
  * @param frames - Recorded normal-motion startup.
  * @param width - Current layout viewport width.
  * @returns Measured delay and movement diagnostics.
@@ -136,14 +136,13 @@ function verifyEntrance(frames: Frame[], width: number): Record<string, number> 
   )
   assert.ok(searchStart.search && settled.search && navStart.nav && settled.nav)
   assert.ok(
-    frames.every(
-      frame =>
-        frame.search?.visibility === 'visible' &&
-        frame.search.opacity === 1 &&
-        frame.nav?.visibility === 'visible' &&
-        frame.nav.opacity === 1,
-    ),
-    'Map startup hid the controls',
+    settled.search.y - searchStart.search.y > 2,
+    'Search did not enter from top',
+  )
+  assert.ok(navStart.nav.y - settled.nav.y > 2, 'Navigation did not enter from bottom')
+  assert.ok(
+    mapStart.mapReadyAt !== null && mapStart.at - mapStart.mapReadyAt >= 380,
+    'Map fade did not wait after its first frame',
   )
   for (const key of ['search', 'nav', 'overlay'] as const) {
     const boxes = frames.flatMap(frame => (frame[key] ? [frame[key]] : []))
@@ -255,13 +254,13 @@ try {
       `${output}/map-intro-${width}.json`,
       JSON.stringify(frames, null, 2),
     )
-    const beforeRemount = await page.evaluate(() => performance.now())
     await page.getByRole('button', { name: 'Explore', exact: true }).click()
     await page.locator('[data-intro-map][data-generation="1"]').waitFor()
     // The outgoing panel can retain its keyed surface briefly during its outro.
     await page
       .locator('[data-intro-map][data-generation="0"]')
       .waitFor({ state: 'detached' })
+    const beforeRemount = await page.evaluate(() => performance.now())
     await page.getByRole('textbox', { name: 'Search places' }).fill('Ready immediately')
     await page.waitForTimeout(650)
     const remounted = await page.evaluate(
@@ -271,7 +270,7 @@ try {
     )
     assert.ok(remounted.length > 3)
     assert.ok(
-      remounted.every(frame => frame.phase === 'complete'),
+      remounted.every(frame => frame.phase === 'waiting'),
       'Remounted surface replayed intro',
     )
     assert.ok(
@@ -344,7 +343,7 @@ try {
     .fill('Available before map')
   assert.equal(await late.locator('.maplibregl-canvas').count(), 0)
   await late.locator('[data-map-visual-ready="true"]').waitFor()
-  await late.waitForTimeout(650)
+  await late.waitForTimeout(800)
   const lateFrames = await late.evaluate(
     () => (window as CheckWindow).__introFrames ?? [],
   )
