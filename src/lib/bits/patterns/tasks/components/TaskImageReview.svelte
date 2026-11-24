@@ -367,18 +367,14 @@ async function save(
     if (file) {
       if (file.size > 20 * 1024 * 1024)
         throw new Error('Replacement must be at most 20 MB')
+      if (!['image/jpeg', 'image/png', 'image/webp', 'image/avif'].includes(file.type))
+        throw new Error('Unsupported image type')
       const encoded = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader()
         reader.onload = () => resolve(String(reader.result).split(',')[1])
         reader.onerror = reject
         reader.readAsDataURL(file)
       })
-      if (
-        !['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'].includes(
-          file.type,
-        )
-      )
-        throw new Error('Unsupported image type')
       updated = await replaceTaskReviewImage({
         ...input,
         bytes: encoded,

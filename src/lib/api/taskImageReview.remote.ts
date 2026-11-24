@@ -122,13 +122,7 @@ export const saveTaskImageReview = guardedCommand(saveSchema, async (input, ctx)
 export const replaceTaskReviewImage = guardedCommand(
   saveSchema.extend({
     bytes: z.string().max(28 * 1024 * 1024),
-    mediaType: z.enum([
-      'image/jpeg',
-      'image/png',
-      'image/webp',
-      'image/avif',
-      'image/gif',
-    ]),
+    mediaType: z.enum(['image/jpeg', 'image/png', 'image/webp', 'image/avif']),
   }),
   async (input, ctx) => {
     const guard = await authorize(ctx, input.taskId)

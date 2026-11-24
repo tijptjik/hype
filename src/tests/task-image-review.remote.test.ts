@@ -90,6 +90,11 @@ it('validates replacements before storage and rejects stale replay without anoth
     bytes: btoa('verified bytes'),
     mediaType: 'image/png' as const,
   }
+  await expect(
+    replaceTaskReviewImage({ ...input, mediaType: 'image/gif' as 'image/png' }),
+  ).rejects.toThrow()
+  expect(state.transform).not.toHaveBeenCalled()
+  expect(state.put).not.toHaveBeenCalled()
   state.transform.mockRejectedValueOnce(new Error('Bad image'))
   await expect(replaceTaskReviewImage(input)).rejects.toThrow('Bad image')
   expect(state.put).not.toHaveBeenCalled()
