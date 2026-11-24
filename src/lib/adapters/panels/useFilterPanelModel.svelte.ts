@@ -46,18 +46,24 @@ function getPropertyFilterMap(
  * @param app - Route-owned resource and filter context.
  * @param omni - Route-owned search/map presentation context.
  * @param zoomToVisible - Fits the map after filter changes.
+ * @param isOpen - Whether classifier groups are visible and need hydration.
  * @returns Filter panel data and callbacks for controlled Bits patterns.
  */
 export function useFilterPanelModel(
   app: ResourceViewCtx,
   omni: OmniCtx,
   zoomToVisible: () => void,
+  isOpen: () => boolean,
 ) {
   let searchTerm = $state('')
   let groups = $state<ClassifierGroup[]>([])
 
   // Refresh after definitions arrive as well as when the active selection changes.
   $effect(() => {
+    if (!isOpen()) {
+      groups = []
+      return
+    }
     const prismSignature = app.scope.getPrism(FirstClassResource.layer).join('|')
     // SvelteMap reads must happen before the async boundary to track hydration.
     Array.from(app.cache.property.values())

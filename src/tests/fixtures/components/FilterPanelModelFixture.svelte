@@ -6,9 +6,20 @@ import type { OmniCtx } from '#lib/context/omni.svelte.js'
 let {
   app,
   onModel,
+  open = true,
 }: {
+  open?: boolean
   app: ResourceViewCtx
   onModel: (model: ReturnType<typeof useFilterPanelModel>) => void
 } = $props()
-untrack(() => onModel(useFilterPanelModel(app, {} as OmniCtx, () => {})))
+untrack(() =>
+  onModel(
+    useFilterPanelModel(
+      app,
+      {} as OmniCtx,
+      () => {},
+      () => open,
+    ),
+  ),
+)
 </script>

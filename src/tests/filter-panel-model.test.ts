@@ -108,12 +108,15 @@ it('hydrates categories after definitions arrive and updates them without a laye
     filters: { values: { feature: { properties: {} } } },
   } as unknown as ResourceViewCtx
   let model!: ReturnType<typeof useFilterPanelModel>
-  render(Fixture, {
+  const { rerender } = render(Fixture, {
     app,
+    open: false,
     onModel: value => {
       model = value
     },
   })
+  expect(app.getLayerById).not.toHaveBeenCalled()
+  await rerender({ open: true })
   await waitFor(() => expect(app.getLayerById).toHaveBeenCalled())
   expect(model.categories).toEqual([])
   cache.set(property.id, property)
