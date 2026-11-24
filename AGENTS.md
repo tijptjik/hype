@@ -77,29 +77,14 @@
 
 - Use the installed `playwright` package directly with Bun for manual UI checks; do not
   add a dependency solely for this.
-- Run every browser check through `dev-check`, including headless Chrome/Chromium,
-  Firefox, WebKit, inline `bun -e` checks, temporary scripts and Playwright CLI
-  commands. Browser child processes inherit the launcher's memory scope; launching them
-  directly from Zed charges their RAM to the editor and can stall it.
-- Use `dev-check bun scripts/visual-checks/<check>.ts` for saved checks, or
-  `dev-check bun -e "import { chromium } from 'playwright'; /* launch, inspect, screenshot, close */"`
-  when the `playwright-cli` wrapper cannot resolve this checkout's dependencies. If the
-  user systemd bus is blocked by the sandbox, request execution with bus access; do not
-  retry without `dev-check` or set `DOTJIK_DEV_CHECK` manually.
-- For admin UI verification, use the user's existing authenticated browser session. A
-  redirect from a fresh unauthenticated Playwright context does not establish that no
-  admin session is available.
-- An authenticated local admin account is available to agents. If the existing browser
-  session cannot be accessed, use `bun run dev:agent admin --port 4173` and run a
-  dedicated headless Playwright check through `dev-check`. The launcher in
-  `scripts/dev/agent.ts` seeds the reserved local accounts and enables the admin persona
-  without passwords or production accounts. Do not report admin verification as blocked
-  solely because browser integration is unavailable or a fresh context redirects to
-  sign-in; check this supported local authentication path first.
-- Start the app with `bun run dev -- --host 127.0.0.1 --port 4173`, then stop it after
-  the check. Package Vite launchers use `dev-server` to keep server memory outside Zed.
-  Wrap direct or temporary Vite launches with `dev-server` too; long-lived servers must
-  not hold the `dev-check` validation lock.
+- Run application browser checks on Li using `dev-remote --port 4173 chrome` and its
+  managed Chrome runner. For interaction tests, use
+  `dev-remote --port 4173 chrome bun x   playwright test --config .dotjik-runner/playwright.config.mjs`.
+  Never silently fall back to a local browser when Li is unavailable.
+- Reuse the checkout's existing development server through `dev-server`; stop owned
+  unused instances after verification. For admin checks, the supported local persona is
+  `bun run dev:agent admin --port 4173`. Assert the admin identity and access in custom
+  tests; screenshots alone do not establish interaction correctness.
 - Launch Chromium with `args: ['--disable-web-security']` for local map verification:
   the development origin otherwise cannot load the external map tiles because of CORS.
 
@@ -138,10 +123,14 @@
   `spec/breadline/proposal/` and update that document when the implementation path or
   blocker changes.
 
-On managed desktops, run heavy validation through `dev-check COMMAND ...`, including
-direct Vitest, Svelte checks and Cargo builds. It shares one user lock across agents and
-repositories. Do not set DOTJIK_DEV_CHECK manually or bypass a failed resource scope.
-Watch commands retain the slot until stopped; avoid them for one-shot checks.
+On managed desktops, run Bun/Svelte lint and tests on Li from the Git root with
+`dev-remote lint` or `dev-remote test`; use `dev-remote typecheck` for the full Hype
+Svelte check. An explicit test command can be supplied after `dev-remote test`. Jobs use
+isolated snapshots; generate ignored build outputs in the job. Use `dev-remote status`
+to inspect the queue and wait for submitted jobs to finish. For checks requiring local
+state or non-Bun tooling, use `dev-check COMMAND ...`. Do not set `DOTJIK_DEV_CHECK`
+manually or bypass a failed resource scope. Avoid watch commands that hold a validation
+slot.
 
 ## Lint workflow
 
