@@ -4,7 +4,8 @@ vi.mock('#lib/sources/saanseoi.js', async original => ({
   ...(await original<typeof import('#lib/sources/saanseoi.js')>()),
   loadBuildingNames: async () => ({
     release: 'publication',
-    records: ['first', 'second'].map(id => ({ id, names: {} })),
+    // The second verified footprint is absent from the published names index.
+    records: [{ id: 'first', names: { en: 'First building' } }],
   }),
   loadBuildingDetails: async (id: string) => ({
     id,

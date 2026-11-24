@@ -104,19 +104,25 @@ export async function importBuildingLocation(
   const bundle = await loadBuildingNames()
   if (bundle.release !== source.release) throw new Error('BUILDING_PUBLICATION_CHANGED')
   const record = bundle.records.find(row => row.id === source.id)
-  if (!record) throw new Error('BUILDING_NOT_FOUND')
+  // The pinned point and address shards also cover footprints without a published name.
   const details = await loadBuildingDetails(source.id, source.release)
   const candidate = source.addressId
     ? details.addresses.find(row => row.id === source.addressId)
     : details.addresses[0]
   if (source.addressId && !candidate) throw new Error('BUILDING_ADDRESS_NOT_FOUND')
   const names = Object.fromEntries(
-    Object.entries(record.names).filter((entry): entry is [string, string] =>
+    Object.entries(record?.names ?? {}).filter((entry): entry is [string, string] =>
       Boolean(entry[1]),
     ),
   )
-  if (!Object.keys(names).length && record.name) names.und = record.name
-  const building = { ...record, names, release: bundle.release }
+  if (!Object.keys(names).length && record?.name) names.und = record.name
+  const building = {
+    id: source.id,
+    name: record?.name,
+    divisionCodes: record?.divisionCodes ?? [],
+    names,
+    release: bundle.release,
+  }
   const address = fillBuildingDetails(
     emptyFeatureAddress(),
     building,
