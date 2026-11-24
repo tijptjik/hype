@@ -50,6 +50,25 @@ import type { GuardedBaseContext } from './guarded.types.js'
 // 3. Versioned configuration and session metadata
 
 const id = z.string().min(1).max(100)
+const sessionPrisms = z.object({
+  organisation: z.array(id),
+  project: z.array(id),
+})
+
+/** Restrict session results to selected organisation and project prisms.
+ * @param prisms Selected IDs; empty selections impose no restriction.
+ * @returns SQL predicates for the session alias.
+ */
+function sessionPrismScope(prisms: z.infer<typeof sessionPrisms> | undefined) {
+  return and(
+    prisms?.organisation.length
+      ? sql`s.organisationId IN (SELECT value FROM json_each(${JSON.stringify(prisms.organisation)}))`
+      : undefined,
+    prisms?.project.length
+      ? sql`s.projectId IN (SELECT value FROM json_each(${JSON.stringify(prisms.project)}))`
+      : undefined,
+  )
+}
 const sessionRevision = z.object({
   sessionId: id,
   revision: z.number().int().nonnegative(),
@@ -143,6 +162,8 @@ export const getResearchSessions = guardedQuery(
     organisationId: id.optional(),
     projectId: id.optional(),
     layerId: id.optional(),
+    prisms: sessionPrisms.optional(),
+    hasRecords: z.boolean().optional(),
     sortBy: z.enum(['createdAt', 'name']).default('createdAt'),
     sortOrder: z.enum(['asc', 'desc']).default('desc'),
   }),
@@ -185,6 +206,17 @@ export const getResearchSessions = guardedQuery(
             : undefined,
           input.projectId ? eq(sessions.projectId, input.projectId) : undefined,
           input.layerId ? eq(sessions.layerId, input.layerId) : undefined,
+          input.prisms?.organisation.length
+            ? sql`${sessions.organisationId} IN (SELECT value FROM json_each(${JSON.stringify(input.prisms.organisation)}))`
+            : undefined,
+          input.prisms?.project.length
+            ? sql`${sessions.projectId} IN (SELECT value FROM json_each(${JSON.stringify(input.prisms.project)}))`
+            : undefined,
+          input.hasRecords === undefined
+            ? undefined
+            : input.hasRecords
+              ? sql`EXISTS (SELECT 1 FROM fieldResearchRecord WHERE sessionId=${sessions.id})`
+              : sql`NOT EXISTS (SELECT 1 FROM fieldResearchRecord WHERE sessionId=${sessions.id})`,
           input.query?.trim()
             ? sql`instr(lower(${sessions.name}),lower(${input.query.trim()})) > 0`
             : undefined,
@@ -208,9 +240,13 @@ export const getResearchSessionFilters = guardedQuery(
     organisationId: id.optional(),
     projectId: id.optional(),
     layerId: id.optional(),
+    prisms: sessionPrisms.optional(),
+    hasRecords: z.boolean().optional(),
   }),
   async (input, ctx) => {
     requireResearch(ctx)
+    if (input.archive !== 'active' && !ctx.user.superAdmin)
+      error(403, 'Only super admins can view archived sessions.')
     /** Build a facet scope excluding its own selection so that choice remains editable.
      * @param facet Facet whose available choices are requested.
      * @returns Authorization and other selected association predicates.
@@ -218,6 +254,12 @@ export const getResearchSessionFilters = guardedQuery(
     const scope = (facet: keyof typeof input) =>
       and(
         researchProjectAccess(ctx, sql`s.projectId`),
+        sessionPrismScope(input.prisms),
+        input.hasRecords === undefined
+          ? undefined
+          : input.hasRecords
+            ? sql`EXISTS (SELECT 1 FROM fieldResearchRecord WHERE sessionId=s.id)`
+            : sql`NOT EXISTS (SELECT 1 FROM fieldResearchRecord WHERE sessionId=s.id)`,
         input.archive === 'all'
           ? undefined
           : sql`s.isArchived=${input.archive === 'archived' ? 1 : 0}`,

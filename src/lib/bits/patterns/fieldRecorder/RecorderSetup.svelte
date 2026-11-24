@@ -18,6 +18,7 @@ import {
   getResearchProjects,
   getResearchLayers,
   getResearchSession,
+  getResearchSessionFilters,
 } from '#lib/api/fieldResearch.remote.js'
 import { refreshRemoteQuery } from '#lib/remote/index.js'
 // COMPONENTS
@@ -32,12 +33,26 @@ import type { ResearchSession } from '#lib/fieldResearch/model.js'
 let projects = $state<Awaited<ReturnType<typeof getResearchProjects>>>([])
 let archived = $state<boolean | null>(false)
 let filtersVisible = $state(false)
+let creatorId = $state('')
+let hasRecords = $state<boolean | null>(null)
+let creators = $state<{ value: string; label: string }[]>([])
 let sorting = $state<{ sortBy: 'createdAt' | 'name'; sortOrder: 'asc' | 'desc' }>({
   sortBy: 'createdAt',
   sortOrder: 'desc',
 })
 const adminCtx = getAdminCtx()
 const isSuperAdmin = $derived(Boolean(adminCtx.view.user?.superAdmin))
+const prisms = $derived({
+  organisation: [...adminCtx.view.scope.prisms.organisation],
+  project: [...adminCtx.view.scope.prisms.project],
+})
+const archive = $derived(
+  !isSuperAdmin || archived === false
+    ? 'active'
+    : archived === true
+      ? 'archived'
+      : 'all',
+)
 let sessionCount = $state(0)
 let layers = $state<Awaited<ReturnType<typeof getResearchLayers>>>([])
 let current = $state<ResearchSession | null>(null)
@@ -197,10 +212,36 @@ $effect(() => {
         showArchive: isSuperAdmin,
         sorting,
         onSortingChange: changeSorting,
+        creatorId,
+        creators,
+        hasRecords,
+        onCreatorChange: (value: string) => (creatorId = value),
+        onRecordsChange: (value: boolean | null) => (hasRecords = value),
+        onReset: () => {
+          archived = false
+          creatorId = ''
+          hasRecords = null
+        },
       },
       { isVisible: filtersVisible },
     )
   } else header.clearControlBar()
+})
+// Refresh creator choices within the current authorized prism and record scope.
+$effect(() => {
+  if (sessionId || creating || !filtersVisible) return
+  const options = { archive, prisms, hasRecords: hasRecords ?? undefined }
+  let active = true
+  refreshRemoteQuery(getResearchSessionFilters(options))
+    .then(result => {
+      if (active) creators = result.creators
+    })
+    .catch(error => {
+      if (active) failure = error instanceof Error ? error.message : String(error)
+    })
+  return () => {
+    active = false
+  }
 })
 onDestroy(() => {
   header.clearControlBar()
@@ -293,12 +334,11 @@ async function create(): Promise<void> {
   {#if !sessionId && !creating}
     <ResearchSessionIndex
       {indexPath}
-      archive={!isSuperAdmin || archived === false
-        ? 'active'
-        : archived === true
-          ? 'archived'
-          : 'all'}
+      {archive}
       {sorting}
+      {prisms}
+      {creatorId}
+      {hasRecords}
       bind:count={sessionCount}
     />
   {:else if !failure && ((creating && !ready) || (sessionId && !current))}

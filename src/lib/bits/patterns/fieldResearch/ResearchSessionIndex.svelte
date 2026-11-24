@@ -18,15 +18,27 @@ let {
   indexPath,
   archive,
   sorting,
+  prisms,
+  creatorId,
+  hasRecords,
   count = $bindable(0),
 }: {
   indexPath: string
   archive: 'active' | 'archived' | 'all'
   sorting: { sortBy: 'createdAt' | 'name'; sortOrder: 'asc' | 'desc' }
+  prisms: { organisation: string[]; project: string[] }
+  creatorId: string
+  hasRecords: boolean | null
   count?: number
 } = $props()
 
-const options = $derived({ archive, ...sorting })
+const options = $derived({
+  archive,
+  ...sorting,
+  prisms,
+  creatorId: creatorId || undefined,
+  hasRecords: hasRecords ?? undefined,
+})
 let sessions = $state<Awaited<ReturnType<typeof getResearchSessions>>>([])
 let loading = $state(false)
 let ready = $state(false)
@@ -66,7 +78,8 @@ async function load(before?: string): Promise<void> {
     if (request !== generation) return
     sessions = before ? [...sessions, ...rows] : rows
     if (!before) count = rows[0]?.totalCount ?? 0
-    hasMore = rows.length < (rows[0]?.totalCount ?? 0)
+    hasMore =
+      rows.length === 50 && (before ? true : rows.length < (rows[0]?.totalCount ?? 0))
   } catch (error) {
     if (request === generation)
       failure = error instanceof Error ? error.message : String(error)
