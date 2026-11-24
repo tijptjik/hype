@@ -193,7 +193,8 @@ const rootClass = $derived(
             </div>
           {/if}
           <div
-            class="grid shrink-0 items-center {viewActions.content?.component
+            class="grid shrink-0 items-center {viewActions.content?.component ||
+            (showFormActions && showViewActions)
               ? ''
               : shareAction
                 ? 'w-[408px]'
@@ -223,7 +224,10 @@ const rootClass = $derived(
             {/if}
             {#if showFilter || showViewActions}
               <div
-                class="col-start-1 row-start-1 flex w-full min-w-0 items-center justify-end gap-0 [&>label]:min-w-0 [&>label]:flex-1 [&>label>input]:min-w-0"
+                class="row-start-1 flex w-full min-w-0 items-center justify-end gap-0 [&>label]:min-w-0 [&>label]:flex-1 [&>label>input]:min-w-0 {showFormActions &&
+                showViewActions
+                  ? 'col-start-2'
+                  : 'col-start-1'}"
                 transition:fade={{ duration: prefersReducedMotion.current ? 0 : 180 }}
               >
                 <HeaderPrimitive.Search

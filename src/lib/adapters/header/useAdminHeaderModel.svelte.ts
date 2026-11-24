@@ -817,11 +817,11 @@ export function useAdminHeaderModel(
         isEmbeddedIndex ||
         (visibility.showFilter ?? defaultVisibility.showFilter)),
     showFacets: visibility.showFacets ?? defaultVisibility.showFacets,
-    showViewActions:
-      !isFormView &&
-      (isHistoryView ||
+    showViewActions: isFormView
+      ? visibility.showViewActions === true && customViewActions.length > 0
+      : isHistoryView ||
         isEmbeddedIndex ||
-        (visibility.showViewActions ?? defaultVisibility.showViewActions)),
+        (visibility.showViewActions ?? defaultVisibility.showViewActions),
     showFormActions:
       isFormView ||
       (!isReadOnlyView &&
