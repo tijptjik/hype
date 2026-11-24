@@ -245,6 +245,7 @@ const filtersModel = useFilterPanelModel(
   appCtx.view,
   omniCtx,
   appCtx.zoomToFilteredFeatures,
+  () => filtersShell.open,
 )
 const prismsModel = useResourcePanelModel(appCtx.view, 'prisms', undefined, omniCtx)
 const omnibarModel = useOmnibarModel(
