@@ -203,6 +203,8 @@ export default defineConfig(async ({ command }) => ({
       ignored: [
         '**/.wrangler/**',
         '**/apps/recorder/**',
+        // Database exports are not application sources and can change continuously.
+        '**/sql/backup/**',
         // Editing migration notes and browser checks must not invalidate a live form request.
         '**/migrations/pending/**',
         '**/scripts/visual-checks/**',
