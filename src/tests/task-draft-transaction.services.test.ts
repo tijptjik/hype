@@ -3,6 +3,7 @@ import { getTableColumns, getTableName } from 'drizzle-orm'
 import { describe, expect, it, vi } from 'vitest'
 import {
   feature,
+  featureOrigin,
   featureI18n,
   featureProperty,
   featurePropertyI18n,
@@ -16,7 +17,14 @@ import {
 import { publicationSqlite } from './fixtures/publicationSqlite.js'
 import type { Database } from '#lib/types.js'
 
-const tables = [feature, featureI18n, featureProperty, featurePropertyI18n, task]
+const tables = [
+  feature,
+  featureOrigin,
+  featureI18n,
+  featureProperty,
+  featurePropertyI18n,
+  task,
+]
 
 describe('atomic contribution draft updates', () => {
   it.each([

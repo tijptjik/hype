@@ -108,6 +108,11 @@ function setup(withOrphan = false) {
     ALTER TABLE feature RENAME COLUMN localPlaceBrands TO localLocationBrands;
     ALTER TABLE project RENAME COLUMN placePolicy TO locationPolicy;
     ALTER TABLE project RENAME COLUMN placePolicyRevision TO locationPolicyRevision;`)
+  sqlite.exec(`ALTER TABLE featureLocation ADD COLUMN occupancyRevisionId TEXT;
+    CREATE VIEW locationRevisionContent AS SELECT * FROM locationRevision;
+    CREATE TABLE locationSharedRevision(id TEXT PRIMARY KEY,locationId TEXT,corrections TEXT);
+    CREATE TABLE locationOccupancy(id TEXT PRIMARY KEY,establishmentLocationId TEXT,containerLocationId TEXT,assertionState TEXT,occupancyState TEXT,scopeOrganisationId TEXT);
+    CREATE TABLE locationCanonicalDraft(locationId TEXT PRIMARY KEY,sourceKey TEXT);`)
   const statements: string[] = []
   const prepare = (query: string, bindings: unknown[] = []) => ({
     bind: (...params: unknown[]) => prepare(query, params),

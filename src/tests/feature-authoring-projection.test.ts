@@ -30,11 +30,11 @@ it('projects only record-owned naming state without querying parent tables', () 
       expect(FeatureListRow.shape.authoring.parse(raw)).toEqual(parsed)
       return parsed
     }
-    expect(read()).toEqual({ nameMode: 'independent' })
+    expect(read()).toEqual({ hasLocation: 0, nameMode: 'independent' })
     db.exec("INSERT INTO featureLocation VALUES('f',NULL)")
-    expect(read()).toEqual({ nameMode: 'inherit' })
+    expect(read()).toEqual({ hasLocation: 1, nameMode: 'inherit' })
     db.exec(`UPDATE featureLocation SET acceptancePolicy='{"nameMode":"independent"}'`)
-    expect(read()).toEqual({ nameMode: 'independent' })
+    expect(read()).toEqual({ hasLocation: 1, nameMode: 'independent' })
   } finally {
     db.close()
   }
