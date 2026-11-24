@@ -69,56 +69,74 @@ function display(content: AddressContent, tag: string): string {
   return getAddressDisplay(address, locale)
 }
 </script>
-<div class="space-y-3">
+<div class="mb-1 self-end">
   <Button
+    type="button"
+    size="sm"
     text={m.location_address_parse()}
     disabled={disabled || loading}
     onClick={propose}
   />
-  {#if loading}
-    <div aria-busy="true" class="bg-muted h-24 animate-pulse rounded-xl"></div>
-  {:else if failed}
-    <p role="alert" class="text-destructive text-sm">{m.address_names_unavailable()}</p>
-  {/if}
-  {#if proposal}
-    <section
-      class="border-border space-y-3 rounded-xl border p-4"
-      aria-label={m.location_address_parse()}
-    >
-      <p class="text-muted-foreground text-sm">{m.location_address_parse_help()}</p>
-      {#each Object.keys(proposal.source) as tag}
-        <div class="grid gap-2 sm:grid-cols-2">
-          <p>
-            <span class="text-muted-foreground text-xs"
-              >{tag}
-              · {m.location_review_before()}</span
-            ><br>{proposal.source[tag]}
-          </p>
+</div>
+{#if loading}
+  <div
+    aria-busy="true"
+    class="bg-muted col-span-full h-24 animate-pulse rounded-xl"
+  ></div>
+{:else if failed}
+  <p role="alert" class="text-destructive col-span-full text-sm">
+    {m.address_names_unavailable()}
+  </p>
+{/if}
+{#if proposal}
+  <section
+    class="border-border col-span-full min-w-0 space-y-3 rounded-xl border p-4"
+    aria-label={m.location_address_parse()}
+  >
+    <p class="text-muted-foreground text-sm">{m.location_address_parse_help()}</p>
+    {#each Object.keys(proposal.source) as tag}
+      {@const fields = proposal.content.i18n[tag]}
+      <div class="grid gap-2 sm:grid-cols-2">
+        <p>
+          <span class="text-muted-foreground text-xs"
+            >{tag}
+            · {m.location_review_before()}</span
+          ><br>{proposal.source[tag]}
+        </p>
+        <div>
           <p>
             <span class="text-muted-foreground text-xs"
               >{tag}
               · {m.location_review_candidate()}</span
             ><br>{display(proposal.content, tag)}
           </p>
+          <dl class="mt-1 grid grid-cols-[auto_1fr] gap-x-2 text-sm">
+            <dt class="text-muted-foreground">{m.feature_address_streetName()}</dt>
+            <dd>{fields?.streetName || '—'}</dd>
+            <dt class="text-muted-foreground">
+              {m.feature_address_buildingNumberExpression()}
+            </dt>
+            <dd>{fields?.buildingNumberExpression || '—'}</dd>
+          </dl>
         </div>
-        {#if proposal.unresolved[tag]}
-          <p class="text-muted-foreground text-sm">
-            {m.location_address_unparsed()}: {proposal.unresolved[tag]}
-          </p>
-        {/if}
-      {/each}
-      {#each proposal.diagnostics as diagnostic}
-        <p class="text-sm">{diagnostic}</p>
-      {/each}
-      <Button
-        text={m.location_address_use_parse()}
-        {disabled}
-        onClick={() => {
-          if (!proposal) return
-          onAccept(proposal)
-          review = null
-        }}
-      />
-    </section>
-  {/if}
-</div>
+      </div>
+      {#if proposal.unresolved[tag]}
+        <p class="text-muted-foreground text-sm">
+          {m.location_address_unparsed()}: {proposal.unresolved[tag]}
+        </p>
+      {/if}
+    {/each}
+    {#each proposal.diagnostics as diagnostic}
+      <p class="text-sm">{diagnostic}</p>
+    {/each}
+    <Button
+      text={m.location_address_use_parse()}
+      {disabled}
+      onClick={() => {
+        if (!proposal) return
+        onAccept(proposal)
+        review = null
+      }}
+    />
+  </section>
+{/if}

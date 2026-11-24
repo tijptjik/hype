@@ -58,25 +58,21 @@ function change(next: FeatureAddress): void {
       showAccessHints={false}
       {show3dAddressOptions}
       onChange={change}
-    />
+    >
+      {#snippet displayAddressActions()}
+        {#if draft}
+          <LocalAddressParseReview
+            {draft}
+            {locationKind}
+            {disabled}
+            onAccept={proposal => {
+              if (!draft) return
+              change(applyLocalAddressParse($state.snapshot(draft), proposal.content))
+              onParsed?.(proposal)
+            }}
+          />
+        {/if}
+      {/snippet}
+    </AddressDetails>
   {/if}
-  <details class="border-border border-t pt-3">
-    <summary class="text-muted-foreground cursor-pointer text-sm">
-      {m.location_address_parse()}
-    </summary>
-    {#if draft}
-      <div class="pt-3">
-        <LocalAddressParseReview
-          {draft}
-          {locationKind}
-          {disabled}
-          onAccept={proposal => {
-            if (!draft) return
-            change(applyLocalAddressParse($state.snapshot(draft), proposal.content))
-            onParsed?.(proposal)
-          }}
-        />
-      </div>
-    {/if}
-  </details>
 </fieldset>

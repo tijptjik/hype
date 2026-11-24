@@ -140,6 +140,7 @@ let {
   coordinates,
   locationKind,
   identityFields,
+  displayAddressActions,
   streetAddresses,
   buildingStreets = [],
   primaryDisplay,
@@ -186,6 +187,7 @@ let {
   coordinates?: readonly number[] | null
   locationKind?: string
   identityFields?: Snippet<[boolean]>
+  displayAddressActions?: Snippet
   streetAddresses?: Snippet<[string[]]>
   buildingStreets?: BuildingStreet[]
   primaryDisplay?: (tag: string) => string
@@ -1814,11 +1816,19 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                 ? [shownLocales[0]]
                 : shownLocales as rowTag, rowIndex (rowTag)}
                 {@const rowLocale = addressLocaleKey(rowTag)}
+                {@const showDisplayActions =
+                  group[0] === 'formattedAddress' &&
+                  rowIndex === 0 &&
+                  displayAddressActions}
                 <div
                   animate:flip={{ duration: prefersReducedMotion.current ? 0 : 200 }}
-                  class="min-w-0 items-start pt-2 first:pt-0 {group.length > 1
-                    ? 'col-span-full grid grid-cols-subgrid'
-                    : 'flex gap-2'}"
+                  class="min-w-0 items-start pt-2 first:pt-0 {showDisplayActions
+                    ? translations
+                      ? 'grid grid-cols-[auto_minmax(0,max-content)_auto] justify-start gap-2'
+                      : 'grid grid-cols-[minmax(0,max-content)_auto] justify-start gap-2'
+                    : group.length > 1
+                      ? 'col-span-full grid grid-cols-subgrid'
+                      : 'flex gap-2'}"
                 >
                   {#if translations && group[0] !== 'accessHint'}
                     <span
@@ -2109,7 +2119,9 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                                 ? 'grid-cols-[max-content_max-content_max-content]'
                                 : field === 'phaseExpression'
                                   ? 'grid-cols-[max-content_max-content]'
-                                  : 'grid-cols-[max-content]'}"
+                                  : showDisplayActions
+                                    ? 'grid-cols-[minmax(0,1fr)]'
+                                    : 'grid-cols-[max-content]'}"
                             >
                               {#each shared
                                 ? rowIndex === 0
@@ -2166,6 +2178,9 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                                 >
                                   {#if field === 'formattedAddress'}
                                     <AddressDisplayField
+                                      scrollWhenConstrained={Boolean(
+                                        showDisplayActions,
+                                      )}
                                       {coordinates}
                                       stale={displayStale}
                                       {locationKind}
@@ -2722,6 +2737,9 @@ function blockTypeFirst(locale: LocaleKey): boolean {
                       {/each}
                     {/if}
                   </div>
+                  {#if showDisplayActions}
+                    {@render displayAddressActions?.()}
+                  {/if}
                 </div>
               {/each}
             </div>

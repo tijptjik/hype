@@ -20,8 +20,7 @@ import { onDestroy, untrack } from 'svelte'
 // COMPONENTS
 import FormFeatureAddress from '../formFeatureAddress/FormFeatureAddress.svelte'
 import LocationRelationships from '../locationRelationships/LocationRelationships.svelte'
-import AddressDetails from '../formFeatureAddress/AddressDetails.svelte'
-import AddressDivisions from '../formFeatureAddress/AddressDivisions.svelte'
+import AddressEditorLayout from '../formFeatureAddress/AddressEditorLayout.svelte'
 import LocalAddressParseReview from './LocalAddressParseReview.svelte'
 import LocationRecordDetails from './LocationRecordDetails.svelte'
 import LocationLocaleField from './LocationLocaleField.svelte'
@@ -765,6 +764,67 @@ $effect(() => {
   />
 {/snippet}
 
+{#snippet recordAddress()}
+  <fieldset
+    disabled={busy || communityClosed('location.address')}
+    class="@container col-span-full min-w-0"
+  >
+    <AddressEditorLayout
+      coordinates={point}
+      readOnlyClass="grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] gap-x-8"
+      localeState={editorLocaleState}
+      translations={localeState.expanded}
+      showLocaleToolbar={false}
+      {primaryDisplay}
+      buildingStreets={activeKind === 'building' ? streetRows : undefined}
+      streetAddresses={activeKind === 'building' && place.canEditBuildingStreets
+        ? buildingStreetList
+        : undefined}
+      hideDisplayAddress={!editing}
+      onLocaleStateChange={next => (localeState = next)}
+      suggestionKey={JSON.stringify([place.id, point])}
+      onSuggestStreetNumber={async () =>
+        (await numberMapController?.getStreetNumberAt?.([point[0], point[1]])) ?? null}
+      locationKind={activeKind}
+      accessibilityLocationId={place.id}
+      accessibilityDraft={profileValues.accessibility ??
+        editableFacts?.accessibility ??
+        undefined}
+      onAccessibilityDraftChange={communityRecord &&
+      place.canEditShared &&
+      !communityClosed('accessibility')
+        ? value => {
+            if (value && !Object.keys(value).length) return
+            profileValues = {
+              ...profileValues,
+              accessibility: { ...UNKNOWN_ACCESSIBILITY, ...value },
+            }
+          }
+        : undefined}
+      {address}
+      isEditing={editing}
+      showAccessHints={false}
+      show3dAddressOptions={activeKind !== 'building'}
+      onChange={next => (draft = next)}
+    >
+      {#snippet displayAddressActions()}
+        {#if editing && draft && !primaryStreet}
+          <LocalAddressParseReview
+            {draft}
+            locationKind={activeKind}
+            disabled={busy}
+            onAccept={proposal => {
+              if (!draft) return
+              parseReview = proposal
+              draft = applyLocalAddressParse($state.snapshot(draft), proposal.content)
+            }}
+          />
+        {/if}
+      {/snippet}
+    </AddressEditorLayout>
+  </fieldset>
+{/snippet}
+
 {#snippet recordContent()}
   <Tabs
     value={recordView}
@@ -1026,80 +1086,9 @@ $effect(() => {
                   </button>
                 {/each}
               {/if}
-              <fieldset
-                disabled={busy || communityClosed('location.address')}
-                class="@container grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,24rem),1fr))] items-start gap-8"
-              >
-                <AddressDetails
-                  {primaryDisplay}
-                  buildingStreets={activeKind === 'building' ? streetRows : undefined}
-                  streetAddresses={activeKind === 'building' &&
-                  place.canEditBuildingStreets
-                    ? buildingStreetList
-                    : undefined}
-                  localeState={editorLocaleState}
-                  translations={localeState.expanded}
-                  showLocaleToolbar={false}
-                  hideDisplayAddress={!editing}
-                  onLocaleStateChange={next => (localeState = next)}
-                  suggestionKey={JSON.stringify([place.id, point])}
-                  onSuggestStreetNumber={async () =>
-                    (await numberMapController?.getStreetNumberAt?.([
-                      point[0],
-                      point[1],
-                    ])) ?? null}
-                  locationKind={activeKind}
-                  accessibilityLocationId={place.id}
-                  accessibilityDraft={profileValues.accessibility ??
-                    editableFacts?.accessibility ??
-                    undefined}
-                  onAccessibilityDraftChange={communityRecord &&
-                  place.canEditShared &&
-                  !communityClosed('accessibility')
-                    ? value => {
-                        if (value && !Object.keys(value).length) return
-                        profileValues = {
-                          ...profileValues,
-                          accessibility: { ...UNKNOWN_ACCESSIBILITY, ...value },
-                        }
-                      }
-                    : undefined}
-                  {address}
-                  isEditing={editing}
-                  showAccessHints={false}
-                  show3dAddressOptions={activeKind !== 'building'}
-                  onChange={next => (draft = next)}
-                />
-                <AddressDivisions
-                  class="@min-[50rem]:border-t-0 @min-[50rem]:pt-0"
-                  {address}
-                  coordinates={point}
-                  isEditing={editing}
-                  onChange={next => (draft = next)}
-                />
-                {#if editing && draft && !primaryStreet}
-                  <details class="border-border col-span-full border-t pt-4">
-                    <summary class="text-muted-foreground cursor-pointer text-sm">
-                      {m.location_address_parse()}
-                    </summary>
-                    <div class="pt-3">
-                      <LocalAddressParseReview
-                        {draft}
-                        locationKind={activeKind}
-                        disabled={busy}
-                        onAccept={proposal => {
-                          if (!draft) return
-                          parseReview = proposal
-                          draft = applyLocalAddressParse(
-                            $state.snapshot(draft),
-                            proposal.content,
-                          )
-                        }}
-                      />
-                    </div>
-                  </details>
-                {/if}
-              </fieldset>
+              {#if !editing}
+                {@render recordAddress()}
+              {/if}
             {/if}
             {#if saved}
               <p role="status" class="text-muted-foreground text-sm">
@@ -1112,6 +1101,9 @@ $effect(() => {
               </p>
             {/if}
           </div>
+          {#if editing && place.facts}
+            {@render recordAddress()}
+          {/if}
         </div>
       {:else if view === 'relationships'}
         <div class="space-y-6 px-6 py-6">
@@ -1164,8 +1156,8 @@ $effect(() => {
   {#if place.facts}
     <FormFeatureAddress
       localeState={editorLocaleState}
-      {primaryDisplay}
       displayAddressInToolbar={true}
+      {primaryDisplay}
       locationKind={activeKind}
       {address}
       coordinates={point}
