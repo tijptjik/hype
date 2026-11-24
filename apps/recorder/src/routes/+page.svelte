@@ -4,7 +4,7 @@ import { onDestroy, onMount } from 'svelte'
 // TAURI
 import { isTauri } from '@tauri-apps/api/core'
 // API
-import { connect, connectionHint, disconnect } from '#lib/hype.js'
+import { connect, connectionHint } from '#lib/hype.js'
 import { recorderAccount } from '#lib/api/recorderAccount.remote.js'
 import SessionWorkspace from '#lib/SessionWorkspace.svelte'
 // STYLES
@@ -62,27 +62,14 @@ async function signIn(): Promise<void> {
     code = ''
   }
 }
-
-async function signOut(): Promise<void> {
-  busy = true
-  message = ''
-  try {
-    await disconnect()
-    signedIn = false
-  } catch (cause) {
-    message = cause instanceof Error ? cause.message : 'Could not sign out.'
-  } finally {
-    busy = false
-  }
-}
 </script>
 
 <svelte:head><title>Hype Recorder</title></svelte:head>
 {#if signedIn}
   <main
-    class="mx-auto flex min-h-svh max-w-lg flex-col gap-3 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
+    class="mx-auto flex min-h-svh max-w-lg flex-col gap-3 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))]"
   >
-    <SessionWorkspace {signOut} {busy} {message} />
+    <SessionWorkspace {message} />
   </main>
 {:else}
   <main

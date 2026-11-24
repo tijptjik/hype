@@ -5,6 +5,7 @@ import { pushState, replaceState } from '$app/navigation'
 import { page } from '$app/state'
 // COMPONENTS
 import Selector from './Selector.svelte'
+import BottomMenu from './BottomMenu.svelte'
 import RealmSelector from './RealmSelector.svelte'
 import SessionMap from './SessionMap.svelte'
 // API
@@ -25,11 +26,7 @@ import type {
   RecorderSession,
 } from '../../../../src/lib/fieldResearch/recorder'
 
-let {
-  signOut,
-  busy,
-  message,
-}: { signOut: () => void; busy: boolean; message: string } = $props()
+let { message }: { message: string } = $props()
 let sessions = $state<RecorderSession[]>([])
 let session = $state<RecorderSession | null>(null)
 let places = $state<RecorderLocation[]>([])
@@ -184,6 +181,7 @@ $effect(() => {
 })
 function openSession(id: string): void {
   if (saving || session?.id === id) return
+  window.scrollTo({ top: 0, behavior: 'instant' })
   const next = { recorder: { sessionId: id, view: 'session' as const } }
   if (screen === 'sessions') pushState('', next)
   else replaceState('', next)
@@ -248,14 +246,6 @@ async function capture(): Promise<void> {
   <header class="flex items-center justify-between gap-3">
     {#if screen === 'sessions'}
       <h1 class="text-3xl font-semibold">Sessions</h1>
-      <button
-        type="button"
-        disabled={busy}
-        class="min-h-12 px-3 text-sm text-slate-300"
-        onclick={signOut}
-      >
-        Sign out
-      </button>
     {:else}
       <button
         type="button"
@@ -341,13 +331,32 @@ async function capture(): Promise<void> {
   {/if}
   {#if loading}
     <div
-      class="grid gap-2"
+      class={screen === 'session'
+        ? 'grid min-h-[16.5rem] content-start gap-3'
+        : 'grid gap-2'}
       role="status"
       aria-label="Loading {screen}"
       aria-busy="true"
     >
       {#each [1, 2, 3] as n (n)}
-        <div class="h-16 animate-pulse rounded-2xl bg-slate-900"></div>
+        <div
+          class={[
+            'grid content-center gap-2 rounded-2xl bg-slate-900 px-4 py-3',
+            screen === 'session'
+              ? 'min-h-20 border border-slate-700'
+              : screen === 'records'
+                ? 'min-h-24'
+                : 'min-h-16',
+          ]}
+        >
+          {#if screen === 'session'}
+            <div class="h-3 w-20 animate-pulse rounded bg-slate-800"></div>
+          {/if}
+          <div class="h-5 w-2/3 animate-pulse rounded bg-slate-800"></div>
+          {#if screen === 'records'}
+            <div class="h-3 w-4/5 animate-pulse rounded bg-slate-800"></div>
+          {/if}
+        </div>
       {/each}
     </div>
   {:else if failure}
@@ -402,40 +411,42 @@ async function capture(): Promise<void> {
       {/each}
     </ol>
   {:else}
-    {#if premisesOptions.length}
-      <Selector
-        label="Premises"
-        options={premisesOptions}
-        value={premises}
-        disabled={saving}
-        onchange={id => {
-          premises = id
-          pin = null
-          building = part = ''
-        }}
-      />
-    {/if}
-    {#if buildingOptions.length}
-      <Selector
-        label="Building"
-        options={buildingOptions}
-        value={building}
-        disabled={saving}
-        onchange={chooseBuilding}
-      />
-    {/if}
-    {#if partOptions.length}
-      <Selector
-        label="Building part"
-        options={partOptions}
-        value={part}
-        disabled={saving}
-        onchange={id => {
-          const p = places.find(row => row.id === id)
-          if (p) choosePlace(p)
-        }}
-      />
-    {/if}
+    <div class="grid min-h-[16.5rem] content-start gap-3">
+      {#if premisesOptions.length}
+        <Selector
+          label="Premises"
+          options={premisesOptions}
+          value={premises}
+          disabled={saving}
+          onchange={id => {
+            premises = id
+            pin = null
+            building = part = ''
+          }}
+        />
+      {/if}
+      {#if buildingOptions.length}
+        <Selector
+          label="Building"
+          options={buildingOptions}
+          value={building}
+          disabled={saving}
+          onchange={chooseBuilding}
+        />
+      {/if}
+      {#if partOptions.length}
+        <Selector
+          label="Building part"
+          options={partOptions}
+          value={part}
+          disabled={saving}
+          onchange={id => {
+            const p = places.find(row => row.id === id)
+            if (p) choosePlace(p)
+          }}
+        />
+      {/if}
+    </div>
   {/if}
   {#if notice}
     <p role="status">{notice}</p>
@@ -456,7 +467,9 @@ async function capture(): Promise<void> {
         disabled={saving}
       />
     {/if}
-    <footer class="sticky bottom-0 mt-auto flex items-center gap-3 bg-[#08090e] py-4">
+    <footer
+      class="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] mt-auto flex items-center gap-3 bg-[#08090e] py-4"
+    >
       <button
         type="button"
         disabled={saving ||
@@ -540,3 +553,5 @@ async function capture(): Promise<void> {
     <p class="py-4 text-slate-400">No matching locations.</p>
   {/each}
 </dialog>
+
+<BottomMenu view={route?.view ?? screen} />
