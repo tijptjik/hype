@@ -75,11 +75,17 @@ beforeEach(() => {
     configurable: true,
     value: vi.fn(),
   })
+  // Complete the expanded panel's Web Animation in jsdom.
+  Object.defineProperty(HTMLElement.prototype, 'animate', {
+    configurable: true,
+    value: () => ({ finished: Promise.resolve(), cancel: vi.fn() }),
+  })
 })
 
 afterEach(() => {
   cleanup()
   Reflect.deleteProperty(HTMLElement.prototype, 'scrollTo')
+  Reflect.deleteProperty(HTMLElement.prototype, 'animate')
   state.getTasks.mockReset()
   state.navigateOnAdmin.mockReset()
   state.togglePrism.mockReset()
