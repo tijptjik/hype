@@ -229,6 +229,7 @@ export const getResearchLocations = guardedQuery(
         members: members.map(member => ({
           locationId: member.childLocationId,
           source: member.source,
+          outlineRole: member.outlineRole,
           coordinates: member.coordinates,
           addresses: member.addresses.map(({ id, display, streets }) => ({
             id,

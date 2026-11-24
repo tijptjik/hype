@@ -102,6 +102,15 @@ export async function appendLocationRelationship(
     input.scopeOrganisationId,
     Object.keys(fields).concat(['effectiveFrom', 'effectiveTo']),
   )
+  // Keep a reviewed part classification when the same scoped membership changes lifecycle state.
+  const previous =
+    input.table === 'locationMembership' && input.previousRevisionId
+      ? await db.get<{
+          role: string | null
+        }>(sql`SELECT provenance->>'$.outlineRole' role FROM locationMembership
+        WHERE id=${input.previousRevisionId} AND scopeOrganisationId IS ${input.scopeOrganisationId}
+          AND relationshipId=${input.relationshipId} AND childLocationId=${input.childLocationId} AND parentLocationId=${input.parentLocationId}`)
+      : null
   const values = {
     ...fields,
     effectiveFrom: effectiveFrom?.value ?? null,
@@ -109,7 +118,10 @@ export async function appendLocationRelationship(
     effectiveTo: effectiveTo?.value ?? null,
     effectiveToPrecision: effectiveTo?.precision ?? null,
     actorId,
-    provenance: { process: 'relationship-editor' },
+    provenance: {
+      process: 'relationship-editor',
+      ...(previous?.role ? { outlineRole: previous.role } : {}),
+    },
   }
   const existing = await db.get<Record<string, unknown>>(
     sql`SELECT * FROM ${sql.identifier(table)} WHERE id=${input.id}`,

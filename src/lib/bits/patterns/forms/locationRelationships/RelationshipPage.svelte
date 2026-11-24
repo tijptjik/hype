@@ -16,6 +16,11 @@ import {
   getRelationshipPage,
   reorderAddresses,
 } from '#lib/api/locationRelationships.remote.js'
+import {
+  setBuildingOutlineRole,
+  getBuildingCompositionRole,
+} from '#lib/api/buildingEvidence.remote.js'
+import { outlineRoles, type OutlineRole } from '#lib/locations/physicalBuilding.js'
 // ICONS
 import HistoryIcon from 'virtual:icons/lucide/history'
 // TYPES
@@ -97,6 +102,32 @@ const ordered = $derived(
         )
         .map(r => String(r.id)),
 )
+/** Save a reviewed outline role and reload the effective membership and picker.
+ * @param revisionId Exact membership shown. @param value Selected architectural role or empty.
+ */
+async function changeOutlineRole(revisionId: string, value: string): Promise<void> {
+  if (!organisationId) return
+  busy = true
+  failure = ''
+  try {
+    await setBuildingOutlineRole({
+      locationId,
+      organisationId,
+      revisionId,
+      role: value ? (value as OutlineRole) : null,
+    })
+    afterId = undefined
+    pages = []
+    await Promise.all([
+      request.refresh(),
+      getBuildingCompositionRole({ locationId, organisationId }).refresh(),
+    ])
+  } catch (e) {
+    failure = e instanceof Error ? e.message : 'Could not save the outline role.'
+  } finally {
+    busy = false
+  }
+}
 /** Reset traversal when switching between resolved assertions and immutable versions. */
 function toggleHistory(): void {
   history = !history
@@ -257,6 +288,36 @@ async function saveOrder(clear = false): Promise<void> {
             : (row.occupancyState ?? row.membershipState ?? row.addressState),
         )}</span
       >
+      {#if canEdit &&
+        !history &&
+        row.canReviewOutline &&
+        row.parentLocationId === locationId &&
+        row.membershipState === 'current' &&
+        row.assertionState === 'asserted'}
+        <label class="flex items-center gap-2 text-xs">
+          Outline role
+          <select
+            class="border-border bg-background rounded-md border p-1"
+            value={row.outlineRole ?? ''}
+            disabled={busy || saving}
+            onchange={event => {
+              const select = event.currentTarget
+              const next = select.value
+              select.value = String(row.outlineRole ?? '')
+              void changeOutlineRole(String(row.id), next)
+            }}
+          >
+            <option value="">Unclassified</option>
+            {#each outlineRoles as role (role)}
+              <option value={role}>
+                {role[0].toUpperCase() + role.slice(1)} footprint
+              </option>
+            {/each}
+          </select>
+        </label>
+      {:else if row.outlineRole}
+        <span class="text-xs capitalize">{String(row.outlineRole)} footprint</span>
+      {/if}
       {#if row.effectiveFrom || row.effectiveTo}
         <span
           >{String(row.effectiveFrom ?? 'Unknown')}

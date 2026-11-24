@@ -43,7 +43,7 @@ export function physicalBuildingMembers(
   scope: string | null = null,
 ): SQL<string> {
   return sql<string>`(SELECT json_group_array(json(member)) FROM (
-    SELECT json_set(v.rawSource->'$.member','$.names',json(${pinnedNames(sql`json_extract(root.provenance,'$.childRevisionId')`)}),'$.childLocationId',${canonicalLocationSQL(sql`r.childLocationId`)},'$.childRevisionId',json_extract(root.provenance,'$.childRevisionId')) member
+    SELECT json_set(v.rawSource->'$.member','$.outlineRole',json_extract(r.provenance,'$.outlineRole'),'$.names',json(${pinnedNames(sql`json_extract(root.provenance,'$.childRevisionId')`)}),'$.childLocationId',${canonicalLocationSQL(sql`r.childLocationId`)},'$.childRevisionId',json_extract(root.provenance,'$.childRevisionId')) member
     FROM locationMembershipHead r JOIN locationMembership root ON root.id=r.relationshipId
     JOIN locationRevision v ON v.id=json_extract(root.provenance,'$.parentRevisionId')
     WHERE ${canonicalLocationSQL(sql`r.parentLocationId`)}=${locationId} AND r.assertionState='asserted' AND r.membershipState='current'

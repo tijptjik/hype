@@ -11,7 +11,15 @@ import { requireLocationOrganisationManager } from './services/locationOwnership
 import { probeProjectQuery } from '#lib/db/services/project.js'
 import { createLocalLocation } from '#lib/db/services/locationLocal.js'
 import { loadBuildingNames, loadBuildingDetails } from '#lib/sources/saanseoi.js'
-import { savePhysicalBuildingMember } from '#lib/db/services/physicalBuilding.js'
+import {
+  savePhysicalBuildingMember,
+  physicalBuildingMembers,
+} from '#lib/db/services/physicalBuilding.js'
+import {
+  outlineRoles,
+  type PhysicalBuildingMember,
+} from '#lib/locations/physicalBuilding.js'
+import { relationshipScopeSql } from '#lib/db/services/locationRelationships.js'
 // DOMAIN
 import {
   BuildingSourceSchema,
@@ -192,18 +200,41 @@ export const attachPhysicalBuildingMember = guardedCommand(
 )
 
 /** Determine which composition action applies to this Building in the current organisation.
- * @param input Visible Location and editing organisation. @returns The editor role or null.
+ * @param input Visible Location and editing organisation. @returns The editor role and currently attached catalogue IDs with their reviewed outline roles.
  */
 export const getBuildingCompositionRole = guardedQuery(
   z.strictObject({ locationId: z.string().min(1), organisationId: z.string().min(1) }),
   async (input, ctx) => {
     await requireLocationOrganisationManager(ctx, input.organisationId)
-    const row = await ctx.db.get<{ role: 'source' | 'parent' | null }>(sql`SELECT CASE
+    const row = await ctx.db.get<{
+      role: 'source' | 'parent' | null
+      sourceId: string | null
+      generatedProfile: number
+      owned: number
+    }>(sql`SELECT
+      v.rawSource->>'$.kind'='physical-building-member' generatedProfile,
+      v.rawSource->>'$.buildingSource.id' sourceId,l.ownerOrganisationId=${input.organisationId} owned, CASE
+      WHEN v.rawSource->>'$.kind'='physical-building-member' AND l.ownerOrganisationId=${input.organisationId} THEN 'parent'
       WHEN json_extract(v.rawSource,'$.kind')='building-export-baseline' THEN 'source'
-      WHEN json_extract(v.rawSource,'$.kind')='physical-building-member' AND l.ownerOrganisationId=${input.organisationId} THEN 'parent' END role
+      END role
       FROM location l JOIN locationRevision v ON v.locationId=l.id AND v.version=1
       WHERE l.id=${input.locationId} AND l.matchingType='building' AND l.state='unresolved'`)
-    return row?.role ?? null
+    const result =
+      row?.role === 'parent'
+        ? await ctx.db.get<{ members: string }>(
+            sql`SELECT ${physicalBuildingMembers(sql`${input.locationId}`, input.organisationId)} members`,
+          )
+        : null
+    const members: PhysicalBuildingMember[] = result ? JSON.parse(result.members) : []
+    return {
+      role: row?.role ?? null,
+      sourceId: row?.sourceId ?? null,
+      canFillProfile: Boolean(row?.generatedProfile),
+      members: members.map(member => ({
+        id: member.source.id,
+        outlineRole: member.outlineRole,
+      })),
+    }
   },
 )
 
@@ -217,5 +248,35 @@ export const refreshPhysicalBuildingProfile = guardedCommand(
     return savePhysicalBuildingMember(ctx.db, input.organisationId, ctx.user.id, {
       parentId: input.locationId,
     })
+  },
+)
+
+/** Record the architectural meaning of a constituent outline for the editing organisation.
+ * @param input Parent, exact visible membership revision, scope and reviewed role.
+ * @returns The new scoped membership revision, retaining the original evidence and dates.
+ */
+export const setBuildingOutlineRole = guardedCommand(
+  z.strictObject({
+    locationId: z.string().min(1),
+    organisationId: z.string().min(1),
+    revisionId: z.string().min(1),
+    role: z.enum(outlineRoles).nullable(),
+  }),
+  async (input, ctx) => {
+    await requireLocationOrganisationManager(ctx, input.organisationId)
+    const id = crypto.randomUUID()
+    // Copy the exact effective composition assertion and fence concurrent scoped edits in the same statement.
+    const row = await ctx.db.get<{ id: string }>(sql`INSERT INTO locationMembership
+      (id,relationshipId,previousRevisionId,scopeOrganisationId,assertionState,evidence,observedAt,verifiedAt,effectiveFrom,effectiveTo,effectiveFromPrecision,effectiveToPrecision,provenance,actorId,childLocationId,parentLocationId,membershipState)
+      SELECT ${id},r.relationshipId,CASE WHEN r.scopeOrganisationId IS ${input.organisationId} THEN r.id END,${input.organisationId},r.assertionState,r.evidence,r.observedAt,r.verifiedAt,r.effectiveFrom,r.effectiveTo,r.effectiveFromPrecision,r.effectiveToPrecision,
+        json_set(r.provenance,'$.outlineRole',${input.role}),${ctx.user.id},r.childLocationId,r.parentLocationId,r.membershipState
+      FROM locationMembershipHead r JOIN locationMembership root ON root.id=r.relationshipId
+      JOIN location p ON p.id=r.parentLocationId JOIN location c ON c.id=r.childLocationId
+      WHERE r.id=${input.revisionId} AND p.id=${input.locationId} AND p.state!='redirect' AND c.state NOT IN ('manual','redirect')
+        AND p.ownerOrganisationId=${input.organisationId} AND root.provenance->>'$.process'='physical-building-composition'
+        AND r.assertionState='asserted' AND r.membershipState='current' AND ${relationshipScopeSql('locationMembership', input.organisationId)}
+      RETURNING id`)
+    if (!row) error(409, 'The membership changed. Reload to review its current role.')
+    return row.id
   },
 )

@@ -6,7 +6,11 @@ import { parseStreetNumber } from '#lib/addresses/streetNumber.js'
 import type { BuildingSource } from './buildingSource'
 import type { BuildingDetails } from '#lib/sources/saanseoi.js'
 
+export const outlineRoles = ['tower', 'podium', 'whole building'] as const
+export type OutlineRole = (typeof outlineRoles)[number]
+
 export type PhysicalBuildingMember = {
+  outlineRole?: OutlineRole | null
   names?: Record<string, string>
   childLocationId?: string
   childRevisionId?: string

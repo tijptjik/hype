@@ -142,12 +142,17 @@ export async function readRelationshipPage(
              AS number FROM json_each(a.components,'$.i18n') fields
            WHERE number IS NOT NULL ORDER BY fields.key != 'en', fields.key LIMIT 1) AS streetNumber`
       : sql``
+  const outlineFields =
+    input.table === 'locationMembership'
+      ? sql`, json_extract(r.provenance,'$.outlineRole') outlineRole,
+       EXISTS(SELECT 1 FROM locationMembership root JOIN location p ON p.id=r.parentLocationId WHERE root.id=r.relationshipId AND root.provenance->>'$.process'='physical-building-composition' AND p.ownerOrganisationId=${input.scope}) canReviewOutline`
+      : sql``
   const addressJoin =
     input.table === 'locationAddress'
       ? sql`LEFT JOIN addressRevision a ON a.id=r.addressRevisionId`
       : sql``
   const rows = await db.all<Record<string, unknown>>(
-    sql`SELECT r.*,${sql.join(labels, sql`,`)}${addressFields} FROM ${sql.identifier(input.table + (input.history ? '' : 'Head'))} r ${addressJoin} WHERE ${visibleRelationshipSubject(input.table, input.locationId, input.scope)} AND ${scope} AND r.id>${input.afterId ?? ''} ORDER BY r.id LIMIT ${limit + 1}`,
+    sql`SELECT r.*,${sql.join(labels, sql`,`)}${addressFields}${outlineFields} FROM ${sql.identifier(input.table + (input.history ? '' : 'Head'))} r ${addressJoin} WHERE ${visibleRelationshipSubject(input.table, input.locationId, input.scope)} AND ${scope} AND r.id>${input.afterId ?? ''} ORDER BY r.id LIMIT ${limit + 1}`,
   )
   return {
     rows: rows.slice(0, limit).map(({ evidence, provenance, actorId, ...row }) => row),

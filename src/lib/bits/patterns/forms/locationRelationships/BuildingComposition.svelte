@@ -90,8 +90,8 @@ async function save(row?: BuildingSearchResult): Promise<void> {
       source: row ? row.buildingSource : { importedLocationId: locationId },
     })
     if (row) {
+      await role.refresh()
       await onSaved()
-      open = false
     } else
       await goto(
         '/admin/locations/' +
@@ -124,11 +124,11 @@ onDestroy(() => {
   generation++
 })
 </script>
-{#if role.current === 'source'}
+{#if role.current?.role === 'source'}
   <button type="button" class={control} disabled={busy} onclick={() => save()}>
     Create Physical Building
   </button>
-{:else if role.current === 'parent'}
+{:else if role.current?.role === 'parent'}
   <button type="button" class={control} disabled={busy} onclick={fillProfile}>
     Fill profile from constituents
   </button>
@@ -180,6 +180,9 @@ onDestroy(() => {
       {/if}
       {#each candidates as candidate (candidate.row.buildingSource.id)}
         {@const row = candidate.row}
+        {@const attached = role.current?.members.find(
+          member => member.id === row.buildingSource.id,
+        )}
         <div
           class="border-border flex flex-wrap items-center justify-between gap-3 border-b py-2"
         >
@@ -196,14 +199,22 @@ onDestroy(() => {
               >SaanSeoi Building · {row.buildingSource.id}</a
             >
           </div>
-          <button
-            type="button"
-            class={control}
-            disabled={busy}
-            onclick={() => save(row)}
-          >
-            Add to Physical Building
-          </button>
+          {#if attached}
+            <span class="text-muted-foreground text-sm">
+              Constituent added{attached.outlineRole
+                ? ` · ${attached.outlineRole}`
+                : ''}
+            </span>
+          {:else}
+            <button
+              type="button"
+              class={control}
+              disabled={busy}
+              onclick={() => save(row)}
+            >
+              Add to Physical Building
+            </button>
+          {/if}
         </div>
       {:else}
         {#if searched && !busy}
