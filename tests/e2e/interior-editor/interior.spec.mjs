@@ -76,13 +76,11 @@ test('service compartments remain distinct and uncovered space is flagged', asyn
       body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="white"/></svg>',
     }),
   )
-  await page
-    .locator('input[type=file]')
-    .setInputFiles({
-      name: 'synthetic.png',
-      mimeType: 'image/png',
-      buffer: Buffer.from('synthetic fixture'),
-    })
+  await page.locator('input[type=file]').setInputFiles({
+    name: 'synthetic.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('synthetic fixture'),
+  })
   await expect(
     page.getByText('Amber areas remain unclassified.', { exact: false }),
   ).toBeVisible()
@@ -172,16 +170,14 @@ test('real upload saves and reopens a disposable local building draft', async ({
   })
   await page.goto('/admin/locations/' + created.locationId + '#interior')
   await page.getByRole('button', { name: 'Edit', exact: true }).click()
-  await page
-    .locator('input[type=file]')
-    .setInputFiles({
-      name: 'fixture.png',
-      mimeType: 'image/png',
-      buffer: Buffer.from(
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
-        'base64',
-      ),
-    })
+  await page.locator('input[type=file]').setInputFiles({
+    name: 'fixture.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
+      'base64',
+    ),
+  })
   await expect(
     page.getByRole('button', { name: 'Integration room · 100%' }),
   ).toBeVisible({ timeout: 60000 })
