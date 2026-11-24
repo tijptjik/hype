@@ -450,7 +450,9 @@ onMount(() => void load().catch(error => (failure = String(error))))
                         class="font-semibold break-words whitespace-normal hover:underline"
                         >{item.name}</a
                       >
-                      {#each addresses as { label } (label)}
+                      {#each item.kind === 'building' && item.address
+                        ? [{ label: item.address }]
+                        : addresses as { label } (label)}
                         {#if label && label !== item.name}
                           <p
                             class="text-muted-foreground mt-1 text-sm break-words whitespace-normal"

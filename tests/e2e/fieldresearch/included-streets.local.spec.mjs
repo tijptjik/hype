@@ -38,7 +38,7 @@ test('groups the included buildings in the Kowloon City session by street and nu
     items.map(item => Number(item.querySelector('a + p').textContent.match(/\d+/)[0])),
   )
   expect(firstNumbers).toEqual(firstNumbers.toSorted((a, b) => a - b))
-  expect(firstNumbers).toEqual(expect.arrayContaining([20, 26, 32, 36]))
+  expect(firstNumbers).toEqual(expect.arrayContaining([20, 26, 32]))
   const streetToggle = street.getByRole('button', {
     name: 'Tak Ku Ling Road',
     exact: true,
@@ -49,7 +49,14 @@ test('groups the included buildings in the Kowloon City session by street and nu
   await expect(streetToggle).toHaveAttribute('aria-expanded', 'false')
   await expect(buildingRows).toBeHidden()
   await expect(list.getByRole('link', { name: 'Kai King Mansion' })).toBeVisible()
-  await expect(street).toContainText(/36 TAK KU LING ROAD.*38 TAK KU LING ROAD/is)
+  const tatTak = rows.filter({
+    has: page.getByRole('link', {
+      name: 'Tat Tak Building',
+      includeHidden: true,
+      exact: true,
+    }),
+  })
+  await expect(tatTak.locator('a + p')).toHaveText(/^32[-–]34A Tak Ku Ling Road$/i)
   await expect(list.getByRole('region', { name: 'Lung Kong Road' })).toContainText(
     'Kai King Mansion',
   )
