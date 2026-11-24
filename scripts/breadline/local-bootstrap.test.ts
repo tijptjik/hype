@@ -9,7 +9,7 @@ import { Database } from 'bun:sqlite'
 import { bootstrapLocalDatabase, seedLocalApplication } from './lib/local-bootstrap'
 
 describe('clean local source and migration bootstrap', () => {
-  it('replays all migrations with clean references and seeds no legacy credentials', () => {
+  it('replays applicable migrations and records the deferred production data migration', () => {
     const directory = mkdtempSync(join(tmpdir(), 'breadline-bootstrap-'))
     const db = new Database(join(directory, 'fresh.sqlite'))
     try {
@@ -18,11 +18,15 @@ describe('clean local source and migration bootstrap', () => {
       const migrationNames = readdirSync(resolve('migrations'))
         .filter(name => name.endsWith('.sql'))
         .sort()
-      expect(receipt.migrations.map(migration => migration.name)).toEqual(
-        migrationNames,
+      expect(receipt.deferred.map(migration => migration.name)).toEqual([
+        '0207_former_bookstore_occupancy.sql',
+      ])
+      const appliedNames = migrationNames.filter(
+        name => !receipt.deferred.some(m => m.name === name),
       )
+      expect(receipt.migrations.map(migration => migration.name)).toEqual(appliedNames)
       expect(db.query('SELECT name FROM d1_migrations ORDER BY id').all()).toEqual(
-        migrationNames.map(name => ({ name })),
+        appliedNames.map(name => ({ name })),
       )
       expect(db.query('SELECT count(*) AS n FROM d1_migrations').get()).toEqual({
         n: receipt.migrations.length,

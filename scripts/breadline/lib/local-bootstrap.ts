@@ -15,12 +15,13 @@ import { buildSyncSql } from '../../sync-map-styles'
 // ---
 
 /**
- * Create a clean source-derived local schema and replay every migration in order.
+ * Create a clean source-derived local schema and replay applicable migrations in order.
  * @param db Empty, disposable SQLite database; never a populated/live destination.
  * @param root Repository root containing the versioned baseline and migrations.
  * @returns Input hashes and applied migration names for the private rebuild receipt.
  * @remarks Historical seed migrations require two hub IDs and a temporary user ID.
  * This bootstrap supplies only those references, never old users, credentials or content.
+ * The reviewed bookstore data migration remains pending until the lifecycle cutover.
  */
 export function bootstrapLocalDatabase(
   db: Database,
@@ -28,6 +29,7 @@ export function bootstrapLocalDatabase(
 ): {
   migrations: Array<{ name: string; sha256: string }>
   baseline: Array<{ name: string; sha256: string }>
+  deferred: Array<{ name: string; sha256: string }>
 } {
   const tables = db
     .query(
@@ -49,11 +51,17 @@ export function bootstrapLocalDatabase(
     INSERT INTO user(id,name,email,createdAt,updatedAt) VALUES
       ('qJpgD5f5wBMvvvLFbUOPnFfSpRiUXdaM','Local bootstrap',NULL,1,1);`)
   const migrations: Array<{ name: string; sha256: string }> = []
+  const deferred: Array<{ name: string; sha256: string }> = []
   // Honour SQLite's foreign-key pragma outside transactions during historical table rebuilds.
   for (const name of readdirSync(resolve(root, 'migrations'))
     .filter(name => name.endsWith('.sql'))
     .sort()) {
     const sql = readFileSync(resolve(root, 'migrations', name), 'utf8')
+    // This production-data migration requires accepted Feature heads and reviewed records.
+    if (name === '0207_former_bookstore_occupancy.sql') {
+      deferred.push({ name, sha256: createHash('sha256').update(sql).digest('hex') })
+      continue
+    }
     const disablesForeignKeys = /PRAGMA\s+foreign_keys\s*=\s*(OFF|0|false)/i.test(sql)
     db.exec(disablesForeignKeys ? 'PRAGMA foreign_keys=OFF' : 'PRAGMA foreign_keys=ON')
     db.transaction(() => {
@@ -72,7 +80,7 @@ export function bootstrapLocalDatabase(
   }
   if (db.query('PRAGMA foreign_key_check').all().length)
     throw new Error('Migration replay has foreign-key violations')
-  return { migrations, baseline }
+  return { migrations, baseline, deferred }
 }
 
 /**

@@ -191,6 +191,10 @@ test.each([false, true])(
     const initial = new Database(source)
     bootstrapLocalDatabase(initial, resolve('.'))
     seedLocalApplication(initial)
+    // This synthetic production snapshot has no reviewed bookstore data to migrate.
+    initial
+      .query('INSERT INTO d1_migrations(name) VALUES (?)')
+      .run('0207_former_bookstore_occupancy.sql')
     initial.exec(`DELETE FROM image;
  INSERT INTO user(id,name,createdAt,updatedAt) VALUES('author','Author',1,1);
  INSERT INTO layer(id,projectId,organisationId,isPublished) VALUES('layer1','breadlinePrj','hkfoodworks1',1);
