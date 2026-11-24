@@ -1,6 +1,7 @@
 <script lang="ts">
 // SVELTE
 import { onMount } from 'svelte'
+import { on } from 'svelte/events'
 // API
 import {
   getExteriorAlignment,
@@ -76,6 +77,11 @@ const editedNumber = $derived(
 )
 const views = $derived(facadeViews(result?.facades ?? []))
 const face = $derived(views[side])
+// Camera offsets are fractions of the current face's width and model height.
+const fitted = { zoom: 1, x: 0, y: 0 }
+let cameras = $state<Record<string, typeof fitted>>({})
+const camera = $derived(cameras[face?.id] ?? fitted)
+const maxZoom = 4
 const bounds = $derived<[number, number]>(
   views.length
     ? [
@@ -90,12 +96,89 @@ const storageKey = $derived(
 let anchors: HTMLElement[] = []
 let worker: Worker | undefined
 
-/** Establish a straight-on camera and four world-space anchors for the interactive overlay. @returns Nothing. */
+/** Keep the selected point on the façade reachable when zooming or panning.
+ * @param zoom Magnification relative to fit. @param x Horizontal target offset.
+ * @param y Vertical target offset (positive upwards). @returns Nothing.
+ */
+function setCamera(zoom: number, x: number, y: number): void {
+  const limit = (1 - 1 / zoom) / 2
+  cameras[face.id] = {
+    zoom,
+    x: Math.min(limit, Math.max(-limit, x)),
+    y: Math.min(limit, Math.max(-limit, y)),
+  }
+}
+
+/** Zoom about the cursor or, for the toolbar, the centre of the view.
+ * @param factor Multiplicative zoom step. @param pointer Optional wheel position. @returns Nothing.
+ */
+function zoomBy(factor: number, pointer?: WheelEvent): void {
+  const zoom = Math.min(maxZoom, Math.max(1, camera.zoom * factor))
+  if (zoom === camera.zoom) return
+  const rect = viewer.getBoundingClientRect()
+  const shift = 1 - camera.zoom / zoom
+  const dx = pointer
+    ? (pointer.clientX - rect.left - rect.width / 2) / (frame.right - frame.left)
+    : 0
+  const dy = pointer
+    ? (rect.top + rect.height / 2 - pointer.clientY) / (frame.bottom - frame.top)
+    : 0
+  setCamera(zoom, camera.x + dx * shift, camera.y + dy * shift)
+}
+
+/** Handle canvas gestures while leaving floor handles available for editing.
+ * @param node Clipped façade viewport. @returns Listener cleanup.
+ */
+function navigate(node: HTMLElement): { destroy(): void } {
+  const wheel = on(
+    node,
+    'wheel',
+    event => {
+      if (!event.deltaY || !projected) return
+      event.preventDefault()
+      const unit =
+        event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? node.clientHeight : 1
+      zoomBy(Math.exp(-event.deltaY * unit * 0.002), event)
+    },
+    { passive: false },
+  )
+  const down = on(node, 'pointerdown', event => {
+    if (
+      event.target !== node ||
+      event.button !== 0 ||
+      !event.isPrimary ||
+      camera.zoom === 1
+    )
+      return
+    const { zoom, x, y } = camera
+    const width = frame.right - frame.left
+    const height = frame.bottom - frame.top
+    node.setPointerCapture(event.pointerId)
+    const move = on(node, 'pointermove', next => {
+      if (next.pointerId !== event.pointerId) return
+      setCamera(
+        zoom,
+        x - (next.clientX - event.clientX) / width,
+        y + (next.clientY - event.clientY) / height,
+      )
+    })
+    on(node, 'lostpointercapture', () => move(), { once: true })
+  })
+  return {
+    destroy() {
+      wheel()
+      down()
+    },
+  }
+}
+
+/** Establish the straight-on camera at the selected zoom and pan. @returns Nothing. */
 function orient(): void {
   if (!active || !face || !anchors.length) return
-  projected = false
   const middle = (bounds[0] + bounds[1]) / 2
-  viewer.cameraTarget = `${face.centre[0]}m ${middle}m ${face.centre[2]}m`
+  const offset = camera.x * face.width
+  const elevation = middle + camera.y * (bounds[1] - bounds[0])
+  viewer.cameraTarget = `${face.centre[0] + offset * face.right[0]}m ${elevation}m ${face.centre[2] + offset * face.right[2]}m`
   viewer.minFieldOfView = '10deg'
   viewer.maxFieldOfView = '10deg'
   viewer.fieldOfView = '10deg'
@@ -108,7 +191,14 @@ function orient(): void {
   const theta = (Math.atan2(face.normal[0], face.normal[2]) * 180) / Math.PI
   viewer.minCameraOrbit = 'auto auto 0.01m'
   viewer.maxCameraOrbit = `auto auto ${distance * 2}m`
-  viewer.cameraOrbit = `${theta}deg 90deg ${distance}m`
+  viewer.cameraOrbit = `${theta}deg 90deg ${distance / camera.zoom}m`
+  void viewer.updateComplete.then(() => viewer.jumpCameraToGoal())
+}
+
+/** Establish four world-space anchors for the interactive overlay. @returns Nothing. */
+function placeAnchors(): void {
+  if (!active || !face || !anchors.length) return
+  projected = false
   const positions = [
     [-1, bounds[1]],
     [1, bounds[1]],
@@ -124,7 +214,6 @@ function orient(): void {
       normal: face.normal.join(' '),
     })
   })
-  void viewer.updateComplete.then(() => viewer.jumpCameraToGoal())
 }
 
 /** Map one model elevation to overlay pixels. @param elevation Model Y. @returns Canvas Y. */
@@ -364,6 +453,7 @@ onMount(() => {
         viewer.autoRotate = true
       }
     })
+    $effect(placeAnchors)
     $effect(orient)
   })
   void (async () => {
@@ -526,7 +616,7 @@ onMount(() => {
 <section
   hidden={!active}
   aria-label="Visual façade floor alignment"
-  class="pointer-events-none absolute inset-0 z-10"
+  class="pointer-events-none absolute inset-0 z-10 overflow-clip"
 >
   {#if failure}
     <p
@@ -543,7 +633,7 @@ onMount(() => {
     ></div>
   {:else}
     <div
-      class="pointer-events-auto absolute inset-x-3 top-3 flex flex-wrap items-center justify-between gap-2"
+      class="pointer-events-auto absolute inset-x-3 top-3 z-10 flex flex-wrap items-center justify-between gap-2"
     >
       <div class="bg-panel/95 flex items-center gap-2 rounded-xl border p-1 shadow-sm">
         <button
@@ -705,82 +795,126 @@ onMount(() => {
         </p>
       </div>
     {/if}
-    {#if projected}
-      {#each lines as line, index (line.id)}
-        <div
-          class="absolute"
-          style:left={`${frame.left}px`}
-          style:top={`${lineY(line.elevation)}px`}
-          style:width={`${frame.right - frame.left}px`}
-        >
-          <button
-            type="button"
-            aria-label={`${line.locked ? 'Unlock' : 'Lock'} ${label(index)}`}
-            aria-pressed={line.locked}
-            class="bg-panel/95 pointer-events-auto absolute top-0 right-full mr-2 grid size-7 -translate-y-1/2 place-items-center rounded border text-blue-600 shadow-sm"
-            onclick={() =>
-              edit(
-                lines.map(item =>
-                  item.id === line.id ? { ...item, locked: !item.locked } : item,
-                ),
-              )}
+    <div
+      class={[
+        'pointer-events-auto absolute inset-0',
+        camera.zoom > 1 && 'cursor-grab touch-none active:cursor-grabbing',
+      ]}
+      use:navigate
+    >
+      {#if projected}
+        {#each lines as line, index (line.id)}
+          <div
+            class="absolute"
+            style:left={`${frame.left}px`}
+            style:top={`${lineY(line.elevation)}px`}
+            style:width={`${frame.right - frame.left}px`}
           >
-            {#if line.locked}
-              <Lock class="size-4" />
-            {:else}
-              <Unlock class="size-4" />
-            {/if}
-          </button>
-          {#if index > 0 && index < lines.length - 1}
             <button
               type="button"
-              aria-label={`Remove ${label(index)}`}
-              title={line.locked
-                ? 'Unlock this floor before removing it'
-                : `Remove ${label(index)}`}
-              disabled={line.locked}
-              class="bg-panel/95 pointer-events-auto absolute top-0 left-full ml-2 grid size-7 -translate-y-1/2 place-items-center rounded border text-blue-600 shadow-sm disabled:cursor-not-allowed disabled:opacity-40"
-              onclick={() => edit(removeFloorLine(lines, line.id))}
-            >
-              <Minus class="size-4" />
-            </button>
-          {/if}
-          <button
-            type="button"
-            aria-label={`Drag ${label(index)}`}
-            aria-disabled={line.locked}
-            class="pointer-events-auto absolute inset-x-0 top-0 h-6 -translate-y-1/2 cursor-ns-resize touch-none outline-offset-4 disabled:cursor-default"
-            disabled={line.locked}
-            onpointerdown={event => drag(event, line.id)}
-            onkeydown={event => {
-              if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-                event.preventDefault()
+              aria-label={`${line.locked ? 'Unlock' : 'Lock'} ${label(index)}`}
+              aria-pressed={line.locked}
+              class="bg-panel/95 pointer-events-auto absolute top-0 right-full mr-2 grid size-7 -translate-y-1/2 place-items-center rounded border text-blue-600 shadow-sm"
+              onclick={() =>
                 edit(
-                  moveFloorLine(
-                    lines,
-                    line.id,
-                    line.elevation +
-                      (event.key === 'ArrowUp' ? 1 : -1) * (event.shiftKey ? 1 : 0.1),
-                    bounds,
+                  lines.map(item =>
+                    item.id === line.id ? { ...item, locked: !item.locked } : item,
                   ),
-                )
-              }
-            }}
-          >
-            <span class="absolute inset-x-0 top-1/2 h-0.5 bg-blue-500 shadow-sm"></span>
-          </button>
-          <button
-            type="button"
-            aria-label={`Edit ${label(index)} designation`}
-            class="bg-panel/95 pointer-events-auto absolute top-0 left-2 max-w-full -translate-y-1/2 rounded px-2 py-1 text-xs break-words whitespace-normal text-blue-700"
-            disabled={index === lines.length - 1}
-            onclick={() => (editingFloor = line.id)}
-          >
-            {label(index)}
-          </button>
-        </div>
-      {/each}
-    {/if}
+                )}
+            >
+              {#if line.locked}
+                <Lock class="size-4" />
+              {:else}
+                <Unlock class="size-4" />
+              {/if}
+            </button>
+            {#if index > 0 && index < lines.length - 1}
+              <button
+                type="button"
+                aria-label={`Remove ${label(index)}`}
+                title={line.locked
+                  ? 'Unlock this floor before removing it'
+                  : `Remove ${label(index)}`}
+                disabled={line.locked}
+                class="bg-panel/95 pointer-events-auto absolute top-0 left-full ml-2 grid size-7 -translate-y-1/2 place-items-center rounded border text-blue-600 shadow-sm disabled:cursor-not-allowed disabled:opacity-40"
+                onclick={() => edit(removeFloorLine(lines, line.id))}
+              >
+                <Minus class="size-4" />
+              </button>
+            {/if}
+            <button
+              type="button"
+              aria-label={`Drag ${label(index)}`}
+              aria-disabled={line.locked}
+              class="pointer-events-auto absolute inset-x-0 top-0 h-6 -translate-y-1/2 cursor-ns-resize touch-none outline-offset-4 disabled:cursor-default"
+              disabled={line.locked}
+              onpointerdown={event => drag(event, line.id)}
+              onkeydown={event => {
+                if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+                  event.preventDefault()
+                  edit(
+                    moveFloorLine(
+                      lines,
+                      line.id,
+                      line.elevation +
+                        (event.key === 'ArrowUp' ? 1 : -1) * (event.shiftKey ? 1 : 0.1),
+                      bounds,
+                    ),
+                  )
+                }
+              }}
+            >
+              <span
+                class="absolute inset-x-0 top-1/2 h-0.5 bg-blue-500 shadow-sm"
+              ></span>
+            </button>
+            <button
+              type="button"
+              aria-label={`Edit ${label(index)} designation`}
+              class="bg-panel/95 pointer-events-auto absolute top-0 left-2 max-w-full -translate-y-1/2 rounded px-2 py-1 text-xs break-words whitespace-normal text-blue-700"
+              disabled={index === lines.length - 1}
+              onclick={() => (editingFloor = line.id)}
+            >
+              {label(index)}
+            </button>
+          </div>
+        {/each}
+      {/if}
+    </div>
+    <fieldset
+      aria-label="Façade zoom"
+      class="bg-panel/95 pointer-events-auto absolute right-3 bottom-3 flex items-center rounded-xl border p-1 shadow-sm"
+    >
+      <button
+        type="button"
+        aria-label="Zoom out"
+        title="Zoom out"
+        class="grid size-9 place-items-center rounded-lg disabled:opacity-40"
+        disabled={camera.zoom === 1}
+        onclick={() => zoomBy(1 / 1.25)}
+      >
+        <Minus class="size-4" />
+      </button>
+      <button
+        type="button"
+        aria-label="Fit façade to view"
+        title="Fit façade to view"
+        class="min-h-9 w-14 rounded-lg text-sm tabular-nums"
+        onclick={() => setCamera(1, 0, 0)}
+      >
+        {Math.round(camera.zoom * 100)}%
+      </button>
+      <button
+        type="button"
+        aria-label="Zoom in"
+        title="Zoom in"
+        class="grid size-9 place-items-center rounded-lg disabled:opacity-40"
+        disabled={camera.zoom === maxZoom}
+        onclick={() => zoomBy(1.25)}
+      >
+        <Plus class="size-4" />
+      </button>
+    </fieldset>
     {#if saveError}
       <p
         role="alert"
