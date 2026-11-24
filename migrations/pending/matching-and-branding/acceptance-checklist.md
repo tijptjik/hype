@@ -25,7 +25,7 @@ schema. This is a separate release. The original cutover run is complete.
       donor export and compare it with the pinned rows. Rebuild and verify affected
       amendments if inputs changed. Keep raw exports, phone numbers and credentials
       private.
-- [ ] **Prove identity and history.** For all 330 frozen source crosswalks, compare
+- [x] **Prove identity and history.** For all 330 frozen source crosswalks, compare
       source table, ID, hash, and production Feature ID. Verify each intended Location
       link, match decision, override, and existing production predecessor. Append
       curated values through production revision chains. Compare old source revisions,
@@ -33,7 +33,7 @@ schema. This is a separate release. The original cutover run is complete.
       Check that unresolved donors retain independent identities, no duplicate
       identities or orphan revisions appear, and unrelated production and authentication
       rows agree with the baseline.
-- [ ] **Verify effective donor data.** Check every donor's current and accepted Feature
+- [x] **Verify effective donor data.** Check every donor's current and accepted Feature
       revision, rendered name, materialized phone, Location contact and binding. The
       November rehearsal covered 311 donors. Of these, 245 inherited an exact Location
       phone, 39 filled a missing Location phone with attribution, 25 retained a Feature
@@ -58,7 +58,7 @@ schema. This is a separate release. The original cutover run is complete.
       drop-off in the live app. For the combined scope, also check a station page and
       catalogue artwork. Confirm the active release, normal writes and restoration of
       any paused consumers.
-- [ ] **Report evidence.** Return the release ID, input and plan hashes, scoped
+- [x] **Report evidence.** Return the release ID, input and plan hashes, scoped
       before/after counts, discrepancies and their dispositions, production readback,
       replay count, live page results and private receipt paths. Mark each item
       verified, failed or pending. A local rehearsal or completed media upload alone is
@@ -119,10 +119,34 @@ exact bundled runner hash and its progress-logging changes are in `runner-pin.js
 
 ### Production application and live acceptance
 
-Pending the optimized production apply and readback. Do not interpret the preparation
-receipts as evidence of installed production data. The media preflight, application,
-readback, replay, live pages and consumer restoration must all be recorded here before
-marking the combined application item complete.
+All 265 groups committed. `apply.json` records the final cursor; `verify.json` records
+phase `verified`. A fresh production export was restored privately and compared with the
+complete 172-table expected after-state. `post-apply/verification.json` confirms 311
+donor phones, the permanent closure, zero excluded Locations, integrity OK and zero
+foreign-key violations. `post-apply/donor-replay.json` contains zero correction groups.
+`post-apply/cohorts.json` explicitly verifies 113 historical MTR placements, 110 current
+MTR bindings, 933 localized donor titles and all 330 source crosswalks.
+
+`finish.json` confirms the exact original application journal restored at cursor 5681.
+`health-after.json` reports active and ready; `queue-restored.log` confirms both
+original queue settings restored. Fresh production user replay found zero mutations and
+zero exceptions (`post-apply/user-replay.json`); the accepted user manifest now points
+to this verified source and production snapshot, with its predecessor preserved.
+
+Live acceptance is **failed in part**. Managed Chrome job `job-B4EINhWHen` found
+hierarchy-loading errors on the linked, unresolved, phone-override and drop-off pages.
+The station heading loaded, but its map canvas did not render after the readiness wait.
+The catalogue artwork passed. No HTTP error responses or uncaught page errors explained
+these failures. Screenshots and the detailed receipt are retained in the managed job
+artifacts; `live-verification.json` copies the receipt into the private release folder.
+The earlier heading-only smoke (`job-tEumpZdWPH`) passed but was insufficient;
+screenshot review exposed these errors and the strengthened check supersedes that
+result.
+
+The production database apply is complete and verified. The combined checklist item
+remains unchecked because live application acceptance has not passed. The repository's
+production-to-DEV restore command is also being exercised on a private copy; DEV itself
+has not been overwritten.
 
 ### Recovery evidence
 
@@ -139,13 +163,18 @@ profiling fell from 18.4 to 6.2 seconds. A subsequent preparation filename colli
 aborted before any data group; the data-only abort path now preserves the original
 application cursor and has focused retry and post-mutation rejection coverage.
 
+The optimized apply was interrupted by signal 143 after staging cursor 40; it resumed
+without replaying committed groups. The optimized atomic install then committed at
+cursor 191. D1 briefly throttled the next request; the same-plan continuation completed
+all remaining groups. These interruptions did not change the selected data scope.
+
 ### Ongoing sync and remaining acceptance
 
 The existing incremental Feature sync planner targets legacy Place tables and must not
 be enabled against the deployed Location schema. Port and rehearse that recurring
 planner before enabling it; run the supported current-schema donor curation step after
 source reconciliation. Raw source hashes remain unchanged. The accepted user-sync
-manifest must be advanced only after verified production application.
+manifest was advanced after verified production application and zero-write readback.
 
 Stratigraphy is already multi-select (`many`) in production; no additional migration is
 required for that field. Private inputs, phone values, identity decisions and backup
