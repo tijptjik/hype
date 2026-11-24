@@ -5,6 +5,7 @@
 // 1. MARKER GEOGRAPHY
 // - catalogueRelease
 // - readCatalogue
+// - readMarkerDistricts
 // - readAddressDivisionContext
 // - resolveCataloguePoint
 // 2. SELECTION VALIDATION
@@ -20,13 +21,17 @@ import { divisionDefinition, divisionGeometryPart } from '#lib/db/schema/divisio
 // DOMAIN
 import { divisionPolygonSchema, readDivisionPolygons } from '#lib/divisions/geometry.js'
 import { chunkedInArray } from '#lib/utils/batch-query.js'
-import { covers } from '../../../../workers/division-refresh/src/api'
+import {
+  bounds as polygonBounds,
+  covers,
+} from '../../../../workers/division-refresh/src/api'
 import {
   AddressDivisionHierarchiesSchema,
   AddressDivisionOverridesSchema,
   isApprovedLocalityPath,
   SUBJECTIVE_DIVISIONS,
 } from '#lib/addresses/divisions.js'
+import { readMirroredDivisionPolygons } from './divisionGeometry'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type {
@@ -149,6 +154,56 @@ async function readCatalogue(db: Database, release: string | null): Promise<Cata
       expires: Date.now() + 60_000,
     })
   return value
+}
+
+/** Find the administrative districts covering a set of Location markers.
+ * @param db Request-local database.
+ * @param locations Effective, readable Location coordinates from the session projection.
+ * @returns District names by Location ID, retaining both memberships at a shared boundary.
+ */
+export async function readMarkerDistricts(
+  db: Database,
+  locations: { id: string; coordinates: [number, number] | null }[],
+): Promise<Map<string, string[]>> {
+  const memberships = new Map<string, string[]>()
+  const markers = locations.flatMap(({ id, coordinates }) =>
+    coordinates ? [{ id, coordinates }] : [],
+  )
+  if (!markers.length) return memberships
+  const release = await catalogueRelease(db)
+  // Read just the district class, once for the whole list, and honor split polygon storage.
+  const districts = await db
+    .select()
+    .from(divisionDefinition)
+    .where(
+      and(
+        sql`json_extract(${divisionDefinition.attributes}, '$.class') = 'district'`,
+        release ? eq(divisionDefinition.apiReleaseSet, release) : undefined,
+      ),
+    )
+  for (const district of districts) {
+    const metadata = attributesSchema.parse(district.attributes)
+    const names = metadata.names ?? metadata.i18n ?? {}
+    const label =
+      names.en?.name || Object.values(names).find(row => row.name)?.name || district.id
+    const polygons = await readMirroredDivisionPolygons(
+      db,
+      district.id,
+      district.attributes,
+    )
+    const bounds = polygonBounds(polygons)
+    if (!bounds) continue
+    for (const { id, coordinates } of markers) {
+      const [x, y] = coordinates
+      if (x < bounds[0] || y < bounds[1] || x > bounds[2] || y > bounds[3]) continue
+      if (polygons.some(polygon => covers(coordinates, polygon))) {
+        const labels = memberships.get(id) ?? []
+        labels.push(label)
+        memberships.set(id, labels)
+      }
+    }
+  }
+  return memberships
 }
 
 /** Resolve marker memberships with a metadata bounding-box pass before any geometry reads.

@@ -15,6 +15,7 @@ import {
 import { requireResearchSessionAccess } from '#lib/fieldResearch/access.js'
 import { researchConfigurationVersion } from '#lib/fieldResearch/configuration.js'
 import { readResearchSession } from '#lib/db/services/fieldResearch.js'
+import { readMarkerDistricts } from '#lib/db/services/addressDivisions.js'
 import { locationReadFields } from '#lib/db/services/locationReadProjection.js'
 import {
   emptyFeatureAddress,
@@ -68,7 +69,11 @@ export const searchResearchLocations = guardedQuery(
  * @param input Session identity and optional revision cache key. @returns The session's vetted Locations.
  */
 export const getResearchLocations = guardedQuery(
-  z.object({ sessionId: id, revision: z.number().int().nonnegative().optional() }),
+  z.object({
+    sessionId: id,
+    revision: z.number().int().nonnegative().optional(),
+    includeDistricts: z.boolean().optional(),
+  }),
   async (input, ctx) => {
     await requireResearchSessionAccess(ctx, input.sessionId)
     const session = await readResearchSession(ctx.db, input.sessionId)
@@ -137,7 +142,7 @@ export const getResearchLocations = guardedQuery(
         WHERE sl.sessionId=${input.sessionId} AND l.state!='redirect'
           AND (l.state!='manual' OR l.ownerOrganisationId=${session.organisationId}) ORDER BY l.id`,
     )
-    return rows.map(row => {
+    const locations = rows.map(row => {
       const names: Record<string, string> = JSON.parse(row.names ?? '{}')
       const location: {
         address?: FeatureAddress['source']
@@ -222,6 +227,7 @@ export const getResearchLocations = guardedQuery(
           coordinates: member.coordinates,
           addresses: member.addresses.map(({ id, display }) => ({ id, display })),
         })),
+        linkedAddresses: linked.map(entry => entry.label),
         streetAddresses,
         coordinates: location.geometry?.coordinates ?? null,
         footprint:
@@ -230,6 +236,14 @@ export const getResearchLocations = guardedQuery(
             : null,
       }
     })
+    // Only District grouping needs the published boundary geometry.
+    const districts = input.includeDistricts
+      ? await readMarkerDistricts(ctx.db, locations)
+      : null
+    return locations.map(location => ({
+      ...location,
+      districts: districts?.get(location.id) ?? [],
+    }))
   },
 )
 
