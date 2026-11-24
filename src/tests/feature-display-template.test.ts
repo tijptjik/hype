@@ -23,8 +23,9 @@ async function fixture() {
   await f.initialize()
   f.sqlite.exec("INSERT INTO user(id) VALUES('author')")
   f.sqlite.exec(readFileSync('migrations/0234_display_template_registry.sql', 'utf8'))
-  f.sqlite.exec(`CREATE VIEW featureComputedName AS SELECT featureId,locale,title FROM featureI18n;
-    CREATE VIEW featureAcceptedNamingLocation AS SELECT id featureId,'{}' names FROM feature;`)
+  f.sqlite.exec(
+    `CREATE VIEW featureAcceptedNamingLocation AS SELECT id featureId,'{}' names FROM feature;`,
+  )
   f.sqlite.exec(readFileSync('migrations/0235_feature_display_templates.sql', 'utf8'))
   await saveDisplayTemplate(f.db, {
     id: 'central',

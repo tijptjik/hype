@@ -119,6 +119,7 @@ import {
 } from '#lib/db/services/revisionBatch.js'
 // FIXTURES
 import { buildFeatureCommandScopeGuard } from '#lib/db/services/featureCommandScope.js'
+import * as relationalSchema from '#lib/db/schema/index.js'
 import { publicationSqlite } from './fixtures/publicationSqlite'
 import {
   featureRevisionSourceFixture,
@@ -148,7 +149,7 @@ const expectedScope = {
 
 /** Build isolated compatibility tables with real child constraints and revision migrations. */
 function fixture(linked = false, catalogueCascades = false) {
-  const connection = publicationSqlite({ property }, 100)
+  const connection = publicationSqlite(relationalSchema, 100)
   connections.push(connection)
   const { sqlite } = connection
   sqlite.exec(
@@ -202,6 +203,9 @@ function fixture(linked = false, catalogueCascades = false) {
   }
   const source = featureRevisionSourceFixture()
   if (linked) {
+    sqlite.exec(
+      "CREATE TABLE location(id TEXT PRIMARY KEY,kind TEXT,state TEXT,ssId TEXT,ownerOrganisationId TEXT,matchingType TEXT GENERATED ALWAYS AS (kind)); INSERT INTO location(id,kind,state,ownerOrganisationId) VALUES('place','establishment','manual','org')",
+    )
     const accepted = featureRevisionLocationFixture()
     const { associationVersion, acceptedOverrides, memberships, ...references } =
       accepted
@@ -1143,9 +1147,9 @@ describe('existing form revision routing', () => {
       UPDATE featureProperty SET value=NULL,valueJson=NULL,propertyValueId=NULL WHERE propertyId='private';
       DELETE FROM featurePropertyI18n WHERE propertyId='private';`)
       if (community) {
-        f.sqlite.exec(`CREATE TABLE location(id TEXT PRIMARY KEY,kind TEXT,state TEXT);
-          INSERT INTO location VALUES('place','establishment','linked');
+        f.sqlite.exec(`UPDATE location SET state='linked',ssId='source',ownerOrganisationId=NULL WHERE id='place';
           CREATE TABLE locationRevision(id TEXT PRIMARY KEY,locationId TEXT,facts TEXT,rawSource TEXT,version INTEGER);
+          CREATE VIEW locationRevisionContent AS SELECT * FROM locationRevision;
           CREATE TABLE locationSharedRevision(id TEXT PRIMARY KEY,locationId TEXT,previousRevisionId TEXT,sourceRevisionId TEXT,corrections TEXT,actorId TEXT,provenance TEXT,createdAt TEXT);
           CREATE VIEW locationSharedHead AS SELECT r.* FROM locationSharedRevision r WHERE NOT EXISTS(SELECT 1 FROM locationSharedRevision n WHERE n.previousRevisionId=r.id);`)
         f.sqlite.prepare('INSERT INTO locationRevision VALUES(?,?,?,?,?)').run(

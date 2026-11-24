@@ -243,12 +243,18 @@ it('saves real accepted revisions against materialized titles and retains immuta
     f.sqlite.exec(`CREATE TABLE location(id TEXT PRIMARY KEY,state TEXT,ownerOrganisationId TEXT);
       CREATE TABLE locationRevision(id TEXT PRIMARY KEY,locationId TEXT,facts TEXT);
       CREATE TABLE locationSharedRevision(id TEXT PRIMARY KEY,locationId TEXT,corrections TEXT);`)
+    // Replace the plain-name fixture view with the production naming migration.
     // The schema-driven fixture already contains the two columns added by the migration.
     f.sqlite.exec(
-      readFileSync('migrations/0220_feature_name_materialization.sql', 'utf8').replace(
-        /ALTER TABLE featureI18n ADD COLUMN (baseName|nameOverride) TEXT;/g,
-        '',
-      ),
+      readFileSync('migrations/0220_feature_name_materialization.sql', 'utf8')
+        .replace(
+          /ALTER TABLE featureI18n ADD COLUMN (baseName|nameOverride) TEXT;/g,
+          '',
+        )
+        .replace(
+          'CREATE VIEW featureComputedName AS',
+          'DROP VIEW featureComputedName; CREATE VIEW featureComputedName AS',
+        ),
     )
     const command = {
       featureId: 'f',
