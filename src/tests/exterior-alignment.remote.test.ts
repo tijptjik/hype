@@ -38,6 +38,7 @@ const alignment = {
       id: 'base',
       elevation: 1,
       locked: true,
+      reference: { blend: 0.75, viewId: 'view-2' },
       designation: { type: 'ground' as const, number: 1, name: '大堂' },
     },
     { id: 'top', elevation: 8, locked: false },

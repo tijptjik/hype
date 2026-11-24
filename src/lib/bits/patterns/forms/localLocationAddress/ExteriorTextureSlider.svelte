@@ -1,20 +1,19 @@
 <script lang="ts">
+// DOMAIN
+import { textureLabel } from '#lib/locations/exterior/floorTexture.js'
 // TYPES
 import type { ModelViewerElement } from '@google/model-viewer'
 import type { bindTextureBlend } from '#lib/locations/exterior/textureBlend.js'
 
-let { viewer, onfailure }: { viewer: ModelViewerElement; onfailure: () => void } =
-  $props()
+let {
+  viewer,
+  value = $bindable(1),
+  onfailure,
+}: { viewer: ModelViewerElement; value?: number; onfailure: () => void } = $props()
 const stopsId = $props.id()
-let value = $state(1)
 let binding = $state.raw<Awaited<ReturnType<typeof bindTextureBlend>>>()
 const labels = ['Government', 'Revised', 'AI-generated']
-const percentage = $derived(Math.round(100 * (value % 1)))
-const description = $derived(
-  Number.isInteger(value)
-    ? labels[value]
-    : `${100 - percentage}% ${labels[Math.floor(value)]}, ${percentage}% ${labels[Math.ceil(value)]}`,
-)
+const description = $derived(textureLabel(value))
 
 $effect(() => {
   const current = viewer

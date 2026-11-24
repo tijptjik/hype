@@ -1,5 +1,6 @@
 // TOC: Alignment contracts | Boundary editing | Directional views
 // TYPES
+import type { FloorImageReference } from './floorTexture'
 import type { FacadeProposal, Point3 } from './facades'
 
 export const floorTypes = ['basement', 'ground', 'mezzanine', 'floor'] as const
@@ -11,6 +12,7 @@ export type FloorDesignation = {
 export type FloorLine = {
   id: string
   elevation: number
+  reference?: FloorImageReference
   locked: boolean
   designation?: FloorDesignation
 }

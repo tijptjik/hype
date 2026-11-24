@@ -22,6 +22,18 @@ const identity = z.object({
 })
 const line = z.object({
   id: z.string().min(1).max(100),
+  reference: z
+    .union([
+      z.enum(['model', 'government-model']),
+      z.object({
+        blend: z.number().finite().min(0).max(2),
+        viewId: z
+          .string()
+          .regex(/^view-[0-9]+$/)
+          .max(30),
+      }),
+    ])
+    .optional(),
   locked: z.boolean(),
   elevation: z.number().finite(),
   designation: z

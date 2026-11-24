@@ -17,6 +17,12 @@ import ChevronLeft from 'virtual:icons/lucide/chevron-left'
 import ChevronRight from 'virtual:icons/lucide/chevron-right'
 // DOMAIN
 import {
+  floorTextureAnchors,
+  textureHeight,
+  textureLabel,
+  type FloorImageReference,
+} from '#lib/locations/exterior/floorTexture.js'
+import {
   addFloorLine,
   designateFloorLine,
   distributeFloorLines,
@@ -36,6 +42,7 @@ let {
   viewer,
   assetId,
   comparisonGeometry = false,
+  textureBlend = 0,
   sourceAssetId,
   locationId,
   canSave,
@@ -46,6 +53,7 @@ let {
   sourceAssetId: string
   locationId: string
   canSave: boolean
+  textureBlend?: number
   comparisonGeometry?: boolean
 } = $props()
 let result = $state<FacadeAnalysis | null>(null)
@@ -74,6 +82,20 @@ const editedLine = $derived(lines[editingIndex])
 const editedFloor = $derived(floors[editingIndex])
 const views = $derived(facadeViews(result?.facades ?? []))
 const face = $derived(views[side])
+const registration = $derived(floorTextureAnchors(viewer.originalGltfJson, face?.id))
+const lineReferences = $derived([
+  ...new Set(lines.map(line => referenceLabel(line.reference))),
+])
+/** Identify the source of a boundary's last height edit, including legacy records.
+ * @param reference Persisted texture and façade or a calculated model height. @returns Human-readable source.
+ */
+function referenceLabel(reference: FloorImageReference | undefined): string {
+  if (reference === 'government-model') return 'Government model'
+  if (reference === 'model') return 'Calculated from geometry'
+  if (!reference) return 'Unrecorded'
+  const index = views.findIndex(view => view.id === reference.viewId)
+  return textureLabel(reference.blend) + (index >= 0 ? ' · façade ' + (index + 1) : '')
+}
 // Camera offsets are fractions of the current face's width and model height.
 const fitted = { zoom: 1, x: 0, y: 0 }
 let cameras = $state<Record<string, typeof fitted>>({})
@@ -217,7 +239,37 @@ function placeAnchors(): void {
 function lineY(elevation: number): number {
   return (
     frame.bottom -
-    ((elevation - bounds[0]) / (bounds[1] - bounds[0])) * (frame.bottom - frame.top)
+    ((textureHeight(elevation, registration, textureBlend) - bounds[0]) /
+      (bounds[1] - bounds[0])) *
+      (frame.bottom - frame.top)
+  )
+}
+/** Record which visible image and façade supplied a changed height.
+ * @param id Edited line. @param height Target in model coordinates. @returns Updated lines.
+ */
+function moveOnImage(id: string, height: number): FloorLine[] {
+  const moved = moveFloorLine(lines, id, height, bounds)
+  return moved.map((line, i) =>
+    line.elevation === lines[i].elevation
+      ? line
+      : {
+          ...line,
+          reference: {
+            blend: face.comparisonArea > 0 ? textureBlend : 0,
+            viewId: face.id,
+          },
+        },
+  )
+}
+/** Mark calculated heights after adding a boundary or redistributing unlocked lines.
+ * @param next Result of a geometry operation. @returns Nothing.
+ */
+function editCalculated(next: FloorLine[]): void {
+  const previous = new Map(lines.map(line => [line.id, line.elevation]))
+  edit(
+    next.map(line =>
+      line.elevation === previous.get(line.id) ? line : { ...line, reference: 'model' },
+    ),
   )
 }
 /** Move a boundary directly; redistribution remains an explicit separate action. @param event Pointer input. @param id Boundary identity. @returns Nothing. */
@@ -229,10 +281,18 @@ function drag(event: PointerEvent, id: string): void {
   target.setPointerCapture(event.pointerId)
   const before = snapshot()
   const start = line.elevation
+  const displayStart = textureHeight(start, registration, textureBlend)
   const startY = event.clientY
   const scale = (bounds[1] - bounds[0]) / (frame.bottom - frame.top)
   const move = (next: PointerEvent) => {
-    lines = moveFloorLine(lines, id, start - (next.clientY - startY) * scale, bounds)
+    const delta = (next.clientY - startY) * scale
+    lines =
+      delta === 0
+        ? before.lines
+        : moveOnImage(
+            id,
+            textureHeight(displayStart - delta, registration, textureBlend, true),
+          )
   }
   const end = () => {
     if (lines.find(item => item.id === id)?.elevation !== start) remember(before)
@@ -284,6 +344,9 @@ function snapshotKey(state: Snapshot): string {
       line.id,
       line.elevation,
       line.locked,
+      typeof line.reference === 'object'
+        ? [line.reference.blend, line.reference.viewId]
+        : line.reference,
       line.designation?.type,
       line.designation?.number,
       line.designation?.name,
@@ -504,6 +567,7 @@ onMount(() => {
           id: `line-${i}`,
           elevation,
           locked: false,
+          reference: 'model',
         }))
         // Start comparisons facing the largest corrected area, then honor any saved front.
         if (comparisonGeometry) {
@@ -557,6 +621,14 @@ onMount(() => {
               (line: FloorLine, i: number) =>
                 typeof line.id === 'string' &&
                 typeof line.locked === 'boolean' &&
+                (line.reference === undefined ||
+                  line.reference === 'model' ||
+                  line.reference === 'government-model' ||
+                  (line.reference &&
+                    Number.isFinite(line.reference.blend) &&
+                    line.reference.blend >= 0 &&
+                    line.reference.blend <= 2 &&
+                    /^view-[0-9]+$/.test(line.reference.viewId))) &&
                 validFloorDesignation(line.designation) &&
                 Number.isFinite(line.elevation) &&
                 line.elevation >= low &&
@@ -665,6 +737,15 @@ onMount(() => {
       <div
         class="bg-panel/95 flex flex-wrap items-center gap-1 rounded-xl border p-1 shadow-sm"
       >
+        {#if comparisonGeometry}
+          <span
+            class="text-muted-foreground px-2 text-xs"
+            title={lineReferences.join(', ')}
+          >
+            Line reference ·
+            {lineReferences.length === 1 ? lineReferences[0] : 'Varies by line'}
+          </span>
+        {/if}
         <label class="flex min-h-9 items-center gap-2 px-2 text-sm">
           <input type="checkbox" bind:checked={transparent}>50% transparent
         </label>
@@ -681,7 +762,7 @@ onMount(() => {
           aria-label="Evenly distribute"
           title="Evenly distribute unlocked lines between fixed anchors"
           class="grid size-10 place-items-center rounded-lg"
-          onclick={() => edit(distributeFloorLines(lines))}
+          onclick={() => editCalculated(distributeFloorLines(lines))}
         >
           <Distribute class="size-5" />
         </button>
@@ -690,7 +771,7 @@ onMount(() => {
           aria-label="Add floor"
           class="flex min-h-10 items-center gap-1 rounded-lg px-2 text-sm"
           disabled={lines.length >= 100}
-          onclick={() => edit(addFloorLine(lines, crypto.randomUUID()))}
+          onclick={() => editCalculated(addFloorLine(lines, crypto.randomUUID()))}
         >
           <Plus class="size-5" />Add floor
         </button>
@@ -783,7 +864,8 @@ onMount(() => {
           Done
         </button>
         <p class="w-full text-xs">
-          Names the floor above this line. Changing its name does not move any lines.
+          Height reference · {referenceLabel(editedLine.reference)}. Names the floor
+          above this line. Changing its name does not move any lines.
         </p>
       </div>
     {/if}
@@ -837,6 +919,7 @@ onMount(() => {
             <button
               type="button"
               aria-label={`Drag ${floors[index].label}`}
+              title={`Height reference · ${referenceLabel(line.reference)}`}
               aria-disabled={line.locked}
               class="pointer-events-auto absolute inset-x-0 top-0 h-6 -translate-y-1/2 cursor-ns-resize touch-none outline-offset-4 disabled:cursor-default"
               disabled={line.locked}
@@ -845,12 +928,10 @@ onMount(() => {
                 if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
                   event.preventDefault()
                   edit(
-                    moveFloorLine(
-                      lines,
+                    moveOnImage(
                       line.id,
                       line.elevation +
                         (event.key === 'ArrowUp' ? 1 : -1) * (event.shiftKey ? 1 : 0.1),
-                      bounds,
                     ),
                   )
                 }

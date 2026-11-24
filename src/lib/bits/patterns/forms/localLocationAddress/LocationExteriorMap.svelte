@@ -66,6 +66,7 @@ const selectedAlreadyAdded = $derived(
 let candidates = $state<Awaited<
   ReturnType<typeof findLocationExteriorCandidates>
 > | null>(null)
+let textureBlend = $state(1)
 const viewModes = ['Facade', '3D'] as const
 let viewMode = $state<(typeof viewModes)[number]>('Facade')
 let associating = $state(false)
@@ -798,6 +799,7 @@ async function importModel(): Promise<void> {
       {#if comparisonFile && analysisViewer}
         <div class="w-full max-w-72">
           <ExteriorTextureSlider
+            bind:value={textureBlend}
             viewer={analysisViewer}
             onfailure={useGovernmentModel}
           />
@@ -833,6 +835,7 @@ async function importModel(): Promise<void> {
             canSave={result.canImport}
             assetId={comparisonFile ?? model.assetId}
             comparisonGeometry={Boolean(comparisonFile)}
+            textureBlend={comparisonFile ? textureBlend : 0}
           />
         {/key}
       {/if}
