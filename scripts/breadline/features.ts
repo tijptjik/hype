@@ -69,9 +69,18 @@ export function planBreadlineFeatures(args: string[]): string[] {
  * @param revision Existing locked connection and creation token, only supplied by the attributed writer.
  * @returns Individually executable statements and newly created identities.
  */
-function buildBreadlineFeaturePlan(
+export function buildBreadlineFeaturePlan(
   args: string[],
-  revision?: { target: Database; token: string },
+  revision?: {
+    target: Database
+    token: string
+    identities?: ReadonlySet<string>
+    projectExisting?: boolean
+    onFacts?: (
+      identity: string,
+      facts: import('../../src/lib/locations/model').LocationFacts,
+    ) => void
+  },
 ): { statements: string[]; createdIds: string[] } {
   process.umask(0o077)
   const option = (name: string): string => {
@@ -267,6 +276,8 @@ function buildBreadlineFeaturePlan(
       const rows = cohorts[table]
       for (const row of rows) {
         const sourceId = String(row.id)
+        if (revision?.identities && !revision.identities.has(`${table}:${sourceId}`))
+          continue
         if (table === 'donors') {
           const reason = (donorImportPolicy.excludedDonorIds as number[]).includes(
             Number(row.id),
@@ -300,7 +311,7 @@ function buildBreadlineFeaturePlan(
             'SELECT featureId,sourceHash FROM breadlineImportFeature WHERE sourceTable=? AND sourceId=?',
           )
           .get(table, sourceId) as { featureId: string; sourceHash: string } | null
-        if (existing) {
+        if (existing && !revision?.projectExisting) {
           if (existing.featureId !== id || existing.sourceHash !== hash)
             throw new Error(`Source changed for ${table}:${sourceId}; review required`)
           // Retired identities keep their original crosswalk; replay never follows a successor.
@@ -342,7 +353,10 @@ function buildBreadlineFeaturePlan(
           matched++
           continue
         }
-        if (target.query('SELECT id FROM feature WHERE id=?').get(id))
+        if (
+          !revision?.projectExisting &&
+          target.query('SELECT id FROM feature WHERE id=?').get(id)
+        )
           throw new Error(
             `Unmapped Feature identity collision for ${table}:${sourceId}; review the destination mapping`,
           )
@@ -487,12 +501,14 @@ function buildBreadlineFeaturePlan(
             location: { geometry, address: localAddress },
           },
         })
+        revision?.onFacts?.(`${table}:${sourceId}`, local.facts)
         const locationId = deriveLocationId(
           table === 'donors' ? 'breadline-donor' : 'breadline-dropoff',
           sourceId,
         )
         const revisionId = deriveLocationBaselineId(locationId)
         if (
+          !revision?.projectExisting &&
           target
             .query(`SELECT id FROM ${legacyPlace ? 'place' : 'location'} WHERE id=?`)
             .get(locationId)
@@ -658,7 +674,7 @@ function buildBreadlineFeaturePlan(
             sourceHash: hash,
           }),
         )
-        if (table === 'donors')
+        if (table === 'donors' && !revision?.projectExisting)
           applyReview(sourceId, id, hash, coordinates, JSON.stringify(geometry))
         createdIds.push(id)
         created++

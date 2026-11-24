@@ -4,6 +4,11 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { getPlatformProxy } from 'wrangler'
 // PIPELINE
 import { applyFeatureSyncGroup, type FeatureSyncPlan } from './lib/feature-sync-plan'
+import {
+  applyLocationFeatureSyncGroup,
+  locationSyncSchemaHash,
+  type LocationFeatureSyncPlan,
+} from './lib/location-feature-sync-contract'
 import { userSyncHash } from './lib/user-sync-contract'
 import { writeUserSyncState } from './lib/user-sync-state'
 // TYPES
@@ -18,13 +23,15 @@ async function main(): Promise<void> {
   const [planPath, target, hash, configPath, journalPath, receiptPath] =
     process.argv.slice(2)
   if (process.argv.length !== 8) throw new Error('Invalid remote feature arguments')
-  const plan = JSON.parse(readFileSync(planPath, 'utf8')) as FeatureSyncPlan
+  const plan = JSON.parse(readFileSync(planPath, 'utf8')) as
+    | FeatureSyncPlan
+    | LocationFeatureSyncPlan
   const config = JSON.parse(readFileSync(configPath, 'utf8'))
   const binding = config.d1_databases?.find(
     (r: { binding: string }) => r.binding === 'DB',
   )
   if (
-    plan.version !== 1 ||
+    ![1, 2].includes(plan.version) ||
     plan.exceptions.length ||
     userSyncHash(plan) !== hash ||
     plan.targetIdentity !== target ||
@@ -55,15 +62,19 @@ async function main(): Promise<void> {
     remoteBindings: true,
   })
   try {
-    // Fail closed if the application schema has migrated since this plan was prepared.
-    if (
-      await proxy.env.DB.prepare(
-        "SELECT 1 FROM sqlite_master WHERE name='location'",
-      ).first()
-    )
-      throw new Error('Production no longer uses the Place schema')
+    // Bind each plan version to its reviewed schema before any mutation, including retries.
+    const currentSchema = await proxy.env.DB.prepare(
+      'SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE sql IS NOT NULL',
+    ).all<Record<string, unknown>>()
+    if (plan.version === 2) {
+      if (locationSyncSchemaHash(currentSchema.results) !== plan.schemaHash)
+        throw Error('Production Location schema differs from plan')
+    } else if (currentSchema.results.some(r => r.name === 'location'))
+      throw Error('Legacy plan cannot write Location schema')
     for (let i = journal.nextGroup; i < plan.groups.length; i++) {
-      await applyFeatureSyncGroup(proxy.env.DB, plan.groups[i])
+      if (plan.version === 2)
+        await applyLocationFeatureSyncGroup(proxy.env.DB, plan.groups[i])
+      else await applyFeatureSyncGroup(proxy.env.DB, plan.groups[i])
       journal.nextGroup = i + 1
       writeUserSyncState(journalPath, journal)
       if (journal.nextGroup % 25 === 0)
@@ -74,6 +85,9 @@ async function main(): Promise<void> {
           }),
         )
     }
+    if (plan.version === 2)
+      for (const group of plan.groups)
+        await applyLocationFeatureSyncGroup(proxy.env.DB, group)
     journal.complete = true
     writeUserSyncState(journalPath, journal)
     writeFileSync(receiptPath, JSON.stringify(journal), { mode: 0o600, flag: 'wx' })

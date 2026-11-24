@@ -16,12 +16,30 @@ import {
 import { userSyncHash } from './lib/user-sync-contract'
 import { lockUserSyncState } from './lib/user-sync-state'
 
-/** Prepare an offline, hash-pinned donor/dropoff reconciliation for the deployed Place schema.
+/** Prepare an offline, hash-pinned donor/dropoff reconciliation for the detected Place or revision-enabled Location schema.
  * @returns Aggregate counts and private plan paths.
  * @remarks No source refresh or production mutation. Accepted state changes only after remote application.
  */
 async function main(): Promise<void> {
   process.umask(0o077)
+  const databaseIndex = process.argv.indexOf('--database')
+  if (databaseIndex >= 0 && process.argv[databaseIndex + 1]) {
+    const probe = new Database(process.argv[databaseIndex + 1], { readonly: true })
+    let current = false
+    try {
+      current = Boolean(
+        probe.query("SELECT 1 FROM sqlite_schema WHERE name='location'").get(),
+      )
+    } finally {
+      probe.close()
+    }
+    if (current) {
+      const { planLocationSyncCommand } = await import('./sync-location-features')
+      await planLocationSyncCommand(process.argv.slice(2))
+      return
+    }
+  }
+
   const args = new Map<string, string>()
   for (let i = 2; i < process.argv.length; i += 2) {
     const key = process.argv[i],

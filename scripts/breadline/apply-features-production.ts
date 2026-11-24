@@ -17,6 +17,12 @@ import {
 } from './lib/feature-sync-plan'
 import { userSyncHash } from './lib/user-sync-contract'
 import { lockUserSyncState, writeUserSyncState } from './lib/user-sync-state'
+import {
+  applyLocationFeatureSyncGroup,
+  locationSyncSchemaHash,
+  type LocationFeatureSyncPlan,
+  type LocationFeatureSyncState,
+} from './lib/location-feature-sync-contract'
 import { openSqliteDomain } from '../locations/lib/sqlite-domain'
 
 /** Apply a hash-pinned production plan, then advance its private accepted baseline.
@@ -44,7 +50,9 @@ async function main(): Promise<void> {
     return v
   }
   const planPath = resolve(required('--plan'))
-  const plan = JSON.parse(readFileSync(planPath, 'utf8')) as FeatureSyncPlan
+  const plan = JSON.parse(readFileSync(planPath, 'utf8')) as
+    | FeatureSyncPlan
+    | LocationFeatureSyncPlan
   const hash = userSyncHash(plan),
     target = required('--target')
   const config = Bun.TOML.parse(readFileSync('wrangler.toml', 'utf8')) as {
@@ -62,7 +70,7 @@ async function main(): Promise<void> {
   const binding = config.env.production.d1_databases.find(r => r.binding === 'DB')
   if (
     hash !== required('--expect-hash') ||
-    plan.version !== 1 ||
+    ![1, 2].includes(plan.version) ||
     plan.exceptions.length ||
     plan.targetIdentity !== target ||
     target !== `production:${binding?.database_id}`
@@ -71,9 +79,13 @@ async function main(): Promise<void> {
   const statePath = resolve(required('--state')),
     release = lockUserSyncState(statePath)
   try {
-    const state: FeatureSyncState | null = existsSync(statePath)
+    const state: FeatureSyncState | LocationFeatureSyncState | null = existsSync(
+      statePath,
+    )
       ? JSON.parse(readFileSync(statePath, 'utf8'))
       : null
+    if (state && (state.version !== plan.version || state.targetIdentity !== target))
+      throw new Error('Accepted state version or target differs')
     if (state?.planHash !== hash && (state?.planHash ?? null) !== plan.previousPlanHash)
       throw new Error('Accepted feature baseline changed')
     const directory = dirname(statePath)
@@ -96,8 +108,21 @@ async function main(): Promise<void> {
     copyFileSync(beforeImage, rehearsalPath)
     const rehearsal = openSqliteDomain(rehearsalPath)
     try {
-      for (const group of plan.groups)
-        await applyFeatureSyncGroup(rehearsal.binding, group)
+      if (plan.version === 2) {
+        const schema = await rehearsal.binding
+          .prepare(
+            'SELECT type,name,tbl_name,sql FROM sqlite_schema WHERE sql IS NOT NULL',
+          )
+          .all<Record<string, unknown>>()
+        if (locationSyncSchemaHash(schema.results) !== plan.schemaHash)
+          throw Error('Location schema changed')
+        for (const group of plan.groups)
+          await applyLocationFeatureSyncGroup(rehearsal.binding, group)
+        if (rehearsal.sqlite.query('PRAGMA foreign_key_check').all().length)
+          throw Error('Rehearsal foreign-key violation')
+      } else
+        for (const group of plan.groups)
+          await applyFeatureSyncGroup(rehearsal.binding, group)
     } finally {
       rehearsal.close()
     }
@@ -120,17 +145,23 @@ async function main(): Promise<void> {
       throw new Error('Remote feature application incomplete')
     const local = openSqliteDomain(resolve(required('--database')))
     try {
-      for (const group of plan.groups) await applyFeatureSyncGroup(local.binding, group)
+      if (plan.version === 2)
+        for (const group of plan.groups)
+          await applyLocationFeatureSyncGroup(local.binding, group)
+      else
+        for (const group of plan.groups)
+          await applyFeatureSyncGroup(local.binding, group)
     } finally {
       local.close()
     }
     writeUserSyncState(statePath, {
-      version: 1,
+      version: plan.version,
       targetIdentity: target,
       source: plan.source,
       projections: plan.projections,
+      ...(plan.version === 2 ? { featureIds: plan.featureIds } : {}),
       planHash: hash,
-    } satisfies FeatureSyncState)
+    } as FeatureSyncState | LocationFeatureSyncState)
     console.log(
       JSON.stringify({
         groups: plan.groups.length,
