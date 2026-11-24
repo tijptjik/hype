@@ -4,7 +4,7 @@ import {
   type locationTransition,
   type locationTransitionParticipant,
 } from '../schema/locationRelationships'
-import { canonicalLocationSQL } from './locationRedirect'
+import { canonicalLocationSQL, locationAliasIds } from './locationRedirect'
 // DRIZZLE
 import { getTableColumns, sql, type SQL } from 'drizzle-orm'
 // DOMAIN
@@ -42,9 +42,7 @@ function visibleRelationshipSubject(
       sql`(r.${sql.identifier(key)} IS NULL OR EXISTS(SELECT 1 FROM location l WHERE l.id=${canonicalLocationSQL(sql`r.${sql.identifier(key)}`)} AND (l.state!='manual' OR l.ownerOrganisationId IS ${scope})))`,
   )
   const subject = sql.join(
-    keys.map(
-      key => sql`${canonicalLocationSQL(sql`r.${sql.identifier(key)}`)}=${locationId}`,
-    ),
+    keys.map(key => sql`r.${sql.identifier(key)} IN ${locationAliasIds(locationId)}`),
     sql` OR `,
   )
   return sql`(${subject}) AND ${sql.join(visible, sql` AND `)}`
@@ -57,7 +55,7 @@ function visibleLineageSubject(
   locationId: string | SQL,
   scope: string | null | SQL,
 ): SQL {
-  return sql`EXISTS(SELECT 1 FROM locationTransitionParticipant p WHERE p.transitionRevisionId=r.id AND ${canonicalLocationSQL(sql`p.locationId`)}=${locationId}) AND NOT EXISTS(SELECT 1 FROM locationTransitionParticipant p JOIN location l ON l.id=${canonicalLocationSQL(sql`p.locationId`)} WHERE p.transitionRevisionId=r.id AND l.state='manual' AND l.ownerOrganisationId IS NOT ${scope})`
+  return sql`EXISTS(SELECT 1 FROM locationTransitionParticipant p WHERE p.transitionRevisionId=r.id AND p.locationId IN ${locationAliasIds(locationId)}) AND NOT EXISTS(SELECT 1 FROM locationTransitionParticipant p JOIN location l ON l.id=${canonicalLocationSQL(sql`p.locationId`)} WHERE p.transitionRevisionId=r.id AND l.state='manual' AND l.ownerOrganisationId IS NOT ${scope})`
 }
 
 /** Check the four editor sections for an asserted relationship in the selected scope.

@@ -12,7 +12,7 @@ import type { Database } from '#lib/types.js'
  * @returns Trusted SQL subquery usable with IN; no dynamic identifier interpolation.
  * @remarks UNION deduplicates corrupt cycles as well as valid multistep redirect chains.
  */
-export function locationAliasIds(locationId: string): SQL {
+export function locationAliasIds(locationId: string | SQL): SQL {
   return sql`(WITH RECURSIVE aliases(id) AS (
     SELECT ${locationId} UNION SELECT r.id FROM location r
       JOIN aliases a ON r.redirectTargetId=a.id

@@ -17,6 +17,8 @@ describe('field session Location selection', () => {
         CREATE TABLE locationCanonical(aliasId TEXT PRIMARY KEY, locationId TEXT);
         CREATE TABLE locationMembershipHead(relationshipId TEXT, parentLocationId TEXT, childLocationId TEXT, assertionState TEXT, membershipState TEXT, effectiveFrom TEXT, effectiveTo TEXT, scopeOrganisationId TEXT);
         INSERT INTO location VALUES ('p','premises','linked',NULL),('b','building','linked',NULL),('f','building_part','linked',NULL),('u','building_part','linked',NULL),('foreign','building','manual','other'),('stale','building','linked',NULL),('blocked','building','linked',NULL);
+        ALTER TABLE location ADD COLUMN redirectTargetId TEXT;
+        INSERT INTO location VALUES ('old-b','building','redirect',NULL,'b');
         INSERT INTO locationCanonical VALUES ('old-b','b');
         INSERT INTO locationMembershipHead VALUES
           ('p-b','p','b','asserted','current',NULL,NULL,NULL),

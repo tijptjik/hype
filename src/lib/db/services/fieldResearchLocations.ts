@@ -1,6 +1,6 @@
 // DRIZZLE
 import { sql } from 'drizzle-orm'
-import { canonicalLocationSQL } from './locationRedirect.js'
+import { canonicalLocationSQL, locationAliasIds } from './locationRedirect.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 import type { SQL } from 'drizzle-orm'
@@ -14,10 +14,11 @@ export function researchLocationDescendantsSQL(
   organisationId: string | SQL,
   includeParts: boolean,
 ): SQL {
+  // Resolve aliases from the selected parent so SQLite can seek its membership index.
   return sql`WITH RECURSIVE children(id,kind) AS (
     SELECT l.id,l.matchingType FROM location l WHERE l.id=${root}
     UNION
-    SELECT child.id,child.matchingType FROM children parent JOIN locationMembershipHead m ON ${canonicalLocationSQL(sql`m.parentLocationId`)}=parent.id JOIN location child ON child.id=${canonicalLocationSQL(sql`m.childLocationId`)}
+    SELECT child.id,child.matchingType FROM children parent JOIN locationMembershipHead m ON m.parentLocationId IN ${locationAliasIds(sql`parent.id`)} JOIN location child ON child.id=${canonicalLocationSQL(sql`m.childLocationId`)}
     WHERE m.assertionState='asserted' AND m.membershipState='current' AND (m.effectiveFrom IS NULL OR m.effectiveFrom<=date('now')) AND (m.effectiveTo IS NULL OR m.effectiveTo>date('now'))
     AND (m.scopeOrganisationId=${organisationId} OR (m.scopeOrganisationId IS NULL AND NOT EXISTS(SELECT 1 FROM locationMembershipHead own WHERE own.relationshipId=m.relationshipId AND own.scopeOrganisationId=${organisationId})))
     AND child.state!='redirect' AND (child.state!='manual' OR child.ownerOrganisationId=${organisationId})
