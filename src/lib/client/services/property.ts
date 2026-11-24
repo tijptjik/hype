@@ -20,6 +20,9 @@ import { toLocaleKey } from '#lib/i18n.js'
 import { updateFormData } from '#lib/client/services/form.js'
 // ENUMS
 import { FirstClassResource } from '#lib/enums.js'
+// API
+import { getProjectProperties } from '#lib/api/property.remote.js'
+import { runRemoteQuery } from '#lib/remote/index.js'
 // TYPES
 import type { ResourceViewCtx } from '#lib/context/resourceView.svelte.js'
 import type { Locale, LocaleExtended, Id } from '#lib/types.js'
@@ -238,6 +241,18 @@ export const getGroupedClassifierProperties = async (
     properties: Property[]
   }>
 > => {
+  // Shared definitions can have different ranks in each project.
+  const projectOrders = new Map<string, Promise<Map<string, number>>>()
+  const getProjectOrder = (projectId: string): Promise<Map<string, number>> => {
+    let order = projectOrders.get(projectId)
+    if (!order) {
+      order = runRemoteQuery(getProjectProperties({ projectId })).then(
+        result => new Map(result.data.map((property, index) => [property.id, index])),
+      )
+      projectOrders.set(projectId, order)
+    }
+    return order
+  }
   const results = await Promise.all(
     appCtx.scope.getPrism(FirstClassResource.layer).map(async layerId => {
       // Get layer
@@ -260,9 +275,12 @@ export const getGroupedClassifierProperties = async (
             ? [definition]
             : []
         })
-      const properties = [...classifiers, ...intervals].sort(
-        (a, b) => (a.rank ?? 0) - (b.rank ?? 0),
-      )
+      const order = await getProjectOrder(project.id)
+      const properties = [...classifiers, ...intervals].sort((a, b) => {
+        const left = order.get(a.id) ?? Infinity
+        const right = order.get(b.id) ?? Infinity
+        return left === right ? 0 : left - right
+      })
       if (properties.length === 0) return null
 
       // Construct hierarchy info without hiding single-child names: each filter group needs its own identity.

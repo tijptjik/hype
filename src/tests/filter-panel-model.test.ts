@@ -7,12 +7,74 @@ import Fixture from './fixtures/components/FilterPanelModelFixture.svelte'
 import type { useFilterPanelModel } from '#lib/adapters/panels/useFilterPanelModel.svelte.js'
 import type { Property } from '#lib/db/zod/schema/property.types.js'
 
+const projectProperties = vi.hoisted(() =>
+  vi.fn(async (_params: { projectId: string }) => ({ data: [] as Property[] })),
+)
+vi.mock('#lib/api/property.remote.js', () => ({
+  getProjectProperties: projectProperties,
+}))
 vi.mock('#lib/i18n.js', () => ({
   getI18n: (record: { key?: string; name?: string }, field: string) =>
     field === 'name' ? record.name : record.key,
   m: new Proxy({}, { get: (_, key) => () => String(key) }),
 }))
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  projectProperties.mockReset()
+  projectProperties.mockResolvedValue({ data: [] })
+})
+
+it('orders each layer by its project assignments, including range fields', async () => {
+  const { getGroupedClassifierProperties } = await import(
+    '#lib/client/services/property.js'
+  )
+  const material = {
+    id: 'material',
+    key: 'material',
+    type: 'classifier',
+    rank: 0,
+  } as Property
+  const condition = {
+    id: 'condition',
+    key: 'condition',
+    type: 'classifier',
+    rank: 1,
+  } as Property
+  const hours = {
+    id: 'hours',
+    key: 'hours',
+    type: 'specifier',
+    dataType: 'timeRange',
+    audience: 'public',
+    rank: 2,
+  } as Property
+  const layers = ['one', 'two'].map(id => ({
+    id,
+    properties: [{ propertyId: hours.id, property: hours, isVisible: true }],
+  }))
+  projectProperties.mockImplementation(async ({ projectId }) => ({
+    data:
+      projectId === 'one' ? [hours, material, condition] : [condition, hours, material],
+  }))
+  const app = {
+    scope: { getPrism: () => ['one', 'two'] },
+    getLayerById: async (id: string) => layers.find(layer => layer.id === id),
+    getHierarchy: async (layer: (typeof layers)[number]) => ({
+      project: { id: layer.id },
+      organisation: {},
+    }),
+    getClassifierPropertiesForLayer: async () => [condition, material],
+    getUserPreferences: () => ({}),
+    getContextualOrganisationName: () => '',
+    getContextualProjectName: () => '',
+    getContextualLayerName: () => '',
+  } as unknown as ResourceViewCtx
+  const groups = await getGroupedClassifierProperties(app)
+  expect(groups.map(group => group.properties.map(property => property.id))).toEqual([
+    ['hours', 'material', 'condition'],
+    ['condition', 'hours', 'material'],
+  ])
+})
 
 it('hydrates categories after definitions arrive and updates them without a layer toggle', async () => {
   vi.useRealTimers()
