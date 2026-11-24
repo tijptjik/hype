@@ -1,6 +1,7 @@
 // @vitest-environment node
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { setupLifecycleDatabase } from './fixtures/locationLifecycleDatabase'
+import { readFileSync } from 'node:fs'
+import { describe, expect, it, vi } from 'vitest'
+import { setupLocationServiceDatabase } from './fixtures/locationServiceDatabase'
 import { createLocalLocation } from '#lib/db/services/locationLocal.js'
 import { linkInitialFeatureLocation } from '#lib/db/services/locationLink.js'
 import { localIdentityFromAddress } from '#lib/locations/addressIdentity.js'
@@ -25,10 +26,6 @@ import { createLocalLocationAddress } from '#lib/addresses/localLocationAddress.
 import type { PlaceSourceClient } from '#lib/locations/sourceClient.js'
 import type { SaanSeoiPlaceProjection } from '#lib/locations/saanseoi.js'
 
-const stores: ReturnType<typeof setupLifecycleDatabase>[] = []
-afterEach(() => {
-  for (const s of stores.splice(0)) s.sqlite.close()
-})
 const address = (): FeatureAddress => ({
   ...emptyFeatureAddress(),
   coordinates: [114.15, 22.3],
@@ -44,8 +41,7 @@ const address = (): FeatureAddress => ({
 })
 
 async function setup(value = address()) {
-  const s = setupLifecycleDatabase(true)
-  stores.push(s)
+  const s = setupLocationServiceDatabase(true)
   s.sqlite.exec(
     "INSERT INTO featureI18n(featureId,locale,title,displayAddress) VALUES('f','en','My independent Feature','My corrected address')",
   )
@@ -313,14 +309,14 @@ describe('Open to Sync publication rematching (Refs #194)', () => {
       if (condition === 'private') {
         expect(() =>
           s.sqlite.exec(
-            "INSERT INTO location(id,kind,state,ssId,ownerOrganisationId) VALUES('occupied','establishment','linked','source','other')",
+            "INSERT INTO location(id,kind,class,state,ssId,ownerOrganisationId) VALUES('occupied','operational','establishment','linked','source','other')",
           ),
         ).toThrow('Source-linked Locations must be shared')
         return
       }
       s.sqlite
         .prepare(
-          "INSERT INTO location(id,kind,state,ssId,ownerOrganisationId,sourceAvailability) VALUES('occupied','establishment','linked','source',?,?)",
+          "INSERT INTO location(id,kind,class,state,ssId,ownerOrganisationId,sourceAvailability) VALUES('occupied','operational','establishment','linked','source',?,?)",
         )
         .run(null, 'missing')
       await drain(s, p.client)
@@ -337,7 +333,7 @@ describe('Open to Sync publication rematching (Refs #194)', () => {
     const s = await setup()
     const p = provider()
     s.sqlite.exec(
-      "INSERT INTO location(id,kind,state,ssId,sourceAvailability) VALUES('occupied','establishment','linked','source','current')",
+      "INSERT INTO location(id,kind,class,state,ssId,sourceAvailability) VALUES('occupied','operational','establishment','linked','source','current')",
     )
     await drain(s, p.client)
     expect(
@@ -621,6 +617,10 @@ describe('Open to Sync publication rematching (Refs #194)', () => {
     const before = s.sqlite
       .prepare("SELECT * FROM featureLocation WHERE featureId='neighbour'")
       .get()
+    // The Tasks projection combines rematch reviews and correction proposals.
+    s.sqlite.exec(
+      readFileSync('migrations/0185_location_correction_proposals.sql', 'utf8'),
+    )
     s.sqlite.exec(`ALTER TABLE feature ADD COLUMN organisationId TEXT DEFAULT 'p';
       CREATE TABLE task(id TEXT,organisationId TEXT,projectId TEXT,featureId TEXT,contributorId TEXT,reviewerId TEXT,isDraft INTEGER,type TEXT,message TEXT,isReviewed INTEGER,reviewOutcome TEXT,reviewAction TEXT,reviewReason TEXT,createdAt TEXT,modifiedAt TEXT);`)
     await drain(s, p.client)
