@@ -13,7 +13,7 @@ import {
   schemaFingerprint,
 } from './contract'
 import type { Plan } from './contract'
-import { finishDataRelease, rebaseDataRelease } from './data-release'
+import { abortDataRelease, finishDataRelease, rebaseDataRelease } from './data-release'
 
 test('data release restores the exact app journal and accepts a lost-response retry', async () => {
   const root = mkdtempSync(join(tmpdir(), 'data-release-')),
@@ -65,6 +65,10 @@ test('data release restores the exact app journal and accepts a lost-response re
     }
     const original = (await journal(d.binding))!
     await pause(d.binding, plan)
+    await abortDataRelease(d.binding, plan, original)
+    expect(await journal(d.binding)).toEqual(original)
+    await abortDataRelease(d.binding, plan, original)
+    await pause(d.binding, plan)
     await expect(
       d.binding.prepare("UPDATE content SET value='external'").run(),
     ).rejects.toThrow('REVISION_DEPLOYMENT_MAINTENANCE')
@@ -73,6 +77,7 @@ test('data release restores the exact app journal and accepts a lost-response re
     await rebaseDataRelease(d.binding, replacement, digest(plan), original)
     plan = replacement
     await applyGroups(d.binding, plan)
+    await expect(abortDataRelease(d.binding, plan, original)).rejects.toThrow()
     await expect(
       rebaseDataRelease(
         d.binding,

@@ -13,6 +13,47 @@ import {
 import type { Journal, Plan } from './contract'
 import type { D1Database } from '@cloudflare/workers-types'
 
+/** Abort an unstarted data release without resetting the application's journal cursor.
+ * @param db Fenced production binding.
+ * @param plan Unstarted data-only plan.
+ * @param original Exact application journal retained before maintenance.
+ * @returns Nothing after restoring the original application journal atomically.
+ * @remarks Any committed group prohibits this path, including staging groups.
+ */
+export async function abortDataRelease(
+  db: D1Database,
+  plan: Plan,
+  original: Journal,
+): Promise<void> {
+  if (
+    plan.migrations.length ||
+    plan.parentHash !== original.planHash ||
+    plan.parentCursor !== original.nextGroup ||
+    original.phase !== 'active' ||
+    original.writable !== 0 ||
+    digest(plan.initialSchema) !== digest(plan.expectedSchema)
+  )
+    throw new Error('Invalid data-only abort ancestry')
+  const state = await journal(db)
+  if (digest(state) === digest(original)) return
+  await atomic(db, [
+    guard(
+      "EXISTS(SELECT 1 FROM _revisionDeployment WHERE planHash=? AND nextGroup=0 AND phase='paused' AND writable=0 AND irreversible=0 AND previousHash=?)",
+      [digest(plan), original.planHash],
+    ),
+    {
+      sql: "UPDATE _revisionDeployment SET planHash=?,nextGroup=?,phase='active',writable=0,previousHash=?,irreversible=?,schemaBoundary=? WHERE singleton=1",
+      params: [
+        original.planHash,
+        original.nextGroup,
+        original.previousHash ?? null,
+        original.irreversible,
+        original.schemaBoundary,
+      ],
+    },
+  ])
+}
+
 /** Restore the retained application's release identity after a data-only journal run.
  * @param db Fenced production binding.
  * @param plan Rehearsed data-only plan with no numbered migrations or schema changes.

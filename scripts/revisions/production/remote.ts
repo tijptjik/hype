@@ -14,7 +14,7 @@ import {
   verifyRows,
   verifySchema,
 } from './contract'
-import { finishDataRelease, rebaseDataRelease } from './data-release'
+import { abortDataRelease, finishDataRelease, rebaseDataRelease } from './data-release'
 // TYPES
 import type { D1Database } from '@cloudflare/workers-types'
 import type { Plan } from './contract'
@@ -28,6 +28,7 @@ async function main(): Promise<void> {
   if (
     ![
       'rebase-data',
+      'abort-data',
       'check',
       'finish-data',
       'pause',
@@ -63,6 +64,12 @@ async function main(): Promise<void> {
   })
   try {
     const db = proxy.env.DB
+    if (operation === 'abort-data') {
+      const original = JSON.parse(
+        readFileSync(planPath + '.application-journal.json', 'utf8'),
+      )
+      await abortDataRelease(db, plan, original)
+    }
     if (operation === 'check') {
       const state = await journal(db)
       if (
