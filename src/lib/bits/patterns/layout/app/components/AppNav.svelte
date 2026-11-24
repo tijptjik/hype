@@ -28,6 +28,8 @@ import FunnelIcon from 'virtual:icons/proicons/filter'
 import InformationCircleIcon from 'virtual:icons/proicons/info'
 import MapIcon from 'virtual:icons/proicons/map'
 import StationIcon from 'virtual:icons/tabler/train'
+import BuildingIcon from 'virtual:icons/lucide/building-2'
+import PremisesIcon from './PremisesNavIcon.svelte'
 import RouteIcon from 'virtual:icons/lucide/route'
 import StationMapTools from '#lib/bits/patterns/station/StationMapTools.svelte'
 import MonitorIcon from 'virtual:icons/proicons/computer'
@@ -87,7 +89,21 @@ type AppNavMenuValue =
 const items = $derived<AppMenuItem<AppNavMenuValue>[]>(
   station.active
     ? [
-        { value: Panel.prisms, icon: StationIcon, label: 'Station' },
+        {
+          value: Panel.prisms,
+          icon:
+            station.metadata?.kind === 'building'
+              ? BuildingIcon
+              : station.metadata?.kind === 'complex'
+                ? PremisesIcon
+                : StationIcon,
+          label:
+            station.metadata?.kind === 'building'
+              ? 'Building'
+              : station.metadata?.kind === 'complex'
+                ? 'Complex'
+                : 'Station',
+        },
         { value: STATION_MENU_VALUE, icon: MapIcon, label: 'Surroundings' },
         ...(hasStationMap && canPreviewRoute
           ? ([
