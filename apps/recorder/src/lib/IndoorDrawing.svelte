@@ -150,6 +150,7 @@ function selectPoint(point: MapPoint): void {
   <label class="text-muted grid min-w-0 gap-1 text-sm"
     >{t('floor')}
     <select
+      data-recorder-select
       value={floorId}
       class="bg-panel min-h-12 w-full min-w-0 rounded-xl px-3"
       onchange={event => {

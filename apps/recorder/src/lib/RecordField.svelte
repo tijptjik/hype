@@ -132,6 +132,7 @@ const inputClass =
   {:else if choice}
     <label for={'field-' + field.id} class="text-muted text-sm">{label}</label>
     <select
+      data-recorder-select
       id={'field-' + field.id}
       {disabled}
       class={inputClass}

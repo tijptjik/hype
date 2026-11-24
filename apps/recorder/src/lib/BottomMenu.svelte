@@ -155,6 +155,7 @@ onMount(() => {
     <label class="text-muted grid gap-2 text-sm"
       >{t('language')}
       <select
+        data-recorder-select
         aria-label={t('language')}
         value={preferences.language}
         onchange={() => setPreferences(preferences.theme, 'en')}

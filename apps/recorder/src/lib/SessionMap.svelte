@@ -82,6 +82,7 @@ function choose(id: string, point: RecorderPin | null): void {
   <label class="text-muted grid min-w-0 gap-1 text-sm"
     >{t('location')}
     <select
+      data-recorder-select
       class="bg-panel min-h-12 w-full min-w-0 rounded-xl px-3"
       value={activeId}
       onchange={event => choose(event.currentTarget.value, null)}
@@ -98,6 +99,7 @@ function choose(id: string, point: RecorderPin | null): void {
       <label class="text-muted grid min-w-0 gap-1 text-sm"
         >{t('drawing')}
         <select
+          data-recorder-select
           class="bg-panel min-h-12 w-full min-w-0 rounded-xl"
           value={map.id}
           onchange={event => {
