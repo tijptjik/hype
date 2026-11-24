@@ -21,15 +21,27 @@ vi.mock('node:fs/promises', () => ({
 /**
  * Supplies only local configuration and an injected process executor for deployment tests.
  * @param spawn Mock process executor; never starts a real deployment.
+ * @param target Environment of the simulated build.
  * @returns Nothing.
  */
-function mockRuntime(spawn: ReturnType<typeof vi.fn>): void {
+function mockRuntime(spawn: ReturnType<typeof vi.fn>, target = 'preview'): void {
   vi.stubGlobal('Bun', {
     spawn,
-    TOML: {
-      parse: () => ({ env: { production: { routes: [] }, preview: { routes: [] } } }),
-    },
-    file: () => ({ text: async () => '' }),
+    file: () => ({
+      json: async () => ({
+        name: target === 'preview' ? 'hype-preview' : 'hype-prod',
+        main: 'index.js',
+        assets: { directory: '../client', binding: 'ASSETS' },
+        vars: { ENVIRONMENT: target },
+        d1_databases: [
+          {
+            binding: 'DB',
+            database_name: target === 'preview' ? 'hype-db-preview' : 'hype-db-prod',
+          },
+        ],
+        routes: [],
+      }),
+    }),
   })
 }
 
@@ -106,7 +118,7 @@ describe('database worker deployment', () => {
 
   it('stops before deploying the app when the division worker fails', async () => {
     const spawn = vi.fn().mockReturnValue({ exited: Promise.resolve(1) })
-    mockRuntime(spawn)
+    mockRuntime(spawn, 'production')
     expect(await deployWorker('production')).toBe(1)
     expect(spawn).toHaveBeenCalledTimes(1)
     expect(spawn.mock.calls[0][0]).toEqual([
@@ -164,19 +176,26 @@ describe('database worker deployment', () => {
         'wrangler',
         'deploy',
         '--config',
-        expect.stringMatching(/^\.hub-deploy-.*\.json$/),
+        expect.stringMatching(
+          /^\.svelte-kit\/cloudflare\/worker\/\.hub-deploy-.*\.json$/,
+        ),
         '--name',
         'hype-preview',
-        '--env',
-        'preview',
       ],
     ])
-    expect(JSON.parse(mocks.writeFile.mock.calls[0][1]).env.preview.routes).toEqual([
+    expect(JSON.parse(mocks.writeFile.mock.calls[0][1]).routes).toEqual([
       { pattern: 'retained.example.test', custom_domain: true },
     ])
     expect(mocks.unlink).toHaveBeenCalledExactlyOnceWith(
       mocks.writeFile.mock.calls[0][0],
     )
+  })
+
+  it('rejects a preview build selected for production before any Worker is deployed', async () => {
+    const spawn = vi.fn()
+    mockRuntime(spawn, 'preview')
+    await expect(deployWorker('production')).rejects.toThrow('deployment target')
+    expect(spawn).not.toHaveBeenCalled()
   })
 
   it('does not start deployment when domain inventory cannot be preserved', async () => {

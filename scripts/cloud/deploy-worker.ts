@@ -56,8 +56,7 @@ export const shouldTreatDeployErrorAsSuccess = (
  * @param target Explicit deployment environment.
  * @param run Command executor, injectable for fail-closed orchestration tests.
  * @returns First failing exit code, or zero when both consumers deployed.
- * @remarks Schema/data migrations must already have passed the release gate. This does
- * not apply migrations or claim that deploying a worker drains its queue.
+ * @remarks The deployment command applies pending D1 migrations before starting Workers.
  */
 export async function deployDatabaseConsumers(
   target: DeployTarget,
@@ -85,48 +84,36 @@ export async function deployDatabaseConsumers(
  * Runs a Wrangler worker deployment for the requested environment.
  *
  * @param target Deployment target being executed.
- * @param revisionRelease Optional managed rollout identity injected into the deployed worker.
- * @param artifact Isolated verified application bundle for a managed deployment.
  * @returns Process exit code.
  */
-export const deployWorker = async (
-  target: DeployTarget,
-  revisionRelease?: string,
-  artifact?: { main: string; assets: string },
-): Promise<number> => {
+export const deployWorker = async (target: DeployTarget): Promise<number> => {
   const { name, env } = DEPLOY_TARGETS[target]
 
   // Wrangler replaces domain registrations: preserve live assignments before any deployment.
-  const config = Bun.TOML.parse(await Bun.file('wrangler.toml').text()) as {
-    env: Record<
-      string,
-      { routes?: Array<string | { pattern: string; custom_domain?: boolean }> }
-    >
-  }
-  config.env[env].routes = await preserveHubDomainRoutes(
+  const buildDirectory = '.svelte-kit/cloudflare/worker'
+  const config = await Bun.file(`${buildDirectory}/wrangler.json`).json()
+  if (
+    config.name !== name ||
+    config.vars?.ENVIRONMENT !== env ||
+    config.d1_databases?.find(
+      (binding: { binding: string }) => binding.binding === 'DB',
+    )?.database_name !== `hype-db-${target === 'production' ? 'prod' : 'preview'}` ||
+    config.main !== 'index.js' ||
+    config.assets?.directory !== '../client' ||
+    config.assets.binding !== 'ASSETS'
+  )
+    throw new Error('Cloudflare build does not match the deployment target')
+  config.routes = await preserveHubDomainRoutes(
     {
-      CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
+      CLOUDFLARE_ACCOUNT_ID: config.account_id ?? process.env.CLOUDFLARE_ACCOUNT_ID,
       HUB_DOMAINS_API_TOKEN:
         process.env.HUB_DOMAINS_API_TOKEN ?? process.env.CLOUDFLARE_API_TOKEN,
     },
     name,
-    config.env[env].routes ?? [],
+    config.routes ?? [],
   )
-  if (revisionRelease) {
-    if (!/^[a-f0-9]{64}$/.test(revisionRelease))
-      throw new Error('Invalid revision release identity')
-    const environment = config.env[env] as (typeof config.env)[string] & {
-      vars?: Record<string, string>
-    }
-    environment.vars = { ...environment.vars, REVISION_RELEASE: revisionRelease }
-  }
-  if (artifact) {
-    Object.assign(config, { main: artifact.main })
-    const assets = config as typeof config & { assets: Record<string, unknown> }
-    assets.assets = { ...assets.assets, directory: artifact.assets }
-  }
-  // Keep the temporary config beside wrangler.toml so relative asset paths remain valid.
-  const configPath = `.hub-deploy-${randomUUID()}.json`
+  // Keep the adapter's Worker entry and assets relative to its generated configuration.
+  const configPath = `${buildDirectory}/.hub-deploy-${randomUUID()}.json`
   await writeFile(configPath, JSON.stringify(config), { mode: 0o600 })
   try {
     // Keep both database consumers compatible with the application release.
@@ -141,8 +128,6 @@ export const deployWorker = async (
       configPath,
       '--name',
       name,
-      '--env',
-      env,
     ]
 
     const process = Bun.spawn(command, {
@@ -188,8 +173,5 @@ if (typeof Bun !== 'undefined' && import.meta.main) {
     exit(1)
   }
 
-  stderr.write(
-    'Use bun run deploy:prod or deploy:preview; direct deployment bypasses the revision rollout gate.\n',
-  )
-  exit(1)
+  exit(await deployWorker(targetArg))
 }
