@@ -2,9 +2,10 @@
 // TYPES
 import type { FacadeProposal, Point3 } from './facades'
 
+export const floorTypes = ['basement', 'ground', 'mezzanine', 'floor'] as const
 export type FloorDesignation = {
-  type: 'basement' | 'ground' | 'floor'
-  number: number
+  type: (typeof floorTypes)[number]
+  number?: number
   name?: string
 }
 export type FloorLine = {
@@ -24,27 +25,91 @@ export function validFloorDesignation(
   if (!value || typeof value !== 'object') return false
   const item = value as FloorDesignation
   return (
-    ['basement', 'ground', 'floor'].includes(item.type) &&
-    Number.isInteger(item.number) &&
-    item.number >= 1 &&
-    item.number <= 999 &&
+    floorTypes.includes(item.type) &&
+    (item.number === undefined
+      ? item.type !== 'basement'
+      : Number.isInteger(item.number) && item.number >= 1 && item.number <= 999) &&
     (item.name === undefined || typeof item.name === 'string')
   )
 }
 
-/** Label the floor beginning at a boundary; the final boundary remains the top.
- * @param line Boundary metadata. @param index Ordered index. @param count Boundary count.
- * @returns Human-readable floor designation.
+/** Interpret the mezzanine name used before it had a dedicated floor type.
+ * @param designation Stored floor metadata. @returns Effective floor type.
  */
-export function floorLineLabel(line: FloorLine, index: number, count: number): string {
-  if (index === count - 1) return 'Top'
-  if (line.designation?.name?.trim()) return line.designation.name.trim()
-  if (line.designation?.type === 'ground') return 'Ground floor'
-  if (line.designation?.type === 'basement')
-    return `Basement ${line.designation.number}`
-  if (line.designation?.type === 'floor') return `Floor ${line.designation.number}`
-  return index === 0 ? 'Base' : `Floor ${index}`
+function floorType(designation?: FloorDesignation): FloorDesignation['type'] {
+  if (
+    designation?.type === 'floor' &&
+    designation.name?.trim().toLowerCase() === 'mezzanine'
+  )
+    return 'mezzanine'
+  return designation?.type ?? 'floor'
 }
+
+/** Resolve display labels and editor numbers in elevation order.
+ * @param lines Ordered boundaries, including the base and top.
+ * @returns One floor designation and display label per boundary.
+ * @remarks Explicit floor numbers anchor the sequence. Existing named mezzanines
+ * predate the mezzanine type and also skip a number.
+ */
+export function resolveFloorLines(
+  lines: readonly FloorLine[],
+): { type: FloorDesignation['type']; number: number; label: string }[] {
+  let nextNumber = 1
+  return lines.map(({ designation }, index) => {
+    const name = designation?.name?.trim()
+    const type = floorType(designation)
+    const number =
+      type === 'basement' || type === 'floor'
+        ? (designation?.number ?? nextNumber)
+        : nextNumber
+
+    if (index === lines.length - 1) return { type, number, label: 'Top' }
+    if (index === 0 && !designation) return { type, number, label: 'Base' }
+
+    // Only numbered storeys advance the sequence above ground.
+    if (type === 'floor') nextNumber = number + 1
+    if (type === 'ground') nextNumber = 1
+    const labels = {
+      basement: `Basement ${number}`,
+      floor: `Floor ${number}`,
+      ground: 'Ground floor',
+      mezzanine: 'Mezzanine',
+    }
+    return { type, number, label: name || labels[type] }
+  })
+}
+
+/** Change a floor designation and keep numbered floors consecutive after a mezzanine edit.
+ * @param lines Ordered boundaries. @param index Edited boundary. @param designation New metadata.
+ * @returns Updated boundaries with the original heights, locks and custom names.
+ */
+export function designateFloorLine(
+  lines: FloorLine[],
+  index: number,
+  designation: FloorDesignation,
+): FloorLine[] {
+  if (index < 0 || index >= lines.length - 1 || !validFloorDesignation(designation))
+    return lines
+  const next = [...lines]
+  next[index] = { ...lines[index], designation }
+  const wasMezzanine = floorType(lines[index].designation) === 'mezzanine'
+  if (wasMezzanine === (floorType(designation) === 'mezzanine')) return next
+
+  // Release old numbered overrides above the edit so the normal sequence can fill them in.
+  for (let i = index + 1; i < next.length - 1; i++) {
+    const line = next[i]
+    if (
+      line.designation?.number === undefined ||
+      floorType(line.designation) !== 'floor'
+    )
+      continue
+    const automatic = { ...line.designation }
+    delete automatic.number
+    next[i] = { ...line, designation: automatic }
+  }
+  return next
+}
+
 export type FacadeView = {
   id: string
   normal: Point3

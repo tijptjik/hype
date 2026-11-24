@@ -18,9 +18,10 @@ import ChevronRight from 'virtual:icons/lucide/chevron-right'
 // DOMAIN
 import {
   addFloorLine,
+  designateFloorLine,
   distributeFloorLines,
   facadeViews,
-  floorLineLabel,
+  resolveFloorLines,
   validFloorDesignation,
   type FloorDesignation,
   moveFloorLine,
@@ -67,14 +68,10 @@ const identity = $derived({ locationId, assetId: sourceAssetId, geometryId: asse
 const dirty = $derived(snapshotKey({ lines, front }) !== baseline)
 
 let editingFloor = $state<string | null>(null)
-const editedLine = $derived(lines.find(line => line.id === editingFloor))
-const editedNumber = $derived(
-  editedLine?.designation?.number ??
-    Math.max(
-      1,
-      lines.findIndex(line => line.id === editingFloor),
-    ),
-)
+const floors = $derived(resolveFloorLines(lines))
+const editingIndex = $derived(lines.findIndex(line => line.id === editingFloor))
+const editedLine = $derived(lines[editingIndex])
+const editedFloor = $derived(floors[editingIndex])
 const views = $derived(facadeViews(result?.facades ?? []))
 const face = $derived(views[side])
 // Camera offsets are fractions of the current face's width and model height.
@@ -249,37 +246,34 @@ function drag(event: PointerEvent, id: string): void {
   target.addEventListener('pointercancel', end)
   target.addEventListener('lostpointercapture', end)
 }
-/** Name the two boundary anchors distinctly from intermediate floor lines. @param index Ordered boundary index. @returns Visible label. */
-function label(index: number): string {
-  return floorLineLabel(lines[index], index, lines.length)
-}
-
 /** Change floor identity independently of its height or lock.
  * @param type Floor category. @param number Positive floor number. @returns Nothing.
  */
 function designate(type: FloorDesignation['type'], number: number): void {
-  const designation = { ...editedLine?.designation, type, number }
-  if (!validFloorDesignation(designation)) return
-  edit(lines.map(line => (line.id === editingFloor ? { ...line, designation } : line)))
+  const designation = {
+    ...editedLine?.designation,
+    type,
+    number: type === 'floor' || type === 'basement' ? number : undefined,
+  }
+  // Switching away from a legacy named mezzanine also clears its redundant name.
+  if (
+    type !== 'mezzanine' &&
+    editedFloor.type === 'mezzanine' &&
+    designation.name?.trim().toLowerCase() === 'mezzanine'
+  )
+    delete designation.name
+  edit(designateFloorLine(lines, editingIndex, designation))
 }
 
-/** Set a team-defined label without changing floor category, height or identity.
+/** Set a team-defined label, accounting for the legacy mezzanine name in the numbering.
  * @param name Free-form floor name; blank restores the generated label. @returns Nothing.
  */
 function renameFloor(name: string): void {
-  lines = lines.map(line =>
-    line.id === editingFloor
-      ? {
-          ...line,
-          designation: {
-            type: 'floor',
-            number: editedNumber,
-            ...line.designation,
-            name,
-          },
-        }
-      : line,
-  )
+  lines = designateFloorLine(lines, editingIndex, {
+    type: 'floor',
+    ...editedLine.designation,
+    name,
+  })
 }
 
 /** Compare persisted fields independent of the JSON property order. @param state Reviewed alignment. @returns Stable edit signature. */
@@ -752,19 +746,20 @@ onMount(() => {
           <select
             aria-label="Floor type"
             class="rounded border p-2 pr-8"
-            value={editedLine.designation?.type ?? 'floor'}
+            value={editedFloor.type}
             onchange={event =>
               designate(
                 event.currentTarget.value as FloorDesignation['type'],
-                editedNumber,
+                editedFloor.number,
               )}
           >
             <option value="basement">Basement</option>
             <option value="ground">Ground floor</option>
+            <option value="mezzanine">Mezzanine</option>
             <option value="floor">Numbered floor</option>
           </select>
         </label>
-        {#if editedLine.designation?.type !== 'ground'}
+        {#if editedFloor.type === 'floor' || editedFloor.type === 'basement'}
           <label class="grid gap-1 text-xs"
             >Floor number
             <input
@@ -774,12 +769,9 @@ onMount(() => {
               min="1"
               max="999"
               step="1"
-              value={editedNumber}
+              value={editedFloor.number}
               onchange={event =>
-                designate(
-                  editedLine?.designation?.type ?? 'floor',
-                  event.currentTarget.valueAsNumber,
-                )}
+                designate(editedFloor.type, event.currentTarget.valueAsNumber)}
             >
           </label>
         {/if}
@@ -812,7 +804,7 @@ onMount(() => {
           >
             <button
               type="button"
-              aria-label={`${line.locked ? 'Unlock' : 'Lock'} ${label(index)}`}
+              aria-label={`${line.locked ? 'Unlock' : 'Lock'} ${floors[index].label}`}
               aria-pressed={line.locked}
               class="bg-panel/95 pointer-events-auto absolute top-0 right-full mr-2 grid size-7 -translate-y-1/2 place-items-center rounded border text-blue-600 shadow-sm"
               onclick={() =>
@@ -831,10 +823,10 @@ onMount(() => {
             {#if index > 0 && index < lines.length - 1}
               <button
                 type="button"
-                aria-label={`Remove ${label(index)}`}
+                aria-label={`Remove ${floors[index].label}`}
                 title={line.locked
                   ? 'Unlock this floor before removing it'
-                  : `Remove ${label(index)}`}
+                  : `Remove ${floors[index].label}`}
                 disabled={line.locked}
                 class="bg-panel/95 pointer-events-auto absolute top-0 left-full ml-2 grid size-7 -translate-y-1/2 place-items-center rounded border text-blue-600 shadow-sm disabled:cursor-not-allowed disabled:opacity-40"
                 onclick={() => edit(removeFloorLine(lines, line.id))}
@@ -844,7 +836,7 @@ onMount(() => {
             {/if}
             <button
               type="button"
-              aria-label={`Drag ${label(index)}`}
+              aria-label={`Drag ${floors[index].label}`}
               aria-disabled={line.locked}
               class="pointer-events-auto absolute inset-x-0 top-0 h-6 -translate-y-1/2 cursor-ns-resize touch-none outline-offset-4 disabled:cursor-default"
               disabled={line.locked}
@@ -870,12 +862,12 @@ onMount(() => {
             </button>
             <button
               type="button"
-              aria-label={`Edit ${label(index)} designation`}
+              aria-label={`Edit ${floors[index].label} designation`}
               class="bg-panel/95 pointer-events-auto absolute top-0 left-2 max-w-full -translate-y-1/2 rounded px-2 py-1 text-xs break-words whitespace-normal text-blue-700"
               disabled={index === lines.length - 1}
               onclick={() => (editingFloor = line.id)}
             >
-              {label(index)}
+              {floors[index].label}
             </button>
           </div>
         {/each}

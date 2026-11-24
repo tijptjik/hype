@@ -2,9 +2,11 @@
 import { expect, it } from 'vitest'
 import {
   addFloorLine,
+  designateFloorLine,
   distributeFloorLines,
   facadeViews,
-  floorLineLabel,
+  resolveFloorLines,
+  type FloorLine,
   validFloorDesignation,
   moveFloorLine,
   removeFloorLine,
@@ -157,9 +159,13 @@ it('names basement and ground floors independently of boundary order and preserv
       number: index < 2 ? 2 - index : 1,
     },
   }))
-  expect(named.map((line, index) => floorLineLabel(line, index, named.length))).toEqual(
-    ['Basement 2', 'Basement 1', 'Ground floor', 'Floor 1', 'Top'],
-  )
+  expect(resolveFloorLines(named).map(floor => floor.label)).toEqual([
+    'Basement 2',
+    'Basement 1',
+    'Ground floor',
+    'Floor 1',
+    'Top',
+  ])
   const edited = removeFloorLine(distributeFloorLines(addFloorLine(named, 'new')), '1')
   for (const line of edited.filter(line => line.id !== 'new'))
     expect(line.designation).toEqual(
@@ -177,18 +183,96 @@ it('supports arbitrary multilingual names and restores generated names when clea
       designation: { type: 'floor' as const, number: 12, name },
     }
     expect(validFloorDesignation(line.designation)).toBe(true)
-    expect(floorLineLabel(line, 1, 5)).toBe(name)
-    expect(floorLineLabel(JSON.parse(JSON.stringify(line)), 1, 5)).toBe(name)
+    expect(resolveFloorLines([lines[0], line, lines[4]])[1].label).toBe(name)
+    expect(
+      resolveFloorLines(JSON.parse(JSON.stringify([lines[0], line, lines[4]])))[1]
+        .label,
+    ).toBe(name)
     expect(distributeFloorLines([lines[0], line, lines[4]])[1].designation?.name).toBe(
       name,
     )
     expect(
-      floorLineLabel(
+      resolveFloorLines([
+        lines[0],
         { ...line, designation: { ...line.designation, name: '  ' } },
-        1,
-        5,
-      ),
+        lines[4],
+      ])[1].label,
     ).toBe('Floor 12')
   }
   expect(validFloorDesignation({ type: 'floor', number: 1, name: 123 })).toBe(false)
+})
+
+it('skips mezzanines when numbering upper floors, including legacy named mezzanines', () => {
+  for (const designation of [
+    { type: 'mezzanine', number: 1 },
+    { type: 'floor', number: 1, name: 'Mezzanine' },
+  ] as const) {
+    expect(validFloorDesignation(designation)).toBe(true)
+    const alignment: FloorLine[] = [...lines]
+    alignment[1] = { ...alignment[1], designation }
+    const labels = (rows: FloorLine[]) =>
+      resolveFloorLines(rows).map(floor => floor.label)
+    expect(labels(alignment)).toEqual([
+      'Base',
+      'Mezzanine',
+      'Floor 1',
+      'Floor 2',
+      'Top',
+    ])
+    // A manually corrected Floor 1, as in an existing draft, anchors the following floors.
+    alignment[2] = { ...alignment[2], designation: { type: 'floor', number: 1 } }
+    expect(labels(alignment)).toEqual([
+      'Base',
+      'Mezzanine',
+      'Floor 1',
+      'Floor 2',
+      'Top',
+    ])
+    alignment[2] = {
+      ...alignment[2],
+      designation: { type: 'floor', number: 12, name: '12A' },
+    }
+    expect(labels(alignment)).toEqual(['Base', 'Mezzanine', '12A', 'Floor 13', 'Top'])
+    expect(labels(removeFloorLine(alignment, '1'))).toEqual([
+      'Base',
+      '12A',
+      'Floor 13',
+      'Top',
+    ])
+  }
+})
+
+it('renumbers previously entered floor numbers together when a mezzanine is designated', () => {
+  const numbered: FloorLine[] = lines.map((line, index) => ({
+    ...line,
+    designation:
+      index === 0
+        ? undefined
+        : {
+            type: 'floor',
+            number: index,
+            name: index === 2 ? 'Main hall' : undefined,
+          },
+  }))
+  for (const designation of [
+    { type: 'mezzanine' },
+    { type: 'floor', number: 1, name: 'Mezzanine' },
+  ] as const) {
+    const next = designateFloorLine(numbered, 1, designation)
+    expect(
+      resolveFloorLines(next)
+        .slice(1, 4)
+        .map(floor => [floor.label, floor.number]),
+    ).toEqual([
+      ['Mezzanine', 1],
+      ['Main hall', 1],
+      ['Floor 2', 2],
+    ])
+    expect(next.every(line => validFloorDesignation(line.designation))).toBe(true)
+    expect(next[2]).toMatchObject({ locked: true, elevation: 4 })
+    const restored = designateFloorLine(next, 1, { type: 'floor', number: 1 })
+    expect(resolveFloorLines(restored)[3].label).toBe('Floor 3')
+    expect(numbered[2].designation?.number).toBe(2)
+  }
+  expect(validFloorDesignation({ type: 'basement' })).toBe(false)
 })

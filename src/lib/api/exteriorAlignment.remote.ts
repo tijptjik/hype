@@ -7,6 +7,10 @@ import { sql } from 'drizzle-orm'
 // API
 import { guardedCommand, guardedQuery } from './server/guarded'
 // DOMAIN
+import {
+  floorTypes,
+  validFloorDesignation,
+} from '#lib/locations/exterior/floorAlignment.js'
 import { authorizeExteriorLocation } from '#lib/locations/exterior/authorize.server.js'
 import { textureComparisonFile } from '#lib/locations/exterior/textureComparison.server.js'
 
@@ -22,10 +26,11 @@ const line = z.object({
   elevation: z.number().finite(),
   designation: z
     .object({
-      type: z.enum(['basement', 'ground', 'floor']),
-      number: z.number().int().min(1).max(999),
+      type: z.enum(floorTypes),
+      number: z.number().int().min(1).max(999).optional(),
       name: z.string().max(1000).optional(),
     })
+    .refine(validFloorDesignation)
     .optional(),
 })
 const alignment = z.object({
