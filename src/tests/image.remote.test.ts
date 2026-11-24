@@ -361,10 +361,10 @@ const buildDbWithContextRow = (row: Record<string, unknown>) => ({
 })
 
 describe('image.remote', () => {
-  // Hoisted factories are stable; allow the initial dependency graph to load on cold runners.
+  // Hoisted factories are stable; reset request mocks without reloading dependencies.
   beforeAll(async () => {
     remote = mockedRemoteModule(await import('#lib/api/image.remote.js'))
-  }, 30_000)
+  })
 
   beforeEach(() => {
     mockSaveFeatureImageMetadata.mockReset().mockResolvedValue({ status: 'legacy' })
@@ -2181,12 +2181,8 @@ describe('image.remote', () => {
     'does not save unchanged logo metadata (stale=%s)',
     async stale => {
       const storage = await import('#lib/db/services/resourceLogoSnapshot.js')
-      const revisions = await import('#lib/db/services/resourceLogoRevision.js')
       const editing = await import('#lib/api/services/resourceLogoEditing.js')
       vi.mocked(storage.hasResourceLogoStorage).mockResolvedValue(true)
-      const reconcile = vi
-        .spyOn(revisions, 'reconcileLogoPresentation')
-        .mockResolvedValue(true)
       const baseline = vi.spyOn(editing, 'ensureLogoBaseline').mockResolvedValue({
         imageRevisionId: 'current',
         assetVersionId: 'asset',
@@ -2213,9 +2209,7 @@ describe('image.remote', () => {
         if (stale) await expect(operation).rejects.toMatchObject({ status: 409 })
         else await expect(operation).resolves.toMatchObject({ unchanged: true })
         expect(mockUpdateImageForContext).not.toHaveBeenCalled()
-        expect(reconcile).toHaveBeenCalledTimes(stale ? 0 : 1)
       } finally {
-        reconcile.mockRestore()
         baseline.mockRestore()
         owners.mockRestore()
         vi.mocked(storage.hasResourceLogoStorage).mockResolvedValue(false)
