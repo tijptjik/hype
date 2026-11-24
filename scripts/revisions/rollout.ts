@@ -58,6 +58,26 @@ export function artifactHash(directory: string): string {
   walk(directory, '')
   return digest(files)
 }
+/**
+ * Resolve the adapter's worker entry and public files before the release can pause writes.
+ * @param directory Retained Cloudflare build directory. @param target Pinned environment and D1 ID.
+ * @returns The Worker entry and its public asset root.
+ */
+export function applicationPaths(directory: string, target: string): { main: string; assets: string } {
+  const config = JSON.parse(readFileSync(join(directory, 'worker/wrangler.json'), 'utf8'))
+  const binding = config.d1_databases?.find((entry: Binding) => entry.binding === 'DB')
+  if (
+    config.main !== 'index.js' ||
+    config.assets?.directory !== '../client' ||
+    config.assets?.binding !== 'ASSETS' ||
+    target !== `${config.vars?.ENVIRONMENT}:${binding?.database_id}`
+  ) throw new Error('Cloudflare application build layout or target differs')
+  const main = join(directory, 'worker/index.js'), assets = join(directory, 'client')
+  if (!statSync(main).isFile() || !statSync(assets).isDirectory())
+    throw new Error('Missing built Worker or public assets')
+  return { main, assets }
+}
+
 /** Require the newly deployed app to report the exact pinned release. @param origin Production/preview app origin. @param release Plan hash. @param active Whether writes must already be open. @returns Successful health proof. */
 export async function verifyDeployment(
   origin: string,
@@ -365,6 +385,7 @@ export async function main(args: string[]): Promise<void> {
     console.info('Unstarted rollout cancelled; prior queue delivery state restored')
     return
   }
+  const builtApplication = applicationPaths(artifact, target)
   const recover = async (label: string) => {
     if (localBackup) {
       await verifyLocalBackup(join(directory, 'initial'))
@@ -482,10 +503,7 @@ export async function main(args: string[]): Promise<void> {
       JSON.parse(readFileSync(artifactReceipt, 'utf8')).hash !== artifactHash(artifact)
     )
       throw new Error('Application artifact changed before deployment')
-    const deployed = await deployWorker(environment, release, {
-      main: join(artifact, '_worker.js'),
-      assets: artifact,
-    })
+    const deployed = await deployWorker(environment, release, builtApplication)
     if (deployed !== 0) throw new Error('Application deployment failed')
     const origin = config.env[environment].vars.PUBLIC_ORIGIN
     await verifyDeployment(origin, release)
