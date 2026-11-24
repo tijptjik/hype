@@ -4,12 +4,13 @@ import {
   sharedBuildingSourceId,
 } from './buildingAddressLinks'
 import { canonicalLocationSQL } from './locationRedirect'
+import { isPhysicalBuildingParent } from './physicalBuilding'
 import { locationBuildingPartContext } from './locationBuildingPart'
 import { locationReadFields } from './locationReadProjection'
 import { sharedLocationFacts } from './locationShared'
 // SNAPSHOT CONTRACT
 // DRIZZLE
-import { and, eq, gt, lt, asc, desc, or, sql, type SQL } from 'drizzle-orm'
+import { ne, and, eq, gt, lt, asc, desc, or, sql, type SQL } from 'drizzle-orm'
 // SCHEMA
 import { location as locationTable, locationRevision } from '../schema/location'
 import {
@@ -51,6 +52,7 @@ export async function listLocationResources(
     /** Trusted bounded identity cohort, passed with one JSON binding. */
     ids?: string[]
     publication?: 'all' | 'published' | 'draft'
+    physicalParents?: { excludeLocationId?: string }
     parentOfParts?: boolean
     sortBy?: LocationSortKey
     sortOrder?: 'asc' | 'desc'
@@ -138,6 +140,14 @@ export async function listLocationResources(
       : input.linkedFeatures
         ? linked
         : sql`NOT (${linked})`,
+    input.physicalParents?.excludeLocationId
+      ? ne(locationTable.id, input.physicalParents.excludeLocationId)
+      : undefined,
+    input.physicalParents
+      ? sql`${locationTable.state}='unresolved'
+        AND ${locationTable.ssId} IS NULL AND ${locationTable.ownerOrganisationId}=${input.organisationId ?? null}
+        AND ${locationTable.kind}='building' AND ${isPhysicalBuildingParent(locationTable.id)}`
+      : undefined,
     // Offer actual accessible parents with current, effective building-part membership.
     input.parentOfParts
       ? sql`EXISTS(SELECT 1 FROM locationMembershipHead m JOIN location c ON c.id=m.childLocationId

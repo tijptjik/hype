@@ -87,6 +87,47 @@ export async function readBuildingProfileRoles(
   return { physical: Boolean(row?.physical), constituent: Boolean(row?.constituent) }
 }
 
+/** Designate an owned import in place, retaining its complete latest facts and source revision.
+ * @param db Request database. @param locationId Existing Building. @param organisationId Authorized owner.
+ * @param actorId Authenticated editor. @returns After the durable, retry-safe designation.
+ */
+export async function designatePhysicalBuilding(
+  db: Database,
+  locationId: string,
+  organisationId: string,
+  actorId: string,
+): Promise<void> {
+  if (
+    !(await db.get(
+      sql`SELECT 1 FROM sqlite_master WHERE type='trigger' AND name='location_composition_designation'`,
+    ))
+  )
+    error(
+      503,
+      'Using an existing Location as a physical building requires database migration 0273.',
+    )
+  const eligible = sql`l.id=${locationId} AND l.state='unresolved' AND l.ssId IS NULL AND l.matchingType='building'
+    AND l.ownerOrganisationId=${organisationId} AND EXISTS(SELECT 1 FROM locationRevision seed
+    WHERE seed.locationId=l.id AND seed.version=1 AND seed.rawSource->>'$.kind'='building-export-baseline')`
+  const raw = JSON.stringify({
+    kind: 'physical-building-designation',
+    organisationId,
+    actorId,
+  })
+  // Copy the latest facts and check the designation inside the same write to serialize concurrent requests.
+  await db.run(sql`INSERT INTO locationRevisionContent
+    (id,locationId,version,origin,contentHash,rawSource,facts,createdAt)
+    SELECT ${nanoid(12)},l.id,r.version+1,'local',${createHash('sha256').update(raw).digest('hex')},${raw},r.facts,strftime('%Y-%m-%dT%H:%M:%fZ','now')
+    FROM location l JOIN locationRevisionContent r ON r.locationId=l.id
+    WHERE ${eligible} AND NOT ${isPhysicalBuildingParent(sql`l.id`)} ORDER BY r.version DESC LIMIT 1`)
+  if (
+    !(await db.get(
+      sql`SELECT 1 FROM location l WHERE ${eligible} AND ${isPhysicalBuildingParent(sql`l.id`)}`,
+    ))
+  )
+    error(409, 'Only the owning organisation can designate this imported building.')
+}
+
 /** Save one verified catalogue member as a child of a new or existing physical building.
  * @param db Request-local database. @param organisationId Authorized owner. @param actorId Authenticated editor.
  * @param target Creation retry key or existing physical building ID. @param member Server-verified published record. Omit to refresh defaults from retained memberships.
@@ -127,32 +168,46 @@ export async function savePhysicalBuildingMember(
       version: number
       facts: string
       members: string
-      seed: string
+      seed: string | null
+      importedSourceId: string | null
     }>(sql`
-    SELECT r.id,r.version,r.facts,(SELECT json_extract(rawSource,'$.member.source.id') FROM locationRevision WHERE locationId=l.id AND version=1) seed,${physicalBuildingMembers(sql`l.id`)} members
+    SELECT r.id,r.version,r.facts,(SELECT json_extract(rawSource,'$.member.source.id') FROM locationRevision WHERE locationId=l.id AND version=1) seed,(SELECT rawSource->>'$.buildingSource.id' FROM locationRevision WHERE locationId=l.id AND version=1) importedSourceId,${physicalBuildingMembers(sql`l.id`)} members
     FROM location l JOIN locationRevisionContent r ON r.locationId=l.id
-    WHERE ${eligible} AND EXISTS(SELECT 1 FROM locationRevision first WHERE first.locationId=l.id
-      AND first.version=1 AND json_extract(first.rawSource,'$.kind')='physical-building-member')
+    WHERE ${eligible} AND ${isPhysicalBuildingParent(sql`l.id`)}
     ORDER BY r.version DESC LIMIT 1`)
   let head = await read()
   if ('parentId' in target && !head)
     throw new Error('Physical building unavailable for editing.')
   if ('requestId' in target && (!member || (head && head.seed !== member.source.id)))
     throw new Error('This creation request already belongs to another building.')
+  if (head?.importedSourceId && member?.source.id === head.importedSourceId)
+    error(409, 'A physical building cannot be its own constituent.')
   const members: PhysicalBuildingMember[] = head ? JSON.parse(head.members) : []
   const duplicate =
     member && members.find(existing => existing.source.id === member.source.id)
+  if (
+    duplicate &&
+    member?.childLocationId &&
+    duplicate.childLocationId !== member.childLocationId
+  )
+    error(
+      409,
+      'A different Location for this catalogue footprint is already a constituent.',
+    )
   if (duplicate) return locationId
-  // Import the child independently and pin its published names to the membership revision.
+  // Pin the selected Location when placing an existing import. Catalogue picks reuse their stable shared identity.
   let constituent: PhysicalBuildingMember | undefined
   if (member) {
-    const child = await importBuildingLocation(
-      db,
-      organisationId,
-      member.source,
-      'shared',
-      actorId,
-    )
+    const child =
+      member.childLocationId && member.childRevisionId
+        ? { locationId: member.childLocationId, revisionId: member.childRevisionId }
+        : await importBuildingLocation(
+            db,
+            organisationId,
+            member.source,
+            'shared',
+            actorId,
+          )
     const names = await db.get<{ names: string }>(
       sql`SELECT ${pinnedNames(sql`${child.revisionId}`)} names`,
     )
@@ -192,7 +247,8 @@ export async function savePhysicalBuildingMember(
   }
   // Update generated defaults and preserve the parent's independent corrections and geometry.
   const snapshot: LocationFactsSnapshot = JSON.parse(head.facts)
-  {
+  // Designated imports keep their own profile when constituents change.
+  if (!head.importedSourceId) {
     const before = physicalBuildingProfile(members)
     for (const locale of new Set([
       ...Object.keys(before.names),

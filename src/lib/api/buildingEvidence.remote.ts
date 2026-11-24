@@ -9,9 +9,12 @@ import { guardedCommand, guardedQuery } from './server/guarded.js'
 import { requireLocationOrganisationManager } from './services/locationOwnership.js'
 // SERVICES
 import { probeProjectQuery } from '#lib/db/services/project.js'
+import { listLocationResources } from '#lib/db/services/locationDirectory.js'
 import { createLocalLocation } from '#lib/db/services/locationLocal.js'
 import { loadBuildingNames, loadBuildingDetails } from '#lib/sources/saanseoi.js'
 import {
+  designatePhysicalBuilding,
+  isPhysicalBuildingParent,
   savePhysicalBuildingMember,
   physicalBuildingMembers,
 } from '#lib/db/services/physicalBuilding.js'
@@ -139,22 +142,29 @@ export const attachPhysicalBuildingMember = guardedCommand(
     .refine(value => Boolean(value.projectId) !== Boolean(value.organisationId)),
   async (input, ctx) => {
     if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
-    const organisationId =
-      input.organisationId ??
-      (await probeProjectQuery(ctx.db, { ref: input.projectId!, refKey: 'id' }))
-        ?.organisationId
+    const organisationId = input.projectId
+      ? (await probeProjectQuery(ctx.db, { ref: input.projectId, refKey: 'id' }))
+          ?.organisationId
+      : input.organisationId
     if (!organisationId) error(404, 'ORGANISATION_NOT_FOUND')
     await requireLocationOrganisationManager(ctx, organisationId)
     let source: BuildingSource
+    let imported: { childLocationId: string; childRevisionId: string } | undefined
     if ('importedLocationId' in input.source) {
       const row = await ctx.db.get<{
         source: string
-      }>(sql`SELECT json_extract(v.rawSource,'$.buildingSource') source
+        revisionId: string
+      }>(sql`SELECT json_extract(v.rawSource,'$.buildingSource') source,
+        (SELECT id FROM locationRevision head WHERE head.locationId=l.id ORDER BY head.version DESC LIMIT 1) revisionId
         FROM location l JOIN locationRevision v ON v.locationId=l.id WHERE l.id=${input.source.importedLocationId}
         AND l.matchingType='building' AND l.state NOT IN ('manual','redirect')
         AND json_extract(v.rawSource,'$.kind')='building-export-baseline' ORDER BY v.version LIMIT 1`)
       if (!row) error(409, 'The imported building is unavailable.')
       source = BuildingSourceSchema.parse(JSON.parse(row.source))
+      imported = {
+        childLocationId: input.source.importedLocationId,
+        childRevisionId: row.revisionId,
+      }
     } else source = input.source
     const details = await loadBuildingDetails(source.id, source.release)
     if (source.addressId && !details.addresses.some(row => row.id === source.addressId))
@@ -193,7 +203,7 @@ export const attachPhysicalBuildingMember = guardedCommand(
         organisationId,
         ctx.user.id,
         input.target,
-        { source, coordinates: details.coordinates, addresses },
+        { source, coordinates: details.coordinates, addresses, ...imported },
       ),
     }
   },
@@ -214,7 +224,7 @@ export const getBuildingCompositionRole = guardedQuery(
     }>(sql`SELECT
       v.rawSource->>'$.kind'='physical-building-member' generatedProfile,
       v.rawSource->>'$.buildingSource.id' sourceId,l.ownerOrganisationId=${input.organisationId} owned, CASE
-      WHEN v.rawSource->>'$.kind'='physical-building-member' AND l.ownerOrganisationId=${input.organisationId} THEN 'parent'
+      WHEN l.ownerOrganisationId=${input.organisationId} AND ${isPhysicalBuildingParent(sql`l.id`)} THEN 'parent'
       WHEN json_extract(v.rawSource,'$.kind')='building-export-baseline' THEN 'source'
       END role
       FROM location l JOIN locationRevision v ON v.locationId=l.id AND v.version=1
@@ -230,9 +240,57 @@ export const getBuildingCompositionRole = guardedQuery(
       role: row?.role ?? null,
       sourceId: row?.sourceId ?? null,
       canFillProfile: Boolean(row?.generatedProfile),
+      canDesignate: Boolean(row?.owned && row.role === 'source'),
       members: members.map(member => ({
         id: member.source.id,
         outlineRole: member.outlineRole,
+      })),
+    }
+  },
+)
+
+/** Keep the imported Location as the physical parent.
+ * @param input Imported building and editing organisation. @returns After the parent can accept constituents.
+ */
+export const useAsPhysicalBuilding = guardedCommand(
+  z.strictObject({ locationId: z.string().min(1), organisationId: z.string().min(1) }),
+  async (input, ctx) => {
+    await requireLocationOrganisationManager(ctx, input.organisationId)
+    await designatePhysicalBuilding(
+      ctx.db,
+      input.locationId,
+      input.organisationId,
+      ctx.user.id,
+    )
+    return { locationId: input.locationId }
+  },
+)
+
+/** Browse editable physical parents by name, address or identity.
+ * @param input Current building, editing organisation, search text and cursor. @returns A bounded page of parent choices.
+ */
+export const findPhysicalBuildingParents = guardedQuery(
+  z.strictObject({
+    locationId: z.string().min(1).optional(),
+    organisationId: z.string().min(1),
+    q: z.string().max(200),
+    after: z.string().optional(),
+  }),
+  async (input, ctx) => {
+    await requireLocationOrganisationManager(ctx, input.organisationId)
+    const page = await listLocationResources(ctx.db, {
+      organisationId: input.organisationId,
+      physicalParents: { excludeLocationId: input.locationId },
+      searchAddress: true,
+      q: input.q,
+      after: input.after,
+    })
+    return {
+      nextCursor: page.nextCursor,
+      rows: page.data.map(row => ({
+        id: row.id,
+        names: row.facts?.names ?? {},
+        address: row.facts?.location.address,
       })),
     }
   },

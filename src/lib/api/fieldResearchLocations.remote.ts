@@ -23,7 +23,10 @@ import {
 } from '#lib/addresses/featureAddress.js'
 import { LocationFootprintSchema } from '#lib/locations/footprint.js'
 import type { FeatureAddress } from '#lib/addresses/featureAddress.js'
-import { physicalBuildingMembers } from '#lib/db/services/physicalBuilding.js'
+import {
+  isPhysicalBuildingParent,
+  physicalBuildingMembers,
+} from '#lib/db/services/physicalBuilding.js'
 import type { PhysicalBuildingMember } from '#lib/locations/physicalBuilding.js'
 import { addressComponentValue } from '#lib/addresses/presentation.js'
 import { researchStreetAddresses } from '#lib/fieldResearch/locationStreets.js'
@@ -130,8 +133,7 @@ export const getResearchLocations = guardedQuery(
             WHERE unit.locationId=l.id AND m.publishedHash IS NOT NULL ORDER BY name,id
           )) interiorMaps,
           (l.ownerOrganisationId=scope.organisationId AND l.state='unresolved' AND l.matchingType='building'
-           AND EXISTS(SELECT 1 FROM locationRevision seed WHERE seed.locationId=l.id AND seed.version=1
-            AND json_extract(seed.rawSource,'$.kind')='physical-building-member')) editableParent,
+           AND ${isPhysicalBuildingParent(sql`l.id`)}) editableParent,
           CASE WHEN l.matchingType='building' THEN ${members} ELSE '[]' END members,
           (SELECT json_group_array(json(i18n)) FROM (
             SELECT coalesce(ar.components->'$.i18n','{}') i18n ${currentAddressLinks(session.organisationId)}

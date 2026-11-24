@@ -15,6 +15,7 @@ vi.mock('#lib/sources/saanseoi.js', async original => ({
   }),
 }))
 import { sql } from 'drizzle-orm'
+import { listLocationResources } from '#lib/db/services/locationDirectory.js'
 import { archiveLocalLocation } from '#lib/db/services/locationDeletion.js'
 import { probeLocationIdentityScope } from '#lib/db/services/locationIdentityReview.js'
 import { importBuildingLocation } from '#lib/db/services/locationBuilding.js'
@@ -25,6 +26,7 @@ import {
 } from '#lib/db/services/locationLocal.js'
 import { createLocalLocationAddress } from '#lib/addresses/localLocationAddress.js'
 import {
+  designatePhysicalBuilding,
   readBuildingProfileRoles,
   physicalBuildingMembers,
   savePhysicalBuildingMember,
@@ -259,6 +261,95 @@ db.execute('SELECT 1 FROM locationDeletionBlocker WHERE locationId=?', ('test',)
     expect(getAddressDisplay(address, 'en', [], 'building')).toBe(
       '36–38 Tak Ku Ling Road',
     )
+  })
+  it('designates the existing import once and attaches other buildings without changing its profile', async () => {
+    const { db } = setupLocationServiceDatabase(true)
+    const first = member('first', '57')
+    const second = member('second', '59')
+    const parent = await importBuildingLocation(db, 'p', first.source, 'shared', 'user')
+    const versions = () =>
+      db.all<{ facts: string }>(
+        sql`SELECT facts FROM locationRevisionContent WHERE locationId=${parent.locationId} ORDER BY version`,
+      )
+    const roles = (id: string) => readBuildingProfileRoles(db, id, 'p')
+    expect(await roles(parent.locationId)).toEqual({
+      physical: false,
+      constituent: false,
+    })
+    const baseline = await versions()
+    await expect(
+      designatePhysicalBuilding(db, parent.locationId, 'other', 'user'),
+    ).rejects.toMatchObject({ status: 409 })
+    await designatePhysicalBuilding(db, parent.locationId, 'p', 'user')
+    await designatePhysicalBuilding(db, parent.locationId, 'p', 'user')
+    expect(await versions()).toEqual([...baseline, ...baseline])
+    const findParents = async (organisationId: string, physicalParentFor: string) =>
+      (
+        await listLocationResources(db, {
+          organisationId,
+          physicalParents: { excludeLocationId: physicalParentFor },
+          q: 'First building',
+          searchAddress: true,
+        })
+      ).data.map(row => row.id)
+    expect(await findParents('p', 'another-import')).toEqual([parent.locationId])
+    expect(await findParents('other', 'another-import')).toEqual([])
+    expect(await findParents('p', parent.locationId)).toEqual([])
+    const target = { parentId: parent.locationId }
+    await expect(
+      savePhysicalBuildingMember(db, 'p', 'user', target, first),
+    ).rejects.toMatchObject({ status: 409 })
+    const placement = emptyFeatureAddress()
+    placement.coordinates = second.coordinates
+    const existing = await createLocalLocation(
+      db,
+      'p',
+      localIdentityFromAddress('building', {}, placement),
+      'user',
+      {
+        locationId: 'previously-imported-building',
+        buildingSource: second.source,
+      },
+    )
+    const selected = {
+      ...second,
+      childLocationId: existing.locationId,
+      childRevisionId: existing.revisionId,
+    }
+    for (let attempt = 0; attempt < 2; attempt++)
+      expect(await savePhysicalBuildingMember(db, 'p', 'user', target, selected)).toBe(
+        parent.locationId,
+      )
+    const edges = await db.all<{ child: string; parent: string }>(
+      sql`SELECT childLocationId child,parentLocationId parent FROM locationMembershipHead`,
+    )
+    expect(edges).toHaveLength(1)
+    expect(edges[0].parent).toBe(parent.locationId)
+    expect(edges[0].child).toBe(existing.locationId)
+    expect(await roles(parent.locationId)).toEqual({
+      physical: true,
+      constituent: false,
+    })
+    expect(await roles(existing.locationId)).toEqual({
+      physical: false,
+      constituent: true,
+    })
+    await designatePhysicalBuilding(db, existing.locationId, 'p', 'user')
+    expect(await roles(existing.locationId)).toEqual({
+      physical: true,
+      constituent: true,
+    })
+    await db.run(sql`INSERT INTO locationMembership(id,relationshipId,scopeOrganisationId,assertionState,childLocationId,parentLocationId,membershipState)
+      SELECT 'hide-child',relationshipId,'p','suppressed',childLocationId,parentLocationId,'current' FROM locationMembershipHead WHERE childLocationId=${existing.locationId}`)
+    expect(await roles(existing.locationId)).toEqual({
+      physical: true,
+      constituent: false,
+    })
+    expect(await readBuildingProfileRoles(db, existing.locationId, null)).toEqual({
+      physical: true,
+      constituent: true,
+    })
+    expect(await versions()).toEqual([...baseline, ...baseline, ...baseline])
   })
   it('labels physical and constituent roles independently using effective scoped membership', async () => {
     const { db } = setupLocationServiceDatabase(true)
