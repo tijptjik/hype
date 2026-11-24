@@ -29,12 +29,14 @@ let {
   footprints,
   selectedFootprint,
   includedFootprints = [],
+  showAddress = false,
   onselect,
   class: className = '',
 }: {
   coordinates: [number, number]
   footprints: FeatureCollection<Polygon | MultiPolygon, ExteriorFootprintProperties>
   includedFootprints?: string[]
+  showAddress?: boolean
   selectedFootprint: string
   class?: string
   onselect: (id: string) => void
@@ -62,6 +64,27 @@ $effect(() => {
   /** Restore source layers when MapLibre changes style. @returns Nothing. */
   const render = (): void => {
     if (!instance.getStyle()?.layers) return
+    if (showAddress && !instance.getSource('footprint-address')) {
+      instance.addSource('footprint-address', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: { type: 'Point', coordinates },
+        },
+      })
+      instance.addLayer({
+        id: 'footprint-address',
+        type: 'circle',
+        source: 'footprint-address',
+        paint: {
+          'circle-radius': 7,
+          'circle-color': '#0f172a',
+          'circle-stroke-width': 3,
+          'circle-stroke-color': '#ffffff',
+        },
+      })
+    }
     if (!instance.getSource('exterior-footprints')) {
       instance.addSource('exterior-footprints', { type: 'geojson', data: footprints })
       instance.addLayer({
@@ -193,9 +216,16 @@ $effect(() => {
   <div
     class="bg-panel text-foreground absolute top-2 left-2 rounded px-2 py-1 text-xs shadow"
   >
-    <span class="inline-flex items-center gap-1.5"
-      ><span class="size-2.5 rounded-full bg-sky-400"></span>Added</span
-    >
+    {#if showAddress}
+      <span class="mr-3 inline-flex items-center gap-1.5"
+        ><span class="size-2.5 rounded-full bg-slate-900"></span>Address position</span
+      >
+    {/if}
+    {#if includedFootprints.length}
+      <span class="inline-flex items-center gap-1.5"
+        ><span class="size-2.5 rounded-full bg-sky-400"></span>Added</span
+      >
+    {/if}
     <span class="ml-3 inline-flex items-center gap-1.5"
       ><span class="size-2.5 rounded-full bg-orange-600"></span>Selected</span
     >

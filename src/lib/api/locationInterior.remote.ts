@@ -44,9 +44,9 @@ export const getLocationInterior = guardedQuery(identity, async (input, ctx) => 
     : map?.publishedHash
   const bucket = premisesMapBucket(ctx.event.locals.platform)
   const bundle = hash && map ? await readMapBundle(bucket, map.id, hash) : null
-  const jobId = bundle?.data.sourceDataset?.startsWith('gbp:')
-    ? bundle.data.sourceDataset.slice(4)
-    : null
+  const jobId =
+    bundle?.data.sourceDataset?.match(/^(?:gbp|footprint):([a-f0-9-]{36})$/)?.[1] ??
+    null
   const reviewObject =
     ctx.user.superAdmin && jobId && hash
       ? await bucket.get(
@@ -115,7 +115,16 @@ export const saveLocationInterior = guardedCommand(
       `interior-jobs/${input.locationId}/${input.jobId}/result.json`,
     )
     if (!result) error(409, 'Extraction is not ready for review.')
-    const source = await result.json<{ receipt: { pages: [number, number][] } }>()
+    const source = await result.json<{
+      receipt: {
+        pages: [number, number][]
+        source?: {
+          kind: string
+          metresPerPixel?: number
+          feature?: { properties: { csuid: string } }
+        }
+      }
+    }>()
     for (const floor of input.extraction.floors) {
       const dimensions = source.receipt.pages[floor.page - 1]
       if (
@@ -188,7 +197,17 @@ export const saveLocationInterior = guardedCommand(
         }
     }
     const bundle = floorplanBundle(input.extraction)
-    bundle.data.sourceDataset = `gbp:${input.jobId}`
+    const footprint = source.receipt.source?.kind === 'map-footprint'
+    bundle.data.sourceDataset = `${footprint ? 'footprint' : 'gbp'}:${input.jobId}`
+    if (footprint) {
+      bundle.data.source = 'Reviewed Lands Department building footprint draft'
+      for (const feature of bundle.data.level_polygon.features) {
+        feature.properties.source_footprint_id =
+          source.receipt.source?.feature?.properties.csuid
+        feature.properties.source_metres_per_pixel =
+          source.receipt.source?.metresPerPixel
+      }
+    }
     // Keep the editable reviewed source alongside the immutable map draft for later corrections.
     const reviewHash = await mapHash(JSON.stringify(bundle))
     await bucket.put(

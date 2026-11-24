@@ -151,7 +151,9 @@ export async function publishMapDraft(
     },
   })
   await readMapBundle(bucket, input.id, publishedHash)
-  const isExtractedBuilding = bundle.data.sourceDataset?.startsWith('gbp:') ?? false
+  const isExtractedBuilding = /^(?:gbp|footprint):/.test(
+    bundle.data.sourceDataset ?? '',
+  )
   const unitAssociations = isExtractedBuilding
     ? bundle.data.unit_polygon.features.flatMap(feature => {
         const id = feature.properties.canonical_location_id

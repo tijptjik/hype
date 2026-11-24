@@ -25,6 +25,7 @@ import {
 import { StationState } from '#lib/indoor/station.svelte.js'
 // COMPONENTS
 import StationScene from '#lib/bits/patterns/station/StationScene.svelte'
+import InteriorFootprintPicker from './InteriorFootprintPicker.svelte'
 import { Button } from '#lib/bits/core/index.js'
 // ICONS
 import LayersIcon from 'virtual:icons/lucide/layers'
@@ -34,6 +35,7 @@ let current = $state<Awaited<ReturnType<typeof getLocationInterior>> | null>(nul
 let extraction = $state<FloorplanExtraction | null>(null)
 let jobId = $state('')
 let selectedPages = $state('')
+let choosingFootprint = $state(false)
 let partOrganisationId = $state('')
 let creatingPart = $state(false)
 let pages = $state<string[]>([])
@@ -189,6 +191,24 @@ async function upload(file?: File): Promise<void> {
     busy = false
   }
 }
+/** Open a retained map outline in the same review workspace as uploaded plans.
+ * @param id Prepared footprint job ID. @returns Completion.
+ */
+async function reviewFootprint(id: string): Promise<void> {
+  jobId = id
+  extraction = null
+  floorIndex = 0
+  unitIndex = -1
+  drawing = false
+  vertices = []
+  previewing = false
+  failedJob = false
+  reviewed = false
+  message = ''
+  choosingFootprint = false
+  busy = true
+  await poll()
+}
 /** Add a source-page vertex while tracing a missing space. @param event Source SVG click. @returns Nothing. */
 function addVertex(event: MouseEvent): void {
   if (!drawing || !floor) return
@@ -328,11 +348,22 @@ async function save(): Promise<void> {
         <input
           type="file"
           accept="application/pdf,image/png,image/jpeg"
-          disabled={busy || (Boolean(current?.map?.draftHash) && !replacementConfirmed)}
+          disabled={busy ||
+            choosingFootprint ||
+            ((Boolean(current?.map?.draftHash) || Boolean(extraction)) &&
+              !replacementConfirmed)}
           onchange={event => void upload(event.currentTarget.files?.[0])}
           class="ml-3 text-sm"
         >
       </label>
+      <Button
+        text="Choose from map"
+        disabled={busy ||
+          choosingFootprint ||
+          ((Boolean(current?.map?.draftHash) || Boolean(extraction)) &&
+            !replacementConfirmed)}
+        onClick={() => (choosingFootprint = true)}
+      />
       <label class="grid gap-1 text-sm"
         >PDF pages
         <input
@@ -345,10 +376,10 @@ async function save(): Promise<void> {
           >Choose up to 12 pages before uploading.</span
         >
       </label>
-      {#if current?.map?.draftHash}
+      {#if current?.map?.draftHash || extraction}
         <label class="flex items-center gap-2 text-sm"
           ><input type="checkbox" bind:checked={replacementConfirmed}>Start a
-          replacement extraction for this draft</label
+          replacement floor plan for this draft</label
         >
       {/if}
       <span class="text-muted-foreground text-xs"
@@ -365,6 +396,12 @@ async function save(): Promise<void> {
       <div class="bg-muted animate-pulse rounded-lg"></div>
       <div class="bg-muted animate-pulse rounded-lg"></div>
     </div>
+  {:else if choosingFootprint && isEditing}
+    <InteriorFootprintPicker
+      {locationId}
+      onprepared={reviewFootprint}
+      oncancel={() => (choosingFootprint = false)}
+    />
   {:else if extraction && floor && isEditing && !previewing}
     <div class="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <div class="min-h-96 overflow-auto bg-slate-100 p-3">
@@ -974,8 +1011,8 @@ async function save(): Promise<void> {
         <h2 class="text-xl font-semibold">Building interior</h2>
         <p class="text-muted-foreground text-sm">
           {isEditing
-            ? 'Upload a floor-plan image or PDF to begin.'
-            : 'Choose Edit to upload floor plans and prepare an interior map.'}
+            ? 'Upload a floor plan or choose a building footprint from the map to begin.'
+            : 'Choose Edit to upload floor plans or select a building footprint from the map.'}
         </p>
       </div>
     </div>

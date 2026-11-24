@@ -1832,6 +1832,21 @@ the field preserves it. Ownership and Organisation correction rules apply to foo
 too, including accepted Feature snapshots and Project facts adoption policy. No
 polygon-drawing UI is added by this schema preparation.
 
+Building Interior also supports **Choose from map** beside the PDF/image upload controls
+(Refs #194). The editor loads nearby Lands Department footprints around the saved
+building position. A user explicitly selects an outline (and a part for multipart
+geometry) and names the floor before preparing a review draft. The server re-fetches the
+selected source and checks its hash and the building revision before retaining the
+original geometry, source identifier, actor and diagram. Selecting a footprint does not
+change the Location's identity or address.
+
+The footprint supplies an editable floor boundary with its courtyard holes preserved. It
+does not supply interior rooms, circulation, floor counts or a verified shape for other
+floors. Source diagrams use north-up, proportionate image coordinates, with their
+approximate metre scale retained as provenance. Saving uses the existing unpublished
+interior draft and version guard; reopening restores the source and reviewed geometry.
+Uploads remain available, and replacing an existing review requires an explicit choice.
+
 Primary local was checked read-only: none of its 1,581 revisions contain the removed
 building-only fields. The optional shared field is compatible with all existing v1
 snapshots, so no database rewrite or new migration is necessary for this simplification.
