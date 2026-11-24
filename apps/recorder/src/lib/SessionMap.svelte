@@ -83,7 +83,7 @@ function choose(id: string, point: RecorderPin | null): void {
     >{t('location')}
     <select
       data-recorder-select
-      class="bg-panel min-h-12 w-full min-w-0 rounded-xl px-3"
+      class="bg-panel min-h-12 w-full min-w-0 rounded-xl px-3 pr-11"
       value={activeId}
       onchange={event => choose(event.currentTarget.value, null)}
     >
@@ -100,7 +100,7 @@ function choose(id: string, point: RecorderPin | null): void {
         >{t('drawing')}
         <select
           data-recorder-select
-          class="bg-panel min-h-12 w-full min-w-0 rounded-xl"
+          class="bg-panel min-h-12 w-full min-w-0 rounded-xl pr-11"
           value={map.id}
           onchange={event => {
             choose(activeId, null)

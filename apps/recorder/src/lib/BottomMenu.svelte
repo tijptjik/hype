@@ -159,7 +159,7 @@ onMount(() => {
         aria-label={t('language')}
         value={preferences.language}
         onchange={() => setPreferences(preferences.theme, 'en')}
-        class="border-line bg-surface text-ink min-h-12 rounded-xl border px-3"
+        class="border-line bg-surface text-ink min-h-12 rounded-xl border px-3 pr-11"
       >
         <option value="en">{t('english')}</option>
       </select>

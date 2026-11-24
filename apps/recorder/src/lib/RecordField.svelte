@@ -135,7 +135,7 @@ const inputClass =
       data-recorder-select
       id={'field-' + field.id}
       {disabled}
-      class={inputClass}
+      class={[inputClass, 'pr-11']}
       value={value ?? ''}
       onchange={event => onchange(event.currentTarget.value || null)}
     >

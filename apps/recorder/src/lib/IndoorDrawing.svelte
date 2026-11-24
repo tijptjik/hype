@@ -152,7 +152,7 @@ function selectPoint(point: MapPoint): void {
     <select
       data-recorder-select
       value={floorId}
-      class="bg-panel min-h-12 w-full min-w-0 rounded-xl px-3"
+      class="bg-panel min-h-12 w-full min-w-0 rounded-xl px-3 pr-11"
       onchange={event => {
         chosenFloor = event.currentTarget.value
         zoom = 1
