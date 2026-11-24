@@ -1,9 +1,22 @@
 # Test suite maintenance
 
-Run the complete suite with `bun run test:run` before pushing. For a focused iteration,
-pass a filename: `bun run test:run src/tests/feature.services.test.ts`. Use
-`bun run test:watch` for repeated local edits so compilation and worker startup are
-amortized. The full suite remains the pre-push and CI gate.
+The pre-push hook runs `bun run test:push`, a focused gate for authorization,
+authentication origins, environment selection, spatial boundaries, templates, and
+field-research configuration. It generates translations first. On Li, a run under
+concurrent full-suite load passed 147 tests in 7.73 seconds of Vitest time; the worker
+phase including dependency installation took 13 seconds. Queueing, lock contention and
+machine speed can add time, so this is an observation rather than a hard deadline.
+
+CI runs the full web suite with `bun run test:run`. For focused iteration, invoke Vitest
+with selected filenames after generating translations, or use `bun run test:watch` for
+repeated local edits. `test:run` always runs all Bun script and location tests even when
+filenames are supplied.
+
+The web CI suite runs before preview and production deployment and before the release
+job. It includes the root Vitest suite, Bun script tests and the location SQLite tests.
+Workspace worker tests (`bun run test:workers`), Python tests and browser tests are
+separate and are not included in this gate. The 2026 measurements below are historical;
+they do not establish current runtimes or a 30-second push budget.
 
 ## Coverage to retain
 

@@ -112,6 +112,7 @@
     "locations:seed:lifecycle": "python3 scripts/locations/seed-lifecycle.py",
     "test:locations": "bun test src/lib/locations/location.test.ts",
     "test:scripts": "bun test ./scripts",
+    "test:push": "bash scripts/dev-check.sh bash -c 'bun run i18n:build && vitest run --config=vitest.config.ts src/tests/auth-origin.test.ts src/tests/anonymous-authorization.test.ts src/tests/authorization.feature.test.ts src/tests/app-stage.test.ts src/tests/feature-spatial.test.ts src/tests/display-template.test.ts src/tests/field-research-configuration.test.ts'",
     "test:run": "bash scripts/dev-check.sh bash -c 'bun run i18n:build && bun run test:locations && bun run test:scripts && vitest run --config=vitest.config.ts \"$@\"' --",
     "test:run:verbose": "bash scripts/dev-check.sh bash -c 'bun run i18n:build && bun run test:locations && bun run test:scripts && vitest run --config=vitest.config.ts --reporter=verbose \"$@\"' --",
     "test:run:metrics": "bash scripts/dev-check.sh bash -c 'bun run i18n:build && bun run test:locations && bun run test:scripts && vitest run --config=vitest.config.ts --reporter=default \"$@\"' --",

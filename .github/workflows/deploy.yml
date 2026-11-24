@@ -24,6 +24,12 @@ jobs:
     with:
       environment: "preview"
 
+  test-production:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/test.yml
+    with:
+      environment: "production"
+
   deploy-preview:
     name: "DEPLOY :: Preview"
     if: github.ref == 'refs/heads/preview'
@@ -62,6 +68,7 @@ jobs:
   deploy-production:
     name: "DEPLOY :: Production"
     if: github.ref == 'refs/heads/main'
+    needs: [test-production]
     runs-on: ubuntu-latest
     environment: prod
     steps:

@@ -11,6 +11,11 @@ env:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+    with:
+      environment: "production"
+
   check-changesets:
     name: "VERSION :: Check for Changesets"
     runs-on: ubuntu-latest
@@ -33,7 +38,7 @@ jobs:
 
   release:
     name: "VERSION :: Release"
-    needs: check-changesets
+    needs: [check-changesets, test]
     if: |
       github.ref == 'refs/heads/main' &&
       needs.check-changesets.outputs.has_changesets == 'true'
