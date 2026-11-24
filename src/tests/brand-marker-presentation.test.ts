@@ -10,6 +10,9 @@ import {
 } from '#lib/map/customMarkers.js'
 
 const feature = {
+  locationBrands: [
+    { names: { en: "Maxim's" }, identifiers: { breadlineBrand: 'maxims' } },
+  ],
   properties: [
     { property: { key: 'country' }, propertyValue: { value: 'Belgium & Slovenia' } },
     {
@@ -19,18 +22,20 @@ const feature = {
   ],
 }
 
-describe('effective brand property contract', () => {
-  it('renders all fourteen identities from an inherited or direct property without a Location dependency', () => {
+describe('accepted Location brand presentation', () => {
+  it('resolves every accepted Location brand by its identifier or its English name', () => {
     for (const brand of BRAND_IDENTITIES) {
       const direct = customMarkerModel('breadline', {
-        feature: { properties: [{ property: { key: 'brand' }, value: brand.code }] },
+        feature: {
+          locationBrands: [
+            { names: { en: brand.name }, identifiers: { breadlineBrand: brand.code } },
+          ],
+        },
         imageSrc: '/never-use.jpg',
       })!
       const inherited = customMarkerModel('breadline', {
         feature: {
-          properties: [
-            { property: { key: 'brand' }, propertyValue: { value: brand.code } },
-          ],
+          locationBrands: [{ names: { en: brand.name }, identifiers: {} }],
         },
         imageSrc: null,
       })!

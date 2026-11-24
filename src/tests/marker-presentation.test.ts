@@ -14,6 +14,9 @@ import { LayerMetadataSchema } from '#lib/db/zod/schema/layer.js'
 import { toProjectSubmittedFields } from '#lib/api/services/authz/project.js'
 
 const feature = {
+  locationBrands: [
+    { names: { en: "Maxim's" }, identifiers: { breadlineBrand: 'maxims' } },
+  ],
   properties: [
     { property: { key: 'country' }, propertyValue: { value: 'Belgium & Slovenia' } },
     {
