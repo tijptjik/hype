@@ -444,7 +444,7 @@ async function importModel(): Promise<void> {
             <label class="grid gap-1 text-sm"
               >Building model ID
               <select
-                class="border-border w-full rounded-lg border bg-white px-3 py-2"
+                class="border-border bg-surface text-foreground w-full rounded-lg border px-3 py-2"
                 bind:value={selected}
                 disabled={busy}
               >
