@@ -8,6 +8,7 @@ import {
   premisesMap,
   premisesMapPublication,
   premisesMapDraftRevision,
+  premisesMapUnit,
 } from '../schema/premisesMap'
 // DOMAIN
 import {
@@ -150,6 +151,15 @@ export async function publishMapDraft(
     },
   })
   await readMapBundle(bucket, input.id, publishedHash)
+  const isExtractedBuilding = bundle.data.sourceDataset?.startsWith('gbp:') ?? false
+  const unitAssociations = isExtractedBuilding
+    ? bundle.data.unit_polygon.features.flatMap(feature => {
+        const id = feature.properties.canonical_location_id
+        return typeof id === 'string' && id
+          ? [{ unitId: String(feature.properties.unit_id), locationId: id }]
+          : []
+      })
+    : []
   const draftVersion =
     input.expectedDraftVersion + (publishedHash === input.hash ? 0 : 1)
   const [updated] = await db.batch([
@@ -177,7 +187,20 @@ export async function publishMapDraft(
       )
       .returning({ id: premisesMap.id }),
     // Fence publication and its review task together so stale writers cannot create notifications.
-    ...(input.upstreamReview ? [prepareRevisionCheck(db, sql`changes()=1`)] : []),
+    ...(input.upstreamReview || isExtractedBuilding
+      ? [prepareRevisionCheck(db, sql`changes()=1`)]
+      : []),
+    // Public occupancy joins follow the exact published geometry, never an unpublished draft.
+    // One JSON binding keeps the complete replacement below D1's parameter limit.
+    ...(isExtractedBuilding
+      ? [
+          db.delete(premisesMapUnit).where(eq(premisesMapUnit.mapId, input.id)),
+          db
+            .insert(premisesMapUnit)
+            .select(sql`SELECT ${input.id},json_extract(value,'$.unitId'),json_extract(value,'$.locationId')
+        FROM json_each(${JSON.stringify(unitAssociations)})`),
+        ]
+      : []),
     db
       .insert(premisesMapPublication)
       .select(

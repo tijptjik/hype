@@ -63,12 +63,18 @@ test('service compartments remain distinct and uncovered space is flagged', asyn
     ],
   }
   await page.route('**/interior/jobs', route =>
-    route.fulfill({ status: 202, json: { id: job } }),
-  )
-  await page.route('**/interior/jobs/' + job, route =>
     route.fulfill({
-      json: { status: 'needs-review', pages: ['page-1.png'], extraction },
+      status: route.request().method() === 'POST' ? 202 : 200,
+      json: { id: route.request().method() === 'POST' ? job : null },
     }),
+  )
+  let pollRequests = 0
+  await page.route('**/interior/jobs/' + job, route =>
+    ++pollRequests === 1
+      ? route.fulfill({ status: 503, body: 'Temporary outage' })
+      : route.fulfill({
+          json: { status: 'needs-review', pages: ['page-1.png'], extraction },
+        }),
   )
   await page.route('**/interior/jobs/' + job + '/page-1.png', route =>
     route.fulfill({
@@ -76,6 +82,7 @@ test('service compartments remain distinct and uncovered space is flagged', asyn
       body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="white"/></svg>',
     }),
   )
+  await expect(page.locator('input[type=file]')).toBeEnabled({ timeout: 30000 })
   await page.locator('input[type=file]').setInputFiles({
     name: 'synthetic.png',
     mimeType: 'image/png',
@@ -83,7 +90,8 @@ test('service compartments remain distinct and uncovered space is flagged', asyn
   })
   await expect(
     page.getByText('Amber areas remain unclassified.', { exact: false }),
-  ).toBeVisible()
+  ).toBeVisible({ timeout: 30000 })
+  expect(pollRequests).toBeGreaterThan(1)
   await page.getByRole('button', { name: 'kitchen · 80%' }).click()
   await expect(page.getByLabel('Part type', { exact: true })).toHaveValue('kitchen')
   await page.getByRole('button', { name: 'toilet · 80%' }).click()
@@ -116,6 +124,47 @@ test('service compartments remain distinct and uncovered space is flagged', asyn
   await expect(
     page.getByRole('button', { name: 'Manual space · 0%', exact: true }),
   ).toHaveCount(1)
+  await page.getByRole('button', { name: 'kitchen · 80%' }).click()
+  await page
+    .getByRole('combobox', { name: 'Drawing target', exact: true })
+    .selectOption('unit-hole')
+  await page.getByRole('button', { name: 'Draw void' }).click()
+  for (const [x, y] of [
+    [5, 5],
+    [10, 5],
+    [10, 10],
+    [5, 10],
+  ]) {
+    await page.getByLabel('X', { exact: true }).fill(String(x))
+    await page.getByLabel('Y', { exact: true }).fill(String(y))
+    await page.getByRole('button', { name: 'Add vertex', exact: true }).click()
+  }
+  await page.getByRole('button', { name: 'Finish polygon' }).click()
+  await expect(page.getByRole('button', { name: 'Remove space void 1' })).toBeVisible()
+  await page
+    .getByRole('combobox', { name: 'Drawing target', exact: true })
+    .selectOption('floor-hole')
+  await page.getByRole('button', { name: 'Draw void' }).click()
+  for (const [x, y] of [
+    [92, 92],
+    [98, 92],
+    [98, 98],
+    [92, 98],
+  ]) {
+    await page.getByLabel('X', { exact: true }).fill(String(x))
+    await page.getByLabel('Y', { exact: true }).fill(String(y))
+    await page.getByRole('button', { name: 'Add vertex', exact: true }).click()
+  }
+  await page.getByRole('button', { name: 'Finish polygon' }).click()
+  await expect(page.getByRole('button', { name: 'Remove floor void 1' })).toBeVisible()
+  await page.getByText('Floor assignment and alignment', { exact: true }).click()
+  await page.getByText('Align using two anchors', { exact: true }).click()
+  await page.getByRole('spinbutton', { name: 'Scene X 1', exact: true }).fill('10')
+  await page.getByRole('spinbutton', { name: 'Scene X 2', exact: true }).fill('110')
+  await page.getByRole('button', { name: 'Align anchors', exact: true }).click()
+  await expect(
+    page.getByRole('spinbutton', { name: 'X offset', exact: true }),
+  ).toHaveValue('10')
   await page.getByRole('button', { name: 'Preview floors', exact: true }).click()
   await expect(
     page.getByRole('button', { name: 'Back to review', exact: true }),
@@ -170,6 +219,7 @@ test('real upload saves and reopens a disposable local building draft', async ({
   })
   await page.goto('/admin/locations/' + created.locationId + '#interior')
   await page.getByRole('button', { name: 'Edit', exact: true }).click()
+  await expect(page.locator('input[type=file]')).toBeEnabled({ timeout: 30000 })
   await page.locator('input[type=file]').setInputFiles({
     name: 'fixture.png',
     mimeType: 'image/png',
@@ -192,6 +242,16 @@ test('real upload saves and reopens a disposable local building draft', async ({
   await expect(page.getByLabel('Floor label', { exact: true })).toHaveValue(
     'Second test floor',
   )
+  await page.getByText('Canonical Floor + Unit', { exact: true }).click()
+  await page.getByRole('button', { name: 'Create Floor', exact: true }).click()
+  await expect(
+    page.getByRole('combobox', { name: 'Canonical Floor', exact: true }),
+  ).not.toHaveValue('', { timeout: 30000 })
+  await page.getByRole('button', { name: 'Integration room · 100%' }).click()
+  await page.getByRole('button', { name: 'Create Unit', exact: true }).click()
+  await expect(
+    page.getByRole('combobox', { name: 'Canonical Unit', exact: true }),
+  ).not.toHaveValue('', { timeout: 30000 })
   await page.getByRole('checkbox').check()
   await page.getByRole('button', { name: 'Save interior draft' }).click()
   await expect(page.getByRole('button', { name: 'Save interior draft' })).toBeDisabled({
@@ -209,6 +269,8 @@ test('real upload saves and reopens a disposable local building draft', async ({
     return await getLocationInterior({ locationId: id })
   }, created.locationId)
   expect(persisted.review.extraction.floors).toHaveLength(2)
+  expect(persisted.review.extraction.floors[1].locationId).toBeTruthy()
+  expect(persisted.review.extraction.floors[1].units[0].locationId).toBeTruthy()
   expect(persisted.map.publishedHash).toBeNull()
   expect(persisted.bundle.data.level_polygon.features).toHaveLength(2)
   await page.screenshot({
@@ -231,7 +293,7 @@ test('real upload saves and reopens a disposable local building draft', async ({
   const release = await page.request.get(pointer.url)
   expect(release.ok()).toBe(true)
   expect((await release.json()).data.level_polygon.features).toHaveLength(2)
-  await page.goto('/premises/' + persisted.map.id)
+  await page.goto('/buildings/' + persisted.map.id)
   await expect(page.locator('[data-station-scene]')).toBeVisible({ timeout: 60000 })
   await page.screenshot({
     path: join(process.env.DEV_RUNNER_ARTIFACTS, 'interior-published-fixture.png'),

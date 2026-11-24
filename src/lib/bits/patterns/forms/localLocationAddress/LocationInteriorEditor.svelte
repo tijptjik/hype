@@ -4,6 +4,7 @@ import { onMount, onDestroy } from 'svelte'
 // API
 import {
   getLocationInterior,
+  createLocationInteriorPart,
   saveLocationInterior,
 } from '#lib/api/locationInterior.remote.js'
 // DOMAIN
@@ -15,6 +16,8 @@ import {
 } from '#lib/indoor/floorplans/extraction.js'
 import {
   auditFloor,
+  alignFloorAnchors,
+  editOutline,
   drawnUnit,
   mergeUnits,
   splitUnit,
@@ -30,10 +33,18 @@ let { locationId, isEditing }: { locationId: string; isEditing: boolean } = $pro
 let current = $state<Awaited<ReturnType<typeof getLocationInterior>> | null>(null)
 let extraction = $state<FloorplanExtraction | null>(null)
 let jobId = $state('')
+let selectedPages = $state('')
+let partOrganisationId = $state('')
+let creatingPart = $state(false)
 let pages = $state<string[]>([])
 let floorIndex = $state(0)
 let unitIndex = $state(-1)
 let drawing = $state(false)
+let outlineTarget = $state<'space' | 'boundary' | 'floor-hole' | 'unit-hole'>('space')
+let anchors = $state([
+  [0, 0, 0, 0],
+  [100, 0, 100, 0],
+])
 let vertexX = $state(0)
 let vertexY = $state(0)
 let vertices = $state<[number, number][]>([])
@@ -51,6 +62,7 @@ let reviewed = $state(false)
 let scene = $state<StationState | null>(null)
 let timer: ReturnType<typeof setTimeout> | undefined
 let disposed = false
+let pollFailures = 0
 const floor = $derived(extraction?.floors[floorIndex])
 const residual = $derived.by(() => {
   if (!floor) return []
@@ -78,6 +90,8 @@ async function refresh(): Promise<void> {
   const query = getLocationInterior({ locationId })
   await query.refresh()
   current = await query
+  partOrganisationId ||=
+    current.ownerOrganisationId ?? current.organisations?.[0]?.id ?? ''
   if (current.bundle) {
     const next = new StationState(() => null, false)
     next.loadDraft(current.bundle.data)
@@ -123,7 +137,15 @@ onDestroy(() => {
 async function poll(): Promise<void> {
   try {
     const response = await fetch(base + '/' + jobId)
+    if (disposed) return
+    // Keep the retained job alive across temporary proxy, rate-limit or database outages.
+    if ([429, 502, 503, 504].includes(response.status) && pollFailures < 5) {
+      pollFailures += 1
+      timer = setTimeout(() => void poll(), Math.min(30000, 3000 * 2 ** pollFailures))
+      return
+    }
     if (!response.ok) throw new Error(await response.text())
+    pollFailures = 0
     const result = await response.json()
     if (disposed) return
     if (result.status === 'needs-review') {
@@ -151,7 +173,11 @@ async function upload(file?: File): Promise<void> {
   failedJob = false
   reviewed = false
   try {
-    const response = await fetch(base, { method: 'POST', body: file })
+    const response = await fetch(base, {
+      method: 'POST',
+      body: file,
+      headers: { 'X-Floorplan-Pages': selectedPages.replace(/\s/g, '') },
+    })
     if (!response.ok) throw new Error(await response.text())
     jobId = (await response.json()).id
     extraction = null
@@ -201,6 +227,8 @@ function assignFloor(): void {
     const copy = structuredClone($state.snapshot(floor))
     copy.sourceFloorId = floor.sourceFloorId ?? floor.id
     copy.id = 'floor-' + crypto.randomUUID()
+    delete copy.locationId
+    for (const part of copy.units) delete part.locationId
     copy.label = newFloorLabel.trim()
     extraction!.floors.push(copy)
     floorIndex = extraction!.floors.length - 1
@@ -222,6 +250,30 @@ function moveVertex(event: PointerEvent): void {
   unit.polygon[draggedVertex] = coordinate
   if (draggedVertex === 0) unit.polygon[unit.polygon.length - 1] = [...coordinate]
   reviewed = false
+}
+/** Create an explicitly named canonical Floor or Unit, retaining the association in this draft.
+ * @param kind Floor or Unit. @returns Completion.
+ */
+async function createPart(kind: 'floor' | 'unit'): Promise<void> {
+  if (!floor || creatingPart || (kind === 'unit' && (!unit || !floor.locationId)))
+    return
+  creatingPart = true
+  try {
+    const result = await createLocationInteriorPart({
+      locationId,
+      organisationId: partOrganisationId,
+      label: kind === 'floor' ? floor.label : unit!.label,
+      floorId: kind === 'unit' ? floor.locationId : undefined,
+    })
+    if (kind === 'floor') floor.locationId = result.locationId
+    else unit!.locationId = result.locationId
+    reviewed = false
+    await refresh()
+  } catch (error) {
+    message = String(error)
+  } finally {
+    creatingPart = false
+  }
 }
 /** Save only explicitly reviewed geometry to the unpublished indoor draft. @returns Completion. */
 async function save(): Promise<void> {
@@ -281,6 +333,18 @@ async function save(): Promise<void> {
           class="ml-3 text-sm"
         >
       </label>
+      <label class="grid gap-1 text-sm"
+        >PDF pages
+        <input
+          bind:value={selectedPages}
+          placeholder="All pages, or 1,3,5"
+          class="rounded border p-2"
+          disabled={busy}
+        >
+        <span class="text-muted-foreground text-xs"
+          >Choose up to 12 pages before uploading.</span
+        >
+      </label>
       {#if current?.map?.draftHash}
         <label class="flex items-center gap-2 text-sm"
           ><input type="checkbox" bind:checked={replacementConfirmed}>Start a
@@ -322,6 +386,17 @@ async function save(): Promise<void> {
             width={floor.width}
             height={floor.height}
           />
+          <path
+            d={[floor.boundary, ...(floor.holes ?? [])]
+              .map(ring => 'M' + ring.map(point => point.join(',')).join('L') + 'Z')
+              .join(' ')}
+            fill="none"
+            stroke="#7c3aed"
+            stroke-width="2"
+            stroke-dasharray="6 3"
+          >
+            <title>Reviewed floor boundary and true voids</title>
+          </path>
           {#if vertices.length}
             <polyline
               points={vertices.map(point => point.join(',')).join(' ')}
@@ -346,14 +421,17 @@ async function save(): Promise<void> {
             </path>
           {/each}
           {#each floor.units as part, index (part.id)}
-            <polygon
-              points={part.polygon.map(point => point.join(',')).join(' ')}
+            <path
+              d={[part.polygon, ...(part.holes ?? [])]
+                .map(ring => 'M' + ring.map(point => point.join(',')).join('L') + 'Z')
+                .join(' ')}
+              fill-rule="evenodd"
               fill={unitIndex === index ? '#f9731660' : '#0ea5e930'}
               stroke={unitIndex === index ? '#ea580c' : '#0284c7'}
               stroke-width="2"
             >
               <title>{part.label || part.category} · {part.evidence}</title>
-            </polygon>
+            </path>
           {/each}
           {#if unit}
             {#each unit.polygon.slice(0, -1) as point, index}
@@ -400,11 +478,17 @@ async function save(): Promise<void> {
       <div class="space-y-4 overflow-y-auto border-l p-4">
         <div class="flex flex-wrap gap-2">
           <Button
-            text={drawing ? 'Cancel drawing' : 'Draw missing space'}
+            text={drawing
+              ? 'Cancel drawing'
+              : outlineTarget === 'space'
+                ? 'Draw missing space'
+                : outlineTarget === 'boundary'
+                  ? 'Draw floor boundary'
+                  : 'Draw void'}
             onClick={() => {
               drawing = !drawing
               vertices = []
-              unitIndex = -1
+              if (outlineTarget !== 'unit-hole') unitIndex = -1
             }}
           />
           {#if drawing}
@@ -413,8 +497,10 @@ async function save(): Promise<void> {
               disabled={vertices.length < 3}
               onClick={() =>
                 edit(() => {
-                  floor.units.push(drawnUnit(floor, vertices))
-                  unitIndex = floor.units.length - 1
+                  if (outlineTarget === 'space') {
+                    floor.units.push(drawnUnit(floor, vertices))
+                    unitIndex = floor.units.length - 1
+                  } else editOutline(floor, vertices, outlineTarget, unit)
                   vertices = []
                   drawing = false
                 })}
@@ -422,6 +508,44 @@ async function save(): Promise<void> {
           {/if}
           <Button text="Preview floors" onClick={preview} />
         </div>
+        <label class="grid gap-1 text-sm"
+          >Drawing target
+          <select
+            bind:value={outlineTarget}
+            onchange={() => {
+              vertices = []
+              drawing = false
+            }}
+            class="rounded border p-2"
+          >
+            <option value="space">New space</option>
+            <option value="boundary">Replace floor boundary</option>
+            <option value="floor-hole">Floor void / light well</option>
+            <option value="unit-hole" disabled={!unit}>Selected space void</option>
+          </select>
+        </label>
+        {#if floor.holes?.length}
+          {#each floor.holes as _, i}
+            <Button
+              text={'Remove floor void ' + (i + 1)}
+              onClick={() =>
+                edit(() => {
+                  floor.holes?.splice(i, 1)
+                })}
+            />
+          {/each}
+        {/if}
+        {#if unit?.holes?.length}
+          {#each unit.holes as _, i}
+            <Button
+              text={'Remove space void ' + (i + 1)}
+              onClick={() =>
+                edit(() => {
+                  unit.holes?.splice(i, 1)
+                })}
+            />
+          {/each}
+        {/if}
         {#if drawing}
           <p class="text-sm">
             Click each corner on the source image, or enter its coordinates, then finish
@@ -477,6 +601,78 @@ async function save(): Promise<void> {
             oninput={() => (reviewed = false)}
           ></label
         >
+        <details class="space-y-3 rounded border p-3">
+          <summary>Canonical Floor + Unit</summary>
+          <label class="grid gap-1 text-sm"
+            >Owning organisation<select
+              bind:value={partOrganisationId}
+              disabled={Boolean(current?.ownerOrganisationId)}
+              class="rounded border p-2"
+            >
+              {#each current?.organisations ?? [] as item}
+                <option value={item.id}>{item.name}</option>
+              {/each}
+            </select></label
+          >
+          <label class="grid gap-1 text-sm"
+            >Canonical Floor<select
+              aria-label="Canonical Floor"
+              value={floor.locationId ?? ''}
+              onchange={event =>
+                edit(() => {
+                  floor.locationId = event.currentTarget.value || undefined
+                  for (const part of floor.units) delete part.locationId
+                })}
+              class="rounded border p-2"
+            >
+              <option value="">Not associated</option>
+              {#each current?.parts ?? [] as part}
+                <option value={part.id}>{part.name}</option>
+              {/each}
+            </select></label
+          >
+          <Button
+            text="Create Floor"
+            disabled={creatingPart || !floor.label.trim() || Boolean(floor.locationId)}
+            onClick={() => createPart('floor')}
+          />
+          {#if unit}
+            <label class="grid gap-1 text-sm"
+              >Canonical Unit<select
+                aria-label="Canonical Unit"
+                value={unit.locationId ?? ''}
+                onchange={event =>
+                  edit(() => {
+                    unit.locationId = event.currentTarget.value || undefined
+                  })}
+                disabled={!floor.locationId}
+                class="rounded border p-2"
+              >
+                <option value="">Not associated</option>
+                {#each (current?.parts ?? []).filter(
+                  part =>
+                    part.id !== floor.locationId &&
+                    part.parents.includes(floor.locationId ?? ''),
+                ) as part}
+                  <option value={part.id}>{part.name}</option>
+                {/each}
+              </select></label
+            >
+            <Button
+              text="Create Unit"
+              disabled={creatingPart ||
+                !floor.locationId ||
+                !unit.label.trim() ||
+                Boolean(unit.locationId)}
+              onClick={() => createPart('unit')}
+            />
+          {/if}
+          <p class="text-xs">
+            Creation immediately adds a physical building part. Save this draft to
+            retain its polygon association. Room labels and occupants remain separate
+            from physical identity.
+          </p>
+        </details>
         <p class="text-muted-foreground text-xs">
           Review against the original. Typical plans remain templates; floor ranges and
           alignment need verification.
@@ -510,6 +706,43 @@ async function save(): Promise<void> {
             Each copy retains its source diagram. Assign only floors confirmed by the
             plans.
           </p>
+          <details class="space-y-2">
+            <summary>Align using two anchors</summary>
+            <p class="text-xs">
+              Match two points on this source page to the same points in the shared
+              scene. Coordinates are pixels, not metres.
+            </p>
+            {#each anchors as anchor, i}
+              <div class="grid grid-cols-2 gap-2">
+                {#each ['Source X', 'Source Y', 'Scene X', 'Scene Y'] as label, j}
+                  <label class="grid gap-1 text-xs"
+                    >{label} {i + 1}<input
+                      type="number"
+                      bind:value={anchor[j]}
+                      class="w-full rounded border p-2"
+                    ></label
+                  >
+                {/each}
+              </div>
+            {/each}
+            <Button
+              text="Align anchors"
+              onClick={() =>
+                edit(() => {
+                  floor.alignment = alignFloorAnchors(
+                    floor,
+                    [
+                      [anchors[0][0], anchors[0][1]],
+                      [anchors[1][0], anchors[1][1]],
+                    ],
+                    [
+                      [anchors[0][2], anchors[0][3]],
+                      [anchors[1][2], anchors[1][3]],
+                    ],
+                  )
+                })}
+            />
+          </details>
           {#if !floor.alignment}
             <Button
               text="Set floor alignment"
