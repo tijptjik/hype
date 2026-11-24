@@ -1,7 +1,11 @@
 // VALIDATION
 import { z } from 'zod'
 // SOURCES
-import { loadBuildingNames, loadBuildingDetails } from '#lib/sources/saanseoi.js'
+import {
+  loadBuildingNames,
+  loadBuildingDetails,
+  loadBuildingAddresses,
+} from '#lib/sources/saanseoi.js'
 // ADDRESS
 import { buildingNames } from '#lib/addresses/buildingNames.js'
 import { normalizeNameSearch } from '#lib/addresses/nameSearch.js'
@@ -21,11 +25,11 @@ export type BuildingSearchResult = {
   address: FeatureAddress
   buildingSource: { id: string; release: string; addressId?: string }
 }
-/** Match names locally, then join only the matching buildings' release-pinned shards.
- * @param query Name text, in any published language.
+/** Match names and optional address text, then join only matching buildings' release-pinned detail shards.
+ * @param query Search text, in any published language.
  * @param locale Current editor language.
  * @param isCurrent Guard against fetching details for superseded queries.
- * @param options Name/proximity constraints, detail-fetch budget and optional publication-pinned page position.
+ * @param options Name/proximity constraints, optional address discovery, detail-fetch budget and publication-pinned page position.
  * @returns The requested building slice, or nearby exact matches, with each address alternative explicit.
  * @remarks No nearest-address guess or canonical association is created.
  */
@@ -35,6 +39,7 @@ export async function searchBuildingNames(
   isCurrent: () => boolean = () => true,
   options?: {
     exact?: boolean
+    includeAddresses?: boolean
     coordinates?: [number, number]
     maxDistance?: number
     candidateLimit?: number
@@ -57,16 +62,37 @@ export async function searchBuildingNames(
     throw new BuildingSearchPageError()
   const needle = normalizeNameSearch(query)
   if (!needle) return []
+  // Search the complete pinned address inventory before paging, so unnamed buildings remain discoverable by street.
+  const addressMatches = new Set<string>()
+  if (options?.includeAddresses) {
+    const addresses = await loadBuildingAddresses(bundle.release)
+    if (!isCurrent()) return []
+    for (const row of addresses) {
+      if (
+        row.addresses.some(candidate =>
+          Object.values(candidate.display).some(label =>
+            normalizeNameSearch(label).includes(needle),
+          ),
+        )
+      )
+        addressMatches.add(row.id)
+    }
+  }
+  const nameMatches = new Set(
+    bundle.records
+      .filter(row =>
+        [row.name, ...Object.values(row.names)].some(
+          name =>
+            name &&
+            (options?.exact
+              ? normalizeNameSearch(name) === needle
+              : normalizeNameSearch(name).includes(needle)),
+        ),
+      )
+      .map(row => row.id),
+  )
   const named = bundle.records
-    .filter(row =>
-      [row.name, ...Object.values(row.names)].some(
-        name =>
-          name &&
-          (options?.exact
-            ? normalizeNameSearch(name) === needle
-            : normalizeNameSearch(name).includes(needle)),
-      ),
-    )
+    .filter(row => nameMatches.has(row.id) || addressMatches.has(row.id))
     .sort(
       (a, b) =>
         Number(
@@ -84,7 +110,7 @@ export async function searchBuildingNames(
   const offset = options?.offset ?? 0
   if (options?.candidateLimit && named.length > offset + limit) options.onLimited?.()
   const matches = named.slice(offset, offset + limit)
-  // Resolve the entire named set before radius filtering, with bounded detail concurrency.
+  // Resolve the entire matching set before radius filtering, with bounded detail concurrency.
   const groups: BuildingSearchResult[][] = []
   for (let index = 0; index < matches.length && isCurrent(); index += 8) {
     groups.push(
@@ -101,7 +127,15 @@ export async function searchBuildingNames(
             return []
           const names = buildingNames(row.names, row.name)
           const building = { ...row, names, release: bundle.release }
-          const candidates = details.addresses.length ? details.addresses : [undefined]
+          const candidates = nameMatches.has(row.id)
+            ? details.addresses.length
+              ? details.addresses
+              : [undefined]
+            : details.addresses.filter(candidate =>
+                Object.values(candidate.display).some(label =>
+                  normalizeNameSearch(label).includes(needle),
+                ),
+              )
           return candidates.map(candidate => {
             const projected = fillBuildingDetails(
               emptyFeatureAddress(),
@@ -149,6 +183,7 @@ export class BuildingSearchPageError extends Error {
   }
 }
 const buildingCursorSchema = z.strictObject({
+  matching: z.literal('names-and-addresses'),
   query: z.string(),
   locale: z.string(),
   release: z.string().min(1),
@@ -160,13 +195,13 @@ export type BuildingSearchPage = {
   nextCursor: string | null
 }
 
-/** Fetch details for only the next ten matching buildings in a fixed name catalogue.
- * @param query Original name query.
+/** Fetch details for the next ten buildings matching published names or address candidates.
+ * @param query Original building name, street or address query.
  * @param locale Current editor language.
  * @param isCurrent Guard against obsolete detail fetches.
  * @param cursor Opaque query/publication-bound position from the previous page.
  * @returns All address alternatives for this building slice and an explicit continuation.
- * @remarks Alternatives are never split across pages; changed publications require restart.
+ * @remarks Names and addresses share one pinned release. Matching alternatives are never split across pages; changed publications require restart.
  */
 export async function searchBuildingNamesPage(
   query: string,
@@ -187,6 +222,7 @@ export async function searchBuildingNamesPage(
   let total = 0
   let nextCursor: string | null = null
   const rows = await searchBuildingNames(query, locale, isCurrent, {
+    includeAddresses: true,
     offset: position?.offset,
     release: position?.release,
     candidateLimit: 10,
@@ -197,6 +233,7 @@ export async function searchBuildingNamesPage(
           ? null
           : encodeURIComponent(
               JSON.stringify({
+                matching: 'names-and-addresses',
                 query,
                 locale,
                 release: page.release,

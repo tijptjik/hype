@@ -265,3 +265,23 @@ export async function loadBuildingPoints(
     throw new Error('Invalid building points projection')
   return result.records
 }
+
+/** Load published address candidates for every building in one immutable release.
+ * @param release Building export release used for the accompanying names and details.
+ * @returns Complete validated address inventory, including unnamed buildings.
+ * @remarks Candidates retain their point-in-footprint evidence; they do not establish canonical address membership.
+ */
+export async function loadBuildingAddresses(
+  release: string,
+): Promise<z.infer<typeof buildingAddressesSchema>[]> {
+  const url = `${saanseoiOrigin()}/buildings/v0.1/exports/physical/overture/addresses/manifest.json?release=${encodeURIComponent(release)}`
+  const result = await fetchSaanseoiProjection(url, buildingAddressesSchema, fetch, {
+    release,
+  })
+  if (
+    result.manifest.family !== 'buildings' ||
+    result.manifest.projection !== 'addresses'
+  )
+    throw new Error('Invalid building addresses projection')
+  return result.records
+}

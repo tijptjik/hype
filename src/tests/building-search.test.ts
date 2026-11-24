@@ -4,11 +4,19 @@ import {
   resetAddressComponent,
   clearAddressComponent,
 } from '#lib/addresses/addressExpressions.js'
-import { searchBuildingNames } from '../lib/locations/buildingSearch'
-const source = vi.hoisted(() => ({ names: vi.fn(), details: vi.fn() }))
+import {
+  searchBuildingNames,
+  searchBuildingNamesPage,
+} from '../lib/locations/buildingSearch'
+const source = vi.hoisted(() => ({
+  names: vi.fn(),
+  details: vi.fn(),
+  addresses: vi.fn().mockResolvedValue([]),
+}))
 vi.mock('#lib/sources/saanseoi.js', () => ({
   loadBuildingNames: source.names,
   loadBuildingDetails: source.details,
+  loadBuildingAddresses: source.addresses,
 }))
 vi.mock('#lib/addresses/nameCatalogue.js', () => ({
   loadAddressNames: vi
@@ -17,7 +25,10 @@ vi.mock('#lib/addresses/nameCatalogue.js', () => ({
       { id: 'street', names: { en: 'Test Road' }, divisionCodes: [] },
     ]),
 }))
-afterEach(() => vi.clearAllMocks())
+afterEach(() => {
+  vi.clearAllMocks()
+  source.addresses.mockReset().mockResolvedValue([])
+})
 it('matches primary and translated names and retains explicit address alternatives', async () => {
   source.names.mockResolvedValue({
     release: 'r1',
@@ -226,4 +237,153 @@ it('finds nearby named buildings beyond the initial detail slice', async () => {
     maxDistance: 300,
   })
   expect(result.map(row => row.buildingSource.id)).toEqual(['tower-44'])
+})
+
+it('finds named and unnamed buildings by published street and number without changing name-only matching', async () => {
+  source.names.mockResolvedValue({
+    release: 'r1',
+    records: [
+      { id: 'named', name: 'Example House', names: {} },
+      { id: 'unnamed', name: null, names: {} },
+      { id: 'substation', name: 'Hollywood Road 32 Substation', names: {} },
+    ],
+  })
+  const addresses = [
+    {
+      id: 'named',
+      addresses: [
+        {
+          id: 'a32',
+          snapshotId: 's1',
+          display: { en: '32 Hollywood Road', 'zh-Hant': '荷李活道32號' },
+          match: 'point-in-footprint',
+        },
+        {
+          id: 'a34',
+          snapshotId: 's1',
+          display: { en: '34 Hollywood Road', 'zh-Hant': '荷李活道34號' },
+          match: 'point-in-footprint',
+        },
+        {
+          id: 'side-street',
+          snapshotId: 's1',
+          display: { en: '1 Side Street' },
+          match: 'point-in-footprint',
+        },
+      ],
+    },
+    {
+      id: 'unnamed',
+      addresses: [
+        {
+          id: 'a36',
+          snapshotId: 's1',
+          display: { en: '36 Hollywood Road', 'zh-Hant': '荷李活道36號' },
+          match: 'point-in-footprint',
+        },
+      ],
+    },
+  ]
+  source.addresses.mockResolvedValue(addresses)
+  source.details.mockImplementation(async (id: string) => ({
+    id,
+    coordinates: [114, 22],
+    addresses: addresses.find(row => row.id === id)?.addresses ?? [],
+  }))
+
+  const page = await searchBuildingNamesPage('hollywood road', 'en')
+  expect(page.total).toBe(3)
+  expect(page.rows.map(row => row.buildingSource.addressId)).toEqual([
+    'a32',
+    'a34',
+    'a36',
+    undefined,
+  ])
+  expect(source.addresses).toHaveBeenCalledWith('r1')
+  expect(page.rows[2].names).toEqual({})
+  expect(page.rows[2].address.source.address2dId).toBeNull()
+  expect(page.nextCursor).toBeNull()
+
+  const chinese = await searchBuildingNamesPage('荷李活道', 'zhHant')
+  expect(chinese.total).toBe(2)
+  expect(chinese.rows).toHaveLength(3)
+  const numbered = await searchBuildingNamesPage('32 Hollywood Road', 'en')
+  expect(numbered.rows.map(row => row.buildingSource.addressId)).toEqual(['a32'])
+
+  source.addresses.mockClear()
+  const namesOnly = await searchBuildingNames('Hollywood Road', 'en')
+  expect(namesOnly.map(row => row.buildingSource.id)).toEqual(['substation'])
+  expect(source.addresses).not.toHaveBeenCalled()
+})
+
+it('pages street matches across the whole inventory while bounding detail reads', async () => {
+  const records = Array.from({ length: 13 }, (_, index) => ({
+    id: `building-${index}`,
+    name: null,
+    names: {},
+  }))
+  source.names.mockResolvedValue({ release: 'street-release', records })
+  const addresses = records.map((row, index) => ({
+    id: row.id,
+    addresses: [
+      {
+        id: `address-${index}`,
+        snapshotId: 'snapshot',
+        display: { en: `${index + 1} Hollywood Road` },
+        match: 'point-in-footprint',
+      },
+    ],
+  }))
+  source.addresses.mockResolvedValue(addresses)
+  source.details.mockImplementation(async (id: string) => ({
+    ...addresses.find(row => row.id === id),
+    coordinates: [114, 22],
+  }))
+  const first = await searchBuildingNamesPage('Hollywood Road', 'en')
+  expect(first.total).toBe(13)
+  expect(first.rows).toHaveLength(10)
+  expect(source.details).toHaveBeenCalledTimes(10)
+  if (!first.nextCursor) throw new Error('Expected another page of street matches')
+  const second = await searchBuildingNamesPage(
+    'Hollywood Road',
+    'en',
+    () => true,
+    first.nextCursor,
+  )
+  expect(second.rows).toHaveLength(3)
+  expect(second.nextCursor).toBeNull()
+  expect(new Set([...first.rows, ...second.rows].map(row => row.id)).size).toBe(13)
+  expect(source.details).toHaveBeenCalledTimes(13)
+})
+
+it('reports unavailable address discovery and discards superseded inventory reads', async () => {
+  source.names.mockResolvedValue({ release: 'r1', records: [] })
+  source.addresses.mockRejectedValueOnce(new Error('Source release mismatch'))
+  await expect(searchBuildingNamesPage('Hollywood Road', 'en')).rejects.toThrow(
+    'Source release mismatch',
+  )
+  let current = true
+  source.addresses.mockImplementationOnce(async () => {
+    current = false
+    return []
+  })
+  expect(
+    (await searchBuildingNamesPage('Hollywood Road', 'en', () => current)).rows,
+  ).toEqual([])
+  expect(source.details).not.toHaveBeenCalled()
+})
+
+it('expires name-only cursors whose offsets refer to a different result set', async () => {
+  const cursor = encodeURIComponent(
+    JSON.stringify({
+      query: 'Hollywood Road',
+      locale: 'en',
+      release: 'r1',
+      offset: 10,
+    }),
+  )
+  await expect(
+    searchBuildingNamesPage('Hollywood Road', 'en', () => true, cursor),
+  ).rejects.toMatchObject({ status: 410 })
+  expect(source.names).not.toHaveBeenCalled()
 })
