@@ -406,13 +406,16 @@ db.execute('SELECT 1 FROM locationDeletionBlocker WHERE locationId=?', ('test',)
       { requestId: 'parent' },
       member('first', '36'),
     )
-    const child = await savePhysicalBuildingMember(
+    // A physical parent can also be a constituent when it retains an imported baseline.
+    const childImport = await importBuildingLocation(
       db,
       'p',
+      member('second', '38').source,
+      'shared',
       'user',
-      { requestId: 'child' },
-      member('second', '38'),
     )
+    const child = childImport.locationId
+    await designatePhysicalBuilding(db, child, 'p', 'user')
     expect(await readBuildingProfileRoles(db, parent, 'p')).toEqual({
       physical: true,
       constituent: false,
