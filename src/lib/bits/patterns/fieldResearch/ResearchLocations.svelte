@@ -175,20 +175,47 @@ onMount(() => void load().catch(error => (failure = String(error))))
         <div
           role="status"
           aria-label="Loading Locations"
-          class="bg-muted h-80 animate-pulse rounded-lg"
-        ></div>
+          class="animate-pulse space-y-4"
+        >
+          <div class="bg-muted h-10 w-64 max-w-full rounded-lg"></div>
+          {#if mode === 'search'}
+            <div class="flex items-center gap-2">
+              <div class="bg-muted h-5 w-12 rounded"></div>
+              <div class="bg-muted h-10 w-28 rounded-lg"></div>
+              <div class="bg-muted h-10 min-w-0 flex-1 rounded-lg"></div>
+              <div class="bg-muted h-10 w-10 rounded-lg"></div>
+              <div class="bg-muted h-10 w-20 rounded-lg"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-6 py-10">
+              {#each [1, 2] as column (column)}
+                <div class="flex flex-col items-center gap-3">
+                  <div class="bg-muted h-5 w-44 max-w-full rounded"></div>
+                  <div class="bg-muted h-4 w-40 max-w-full rounded"></div>
+                  <div class="bg-muted mt-3 h-4 w-28 max-w-full rounded"></div>
+                </div>
+              {/each}
+            </div>
+          {:else}
+            <div class="bg-muted h-5 w-full max-w-xl rounded"></div>
+            <div class="bg-muted h-[28rem] rounded-lg"></div>
+          {/if}
+        </div>
       {/if}
     </div>
     <aside
       aria-label="Included Locations"
-      class="border-border overflow-hidden rounded-xl border bg-white xl:sticky xl:top-4"
+      class="border-border bg-panel text-foreground overflow-hidden rounded-xl border xl:sticky xl:top-4"
     >
       <div class="border-border flex items-center gap-2 border-b px-4 py-4">
         <LocationIcon class="size-5" />
         <h3 class="font-semibold">Included Locations</h3>
-        <span class="bg-muted ml-auto rounded-full px-2 py-0.5 text-xs tabular-nums"
-          >{added.length}</span
-        >
+        {#if loaded}
+          <span class="bg-muted ml-auto rounded-full px-2 py-0.5 text-xs tabular-nums"
+            >{added.length}</span
+          >
+        {:else}
+          <span class="bg-muted ml-auto h-5 w-6 animate-pulse rounded-full"></span>
+        {/if}
       </div>
       {#if !loaded}
         <div
@@ -196,9 +223,18 @@ onMount(() => void load().catch(error => (failure = String(error))))
           aria-label="Loading included Locations"
           class="space-y-3 p-4"
         >
-          {#each [1, 2, 3] as row (row)}
-            <div class="bg-muted h-20 animate-pulse rounded-lg"></div>
-          {/each}
+          <div class="flex animate-pulse gap-3">
+            <div class="bg-muted mt-1 size-5 shrink-0 rounded"></div>
+            <div class="min-w-0 flex-1 space-y-2">
+              <div class="bg-muted h-3 w-20 rounded"></div>
+              <div class="bg-muted h-5 w-3/4 rounded"></div>
+              <div class="bg-muted h-4 w-full rounded"></div>
+            </div>
+          </div>
+          <div class="flex animate-pulse gap-2 pt-1">
+            <div class="bg-muted h-10 w-48 rounded-lg"></div>
+            <div class="bg-muted h-10 w-20 rounded-lg"></div>
+          </div>
         </div>
       {:else if !added.length}
         <p class="text-muted-foreground p-4 text-sm">
