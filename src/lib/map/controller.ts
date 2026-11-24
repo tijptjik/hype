@@ -1,9 +1,11 @@
 import {
   buildingStreetsAt,
   buildingNamesAt,
+  includedBuildingFootprints,
   streetNumberAt,
   buildingAt,
   type SelectedBuilding,
+  type IncludedBuildingPoint,
 } from './buildingAddress.js'
 import { nearbyStreetHints, type MapStreetHint } from './nearbyStreets.js'
 import type {
@@ -11,11 +13,16 @@ import type {
   FitBoundsOptions,
   LngLatBoundsLike,
   Map as MapLibreMap,
+  GeoJSONSource,
+  MapSourceDataEvent,
 } from 'maplibre-gl'
 
 export type MapController = {
-  /** Show persisted Location outlines; returns cleanup for this overlay. */
-  showLocationOutlines?: (features: import('geojson').FeatureCollection) => () => void
+  /** Show saved outlines and display-only footprints containing included building points. */
+  showLocationOutlines?: (
+    features: import('geojson').FeatureCollection,
+    buildingPoints?: IncludedBuildingPoint[],
+  ) => () => void
   /** Observe explicit map clicks; returns cleanup for the owning picker. */
   onPointSelect?: (callback: (point: [number, number]) => void) => () => void
   projectToViewport?: (
@@ -62,36 +69,62 @@ export const createMapController = (
   }
 
   return {
-    showLocationOutlines: features => {
+    showLocationOutlines: (features, buildingPoints = []) => {
       const map = getMap()
       if (!map) return () => {}
       const sourceId = 'included-location-outlines'
       const fillId = sourceId + '-fill'
       const lineId = sourceId + '-line'
-      /** Restore the overlay after a style change. @returns Nothing. */
+      let dirty = true
+      const invalidate = (): void => {
+        dirty = true
+      }
+      const tilesChanged = (event: MapSourceDataEvent): void => {
+        if (event.source.type === 'vector' && event.sourceDataType === 'content')
+          invalidate()
+      }
+      /** Restore the overlay after a style change and resolve new visible tiles. @returns Nothing. */
       const draw = (): void => {
-        if (!map.isStyleLoaded()) return
-        if (!map.getSource(sourceId))
-          map.addSource(sourceId, { type: 'geojson', data: features })
+        if (!dirty || !map.isStyleLoaded()) return
+        dirty = false
+        const data: typeof features = {
+          type: 'FeatureCollection',
+          features: [
+            ...features.features,
+            ...includedBuildingFootprints(map, buildingPoints).map(building => ({
+              type: 'Feature' as const,
+              properties: {},
+              geometry: building.geometry,
+            })),
+          ],
+        }
+        if (!map.getSource(sourceId)) map.addSource(sourceId, { type: 'geojson', data })
+        else (map.getSource(sourceId) as GeoJSONSource).setData(data)
         if (!map.getLayer(fillId))
           map.addLayer({
             id: fillId,
             type: 'fill',
             source: sourceId,
-            paint: { 'fill-color': '#087f8c', 'fill-opacity': 0.22 },
+            paint: { 'fill-color': '#14b8a6', 'fill-opacity': 0.4 },
           })
         if (!map.getLayer(lineId))
           map.addLayer({
             id: lineId,
             type: 'line',
             source: sourceId,
-            paint: { 'line-color': '#087f8c', 'line-width': 3 },
+            paint: { 'line-color': '#14b8a6', 'line-width': 3 },
           })
       }
-      map.on('styledata', draw)
+      map.on('style.load', invalidate)
+      map.on('sourcedata', tilesChanged)
+      map.on('moveend', invalidate)
+      map.on('idle', draw)
       draw()
       return () => {
-        map.off('styledata', draw)
+        map.off('idle', draw)
+        map.off('moveend', invalidate)
+        map.off('sourcedata', tilesChanged)
+        map.off('style.load', invalidate)
         if (map.getLayer(lineId)) map.removeLayer(lineId)
         if (map.getLayer(fillId)) map.removeLayer(fillId)
         if (map.getSource(sourceId)) map.removeSource(sourceId)

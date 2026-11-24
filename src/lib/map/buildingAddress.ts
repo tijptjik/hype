@@ -1,6 +1,13 @@
+// ADDRESS
+import { normalizeNameSearch } from '#lib/addresses/nameSearch.js'
 // TYPES
 import type { Map as MapLibreMap, MapGeoJSONFeature } from 'maplibre-gl'
 import type { Polygon, MultiPolygon, Position, Point } from 'geojson'
+
+export type IncludedBuildingPoint = {
+  coordinates: [number, number]
+  names?: string[]
+}
 
 export type SelectedBuilding = {
   id: string
@@ -46,15 +53,14 @@ export function containsBuildingPoint(
   )
 }
 
-/** Collects every containing footprint, merging duplicate tile fragments by source identity.
- * @param features Loaded candidates. @param point Pin. @returns All containing buildings, including overlapping podiums and towers.
+/** Collect building footprints, merging duplicate tile fragments by source identity.
+ * @param features Loaded candidates. @returns Distinct building footprints, including overlapping podiums and towers.
  */
-export function selectBuildings(
+function groupBuildingFootprints(
   features: Pick<
     MapGeoJSONFeature,
     'id' | 'source' | 'sourceLayer' | 'properties' | 'geometry'
   >[],
-  point: [number, number],
 ): SelectedBuilding[] {
   const buildings = new Map<string, SelectedBuilding>()
   for (const feature of features) {
@@ -84,9 +90,19 @@ export function selectBuildings(
         properties: feature.properties,
       })
   }
-  for (const [key, building] of buildings)
-    if (!containsBuildingPoint(point, building.geometry)) buildings.delete(key)
   return [...buildings.values()]
+}
+
+/** Collect every footprint containing a pin, including overlapping podiums and towers.
+ * @param features Loaded candidates. @param point Pin. @returns Containing buildings.
+ */
+export function selectBuildings(
+  features: Parameters<typeof groupBuildingFootprints>[0],
+  point: [number, number],
+): SelectedBuilding[] {
+  return groupBuildingFootprints(features).filter(building =>
+    containsBuildingPoint(point, building.geometry),
+  )
 }
 
 /** Selects a unique containing building. @param features Rendered candidates. @param point Pin. @returns Building or null outdoors. @remarks Overlapping independent footprints require manual resolution. */
@@ -97,6 +113,79 @@ export function selectBuilding(
   const buildings = selectBuildings(features, point)
   if (buildings.length > 1) throw new Error('More than one building contains this pin')
   return buildings[0] ?? null
+}
+
+/** Read loaded tile geometry even when the basemap only draws building outlines.
+ * @param map Owning map. @returns Tile features, or null for styles without a building source.
+ */
+function loadedBuildingFeatures(
+  map: MapLibreMap,
+): Parameters<typeof groupBuildingFootprints>[0] | null {
+  const sources = [
+    ...new Set(
+      map
+        .getStyle()
+        .layers.flatMap(layer =>
+          'source-layer' in layer &&
+          layer['source-layer'] === 'buildings' &&
+          'source' in layer
+            ? [layer.source]
+            : [],
+        ),
+    ),
+  ]
+  if (!sources.length) return null
+  // Source queries include interiors even when the style only draws building outlines.
+  return sources.flatMap(source =>
+    map
+      .querySourceFeatures(source, {
+        sourceLayer: 'buildings',
+        filter: ['==', 'kind', 'building'],
+      })
+      .map(feature => ({
+        id: feature.id,
+        geometry: feature.geometry,
+        properties: feature.properties,
+        source,
+        sourceLayer: 'buildings',
+      })),
+  )
+}
+
+/** Find distinct basemap footprints with an unambiguous included building point inside.
+ * @param map Owning map with loaded tiles. @param points Included buildings without saved geometry.
+ * @returns Display geometry for visible buildings. Ambiguous and outdoor points retain their markers.
+ */
+export function includedBuildingFootprints(
+  map: MapLibreMap,
+  points: IncludedBuildingPoint[],
+): SelectedBuilding[] {
+  if (!points.length || map.getZoom() < 15) return []
+  const bounds = map.getBounds()
+  const visible = points.filter(point => bounds.contains(point.coordinates))
+  if (!visible.length) return []
+  const buildings = groupBuildingFootprints(loadedBuildingFeatures(map) ?? [])
+  const matches = new Set<SelectedBuilding>()
+  for (const point of visible) {
+    const containing = buildings.filter(building =>
+      containsBuildingPoint(point.coordinates, building.geometry),
+    )
+    if (containing.length === 1) matches.add(containing[0])
+    // Overlapping basements, podiums and towers can share a point. Use an exact saved name to distinguish them.
+    else if (containing.length > 1 && point.names?.length) {
+      const names = new Set(point.names.map(normalizeNameSearch).filter(Boolean))
+      const named = containing.filter(building =>
+        Object.entries(building.properties).some(
+          ([key, name]) =>
+            /^(name$|name[:_])/.test(key) &&
+            typeof name === 'string' &&
+            names.has(normalizeNameSearch(name)),
+        ),
+      )
+      if (named.length === 1) matches.add(named[0])
+    }
+  }
+  return [...matches]
 }
 
 /** Reads all containing buildings once tiles at the pin are ready.
@@ -121,35 +210,8 @@ export async function buildingsAt(
       map.once('idle', finish)
     })
   }
-  const sources = [
-    ...new Set(
-      map
-        .getStyle()
-        .layers.flatMap(layer =>
-          'source-layer' in layer &&
-          layer['source-layer'] === 'buildings' &&
-          'source' in layer
-            ? [layer.source]
-            : [],
-        ),
-    ),
-  ]
-  if (!sources.length) throw new Error('This map style has no building source')
-  // Source queries include interiors even when the style only draws building outlines.
-  const features = sources.flatMap(source =>
-    map
-      .querySourceFeatures(source, {
-        sourceLayer: 'buildings',
-        filter: ['==', 'kind', 'building'],
-      })
-      .map(feature => ({
-        id: feature.id,
-        geometry: feature.geometry,
-        properties: feature.properties,
-        source,
-        sourceLayer: 'buildings',
-      })),
-  )
+  const features = loadedBuildingFeatures(map)
+  if (!features) throw new Error('This map style has no building source')
   return selectBuildings(features, point)
 }
 

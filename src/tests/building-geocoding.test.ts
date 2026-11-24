@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { geocodeBuilding } from '#lib/api/external/buildingGeocoding.js'
 import {
   containsBuildingPoint,
+  includedBuildingFootprints,
   selectBuilding,
   buildingAt,
+  type IncludedBuildingPoint,
   type SelectedBuilding,
 } from '#lib/map/buildingAddress.js'
 
@@ -133,6 +135,7 @@ describe('building address selection', () => {
     const map = {
       getZoom: () => 19,
       areTilesLoaded: () => true,
+      getBounds: () => ({ contains: () => true }),
       getStyle: () => ({
         layers: [
           {
@@ -146,6 +149,25 @@ describe('building address selection', () => {
       querySourceFeatures: query,
     }
     expect((await buildingAt(map as never, [pin.lng, pin.lat]))?.id).toBe('42')
+    const included: IncludedBuildingPoint[] = [
+      { coordinates: [pin.lng, pin.lat], names: ['Kai King Mansion'] },
+      { coordinates: [pin.lng, pin.lat] },
+      { coordinates: [114.2, 22.3] },
+    ]
+    const highlighted = () => includedBuildingFootprints(map as never, included)
+    expect(highlighted().map(row => row.id)).toEqual(['42'])
+    const [tile] = query.mock.results[0].value
+    query.mockReturnValue([tile, { ...tile, id: 43 }])
+    expect(highlighted()).toEqual([])
+    query.mockReturnValue([
+      tile,
+      {
+        ...tile,
+        id: 43,
+        properties: { ...tile.properties, name_en: 'Kai King Mansion' },
+      },
+    ])
+    expect(highlighted().map(row => row.id)).toEqual(['43'])
     expect(query).toHaveBeenCalledWith(building.source, {
       sourceLayer: 'buildings',
       filter: ['==', 'kind', 'building'],

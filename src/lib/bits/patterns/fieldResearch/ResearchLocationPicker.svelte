@@ -26,7 +26,10 @@ import { LocalLocationFootprintSchema } from '#lib/locations/footprint.js'
 // TYPES
 import type { DraftLocationSearchResult as Result } from '#lib/bits/patterns/forms/featureLocation/draftLocationSearch.types.js'
 import type { MapController } from '#lib/map/controller.js'
-import type { SelectedBuilding } from '#lib/map/buildingAddress.js'
+import type {
+  IncludedBuildingPoint,
+  SelectedBuilding,
+} from '#lib/map/buildingAddress.js'
 
 let {
   projectId,
@@ -40,6 +43,9 @@ let {
   included?: Array<{
     id: string
     name: string
+    names: Record<string, string>
+    kind: string
+    members?: { coordinates: [number, number] }[]
     coordinates: [number, number] | null
     footprint: import('geojson').Polygon | import('geojson').MultiPolygon | null
   }>
@@ -296,7 +302,7 @@ async function accept(result: Result): Promise<void> {
   }
 }
 
-// Persisted geometry is authoritative; missing outlines remain visible as Location markers.
+// Prefer persisted geometry. Buildings without outlines also use their points to highlight visible tiles.
 $effect(() => {
   const features: import('geojson').FeatureCollection = {
     type: 'FeatureCollection',
@@ -327,7 +333,15 @@ $effect(() => {
       ),
     ],
   }
-  return controller?.showLocationOutlines?.(features)
+  const buildingPoints = included.flatMap<IncludedBuildingPoint>(item => {
+    if (item.footprint || item.kind !== 'building') return []
+    if (item.members?.length)
+      return item.members.map(({ coordinates }) => ({ coordinates }))
+    return item.coordinates
+      ? [{ coordinates: item.coordinates, names: Object.values(item.names) }]
+      : []
+  })
+  return controller?.showLocationOutlines?.(features, buildingPoints)
 })
 const includedMarkers = $derived(
   included.flatMap((item, index) =>
@@ -458,7 +472,8 @@ onDestroy(() => {
   {:else}
     <p class="text-muted-foreground text-sm">
       Select a building footprint to review its SaanSeoi matches or create a HYPE
-      building. Included Locations are marked; known outlines are shaded teal.
+      building. Teal shading shows included buildings. Numbered markers show their saved
+      locations.
     </p>
     <div class="relative h-[28rem] overflow-hidden rounded-lg border">
       <MapPrimitive
