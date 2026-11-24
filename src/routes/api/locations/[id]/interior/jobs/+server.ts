@@ -32,7 +32,14 @@ export const POST: RequestHandler = async event => {
     body.set(chunk, offset)
     offset += chunk.length
   }
-  const response = await floorplanWorker(event, '/jobs', { method: 'POST', body })
+  const selection = event.request.headers.get('x-floorplan-pages') ?? ''
+  if (selection && !/^\d+(,\d+){0,11}$/.test(selection))
+    error(400, 'Select up to 12 page numbers.')
+  const response = await floorplanWorker(event, '/jobs', {
+    method: 'POST',
+    body,
+    headers: { 'X-Floorplan-Pages': selection },
+  })
   const job = (await response.json()) as { id: string; sha256: string }
   if (!/^[a-f0-9-]{36}$/.test(job.id) || !/^[a-f0-9]{64}$/.test(job.sha256))
     error(502, 'Invalid extraction receipt.')

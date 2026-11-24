@@ -31,7 +31,8 @@ def work(directory, source):
     """Process one bounded extraction; expose no subprocess logs to API clients."""
     try:
         write(directory / 'status.json', {'status': 'running'})
-        extract(source, directory, os.environ.get('FLOORPLAN_CODEX', 'codex'))
+        selection = directory / 'selection.json'
+        extract(source, directory, os.environ.get('FLOORPLAN_CODEX', 'codex'), json.loads(selection.read_text()) if selection.exists() else None)
         write(directory / 'status.json', {'status': 'needs-review'})
     except Exception:
         write(directory / 'status.json', {'status': 'failed', 'message': 'Extraction failed; inspect the private worker log.'})
@@ -80,6 +81,13 @@ class Handler(BaseHTTPRequestHandler):
 
             return self.reply(404, {'error': 'Not found'})
         try:
+            selection = self.headers.get('X-Floorplan-Pages', '')
+            selected = [int(page.strip()) for page in selection.split(',')] if selection else None
+            if selected and (len(selected) > 12 or len(set(selected)) != len(selected) or any(page < 1 or page > 1000 for page in selected)):
+                raise ValueError('Invalid page selection')
+        except ValueError:
+            return self.reply(400, {'error': 'Select up to 12 distinct page numbers'})
+        try:
             size = int(self.headers.get('Content-Length', '0'))
         except ValueError:
             return self.reply(400, {'error': 'Invalid content length'})
@@ -97,6 +105,7 @@ class Handler(BaseHTTPRequestHandler):
         directory.mkdir(parents=True, mode=0o700)
         source = directory / ('source' + suffix)
         source.write_bytes(body)
+        write(directory / 'selection.json', selected)
         write(directory / 'status.json', {'status': 'queued'})
         EXECUTOR.submit(work, directory, source)
         self.reply(202, {'id': job, 'sha256': hashlib.sha256(body).hexdigest()})

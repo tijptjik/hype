@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import server
 
-def extract_fixture(source, output, codex):
+def extract_fixture(source, output, codex, selected_pages=None):
     from PIL import Image
     Image.new('RGB',(100,100),'white').save(output/'page-1.png')
     floor={'id':'fixture-floor','label':'Integration test floor','page':1,'width':100,'height':100,'boundary':[[0,0],[100,0],[100,100],[0,100],[0,0]],'warnings':[],'units':[{'id':'fixture-room','label':'Integration room','category':'room','polygon':[[0,0],[100,0],[100,100],[0,100],[0,0]],'confidence':1,'evidence':'Synthetic integration fixture; not building evidence.'}]}

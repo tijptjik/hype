@@ -19,7 +19,7 @@ class WorkerTests(unittest.TestCase):
             server.ROOT = Path(state)
             server.TOKEN = 'synthetic-test-token'
             calls = []
-            def fake_extract(source, output, codex):
+            def fake_extract(source, output, codex, selected_pages=None):
                 calls.append(source.read_bytes())
                 if len(calls) == 1:
                     raise ValueError('synthetic first-attempt failure')

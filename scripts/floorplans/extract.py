@@ -8,7 +8,7 @@ from pathlib import Path
 import subprocess
 
 
-def extract(source: Path, output: Path, codex: str):
+def extract(source: Path, output: Path, codex: str, selected_pages=None):
     """Retain source hash, page images and raw structured extraction for review."""
     output.mkdir(parents=True, exist_ok=True)
     source = source.resolve()
@@ -18,11 +18,16 @@ def extract(source: Path, output: Path, codex: str):
     if source.suffix.lower() == '.pdf':
         info = subprocess.run(['pdfinfo', str(source)], check=True, capture_output=True, text=True).stdout
         pages = int(next(line.split(':')[1] for line in info.splitlines() if line.startswith('Pages:')))
-        if pages > 12:
-            raise ValueError('Choose at most 12 PDF pages per review')
-        subprocess.run(['pdftoppm', '-scale-to', '2400', '-png', str(source), str(output / 'page')], check=True, timeout=180)
-        images = sorted(output.glob('page-*.png'), key=lambda page: int(page.stem.split('-')[1]))
+        selected_pages = selected_pages or list(range(1, pages + 1))
+        if len(selected_pages) > 12 or any(page < 1 or page > pages for page in selected_pages):
+            raise ValueError('Choose up to 12 existing PDF pages')
+        for index, page in enumerate(selected_pages, 1):
+            target = output / f'page-{index}'
+            subprocess.run(['pdftoppm', '-f', str(page), '-l', str(page), '-singlefile', '-scale-to', '2400', '-png', str(source), str(target)], check=True, timeout=180)
+            images.append(target.with_suffix('.png'))
     else:
+        if selected_pages and selected_pages != [1]:
+            raise ValueError('Images have only one page')
         from PIL import Image
         Image.MAX_IMAGE_PIXELS = 50000000
         with Image.open(source) as image:
@@ -55,6 +60,7 @@ def extract(source: Path, output: Path, codex: str):
     result = json.loads((output / 'extraction.json').read_text())
     (output / 'receipt.json').write_text(json.dumps({
         'sourceName': source.name, 'sourceSha256': hashlib.sha256(source.read_bytes()).hexdigest(),
+        'sourcePages': selected_pages or [1],
         'promptSha256': hashlib.sha256(prompt.encode()).hexdigest(), 'pages': sizes,
         'status': 'needs-review', 'floorCount': len(result['floors']),
     }, indent=2))

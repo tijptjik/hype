@@ -38,13 +38,18 @@ export async function floorplanWorker(
   }
   if (!env.FLOORPLAN_WORKER_URL || !env.FLOORPLAN_WORKER_TOKEN)
     error(503, 'Floor-plan extraction worker is not configured.')
-  const url = new URL(path, env.FLOORPLAN_WORKER_URL)
+  // Preserve the private reverse proxy prefix when resolving a worker resource.
+  const url = new URL(
+    path.replace(/^\/+/, ''),
+    env.FLOORPLAN_WORKER_URL.replace(/\/?$/, '/'),
+  )
   const response = await fetch(url, {
     ...init,
     redirect: 'error',
     signal: AbortSignal.timeout(60000),
     headers: {
       ...init.headers,
+      'User-Agent': 'HYPE-Floorplans/1.0',
       Authorization: 'Bearer ' + env.FLOORPLAN_WORKER_TOKEN,
     },
   })
