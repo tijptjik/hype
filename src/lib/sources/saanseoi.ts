@@ -107,8 +107,10 @@ export async function fetchSaanseoiProjection<T extends { id: string }>(
   )
   if (!files.length) throw new Error('No JSON array representation')
   const records: T[] = []
-  // Only expose data after every pinned chunk passes integrity and schema validation.
-  for (const file of files) {
+  /** Validate one release-pinned file before exposing its records.
+   * @param file Manifest entry. @returns Records in their published order.
+   */
+  const readChunk = async (file: (typeof files)[number]): Promise<T[]> => {
     const href = resolveSourceChunkUrl(file.href, url)
     if (!['http:', 'https:'].includes(href.protocol) || href.username || href.password)
       throw new Error('Invalid source URL')
@@ -134,7 +136,14 @@ export async function fetchSaanseoiProjection<T extends { id: string }>(
         return rows
       },
     )
-    records.push(...z.array(schema).parse(rows))
+    return z.array(schema).parse(rows)
+  }
+  // Only expose data after every pinned chunk passes integrity and schema validation.
+  // A cold browser preview reads the full building inventory, which spans hundreds of independent files.
+  const width = typeof window !== 'undefined' && manifest.family === 'buildings' ? 6 : 1
+  for (let start = 0; start < files.length; start += width) {
+    const chunks = await Promise.all(files.slice(start, start + width).map(readChunk))
+    for (const chunk of chunks) records.push(...chunk)
   }
   if (
     (!options.id && records.length !== manifest.recordCount) ||
