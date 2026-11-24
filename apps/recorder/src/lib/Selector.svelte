@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { t } from './i18n'
 // TYPES
 import type { RecorderOption } from '../../../../src/lib/fieldResearch/recorder'
 
@@ -27,15 +29,15 @@ function step(direction: number): void {
 </script>
 
 <label
-  class="relative grid min-h-20 min-w-0 content-center gap-1 rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 focus-within:border-slate-300"
+  class="border-line bg-panel focus-within:border-accent relative grid min-h-20 min-w-0 content-center gap-1 rounded-2xl border px-4 py-3"
 >
-  <span class="text-xs font-medium text-slate-400">{label}</span>
+  <span class="text-muted text-xs font-medium">{label}</span>
   <span class="flex items-center justify-between gap-3 font-semibold">
     <span class="min-w-0 break-words"
       >{options.find(option => option.id === value)?.name ??
-        `Choose ${label.toLowerCase()}`}</span
+        t('choose_field', { field: label.toLowerCase() })}</span
     >
-    <span aria-hidden="true" class="text-slate-400">⌄</span>
+    <span aria-hidden="true" class="text-muted">⌄</span>
   </span>
   <select
     bind:this={select}
@@ -73,7 +75,9 @@ function step(direction: number): void {
     }}
   >
     {#if !value}
-      <option value="" disabled>Choose {label.toLowerCase()}</option>
+      <option value="" disabled>
+        {t('choose_field', { field: label.toLowerCase() })}
+      </option>
     {/if}
     {#each options as option (option.id)}
       <option value={option.id}>{option.name}</option>

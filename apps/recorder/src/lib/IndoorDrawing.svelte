@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { t } from './i18n'
 // DOMAIN
 import { connectionAnchor } from '../../../../src/lib/indoor/connectionEditor'
 import { initialLevel, value, type IndoorData } from '../../../../src/lib/indoor/model'
@@ -111,14 +113,14 @@ function pick(event: MouseEvent): void {
 function selectPoint(point: MapPoint): void {
   if (!onpick || !floor) return
   if (!contains(point, floor)) {
-    hint = 'Tap inside the floor outline.'
+    hint = t('tap_inside_the_floor_outline')
     return
   }
   const room = rooms.find(
     f => assigned.has(value(f.properties, 'unit_id')) && contains(point, f),
   )
   if (!room && selectedUnits.size) {
-    hint = 'Tap a highlighted building part.'
+    hint = t('tap_a_highlighted_building_part')
     return
   }
   hint = ''
@@ -130,26 +132,26 @@ function selectPoint(point: MapPoint): void {
 </script>
 
 {#if failed}
-  <p role="alert">Could not load this floor plan.</p>
+  <p role="alert">{t('could_not_load_this_floor_plan')}</p>
   <button
     type="button"
-    class="min-h-12 rounded-xl border border-slate-700"
+    class="border-line min-h-12 rounded-xl border"
     onclick={() => attempt++}
   >
-    Retry floor plan
+    {t('retry_floor_plan')}
   </button>
 {:else if !data || !projection || !floor}
   <div
-    class="h-72 animate-pulse rounded-xl bg-slate-800"
+    class="bg-surface h-72 animate-pulse rounded-xl"
     role="status"
-    aria-label="Loading floor plan"
+    aria-label={t('loading_floor_plan')}
   ></div>
 {:else}
-  <label class="grid min-w-0 gap-1 text-sm text-slate-300"
-    >Floor
+  <label class="text-muted grid min-w-0 gap-1 text-sm"
+    >{t('floor')}
     <select
       value={floorId}
-      class="min-h-12 w-full min-w-0 rounded-xl bg-slate-900 px-3"
+      class="bg-panel min-h-12 w-full min-w-0 rounded-xl px-3"
       onchange={event => {
         chosenFloor = event.currentTarget.value
         zoom = 1
@@ -166,14 +168,14 @@ function selectPoint(point: MapPoint): void {
     </select>
   </label>
   <div class="relative">
-    <div class="h-[46dvh] min-h-64 overflow-auto rounded-xl bg-slate-950">
+    <div class="bg-canvas h-[46dvh] min-h-64 overflow-auto rounded-xl">
       <!-- The role becomes a keyboard-operable button when pin placement is enabled. -->
       <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
       <svg
         bind:this={svg}
         role={onpick ? 'button' : 'img'}
         tabindex={onpick ? 0 : undefined}
-        aria-label="Floor plan"
+        aria-label={t('floor_plan')}
         onclick={pick}
         onkeydown={event => {
           if ((event.key === 'Enter' || event.key === ' ') && floor && projection) {
@@ -191,16 +193,12 @@ function selectPoint(point: MapPoint): void {
           box[2] + 2 * margin,
           box[3] + 2 * margin,
         ].join(' ')}
-        style={'width:' +
-          zoom * 100 +
-          '%;height:' +
-          zoom * 100 +
-          '%;--station-room:#475569;--station-paid:#334155;--station-unpaid:#1e293b;--station-connector-fill:#9d8460'}
+        style={'width:' + zoom * 100 + '%;height:' + zoom * 100 + '%'}
       >
         <path
           d={projection.path(floor)}
-          fill="#253349"
-          stroke="#94a3b8"
+          fill="var(--station-paper)"
+          stroke="var(--station-edge)"
           vector-effect="non-scaling-stroke"
           fill-rule="evenodd"
         />
@@ -209,12 +207,12 @@ function selectPoint(point: MapPoint): void {
           <path
             d={projection.path(room)}
             fill={selectedUnits.has(id)
-              ? '#0891b2'
+              ? 'var(--station-accent)'
               : assigned.has(id)
-                ? '#0e7490'
+                ? 'var(--station-connector)'
                 : stationFill(room)}
             fill-rule="evenodd"
-            stroke="#a0aec0"
+            stroke="var(--station-edge)"
             stroke-width="0.8"
             vector-effect="non-scaling-stroke"
           />
@@ -223,7 +221,7 @@ function selectPoint(point: MapPoint): void {
           <path
             d={projection.path(door)}
             fill="none"
-            stroke="#e2e8f0"
+            stroke="var(--station-ink)"
             vector-effect="non-scaling-stroke"
           />
         {/each}
@@ -244,8 +242,8 @@ function selectPoint(point: MapPoint): void {
       {#each [-1, 1] as direction}
         <button
           type="button"
-          aria-label={direction < 0 ? 'Zoom out' : 'Zoom in'}
-          class="size-11 rounded-lg bg-slate-800"
+          aria-label={direction < 0 ? t('zoom_out') : t('zoom_in')}
+          class="bg-surface size-11 rounded-lg"
           disabled={direction < 0 ? zoom <= 1 : zoom >= 8}
           onclick={() => (zoom = zoom * (direction < 0 ? 0.5 : 2))}
         >
@@ -258,6 +256,6 @@ function selectPoint(point: MapPoint): void {
     <p role="status">{hint}</p>
   {/if}
   {#if data.source}
-    <small class="text-slate-400">{data.source}</small>
+    <small class="text-muted">{data.source}</small>
   {/if}
 {/if}

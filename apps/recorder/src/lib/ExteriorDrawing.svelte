@@ -1,6 +1,8 @@
 <script lang="ts">
 // SVELTE
 import { onMount } from 'svelte'
+// I18N
+import { t } from './i18n'
 // MAP
 import { Map as StreetMap, Marker, NavigationControl, LngLatBounds } from 'maplibre-gl'
 import { loadMapLibre } from '../../../../src/lib/map/maplibreAssets'
@@ -36,6 +38,15 @@ onMount(() => {
           visible[0] ?? [114.17, 22.31]
         instance = new StreetMap({
           container,
+          locale: {
+            'Map.Title': t('map'),
+            'Map.Description': t('map_description'),
+            'Marker.Title': t('marker'),
+            'NavigationControl.ZoomIn': t('zoom_in'),
+            'NavigationControl.ZoomOut': t('zoom_out'),
+            'NavigationControl.ResetBearing': t('reset_bearing_to_north'),
+            'AttributionControl.ToggleAttribution': t('toggle_attribution'),
+          },
           center: centre,
           zoom: visible.length || point ? 18 : 10,
           style: {
@@ -49,7 +60,9 @@ onMount(() => {
                 tileSize: 256,
                 maxzoom: 19,
                 attribution:
-                  '© <a href="https://api.portal.hkmapservice.gov.hk/disclaimer" target="_blank" rel="noopener">Lands Department</a>',
+                  '© <a href="https://api.portal.hkmapservice.gov.hk/disclaimer" target="_blank" rel="noopener">' +
+                  t('lands_department') +
+                  '</a>',
               },
             },
             layers: [{ id: 'streets', type: 'raster', source: 'streets' }],
@@ -63,7 +76,7 @@ onMount(() => {
         }
         instance.addControl(new NavigationControl({ showCompass: false }))
         instance.on('error', () => {
-          problem = 'Some street tiles could not load.'
+          problem = t('some_street_tiles_could_not_load')
         })
         instance.on('sourcedata', event => {
           if (event.sourceId === 'streets' && event.sourceDataType === 'content')
@@ -75,11 +88,11 @@ onMount(() => {
         })
         map = instance
       } catch {
-        problem = 'The street map could not start on this device.'
+        problem = t('the_street_map_could_not_start_on_this_device')
       }
     })
     .catch(() => {
-      if (!disposed) problem = 'The street map could not start on this device.'
+      if (!disposed) problem = t('the_street_map_could_not_start_on_this_device')
     })
   return () => {
     disposed = true
@@ -94,8 +107,11 @@ $effect(() => {
     element.type = 'button'
     element.textContent = '●'
     element.className =
-      'grid size-10 place-items-center rounded-full text-xl text-cyan-950'
-    element.style.background = place.id === locationId ? '#67e8f9' : '#e2e8f0'
+      'grid size-10 place-items-center rounded-full text-xl text-on-accent'
+    element.style.background =
+      place.id === locationId ? 'var(--theme-primary)' : 'var(--theme-surface)'
+    element.style.color =
+      place.id === locationId ? 'var(--theme-on-primary)' : 'var(--theme-text)'
     element.setAttribute('aria-label', place.name)
     element.onclick = event => {
       event.stopPropagation()
@@ -115,8 +131,8 @@ $effect(() => {
 </script>
 <section
   bind:this={container}
-  aria-label="Exterior map"
-  class="h-[46dvh] min-h-64 rounded-xl bg-slate-800"
+  aria-label={t('exterior_map')}
+  class="bg-surface h-[46dvh] min-h-64 rounded-xl"
 ></section>
 {#if problem}
   <small role="status">{problem}</small>

@@ -1,4 +1,6 @@
 <script lang="ts">
+// I18N
+import { t } from './i18n'
 // COMPONENTS
 import IndoorDrawing from './IndoorDrawing.svelte'
 import ExteriorDrawing from './ExteriorDrawing.svelte'
@@ -77,10 +79,10 @@ function choose(id: string, point: RecorderPin | null): void {
       }
     }}
   />
-  <label class="grid min-w-0 gap-1 text-sm text-slate-300"
-    >Location
+  <label class="text-muted grid min-w-0 gap-1 text-sm"
+    >{t('location')}
     <select
-      class="min-h-12 w-full min-w-0 rounded-xl bg-slate-900 px-3"
+      class="bg-panel min-h-12 w-full min-w-0 rounded-xl px-3"
       value={activeId}
       onchange={event => choose(event.currentTarget.value, null)}
     >
@@ -93,10 +95,10 @@ function choose(id: string, point: RecorderPin | null): void {
 {#if (record?.spatialRealm ?? realm) === 'interior'}
   {#if map}
     {#if !record && new Set(maps.map(row => row.id)).size > 1}
-      <label class="grid min-w-0 gap-1 text-sm text-slate-300"
-        >Drawing
+      <label class="text-muted grid min-w-0 gap-1 text-sm"
+        >{t('drawing')}
         <select
-          class="min-h-12 w-full min-w-0 rounded-xl bg-slate-900"
+          class="bg-panel min-h-12 w-full min-w-0 rounded-xl"
           value={map.id}
           onchange={event => {
             choose(activeId, null)
@@ -121,7 +123,7 @@ function choose(id: string, point: RecorderPin | null): void {
       onpick={record ? undefined : (point, id) => choose(id, point)}
     />
   {:else}
-    <p role="status">No published floor plan is linked to this location.</p>
+    <p role="status">{t('no_published_floor_plan_is_linked_to_this_location')}</p>
   {/if}
 {:else}
   <ExteriorDrawing
@@ -135,16 +137,16 @@ function choose(id: string, point: RecorderPin | null): void {
 {/if}
 {#if !record}
   {#if (map && realm === 'interior') || realm === 'exterior'}
-    <p class="text-sm text-slate-300">
-      {currentPin ? 'Pin placed.' : 'Tap the map to place a pin.'}
+    <p class="text-muted text-sm">
+      {currentPin ? t('pin_placed') : t('tap_the_map_to_place_a_pin')}
     </p>
   {/if}
   <button
     type="button"
     disabled={!activeId}
-    class="min-h-14 rounded-xl bg-white font-semibold text-black"
+    class="bg-accent text-on-accent min-h-14 rounded-xl font-semibold"
     onclick={() => onuse(activeId, currentPin)}
   >
-    Use location
+    {t('use_location')}
   </button>
 {/if}

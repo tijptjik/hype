@@ -1,6 +1,8 @@
 // TAURI
 import { fetch as nativeFetch } from '@tauri-apps/plugin-http'
 import { openUrl } from '@tauri-apps/plugin-opener'
+// I18N
+import { t } from './i18n'
 
 const origin =
   import.meta.env.VITE_RECORDER_DEBUG === 'true'
@@ -20,8 +22,8 @@ function requestDeadline(signal?: AbortSignal): AbortSignal {
 
 export const connectionHint =
   import.meta.env.VITE_RECORDER_DEBUG === 'true'
-    ? 'Could not reach HYPE on Fi. Check Tailscale and try again.'
-    : 'Could not reach HYPE. Check your connection and try again.'
+    ? t('could_not_reach_hype_on_fi_check_tailscale_and_try_again')
+    : t('could_not_reach_hype_check_your_connection_and_try_again')
 
 /**
  * Forwards SvelteKit's generated requests from the local bundle to the HYPE runtime.
@@ -90,7 +92,7 @@ export async function connect(
   ).catch(() => {
     throw new Error(connectionHint)
   })
-  if (!response.ok) throw new Error('Could not start sign-in. Try again.')
+  if (!response.ok) throw new Error(t('could_not_start_sign_in_try_again'))
   const grant = await response.json()
   showCode(grant.user_code)
   const expires = Date.now() + grant.expires_in * 1000
@@ -121,17 +123,17 @@ export async function connect(
     else if (data.error !== 'authorization_pending') {
       throw new Error(
         data.error === 'access_denied'
-          ? 'Connection declined.'
-          : 'Sign-in expired. Try again.',
+          ? t('connection_declined')
+          : t('sign_in_expired_try_again'),
       )
     }
   }
-  throw new Error('Sign-in expired. Try again.')
+  throw new Error(t('sign_in_expired_try_again'))
 }
 
 /** @returns Once HYPE revokes this device session. */
 export async function disconnect(): Promise<void> {
   const response = await authRequest('sign-out', {})
   if (!response.ok)
-    throw new Error('Could not sign out. Check your connection and try again.')
+    throw new Error(t('could_not_sign_out_check_your_connection_and_try_again'))
 }

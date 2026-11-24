@@ -1,8 +1,23 @@
 @import "tailwindcss" source("./");
+@import "../../../src/lib/styles/themes.css";
+@import "../../../src/lib/styles/station.css";
+
+@theme inline {
+  --color-canvas: var(--theme-canvas);
+  --color-panel: var(--theme-panel);
+  --color-surface: var(--theme-surface);
+  --color-raised: var(--theme-raised);
+  --color-ink: var(--theme-text);
+  --color-muted: var(--theme-muted);
+  --color-line: var(--theme-border);
+  --color-accent: var(--theme-primary);
+  --color-on-accent: var(--theme-on-primary);
+  --color-danger: var(--theme-error);
+}
 
 :root {
-  color-scheme: dark;
-  background: #08090e;
-  color: #f9fafb;
+  background: var(--theme-canvas);
+  color: var(--theme-text);
   font-family: Inter, system-ui, sans-serif;
+  accent-color: var(--theme-primary);
 }
