@@ -131,12 +131,23 @@ export async function journal(db: D1Database): Promise<Journal | null> {
     )
     .first<Journal>()
 }
+/** Check a complete batch before it can reach the hosted binding.
+ * @param statements SQL and bound values for this transaction.
+ * @returns Whether the statement, parameter and serialized request budgets fit.
+ * @remarks Leave headroom for the binding RPC envelope and maintenance guards.
+ */
+export function withinAtomicBudget(statements: Statement[]): boolean {
+  return (
+    statements.length <= 950 &&
+    statements.every(
+      s => Buffer.byteLength(s.sql) <= 95_000 && s.params.length <= 100,
+    ) &&
+    Buffer.byteLength(JSON.stringify(statements)) <= 16 * 1024 * 1024
+  )
+}
 /** Execute a whole unit transactionally, never splitting a domain or migration batch. @param db Target binding. @param statements Complete unit. @returns Successful completion. */
 export async function atomic(db: D1Database, statements: Statement[]): Promise<void> {
-  if (
-    statements.length > 950 ||
-    statements.some(s => Buffer.byteLength(s.sql) > 95_000 || s.params.length > 100)
-  )
+  if (!withinAtomicBudget(statements))
     throw new Error(
       'Atomic unit exceeds rollout limits; restructure and rehearse before deployment',
     )

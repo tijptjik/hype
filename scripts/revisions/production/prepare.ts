@@ -24,7 +24,7 @@ import { registerImageRevisionBaseline } from '../../../src/lib/db/services/imag
 import { enrollResourceLogo } from '../../../src/lib/db/services/resourceLogoRevision'
 // ROLLOUT
 import { rehearseFeatureLifecycle } from '../../dev/feature-lifecycle/rehearse'
-import { prepareLifecycleSchemaGroup } from './lifecycle-schema'
+import { prepareLifecycleSchemaGroup, stageLifecyclePayloads } from './lifecycle-schema'
 import { matchingBrandingHash, prepareMatchingBranding } from './matching-branding'
 import { prepareRevisionIdlePolicy } from './revision-idle-policy'
 import {
@@ -46,6 +46,7 @@ import {
   fingerprint,
   identifier,
   schemaFingerprint,
+  withinAtomicBudget,
 } from './contract'
 // TYPES
 import type { Group, Plan, Statement } from './contract'
@@ -412,8 +413,10 @@ export async function prepareRelease(
       const targetSnapshot = new SQLite(converted, { readonly: true })
       try {
         const group = prepareLifecycleSchemaGroup(d.sqlite, targetSnapshot)
-        await atomic(d.binding, group.statements)
-        groups.push(group)
+        for (const unit of stageLifecyclePayloads(group, tables(d))) {
+          await atomic(d.binding, unit.statements)
+          groups.push(unit)
+        }
         for (const table of tables(d)) {
           const expectedRows = fingerprint(
             targetSnapshot.query(`SELECT * FROM ${identifier(table)}`).all() as Record<
@@ -476,10 +479,7 @@ export async function prepareRelease(
         ...group.statements,
         ...(group.tables ? fences(group.fenceTables ?? group.tables) : []),
       ]
-      if (
-        all.length + 4 > 950 ||
-        all.some(s => Buffer.byteLength(s.sql) > 95_000 || s.params.length > 100)
-      )
+      if (all.length + 4 > 950 || !withinAtomicBudget(all))
         throw new Error(`Oversized atomic unit: ${group.label}`)
     }
     const plan: Plan = {

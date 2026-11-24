@@ -258,3 +258,79 @@ export function prepareLifecycleSchemaGroup(before: Database, after: Database): 
     )
   return { label: 'feature-lifecycle-schema', statements, tables, fenceTables }
 }
+
+/**
+ * Stage large bound JSON arrays under the deployment fence before switching schema.
+ * @param replacement Atomic table, trigger and revision-head replacement.
+ * @param beforeTables Tables protected before the lifecycle schema switch.
+ * @returns Journaled transport groups followed by one atomic schema switch.
+ */
+export function stageLifecyclePayloads(
+  replacement: Group,
+  beforeTables: string[],
+): Group[] {
+  const limit = 4 * 1024 * 1024
+  if (Buffer.byteLength(JSON.stringify(replacement.statements)) <= limit)
+    return [replacement]
+  const table = 'revisionLifecyclePayload'
+  if (beforeTables.includes(table) || replacement.tables?.includes(table))
+    throw new Error('Lifecycle payload table already exists')
+  const groups: Group[] = [
+    {
+      label: 'feature-lifecycle-stage-create',
+      statements: [
+        {
+          sql: `CREATE TABLE ${table}(slot INTEGER PRIMARY KEY, payload TEXT NOT NULL CHECK(json_valid(payload)))`,
+          params: [],
+        },
+      ],
+      tables: [...beforeTables, table],
+      fenceTables: [table],
+    },
+  ]
+  let batch: Statement[] = [],
+    bytes = 0,
+    slots = 0
+  const flush = (): void => {
+    if (batch.length)
+      groups.push({
+        label: `feature-lifecycle-stage-${groups.length}`,
+        statements: batch,
+      })
+    batch = []
+    bytes = 0
+  }
+  // Only the generator's single bound JSON array is replaced by a staged lookup.
+  const statements = replacement.statements.map(statement => {
+    if (
+      statement.params.length !== 1 ||
+      typeof statement.params[0] !== 'string' ||
+      !statement.sql.includes('json_each(?)')
+    )
+      return statement
+    const slot = ++slots
+    const insert = {
+      sql: `INSERT INTO ${table}(slot,payload) VALUES(?,?)`,
+      params: [slot, statement.params[0]],
+    }
+    const size = Buffer.byteLength(JSON.stringify(insert)) + 1
+    if (size > limit)
+      throw new Error('Lifecycle staging value exceeds transport budget')
+    if (bytes + size > limit) flush()
+    batch.push(insert)
+    bytes += size
+    return {
+      sql: statement.sql.replace(
+        'json_each(?)',
+        `json_each((SELECT payload FROM ${table} WHERE slot=?))`,
+      ),
+      params: [slot],
+    }
+  })
+  flush()
+  if (!slots) throw new Error('Oversized lifecycle batch has no stageable JSON')
+  statements.unshift(guard(`(SELECT count(*) FROM ${table})=?`, [slots]))
+  statements.push({ sql: `DROP TABLE ${table}`, params: [] })
+  groups.push({ ...replacement, statements })
+  return groups
+}

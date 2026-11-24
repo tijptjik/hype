@@ -73,3 +73,4 @@ spec/breadline/Breadline v4 - Scope of Work.pdf
 
 # Managed validation harness generated outside the application source.
 /.dotjik-runner/
+/project.inlang/cache/paraglide-js/

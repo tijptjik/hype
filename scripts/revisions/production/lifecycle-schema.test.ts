@@ -7,7 +7,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 // DEPLOYMENT
-import { prepareLifecycleSchemaGroup } from './lifecycle-schema'
+import { prepareLifecycleSchemaGroup, stageLifecyclePayloads } from './lifecycle-schema'
 import {
   atomic,
   applyGroups,
@@ -129,6 +129,56 @@ test('rejects oversized retained rows before creating a deployment group', () =>
     expect(d.sqlite.query('SELECT * FROM featureRevisionImage').all()).toEqual([
       { id: 'pin', revisionId: 'r' },
     ])
+  } finally {
+    d.close()
+    after.close()
+  }
+})
+
+test('stages large revision payloads under a resumable fence and switches schema atomically', async () => {
+  const { d, after } = fixture()
+  try {
+    after.exec('ALTER TABLE featureRevision ADD COLUMN evidence TEXT')
+    for (let i = 0; i < 9; i++)
+      after
+        .query(
+          'INSERT INTO featureRevision(id,featureId,sequence,evidence) VALUES(?,?,?,?)',
+        )
+        .run('r' + i, 'f', i + 1, 'x'.repeat(600_000))
+    const replacement = prepareLifecycleSchemaGroup(d.sqlite, after)
+    const tables = replacement.tables!
+    const groups = stageLifecyclePayloads(replacement, tables)
+    expect(groups.length).toBeGreaterThan(3)
+    const plan = {
+      version: 1,
+      target: 'test',
+      groups,
+      initial: Object.fromEntries(tables.map(t => [t, {}])),
+      sourceHash: 'stage-test',
+    } as unknown as Plan
+    await pause(d.binding, plan)
+    await applyGroups(d.binding, plan, 2)
+    expect(() => d.sqlite.exec('DELETE FROM revisionLifecyclePayload')).toThrow(
+      'MAINTENANCE',
+    )
+    await pause(d.binding, plan)
+    expect(d.sqlite.query('SELECT count(*) AS n FROM featureRevision').get()).toEqual({
+      n: 1,
+    })
+    await applyGroups(d.binding, plan)
+    expect(
+      d.sqlite
+        .query(
+          'SELECT count(*) AS n FROM featureRevision WHERE length(evidence)=600000',
+        )
+        .get(),
+    ).toEqual({ n: 9 })
+    expect(
+      d.sqlite
+        .query("SELECT name FROM sqlite_schema WHERE name='revisionLifecyclePayload'")
+        .get(),
+    ).toBeNull()
+    expect(d.sqlite.query('PRAGMA foreign_key_check').all()).toEqual([])
   } finally {
     d.close()
     after.close()
