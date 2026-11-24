@@ -52,7 +52,6 @@ import {
 } from '#lib/client/services/map.js'
 import MapCanvas from '#lib/bits/patterns/maps/LazyMapCanvas.svelte'
 import StationSurface from '#lib/bits/patterns/station/StationSurface.svelte'
-import StationPanel from '#lib/bits/patterns/station/StationPanel.svelte'
 import { useResourcePanelModel } from '#lib/adapters/panels/useResourcePanelModel.svelte.js'
 // import Plan from '#lib/bits/patterns/planPanel/PlanPanel.svelte'
 // import Passport from '#lib/bits/patterns/passportPanel/PassportPanel.svelte'
@@ -69,7 +68,7 @@ import {
 // ENUMS
 import { PageState } from '#lib/enums.js'
 // BITS COMPONENTS
-import PanelLoadingState from '#lib/bits/patterns/panels/PanelLoadingState.svelte'
+import { publicPanelModules } from '#lib/bits/patterns/panels/publicPanelModules.js'
 // TYPES
 import type { LayoutData, LayoutProps } from '../(app)/$types'
 
@@ -141,65 +140,6 @@ $effect(() => {
 let isMapVisualReady = $state(false)
 let hasCompletedMapIntro = $state(false)
 
-type SettingsPanelComponent =
-  typeof import('#lib/bits/patterns/settingsPanel/SettingsPanel.svelte').default
-type ProfilePanelComponent =
-  typeof import('#lib/bits/patterns/profilePanel/ProfilePanel.svelte').default
-
-let SettingsPanel = $state<SettingsPanelComponent | null>(null)
-let ProfilePanel = $state<ProfilePanelComponent | null>(null)
-let settingsPanelLoadError = $state<unknown>(null)
-let profilePanelLoadError = $state<unknown>(null)
-let settingsPanelPromise: Promise<SettingsPanelComponent> | null = null
-let profilePanelPromise: Promise<ProfilePanelComponent> | null = null
-
-/** Loads the settings panel once, retaining the component for subsequent opens. */
-function loadSettingsPanel(): Promise<SettingsPanelComponent> {
-  settingsPanelPromise ??= import(
-    '#lib/bits/patterns/settingsPanel/SettingsPanel.svelte'
-  )
-    .then(module => {
-      SettingsPanel = module.default
-      settingsPanelLoadError = null
-
-      return module.default
-    })
-    .catch(error => {
-      settingsPanelPromise = null
-      settingsPanelLoadError = error
-
-      throw error
-    })
-
-  return settingsPanelPromise
-}
-
-/** Loads the profile panel once, retaining the component for subsequent opens. */
-function loadProfilePanel(): Promise<ProfilePanelComponent> {
-  profilePanelPromise ??= import('#lib/bits/patterns/profilePanel/ProfilePanel.svelte')
-    .then(module => {
-      ProfilePanel = module.default
-      profilePanelLoadError = null
-
-      return module.default
-    })
-    .catch(error => {
-      profilePanelPromise = null
-      profilePanelLoadError = error
-
-      throw error
-    })
-
-  return profilePanelPromise
-}
-
-$effect(() => {
-  if (settingsModel.open) void loadSettingsPanel().catch(() => {})
-})
-
-$effect(() => {
-  if (profileShell.open) void loadProfilePanel().catch(() => {})
-})
 // Reapply the opening guard on viewport resize while preserving the newest panel.
 $effect(() => {
   const width = responsiveCtx.window.width
@@ -659,38 +599,24 @@ $effect(() => {
       <StationSurface />
       <!-- Panels -->
       {#if appCtx.station.active}
-        <StationPanel model={prismsModel} />
-      {:else}
-        <DeferredPanel
-          active={prismsModel.open}
-          load={() => import('#lib/bits/patterns/resourcePanel/ResourcePanel.svelte')}
-        >
-          {#snippet pending()}
-            <PanelLoadingState panel={prismsModel.panel} />
+        <DeferredPanel active={prismsModel.open} load={publicPanelModules.station}>
+          {#snippet children(StationPanel)}
+            <StationPanel model={prismsModel} />
           {/snippet}
+        </DeferredPanel>
+      {:else}
+        <DeferredPanel active={prismsModel.open} load={publicPanelModules.prisms}>
           {#snippet children(ResourcePanel)}
             <ResourcePanel model={prismsModel} />
           {/snippet}
         </DeferredPanel>
       {/if}
-      <DeferredPanel
-        active={starsShell.open}
-        load={() => import('#lib/bits/patterns/starsPanel/StarsPanel.svelte')}
-      >
-        {#snippet pending()}
-          <PanelLoadingState panel={starsShell.panel} />
-        {/snippet}
+      <DeferredPanel active={starsShell.open} load={publicPanelModules.stars}>
         {#snippet children(Stars)}
           <Stars shell={starsShell} model={starsModel} />
         {/snippet}
       </DeferredPanel>
-      <DeferredPanel
-        active={hubShell.open}
-        load={() => import('#lib/bits/patterns/hubPanel/HubPanel.svelte')}
-      >
-        {#snippet pending()}
-          <PanelLoadingState panel={hubShell.panel} />
-        {/snippet}
+      <DeferredPanel active={hubShell.open} load={publicPanelModules.hub}>
         {#snippet children(Hub)}
           <Hub
             shell={hubShell}
@@ -703,13 +629,7 @@ $effect(() => {
           />
         {/snippet}
       </DeferredPanel>
-      <DeferredPanel
-        active={filtersShell.open}
-        load={() => import('#lib/bits/patterns/filtersPanel/FiltersPanel.svelte')}
-      >
-        {#snippet pending()}
-          <PanelLoadingState panel={filtersShell.panel} />
-        {/snippet}
+      <DeferredPanel active={filtersShell.open} load={publicPanelModules.filters}>
         {#snippet children(Filters)}
           <Filters shell={filtersShell} model={filtersModel} />
         {/snippet}
@@ -718,9 +638,6 @@ $effect(() => {
         active={navigationShell.open}
         load={() => import('#lib/bits/patterns/navigationPanel/NavigationPanel.svelte')}
       >
-        {#snippet pending()}
-          <PanelLoadingState panel={navigationShell.panel} />
-        {/snippet}
         {#snippet children(NavigationPanel)}
           <NavigationPanel shell={navigationShell} model={navigationModel} />
         {/snippet}
@@ -728,62 +645,23 @@ $effect(() => {
       <!-- <Plan /> -->
       <!-- <Passport /> -->
       <!-- <EventCompanion /> -->
-      {#if SettingsPanel}
-        <SettingsPanel model={settingsModel} />
-      {:else if settingsModel.open}
-        <div
-          data-app-intro-item="panel-right"
-          class="bits-theme bg-panel absolute top-0 right-0 z-50 flex h-full w-full max-w-[420px] items-center justify-center shadow-xl"
-          role="status"
-          aria-label={m.resource_loading()}
-        >
-          {#if settingsPanelLoadError}
-            <div class="max-w-xs p-6 text-center">
-              <p>{m.bootstrap__error()}</p>
-              <button
-                type="button"
-                class="bg-base-content text-base-100 mt-4 rounded-lg px-4 py-2"
-                onclick={() => void loadSettingsPanel().catch(() => {})}
-              >
-                {m.bootstrap__retry()}
-              </button>
-            </div>
-          {:else}
-            <span class="loading loading-ring loading-lg" aria-hidden="true"></span>
-            <span class="sr-only">{m.resource_loading()}</span>
-          {/if}
-        </div>
-      {/if}
-      {#if ProfilePanel}
-        <ProfilePanel
-          model={profileModel}
-          shell={profileShell}
-          bind:panelContainer={profilePanelContainer}
-        />
-      {:else if profileShell.open && profileModel.username}
-        <div
-          data-app-intro-item="panel-right"
-          class="bits-theme bg-panel absolute top-0 right-0 z-50 flex h-full w-full max-w-[420px] items-center justify-center shadow-xl"
-          role="status"
-          aria-label={m.resource_loading()}
-        >
-          {#if profilePanelLoadError}
-            <div class="max-w-xs p-6 text-center">
-              <p>{m.bootstrap__error()}</p>
-              <button
-                type="button"
-                class="bg-base-content text-base-100 mt-4 rounded-lg px-4 py-2"
-                onclick={() => void loadProfilePanel().catch(() => {})}
-              >
-                {m.bootstrap__retry()}
-              </button>
-            </div>
-          {:else}
-            <span class="loading loading-ring loading-lg" aria-hidden="true"></span>
-            <span class="sr-only">{m.resource_loading()}</span>
-          {/if}
-        </div>
-      {/if}
+      <DeferredPanel active={settingsModel.open} load={publicPanelModules.settings}>
+        {#snippet children(SettingsPanel)}
+          <SettingsPanel model={settingsModel} />
+        {/snippet}
+      </DeferredPanel>
+      <DeferredPanel
+        active={profileShell.open && Boolean(profileModel.username)}
+        load={() => import('#lib/bits/patterns/profilePanel/ProfilePanel.svelte')}
+      >
+        {#snippet children(ProfilePanel)}
+          <ProfilePanel
+            model={profileModel}
+            shell={profileShell}
+            bind:panelContainer={profilePanelContainer}
+          />
+        {/snippet}
+      </DeferredPanel>
       <AppMain>
         {#if navigationModel.showingMap && navigationModel.state.phase === 'ready'}
           <div

@@ -148,6 +148,11 @@ function getItemLabelClasses(item: AppMenuItem<T>): string {
       class="block self-center"
     />
   {/snippet}
+  {@const preload =
+    item.preload &&
+    (() => {
+      void item.preload?.().catch(() => {})
+    })}
   <!-- Shared help keeps compact navigation to one tooltip without remounting its buttons. -->
   <Button
     text={item.label}
@@ -156,7 +161,10 @@ function getItemLabelClasses(item: AppMenuItem<T>): string {
     color={item.color ?? (item.tone === 'secondary' ? 'secondary' : defaultButtonColor)}
     size="md"
     hideLabel={item.hideLabel || viewportState.isIconOnlyMenu}
+    onMouseEnter={preload}
+    onFocus={preload}
     attrs={{
+      onpointerdown: preload,
       'data-tooltip':
         item.hideLabel || viewportState.isIconOnlyMenu ? item.label : undefined,
     }}

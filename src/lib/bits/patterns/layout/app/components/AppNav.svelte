@@ -22,6 +22,7 @@ import { getResponsiveCtx } from '#lib/context/responsive.svelte.js'
 // ENUMS
 import { Panel } from '#lib/enums.js'
 // COMPONENTS
+import { publicPanelModules } from '#lib/bits/patterns/panels/publicPanelModules.js'
 import { AppMenu } from '#lib/bits/patterns/bars/appMenu/index.js'
 import PlusCircleIcon from 'virtual:icons/proicons/add-circle'
 import FunnelIcon from 'virtual:icons/proicons/filter'
@@ -91,6 +92,7 @@ const items = $derived<AppMenuItem<AppNavMenuValue>[]>(
     ? [
         {
           value: Panel.prisms,
+          preload: publicPanelModules.station,
           icon:
             station.metadata?.kind === 'building'
               ? BuildingIcon
@@ -110,20 +112,65 @@ const items = $derived<AppMenuItem<AppNavMenuValue>[]>(
               { value: ROUTE_MENU_VALUE, icon: RouteIcon, label: 'Route' },
             ] satisfies AppMenuItem<AppNavMenuValue>[])
           : []),
-        { value: Panel.settings, icon: SettingsIcon, label: m.menu_settings() },
+        {
+          value: Panel.settings,
+          preload: publicPanelModules.settings,
+          icon: SettingsIcon,
+          label: m.menu_settings(),
+        },
       ]
     : hub.isCore
       ? [
-          { value: Panel.prisms, icon: MapIcon, label: m.maps__title() },
-          { value: Panel.filters, icon: FunnelIcon, label: m.menu_filters() },
-          { value: Panel.stars, icon: StarIcon, label: m.menu_stars() },
-          { value: Panel.settings, icon: SettingsIcon, label: m.menu_settings() },
+          {
+            value: Panel.prisms,
+            preload: publicPanelModules.prisms,
+            icon: MapIcon,
+            label: m.maps__title(),
+          },
+          {
+            value: Panel.filters,
+            preload: publicPanelModules.filters,
+            icon: FunnelIcon,
+            label: m.menu_filters(),
+          },
+          {
+            value: Panel.stars,
+            preload: publicPanelModules.stars,
+            icon: StarIcon,
+            label: m.menu_stars(),
+          },
+          {
+            value: Panel.settings,
+            preload: publicPanelModules.settings,
+            icon: SettingsIcon,
+            label: m.menu_settings(),
+          },
         ]
       : [
-          { value: Panel.hub, icon: InformationCircleIcon, label: m.menu_about() },
-          { value: Panel.filters, icon: FunnelIcon, label: m.menu_filters() },
-          { value: Panel.stars, icon: StarIcon, label: m.menu_stars() },
-          { value: Panel.settings, icon: SettingsIcon, label: m.menu_settings() },
+          {
+            value: Panel.hub,
+            preload: publicPanelModules.hub,
+            icon: InformationCircleIcon,
+            label: m.menu_about(),
+          },
+          {
+            value: Panel.filters,
+            preload: publicPanelModules.filters,
+            icon: FunnelIcon,
+            label: m.menu_filters(),
+          },
+          {
+            value: Panel.stars,
+            preload: publicPanelModules.stars,
+            icon: StarIcon,
+            label: m.menu_stars(),
+          },
+          {
+            value: Panel.settings,
+            preload: publicPanelModules.settings,
+            icon: SettingsIcon,
+            label: m.menu_settings(),
+          },
         ],
 )
 const showAdminMenu = $derived.by(

@@ -6,14 +6,16 @@ import { m } from '#lib/i18n.js'
 
 let {
   active,
+  ready = true,
   load,
   children,
   pending: pendingContent,
 }: {
   active: boolean
+  ready?: boolean
   load: () => Promise<{ default: T }>
   children: Snippet<[T]>
-  pending: Snippet
+  pending?: Snippet
 } = $props()
 
 let component = $state.raw<T | null>(null)
@@ -51,10 +53,10 @@ $effect(() => {
 })
 </script>
 
-{#if component !== null}
+{#if component !== null && ready}
   {@render children(component)}
 {:else if active && !failed}
-  {@render pendingContent()}
+  {@render pendingContent?.()}
 {:else if active}
   <div
     data-app-intro-item="overlay"

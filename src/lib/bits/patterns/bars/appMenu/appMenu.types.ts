@@ -4,6 +4,7 @@ import type { ButtonColor } from '#lib/bits/core/button/index.js'
 export type AppMenuTone = 'primary' | 'secondary'
 
 export interface AppMenuItem<T = string> {
+  preload?: () => Promise<unknown>
   value: T
   label: string
   icon: Component<Record<string, unknown>>
