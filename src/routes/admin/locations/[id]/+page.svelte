@@ -8,6 +8,7 @@ import Tabs from '#lib/bits/core/tabs/Tabs.svelte'
 import * as Main from '#lib/bits/custom/main/index.js'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
 import LocalLocationAddressEditor from '#lib/bits/patterns/forms/localLocationAddress/LocalLocationAddressEditor.svelte'
+import LocationInteriorEditor from '#lib/bits/patterns/forms/localLocationAddress/LocationInteriorEditor.svelte'
 import LocationExteriorMap from '#lib/bits/patterns/forms/localLocationAddress/LocationExteriorMap.svelte'
 // NAVIGATION
 import { getAdminMapHref } from '#lib/navigation/adminMapLink.js'
@@ -183,27 +184,10 @@ $effect(() => {
                     embedded
                   />
                 {:else if view === 'interior'}
-                  <div class="space-y-4 overflow-y-auto p-6">
-                    {#if place.premisesMapId}
-                      <p class="text-sm">Interior map linked to this building.</p>
-                      <div class="flex flex-wrap gap-3">
-                        {#if place.premisesMap}
-                          <Button
-                            text="Open interior map"
-                            href={place.premisesMap.href}
-                          />
-                        {/if}
-                        <Button
-                          text="Open map editor"
-                          href={`/admin/premises-maps?map=${encodeURIComponent(place.premisesMapId)}`}
-                        />
-                      </div>
-                    {:else}
-                      <p class="text-muted-foreground text-sm">
-                        No interior map is linked to this building.
-                      </p>
-                    {/if}
-                  </div>
+                  <LocationInteriorEditor
+                    locationId={place.id}
+                    isEditing={header.state.isEditing}
+                  />
                 {:else if view === 'exterior'}
                   {#if place.facts?.location.geometry.coordinates}
                     <LocationExteriorMap
