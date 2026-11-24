@@ -41,11 +41,16 @@ const buildings = $derived(
           .join(' / ')
       return {
         ...row,
+        hasPreview: view === 'interior' ? row.hasInteriorMap : row.hasExteriorMap,
         title: name || address || buildingNameLabel(row.names, row.confirmedUnnamed),
         subtitle: name && address !== name ? address : '',
       }
     })
-    .sort((a, b) => a.title.localeCompare(b.title, getLocale(), { numeric: true })),
+    .sort(
+      (a, b) =>
+        Number(b.hasPreview) - Number(a.hasPreview) ||
+        a.title.localeCompare(b.title, getLocale(), { numeric: true }),
+    ),
 )
 const columns =
   'grid grid-cols-[repeat(auto-fill,minmax(min(100%,520px),1fr))] gap-4 p-4'

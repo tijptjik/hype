@@ -8,7 +8,8 @@ const { parse, stringify } = await import(kit.resolve('devalue'))
 
 test.beforeEach(async ({ page }) => {
   test.setTimeout(180_000)
-  expect((await page.goto('/admin')).ok()).toBeTruthy()
+  const admin = await page.goto('/admin', { waitUntil: 'domcontentloaded' })
+  expect(admin.ok()).toBeTruthy()
   await expect(page).toHaveURL(/\/admin(?:\/features)?\/?$/)
   expect((await (await page.request.get('/api/auth/get-session')).json()).user.id).toBe(
     'hype-local-agent-admin',
@@ -99,6 +100,7 @@ test('renders a published interior bundle in a read-only card', async ({ page })
       },
     ]
     payload._ = [building]
+    for (const cached of Object.values(payload.q)) cached.v = payload._
     await route.fulfill({ response, json: { ...body, data: stringify(payload) } })
   })
   await page.goto(session + '&models=interior#locations')

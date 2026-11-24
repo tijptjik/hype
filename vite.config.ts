@@ -183,6 +183,8 @@ export default defineConfig(async ({ command }) => ({
     tailwindcss(),
   ],
   optimizeDeps: {
+    // Prepare both gallery renderers together so opening the map does not re-optimize Three mid-session.
+    include: ['@google/model-viewer', 'three', 'three/addons/loaders/GLTFLoader.js'],
     // Keep MapLibre and its worker query out of dependency optimization.
     exclude: ['maplibre-gl'],
   },
