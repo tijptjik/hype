@@ -316,12 +316,14 @@ export class ResourceQueryCoordinator {
    * @param isCascading - Whether dependent feature and profile data should refresh.
    * @param shouldAutoSelectSingleLayer - Whether one available layer is activated automatically.
    * @param expectedRoleScope - Optional identity scope that must still be current.
-   * @returns A promise that resolves once the layer state has been reconciled.
+   * @param options - Bootstrap may defer reconciliation until hub and user defaults have been applied.
+   * @returns Completion of the compact page and any requested dependent refresh.
    */
   refreshLayers = async (
     isCascading: boolean = true,
     shouldAutoSelectSingleLayer: boolean = true,
     expectedRoleScope?: string,
+    options: { deferReconciliation?: boolean } = {},
   ): Promise<void> => {
     const refreshSerial = this.beginResourceRefresh(FirstClassResource.layer)
     const query = this.getRequiredQueryConfig(FirstClassResource.layer)
@@ -339,6 +341,8 @@ export class ResourceQueryCoordinator {
     this.rows.layer = layers
     // Efficiently sync layer cache (only add missing, remove stale)
     this.dependencies.retain('layer', this.rows.layer)
+    // During map bootstrap the caller owns the single reconciliation with the final layer selection.
+    if (options.deferReconciliation) return
     // Sync layer prisms to remove any layerIds which are no londer valid resources given the parent prism selection.
     // Paged results do not establish whether a selected identity still exists.
     // Also calls this.refreshFeatures()

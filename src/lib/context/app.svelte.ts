@@ -760,7 +760,9 @@ export class AppCtx {
     const hierarchy = Promise.allSettled([
       this.view.queries.refreshOrganisations(false, expectedRoleScope),
       this.view.queries.refreshProjects(false, expectedRoleScope),
-      this.view.queries.refreshLayers(false, false, expectedRoleScope),
+      this.view.queries.refreshLayers(false, false, expectedRoleScope, {
+        deferReconciliation: true,
+      }),
     ])
     const results = await Promise.allSettled([
       defaults,
