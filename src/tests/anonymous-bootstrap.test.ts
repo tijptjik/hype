@@ -85,10 +85,10 @@ describe('guest session bootstrap', () => {
     expect(isAuthEntryPath('/features/place-1')).toBe(false)
   })
 
-  it('keeps unavailable providers disabled', () => {
+  it('enables Facebook and keeps WeChat disabled', () => {
     expect(
       AUTH_PROVIDER_REGISTRY.find(provider => provider.id === 'facebook')?.enabled,
-    ).toBe(false)
+    ).toBe(true)
     expect(
       AUTH_PROVIDER_REGISTRY.find(provider => provider.id === 'wechat')?.enabled,
     ).toBe(false)
