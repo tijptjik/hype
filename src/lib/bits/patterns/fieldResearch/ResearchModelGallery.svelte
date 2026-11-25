@@ -131,9 +131,14 @@ const columns =
           {#each previews as preview (view + ':' + (preview.url ?? ''))}
             <article
               aria-label={building.title}
-              class="border-border bg-panel min-w-0 overflow-hidden rounded-xl border"
+              class="border-border bg-panel flex min-w-0 flex-col overflow-hidden rounded-xl border"
             >
-              <div class="bg-surface relative grid aspect-square place-items-center">
+              <div
+                class="bg-surface relative grid aspect-square min-h-0 flex-auto place-items-center"
+                style:background={view === 'interior'
+                  ? 'var(--station-canvas)'
+                  : undefined}
+              >
                 {#if preview.url}
                   <ResearchModelPreview
                     url={preview.url}
@@ -155,7 +160,7 @@ const columns =
               </div>
               <a
                 href={locationHref}
-                class="border-border hover:bg-muted focus-visible:outline-ring block border-t px-4 py-3 hover:underline focus-visible:outline-2 focus-visible:-outline-offset-2"
+                class="border-border hover:bg-muted focus-visible:outline-ring block shrink-0 border-t px-4 py-3 hover:underline focus-visible:outline-2 focus-visible:-outline-offset-2"
               >
                 <h3 class="text-foreground font-semibold break-words">
                   {building.title}

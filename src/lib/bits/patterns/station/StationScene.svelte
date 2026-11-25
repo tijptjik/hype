@@ -118,12 +118,28 @@ const focused = $derived(station.selected ? [station.selected.feature] : targetL
 const box = $derived(targetProjection.box(focused))
 // Leave room at the map edge for labels beside their individual floors.
 const labelGutter = $derived(station.exploded ? Math.max(60, box[2] * 0.35) : 18)
-const fittedView = $derived([
-  box[0] - labelGutter,
-  box[1] - 24,
-  box[2] + labelGutter + 18,
-  box[3] + 48,
-])
+const fittedView = $derived.by(() => {
+  const bounds = [
+    box[0] - labelGutter,
+    box[1] - 24,
+    box[2] + labelGutter + 18,
+    box[3] + 48,
+  ]
+  if (!galleryCamera) return bounds
+  // Fill the gallery viewport while keeping the lowest floor above its footer.
+  const scale = Math.max(
+    bounds[2] / Math.max(1, width),
+    bounds[3] / Math.max(1, height),
+  )
+  const fittedWidth = Math.max(1, width) * scale
+  const fittedHeight = Math.max(1, height) * scale
+  return [
+    bounds[0] - (fittedWidth - bounds[2]) / 2,
+    bounds[1] + bounds[3] - fittedHeight,
+    fittedWidth,
+    fittedHeight,
+  ]
+})
 // Overlapping floor switches keep the source-coordinate frame, including manual pan and zoom.
 let retainedView = $state<number[] | null>(null)
 const baseView = $derived(retainedView ?? fittedView)

@@ -143,7 +143,7 @@ onMount(() => {
 })
 </script>
 
-<div class="relative h-full w-full">
+<div class="absolute inset-0 min-h-0 overflow-hidden">
   <div
     bind:this={host}
     class="absolute inset-0"
