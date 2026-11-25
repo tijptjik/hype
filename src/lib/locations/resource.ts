@@ -15,6 +15,8 @@ export type LocationResource = {
     id: string
     names: Record<string, string>
     displayAddress: Record<string, string>
+    subdivisionNames?: Record<string, string>
+    addressContent?: LocationFacts['location']['address']['authored']
   } | null
   /** Retained upstream polygon identity, independent of the local Location ID. */
   indoorSource?: {

@@ -5,6 +5,7 @@ import {
 } from './buildingAddressLinks'
 import { canonicalLocationSQL } from './locationRedirect'
 import { isPhysicalBuildingParent } from './physicalBuilding'
+import { relationshipScopeSql } from './locationRelationships'
 import { locationBuildingPartContext } from './locationBuildingPart'
 import { locationReadFields } from './locationReadProjection'
 import { sharedLocationFacts } from './locationShared'
@@ -228,8 +229,12 @@ export async function listLocationResources(
           sql`pr.id`,
         )
       : null
+  const parentLabel = parentFields
+    ? sql`coalesce(json_extract(${parentFields.location},${'$.address.displayOverrides.' + JSON.stringify(locale)}),json_extract(${parentFields.location},${'$.address.authored.i18n.' + JSON.stringify(locale) + '.formattedAddress'}),json_extract(${parentFields.location},${'$.address.fallbackDisplay.' + JSON.stringify(locale)}),json_extract(${parentFields.names},${'$.' + JSON.stringify(locale)}),json_extract(${parentFields.names},'$.en'))`
+    : sql`NULL`
+  const physical = sql`p.matchingType='building'`
   const parentAddress = parentFields
-    ? sql`(SELECT CASE WHEN count(DISTINCT p.id)=1 THEN max(coalesce(json_extract(${parentFields.location},${'$.address.fallbackDisplay.' + JSON.stringify(locale)}),json_extract(${parentFields.names},${'$.' + JSON.stringify(locale)}),json_extract(${parentFields.names},'$.en'))) END FROM locationMembershipHead m JOIN location p ON p.id=m.parentLocationId JOIN locationRevisionContent pr ON pr.locationId=p.id AND pr.version=(SELECT max(version) FROM locationRevision WHERE locationId=p.id) WHERE m.childLocationId=${locationTable.id} AND m.assertionState='asserted' AND m.membershipState='current' AND (m.effectiveFrom IS NULL OR m.effectiveFrom<=date('now')) AND (m.effectiveTo IS NULL OR m.effectiveTo>date('now')) AND (m.scopeOrganisationId IS NULL OR m.scopeOrganisationId=${input.organisationId ?? null}) AND p.state!='redirect' AND (p.ownerOrganisationId IS NULL OR p.ownerOrganisationId=${input.organisationId ?? null}))`
+    ? sql`(SELECT CASE WHEN count(DISTINCT p.id)=1 THEN max(${parentLabel}) WHEN count(DISTINCT CASE WHEN ${physical} THEN p.id END)=1 THEN max(CASE WHEN ${physical} THEN ${parentLabel} END) END FROM locationMembershipHead r JOIN location p ON p.id=r.parentLocationId JOIN locationRevisionContent pr ON pr.locationId=p.id AND pr.version=(SELECT max(version) FROM locationRevision WHERE locationId=p.id) WHERE r.childLocationId=${locationTable.id} AND r.assertionState='asserted' AND r.membershipState='current' AND (r.effectiveFrom IS NULL OR r.effectiveFrom<=date('now')) AND (r.effectiveTo IS NULL OR r.effectiveTo>date('now')) AND ${relationshipScopeSql('locationMembership', input.organisationId ?? null)} AND p.state!='redirect' AND (p.ownerOrganisationId IS NULL OR p.ownerOrganisationId=${input.organisationId ?? null}))`
     : sql`NULL`
   const address = sql`coalesce(json_extract(${fields.location},${'$.address.displayOverrides.' + JSON.stringify(locale)}),json_extract(${fields.location},${'$.address.authored.i18n.' + JSON.stringify(locale) + '.formattedAddress'}),json_extract(${fields.location},${'$.address.fallbackDisplay.' + JSON.stringify(locale)}),json_extract(${fields.location},'$.address.fallbackDisplay.en'),CASE WHEN ${locationTable.kind}='building_part' THEN ${name}||', '||${parentAddress} END,'')`
   const expressions: Record<LocationSortKey, SQL> = {

@@ -357,7 +357,7 @@ it('offers actual parents only for current effective accessible building parts',
 it('sorts the full scope in both directions with stable tie pagination and cursor fences', async () => {
   const f = fixture()
   f.sqlite.exec(
-    'CREATE TABLE locationMembershipHead(parentLocationId TEXT,childLocationId TEXT,assertionState TEXT,membershipState TEXT,scopeOrganisationId TEXT,effectiveFrom TEXT,effectiveTo TEXT); CREATE VIEW locationRevision AS SELECT * FROM locationRevisionContent',
+    'CREATE TABLE locationMembershipHead(relationshipId TEXT,parentLocationId TEXT,childLocationId TEXT,assertionState TEXT,membershipState TEXT,scopeOrganisationId TEXT,effectiveFrom TEXT,effectiveTo TEXT); CREATE VIEW locationRevision AS SELECT * FROM locationRevisionContent',
   )
   for (let i = 0; i < 31; i++)
     f.add(

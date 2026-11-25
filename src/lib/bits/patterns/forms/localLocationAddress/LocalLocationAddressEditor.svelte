@@ -244,14 +244,30 @@ const retainedAddress = $derived<FeatureAddress>({
 // Older local records retain display text only; parse a view copy without changing saved evidence.
 const presentationAddress = $derived.by(() => {
   // Containment provides display text, not a street-address parsing candidate.
-  if (place.kind === 'building_part' && place.parentLocation)
+  if (place.kind === 'building_part' && place.parentLocation) {
+    const source = retainedAddress.source
+    const inherited =
+      !source.authored &&
+      !source.canonical &&
+      !source.rawSource.data &&
+      source.status === 'unresolved'
+        ? place.parentLocation.addressContent
+        : undefined
+    const display = buildingPartDisplay(place)
     return {
       ...retainedAddress,
       source: {
         ...retainedAddress.source,
-        fallbackDisplay: buildingPartDisplay(place),
+        ...(inherited
+          ? {
+              authored: inherited,
+              displayOverrides: { ...display, ...source.displayOverrides },
+            }
+          : {}),
+        fallbackDisplay: display,
       },
     }
+  }
   if (retainedAddress.source.authored || retainedAddress.source.rawSource.data)
     return retainedAddress
   const preview = localAddressDraft(prepareLocalLocationAddress(retainedAddress))

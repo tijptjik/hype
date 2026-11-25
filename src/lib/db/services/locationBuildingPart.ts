@@ -41,20 +41,22 @@ export async function locationBuildingPartContext(
   organisationId?: string,
 ): Promise<Pick<LocationResource, 'parentLocation' | 'indoorSource'>> {
   const parents = await retryBusyRead(() =>
-    db.all<{ id: string; facts: string }>(sql`
-    SELECT DISTINCT p.id, r.facts FROM locationMembershipHead h
-    JOIN location p ON p.id=h.parentLocationId
-    JOIN locationRevisionContent r ON r.locationId=p.id
-      AND r.version=(SELECT max(version) FROM locationRevision WHERE locationId=p.id)
-    WHERE h.childLocationId=${id} AND h.assertionState='asserted' AND h.membershipState='current'
-      AND (h.scopeOrganisationId IS NULL OR h.scopeOrganisationId=${organisationId ?? null})
-      AND (h.effectiveFrom IS NULL OR h.effectiveFrom<=date('now'))
-      AND (h.effectiveTo IS NULL OR h.effectiveTo>date('now'))
+    db.all<{ id: string; facts: string; physical: number; class: string }>(sql`
+    SELECT DISTINCT p.id, content.facts, p.matchingType class, (p.matchingType='building') physical FROM locationMembershipHead r
+    JOIN location p ON p.id=r.parentLocationId
+    JOIN locationRevisionContent content ON content.locationId=p.id
+      AND content.version=(SELECT max(version) FROM locationRevision WHERE locationId=p.id)
+    WHERE r.childLocationId=${id} AND r.assertionState='asserted' AND r.membershipState='current'
+      AND ${relationshipScopeSql('locationMembership', organisationId ?? null)}
+      AND (r.effectiveFrom IS NULL OR r.effectiveFrom<=date('now'))
+      AND (r.effectiveTo IS NULL OR r.effectiveTo>date('now'))
       AND p.state!='redirect' AND (p.ownerOrganisationId IS NULL OR p.ownerOrganisationId=${organisationId ?? null})`),
   )
   let parentLocation: LocationResource['parentLocation'] = null
-  if (parents.length === 1) {
-    const parent = parents[0]
+  // A floor and its building are complementary parents of the same polygon.
+  const candidates = parents.length > 1 ? parents.filter(p => p.physical) : parents
+  if (candidates.length === 1) {
+    const parent = candidates[0]
     const facts = await currentLocationFacts(
       db,
       parent.id,
@@ -80,7 +82,26 @@ export async function locationBuildingPartContext(
         if (label) displayAddress[tag] = label
       }
     }
+    const subdivisions = parents.filter(
+      p => p.class === 'building_part' && p.id !== parent.id,
+    )
+    const subdivision = subdivisions.length === 1 ? subdivisions[0] : null
     parentLocation = {
+      ...(subdivision
+        ? {
+            subdivisionNames: (
+              await currentLocationFacts(
+                db,
+                subdivision.id,
+                readLocationFacts(subdivision.facts),
+                organisationId ?? null,
+              )
+            ).names,
+          }
+        : {}),
+      ...(parent.physical && (address.authored || address.canonical)
+        ? { addressContent: address.authored ?? address.canonical?.content }
+        : {}),
       id: parent.id,
       names: facts.names,
       displayAddress,

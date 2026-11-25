@@ -24,7 +24,11 @@ export function buildingPartDisplay(place: LocationResource): Record<string, str
         parent.names[locale] ||
         parent.displayAddress.en ||
         parent.names.en
-      return part && address ? [[locale, `${part}, ${address}`]] : []
+      const subdivision =
+        parent.subdivisionNames?.[locale] || parent.subdivisionNames?.en
+      return part && address
+        ? [[locale, [part, subdivision, address].filter(Boolean).join(', ')]]
+        : []
     }),
   )
   return {
