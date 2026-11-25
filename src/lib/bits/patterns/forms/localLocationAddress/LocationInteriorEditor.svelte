@@ -129,24 +129,31 @@ $effect(() => {
     reviewed = false
   }
 })
-onMount(() => {
-  void (async () => {
+/** Load the map and recover any pending extraction for its editor.
+ * @returns Completion once the map or its retry state is ready.
+ */
+async function loadInterior(): Promise<void> {
+  busy = true
+  message = ''
+  try {
     await refresh()
-    const active = await fetch(base)
-    if (active.ok) {
-      const result = await active.json()
-      if (result.id && result.id !== current?.review?.jobId) {
+    // Only editors can recover private extraction jobs.
+    if (current?.canEdit) {
+      const active = await fetch(base)
+      const result = active.ok ? await active.json() : null
+      if (result?.id && result.id !== current.review?.jobId) {
         jobId = result.id
         await poll()
         return
       }
     }
     busy = false
-  })().catch(error => {
-    message = String(error)
+  } catch (error) {
+    message = current ? String(error) : 'The building interior could not be loaded.'
     busy = false
-  })
-})
+  }
+}
+onMount(() => void loadInterior())
 onDestroy(() => {
   disposed = true
   clearTimeout(timer)
@@ -1035,7 +1042,7 @@ async function save(): Promise<void> {
         {/if}
       </div>
     </div>
-  {:else}
+  {:else if current}
     <div class="flex min-h-96 flex-1 items-center justify-center p-8">
       <div class="flex max-w-sm flex-col items-center gap-4 text-center">
         <LayersIcon class="text-primary size-16" />
@@ -1046,6 +1053,10 @@ async function save(): Promise<void> {
             : 'Choose Edit to upload floor plans or select a building footprint from the map.'}
         </p>
       </div>
+    </div>
+  {:else}
+    <div class="px-5">
+      <Button text="Retry loading interior" onClick={loadInterior} />
     </div>
   {/if}
 </div>
