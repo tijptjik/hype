@@ -92,6 +92,11 @@ const verifiedShopCodes: Readonly<Record<string, string>> = {
 export function places(data: IndoorData): Place[] {
   const result: Place[] = []
   const mergedMarkers = new Set<string>()
+  const symbolsByUnit = new Map(
+    data.amenity_point.features
+      .filter(f => f.properties.marker_role === 'unit_symbol')
+      .map(f => [value(f.properties, 'unit_id'), f]),
+  )
   for (const feature of data.unit_polygon.features) {
     const p = feature.properties
     const occupants = data.occupant_point.features.filter(
@@ -124,7 +129,10 @@ export function places(data: IndoorData): Place[] {
               ),
           )
         : undefined
-    if (serviceMarker) mergedMarkers.add(value(serviceMarker.properties, 'amenity_id'))
+    const symbol = symbolsByUnit.get(value(p, 'unit_id'))
+    const marker =
+      serviceMarker ?? (symbol?.properties.level_id === p.level_id ? symbol : undefined)
+    if (marker) mergedMarkers.add(value(marker.properties, 'amenity_id'))
     result.push({
       artwork: data.unitArtwork?.[value(p, 'unit_id')],
       id: value(p, 'unit_id'),
@@ -152,10 +160,8 @@ export function places(data: IndoorData): Place[] {
           : value(p, 'unit_category'),
       area: value(p, 'section_name_en'),
       feature,
-      markerFeature: serviceMarker,
-      sourceIds: serviceMarker
-        ? [value(serviceMarker.properties, 'amenity_id')]
-        : undefined,
+      markerFeature: marker,
+      sourceIds: marker ? [value(marker.properties, 'amenity_id')] : undefined,
       occupants,
       kind: firstOccupant ? 'shop' : 'facility',
     })

@@ -374,8 +374,10 @@ $effect(() => {
                             </button>
                           </div>
                           <p class="text-muted-foreground mt-2 text-xs">
-                            {levelName(selected.levelId)}
-                            · {selected.area}
+                            {value(selected.feature.properties, 'unit_address_en') ||
+                              [levelName(selected.levelId), selected.area]
+                                .filter(Boolean)
+                                .join(' · ')}
                           </p>
                           <div class="text-primary mt-3 flex justify-end gap-1">
                             {#each ['copy', 'share'] as action}

@@ -4,9 +4,29 @@ import { z } from 'zod'
 import polygonClipping, { type MultiPolygon } from 'polygon-clipping'
 // DOMAIN
 import { collection, layerNames, type IndoorData } from '../model.js'
+import { polygonLabels } from '../labels.js'
+import { stairFlightsSchema } from '../stairFlights.js'
 import { validateMapBundle, type MapBundle } from '../releases.js'
 
 // TOC: Review schema | Indoor map conversion
+export const floorplanCategories = [
+  'room',
+  'corridor',
+  'stairs',
+  'elevator',
+  'toilet',
+  'kitchen',
+  'lavatory',
+  'balcony',
+  'void',
+  'retail',
+  'roof',
+  'canopy',
+  'utility',
+  'structure',
+  'unknown',
+] as const
+
 const point = z.tuple([
   z.number().finite().nonnegative(),
   z.number().finite().nonnegative(),
@@ -44,6 +64,13 @@ const ring = z
   )
 export const floorplanExtractionSchema = z
   .object({
+    venue: z
+      .object({
+        name: z.string().trim().min(1).max(200),
+        nameZh: z.string().max(200).optional(),
+        address: z.string().max(500).optional(),
+      })
+      .optional(),
     warnings: z.array(z.string().max(2000)).max(1000),
     floors: z
       .array(
@@ -77,18 +104,10 @@ export const floorplanExtractionSchema = z
                   .regex(/^[a-z0-9-]+$/)
                   .max(100),
                 label: z.string().max(300),
-                category: z.enum([
-                  'room',
-                  'corridor',
-                  'stairs',
-                  'elevator',
-                  'toilet',
-                  'kitchen',
-                  'lavatory',
-                  'balcony',
-                  'void',
-                  'unknown',
-                ]),
+                category: z.enum(floorplanCategories),
+                unitReference: z.string().trim().min(1).max(80).optional(),
+                showUnitReference: z.boolean().optional(),
+                stairFlights: stairFlightsSchema.optional(),
                 polygon: ring,
                 holes: z.array(ring).max(100).optional(),
                 locationId: z.string().min(1).max(200).optional(),
@@ -131,6 +150,25 @@ export const floorplanExtractionSchema = z
         if (units.has(unit.id))
           ctx.addIssue({ code: 'custom', message: 'Duplicate unit identity' })
         units.add(unit.id)
+        for (const flight of unit.stairFlights ?? []) {
+          const footprint = [
+            ...flight.first,
+            ...[...flight.last].reverse(),
+            flight.first[0],
+          ]
+          if (
+            unit.category !== 'stairs' ||
+            !simpleRing(footprint) ||
+            polygonClipping.difference(
+              [footprint],
+              [unit.polygon, ...(unit.holes ?? [])],
+            ).length
+          )
+            ctx.addIssue({
+              code: 'custom',
+              message: 'Stair flights must lie inside their stair enclosure.',
+            })
+        }
       }
       for (const polygon of [
         floor.boundary,
@@ -153,12 +191,22 @@ export type FloorplanExtraction = z.infer<typeof floorplanExtractionSchema>
 export function floorplanUnclassified(
   floor: FloorplanExtraction['floors'][number],
 ): MultiPolygon {
-  return floor.units.length
-    ? polygonClipping.difference(
-        [floor.boundary, ...(floor.holes ?? [])],
-        ...floor.units.map(unit => [unit.polygon, ...(unit.holes ?? [])]),
-      )
-    : [[floor.boundary, ...(floor.holes ?? [])]]
+  if (!floor.units.length) return [[floor.boundary, ...(floor.holes ?? [])]]
+  const residual = polygonClipping.difference(
+    [floor.boundary, ...(floor.holes ?? [])],
+    ...floor.units.map(unit => [unit.polygon, ...(unit.holes ?? [])]),
+  )
+  // Intersections along a fully covered sloping edge can produce a floating-point sliver.
+  return residual.filter(([outer]) => {
+    const [x, y] = outer[0]
+    let twiceArea = 0
+    for (let i = 1; i < outer.length - 1; i++) {
+      const a = outer[i],
+        b = outer[i + 1]
+      twiceArea += (a[0] - x) * (b[1] - y) - (a[1] - y) * (b[0] - x)
+    }
+    return Math.abs(twiceArea) > 1e-8
+  })
 }
 
 /** Convert reviewed extraction to existing indoor layers, without fabricating routes or geographic positions.
@@ -209,7 +257,16 @@ export function floorplanBundle(input: unknown): MapBundle {
       data.venue_polygon.features.push({
         type: 'Feature',
         geometry: polygon(floor.boundary, floor.holes),
-        properties: { venue_id: 'building' },
+        properties: {
+          venue_id: 'building',
+          ...(parsed.venue
+            ? {
+                venue_name_en: parsed.venue.name,
+                venue_name_zh: parsed.venue.nameZh,
+                venue_address_en: parsed.venue.address,
+              }
+            : {}),
+        },
       })
     // Retain uncovered space explicitly, rather than letting the floor background imply circulation.
     const residual = floorplanUnclassified(floor)
@@ -232,12 +289,30 @@ export function floorplanBundle(input: unknown): MapBundle {
             'Uncovered floor area; may include walls, columns or omitted compartments. Not inferred circulation.',
         },
       })
-    for (const unit of floor.units)
+    for (const unit of floor.units) {
+      const geometry = polygon(unit.polygon, unit.holes)
+      const unitId = floor.id + '-' + unit.id
+      const shortAddress = [unit.unitReference, floor.label].filter(Boolean).join(', ')
       data.unit_polygon.features.push({
         type: 'Feature',
-        geometry: polygon(unit.polygon, unit.holes),
+        geometry,
         properties: {
-          unit_id: floor.id + '-' + unit.id,
+          unit_id: unitId,
+          ...(parsed.venue?.address
+            ? { unit_address_en: [shortAddress, parsed.venue.address].join(', ') }
+            : {}),
+          ...(unit.unitReference && unit.showUnitReference
+            ? { unit_unitnumbername: shortAddress }
+            : {}),
+          ...(unit.stairFlights
+            ? {
+                stair_flights: unit.stairFlights.map(flight => ({
+                  ...flight,
+                  first: flight.first.map(transform),
+                  last: flight.last.map(transform),
+                })),
+              }
+            : {}),
           ...(unit.locationId ? { canonical_location_id: unit.locationId } : {}),
           level_id: floor.id,
           unit_name_en: unit.label,
@@ -248,6 +323,26 @@ export function floorplanBundle(input: unknown): MapBundle {
           review_required: true,
         },
       })
+      if (['kitchen', 'lavatory', 'toilet'].includes(unit.category)) {
+        const [anchor] = polygonLabels(
+          { type: 'Feature', geometry, properties: {} },
+          p => [p[0], p[1]],
+        )
+        if (anchor)
+          data.amenity_point.features.push({
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: anchor.point },
+            properties: {
+              level_id: floor.id,
+              unit_id: unitId,
+              amenity_id: unitId + '-symbol',
+              amenity_category: unit.category,
+              amenity_name_en: unit.label,
+              marker_role: 'unit_symbol',
+            },
+          })
+      }
+    }
   }
   return validateMapBundle({ schemaVersion: 1, data, documents: [] })
 }

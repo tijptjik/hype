@@ -75,6 +75,14 @@ const pictograms: Record<string, Omit<FacilitySymbol, 'color' | 'background'>> =
     label: 'Parking',
     path: 'M3 3h18v18H3zM9 17V7h4a3 3 0 0 1 0 6H9',
   },
+  kitchen: {
+    label: 'Kitchen',
+    path: 'M4 2v6q0 3 3 3t3-3V2M7 2v20M19 2c-4 3-5 8-5 12h5m0-12v20',
+  },
+  toilet: {
+    label: 'Toilet',
+    path: 'M3 3h5v9H3zM6 12h15c0 5-3 7-7 7l1 3H9l1-4c-3-1-4-3-4-6z',
+  },
   'restroom.unisex': {
     label: 'Unisex toilet',
     path: 'M3 3h18v18H3zM6 8v8l2-4 2 4V8M18 9a3 4 0 1 0 0 6',
@@ -224,6 +232,7 @@ export const facilitySymbols: Record<string, FacilitySymbol> = Object.fromEntrie
 export function facilityCategory(category: string, sourceName = ''): string {
   if (/^exhibition site$/i.test(sourceName.trim())) return 'exhibition'
   const aliases: Record<string, string> = {
+    lavatory: 'toilet',
     Bank: 'atm',
     Platform: 'platform',
     'restroom.wheelchair': 'restroom.accessible',

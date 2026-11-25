@@ -4,6 +4,8 @@ import {
   floorplanExtractionSchema,
   floorplanBundle,
 } from '#lib/indoor/floorplans/extraction.js'
+import { places } from '#lib/indoor/model.js'
+import { stairTreads } from '#lib/indoor/spatial.js'
 const ring = [
   [10, 10],
   [90, 10],
@@ -88,6 +90,10 @@ it('retains kitchen, toilet and lavatory compartments and marks uncovered space 
     ],
   }))
   const bundle = floorplanBundle({ ...input, floors: [{ ...input.floors[0], units }] })
+  expect(bundle.data.amenity_point.features).toHaveLength(3)
+  const indexed = places(bundle.data)
+  expect(indexed).toHaveLength(4)
+  expect(indexed.filter(place => place.markerFeature)).toHaveLength(3)
   const features = bundle.data.unit_polygon.features
   expect(features.filter(f => f.properties.unit_category === 'corridor')).toHaveLength(
     0,
@@ -140,4 +146,65 @@ it('preserves a reviewed balcony category in the standard indoor bundle', () => 
   })
   expect(bundle.data.unit_polygon.features[0].properties.unit_category).toBe('balcony')
   expect(bundle.data.unit_polygon.features[0].properties.unit_name_en).toBe('Balcony')
+})
+
+it('places reviewed tread spans and their labels in aligned map coordinates', () => {
+  const stair = {
+    ...input.floors[0].units[0],
+    category: 'stairs',
+    stairFlights: [
+      {
+        first: [
+          [20, 20],
+          [30, 20],
+        ],
+        last: [
+          [20, 50],
+          [30, 50],
+        ],
+        count: 3,
+        label: 'UP',
+      },
+    ],
+  }
+  const floor = {
+    ...input.floors[0],
+    alignment: { x: 2, y: 4, scale: 2, rotation: 0 },
+    units: [stair],
+  }
+  const { data } = floorplanBundle({ ...input, floors: [floor] })
+  const lines = stairTreads(data).features
+  expect(lines).toHaveLength(3)
+  expect(lines[1].geometry).toEqual({
+    type: 'LineString',
+    coordinates: [
+      [22, 54],
+      [42, 54],
+    ],
+  })
+  expect(lines[1].properties.flight_label).toBe('UP')
+  expect(data.connections).toEqual([])
+  stair.stairFlights[0].last[1] = [99, 99]
+  expect(
+    floorplanExtractionSchema.safeParse({ ...input, floors: [floor] }).success,
+  ).toBe(false)
+})
+
+it('does not publish a separate area for a floating-point sliver on a shared wall', () => {
+  // Independently clipped points on the same sloping wall of a scanned plan.
+  const edge = [
+    [11.238095238095237, 592],
+    [11.31904761904762, 609],
+    [11.719047619047618, 693],
+  ]
+  const polygon = [edge[0], [30, 592], [30, 693], edge[2], edge[1], edge[0]]
+  const floor = {
+    ...input.floors[0],
+    height: 700,
+    boundary: [edge[0], [30, 592], [30, 693], edge[2], edge[0]],
+    units: [{ ...input.floors[0].units[0], polygon }],
+  }
+  expect(
+    floorplanBundle({ warnings: [], floors: [floor] }).data.unit_polygon.features,
+  ).toHaveLength(1)
 })

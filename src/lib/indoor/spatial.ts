@@ -10,6 +10,7 @@ import {
   type Place,
 } from './model'
 import type { Geometry } from 'geojson'
+import { reviewedTreads } from './stairFlights'
 import { footprintFrame } from './geometry'
 export const connectorCategories = ['stairs', 'steps', 'escalator', 'elevator', 'ramp']
 /** Recognises level-change facilities. @param category Source category. @returns Whether the facility changes levels. */
@@ -225,6 +226,10 @@ export function stairTreads(data: IndoorData): Collection {
     data.unit_polygon.features.flatMap(feature => {
       const category = value(feature.properties, 'unit_category')
       if (!['stairs', 'steps', 'escalator'].includes(category)) return []
+      if (feature.properties.stair_flights) {
+        const reviewed = reviewedTreads(feature)
+        if (reviewed) return reviewed
+      }
       const annotation = networkAnnotation(data, feature)
       const frame = footprintFrame(
         feature,

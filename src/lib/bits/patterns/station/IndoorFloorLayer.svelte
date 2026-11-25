@@ -679,6 +679,25 @@ const facilityMarkers = $derived.by(() => {
     />
   {/each}
   {#if detailOpacity > 0}
+    {#each treads.filter(tread => tread.properties.flight_label) as tread}
+      {@const p = projection.project(centre(tread), id)}
+      <text
+        x={p[0]}
+        y={p[1]}
+        data-stair-flight={tread.properties.flight_label}
+        font-size={10 * textScale}
+        fill="var(--station-ink)"
+        stroke="var(--station-paper)"
+        stroke-width={3 * textScale}
+        paint-order="stroke"
+        font-weight="700"
+        pointer-events="none"
+        text-anchor="middle"
+        dominant-baseline="central"
+      >
+        {tread.properties.flight_label}
+      </text>
+    {/each}
     <g
       data-level-details
       opacity={detailOpacity}

@@ -38,6 +38,8 @@ export const facilityColourGroups = [
     color: '#7e22ce',
     background: '#faf5ff',
     keys: [
+      'toilet',
+      'lavatory',
       'restroom.male',
       'restroom.female',
       'restroom.unisex',
@@ -53,7 +55,7 @@ export const facilityColourGroups = [
     label: 'Shopping & transactions',
     color: '#92400e',
     background: '#fffbeb',
-    keys: ['atm', 'bank', 'vendingmachine', 'foodservice', 'photobooth'],
+    keys: ['atm', 'bank', 'vendingmachine', 'kitchen', 'foodservice', 'photobooth'],
   },
   {
     label: 'Leisure & recreation',
