@@ -69,7 +69,7 @@ test('zooms and pans each façade independently while keeping floor controls at 
   )
   await page.mouse.up()
   await expect(undo).toBeEnabled()
-  await undo.click()
+  await page.keyboard.press('Control+z')
   await expect
     .poll(async () => (await guide.boundingBox()).y)
     .toBeCloseTo(zoomedGuide.y, 0)

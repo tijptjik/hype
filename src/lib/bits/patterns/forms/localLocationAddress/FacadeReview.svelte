@@ -380,6 +380,29 @@ function undo(): void {
   editingFloor = null
   saveError = ''
 }
+/** Undo a model edit without intercepting native text-field undo.
+ * @param event Keyboard shortcut. @returns Nothing.
+ */
+function undoShortcut(event: KeyboardEvent): void {
+  if (
+    !active ||
+    !history.length ||
+    event.defaultPrevented ||
+    event.shiftKey ||
+    event.altKey ||
+    !(event.ctrlKey || event.metaKey) ||
+    event.key.toLowerCase() !== 'z'
+  )
+    return
+  const target = event.target
+  if (
+    target instanceof HTMLElement &&
+    (target.isContentEditable || target.closest('input, textarea, select'))
+  )
+    return
+  event.preventDefault()
+  undo()
+}
 /** Store an attributed revision for this geometry. @returns Completion of the database write. */
 async function save(): Promise<void> {
   if (!ready || saving || !canSave) return
@@ -678,6 +701,8 @@ onMount(() => {
   }
 })
 </script>
+
+<svelte:window onkeydown={undoShortcut} />
 
 <section
   hidden={!active}
