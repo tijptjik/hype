@@ -7,6 +7,7 @@ import { isTauri } from '@tauri-apps/api/core'
 import { t, errorMessage } from '#lib/i18n/index.js'
 // API
 import { connect, disconnect, connectionHint } from '#lib/hype.js'
+import { setAssetAccount } from '#lib/assetCache.js'
 import { recorderAccount } from '#lib/api/recorderAccount.remote.js'
 import SessionWorkspace from '#lib/SessionWorkspace.svelte'
 // STYLES
@@ -29,6 +30,7 @@ async function restoreSession(): Promise<void> {
     const identity = recorderAccount()
     await identity.refresh()
     account = await identity
+    await setAssetAccount(account?.id ?? null)
     signedIn = Boolean(account)
   } catch {
     message = connectionHint
@@ -57,6 +59,7 @@ async function signIn(): Promise<void> {
       throw new Error(
         t('could_not_verify_the_connected_account_sign_out_and_try_again'),
       )
+    await setAssetAccount(account.id)
     signedIn = true
   } catch (cause) {
     if (!attempt.signal.aborted)
@@ -69,6 +72,7 @@ async function signIn(): Promise<void> {
 }
 async function signOut(): Promise<void> {
   await disconnect()
+  await setAssetAccount(null)
   account = null
   signedIn = false
   message = ''

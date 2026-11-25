@@ -1,6 +1,8 @@
 <script lang="ts">
 // I18N
 import { t } from './i18n'
+// API
+import { readRecorderAsset } from './assetCache'
 
 let { url }: { url: string } = $props()
 let host: HTMLDivElement
@@ -11,7 +13,7 @@ let attempt = $state(0)
 $effect(() => {
   const container = host
   const source = url
-  attempt
+  const reload = attempt > 0
   const controller = new AbortController()
   const { signal } = controller
   const objects: string[] = []
@@ -26,19 +28,36 @@ $effect(() => {
     return result
   }
 
-  async function load(): Promise<void> {
-    const [, response] = await Promise.all([
-      import('@google/model-viewer'),
-      fetch(source, { signal }),
-    ])
-    if (!response.ok) throw new Error('Model unavailable')
-    const model = await response.json()
+  /** @returns A local URL for the current authorized geometry and its textures. */
+  async function modelSource(): Promise<string> {
+    const base = new URL(source, location.href)
+    const metadata = await fetch(new URL('placement.json', base), { signal })
+    if (!metadata.ok) throw new Error('Model unavailable')
+    const { comparisonFile } = await metadata.json()
+    if (
+      typeof comparisonFile === 'string' &&
+      /^comparison-[a-f0-9]{64}\.glb$/.test(comparisonFile)
+    ) {
+      const comparison = await readRecorderAsset(
+        new URL(comparisonFile, base),
+        signal,
+        blob => blob,
+        reload,
+      )
+      if (comparison) return objectUrl(comparison)
+    }
+    const model = await readRecorderAsset(
+      source,
+      signal,
+      async file => JSON.parse(await file.text()),
+      reload,
+    )
+    if (!model) throw new Error('Model unavailable')
     const resources: { uri?: string }[] = [
       ...(model.buffers ?? []),
       ...(model.images ?? []),
     ]
     const siblings = new Map<string, string>()
-    const base = new URL(source, location.href)
     for (const resource of resources) {
       if (!resource.uri || resource.uri.startsWith('data:')) continue
       const file = resource.uri
@@ -46,14 +65,25 @@ $effect(() => {
         throw new Error('Invalid model resource')
       let local = siblings.get(file)
       if (!local) {
-        const asset = await fetch(new URL(file, base), { signal })
-        if (!asset.ok) throw new Error('Model resource unavailable')
-        local = objectUrl(await asset.blob())
+        const asset = await readRecorderAsset(
+          new URL(file, base),
+          signal,
+          blob => blob,
+          reload,
+        )
+        if (!asset) throw new Error('Model resource unavailable')
+        local = objectUrl(asset)
         siblings.set(file, local)
       }
       resource.uri = local
     }
 
+    return objectUrl(new Blob([JSON.stringify(model)], { type: 'model/gltf+json' }))
+  }
+
+  async function load(): Promise<void> {
+    const [, src] = await Promise.all([import('@google/model-viewer'), modelSource()])
+    signal.throwIfAborted()
     const viewer = document.createElement('model-viewer')
     viewer.setAttribute('alt', t('building_model'))
     viewer.setAttribute('camera-controls', '')
@@ -74,10 +104,7 @@ $effect(() => {
       },
       { signal },
     )
-    viewer.setAttribute(
-      'src',
-      objectUrl(new Blob([JSON.stringify(model)], { type: 'model/gltf+json' })),
-    )
+    viewer.setAttribute('src', src)
     container.replaceChildren(viewer)
   }
   void load().catch(() => {

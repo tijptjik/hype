@@ -4,6 +4,8 @@ import { prefersReducedMotion } from 'svelte/motion'
 // I18N
 import Selector from './Selector.svelte'
 import { t } from './i18n'
+// API
+import { readRecorderAsset } from './assetCache'
 // DOMAIN
 import { connectionAnchor } from '../../../../src/lib/indoor/connectionEditor'
 import {
@@ -81,14 +83,16 @@ $effect(() => {
   offset = [0, 0]
   async function load(): Promise<void> {
     try {
-      const response = await fetch(
+      const bundle = await readRecorderAsset(
         '/api/premises-maps/' + encodeURIComponent(id) + '/releases/' + hash,
-        { signal: controller.signal },
+        controller.signal,
+        async blob => {
+          const text = await blob.text()
+          if ((await mapHash(text)) !== hash) throw new Error()
+          return validateMapBundle(JSON.parse(text))
+        },
       )
-      if (!response.ok) throw new Error()
-      const text = await response.text()
-      if ((await mapHash(text)) !== hash) throw new Error()
-      const bundle = validateMapBundle(JSON.parse(text))
+      if (!bundle) throw new Error()
       if (!controller.signal.aborted) {
         data = bundle.data
         resetCamera()

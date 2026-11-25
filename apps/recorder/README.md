@@ -39,6 +39,12 @@ reference artwork. Choose a floor for a top-down pin or use 3D to return to the 
 Exterior shows the linked building model with its textures above the Lands Department
 street map, where you can place a geographic pin.
 
+Recorder caches each floor-plan release and its embedded artwork on first use. It also
+keeps each opened exterior model's geometry and textures on the device. Updated releases
+and model versions download under their own URLs. Reopening a model still needs a
+connection to check access. Account and session loading also require a connection.
+Signing out clears the contributor's asset cache.
+
 A capture stores its selected realm and Location. Interior pins retain the map ID,
 immutable release hash, floor ID and source coordinates. Exterior pins retain longitude
 and latitude. See Records can reopen a saved pin on its original drawing. Interior is

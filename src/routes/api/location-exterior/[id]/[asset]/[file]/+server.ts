@@ -7,7 +7,10 @@ import { locationExteriorModel } from '#lib/db/schema/locationExteriorModel.js'
 // AUTHORIZATION
 import { authorizeExteriorLocation } from '#lib/locations/exterior/authorize.server.js'
 // STORAGE
-import { textureComparisonBucket } from '#lib/locations/exterior/textureComparison.server.js'
+import {
+  textureComparisonBucket,
+  textureComparisonFile,
+} from '#lib/locations/exterior/textureComparison.server.js'
 import { premisesMapBucket } from '#lib/indoor/server/storage.js'
 
 /** Serve a file from the current authorized exterior model. @param event Request context. @returns Model file. */
@@ -19,7 +22,9 @@ export const GET: RequestHandler = async event => {
     !params.asset ||
     !params.file ||
     !/^[a-f0-9-]{36}$/.test(params.asset) ||
-    (!comparison && !/^[a-zA-Z0-9_.-]+\.(gltf|bin|jpg|jpeg|png)$/i.test(params.file))
+    (params.file !== 'placement.json' &&
+      !comparison &&
+      !/^[a-zA-Z0-9_.-]+\.(gltf|bin|jpg|jpeg|png)$/i.test(params.file))
   )
     error(404, 'MODEL_NOT_FOUND')
   const ctx = {
@@ -37,6 +42,14 @@ export const GET: RequestHandler = async event => {
     .where(eq(locationExteriorModel.locationId, params.id))
     .get()
   if (!model || model.assetId !== params.asset) error(404, 'MODEL_NOT_FOUND')
+  // Check access to the current model before Recorder reuses its downloaded assets.
+  if (params.file === 'placement.json') {
+    const comparisonFile = await textureComparisonFile(locals.platform, model.assetId)
+    return Response.json(
+      { comparisonFile },
+      { headers: { 'Cache-Control': 'private, no-store' } },
+    )
+  }
   const bucket = comparison
     ? textureComparisonBucket(locals.platform)
     : premisesMapBucket(locals.platform)

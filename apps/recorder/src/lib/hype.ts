@@ -8,6 +8,7 @@ const origin =
   import.meta.env.VITE_RECORDER_DEBUG === 'true'
     ? 'https://fi.tailb49776.ts.net:9443'
     : 'https://hype.hk'
+export { origin as recorderOrigin }
 const clientId = 'hk.hype.recorder'
 
 /**
@@ -34,7 +35,7 @@ export function installRemoteTransport(): void {
   window.fetch = async (input, init) => {
     const url = new URL(input instanceof Request ? input.url : input, location.href)
     const modelFile =
-      /^\/api\/location-exterior\/[^/]+\/[a-f0-9-]{36}\/[a-zA-Z0-9_.-]+\.(?:gltf|bin|jpe?g|png)$/i.test(
+      /^\/api\/location-exterior\/[^/]+\/[a-f0-9-]{36}\/(?:placement\.json|comparison-[0-9a-f]{64}\.glb|[a-zA-Z0-9_.-]+\.(?:gltf|bin|jpe?g|png))$/i.test(
         url.pathname,
       )
     const mapRelease =

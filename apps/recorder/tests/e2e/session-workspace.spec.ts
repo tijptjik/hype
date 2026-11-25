@@ -83,6 +83,9 @@ async function useLocationFixture(page: Page): Promise<void> {
     textures: [{ source: 0 }],
     images: [{ uri: 'wall.png' }],
   }
+  await page.route('**' + exterior + 'placement.json*', route =>
+    route.fulfill({ json: { comparisonFile: null } }),
+  )
   await page.route('**' + exterior + 'assembly.gltf', route =>
     route.fulfill({ json: model }),
   )
@@ -296,35 +299,10 @@ async function useLocationFixture(page: Page): Promise<void> {
   })
 }
 
-test('opens a shared session, swipes, selects a building part and persists a record', async ({
-  page,
-  context,
-}) => {
-  const fixture = process.env.RECORDER_TEST_FIXTURE === '1'
-  const session = fixture
-    ? 'North tower survey'
-    : (process.env.RECORDER_TEST_SESSION ?? '')
-  const part = fixture ? 'Lift 2' : (process.env.RECORDER_TEST_PART ?? '')
-  const parent = fixture ? 'Building' : (process.env.RECORDER_TEST_PARENT ?? 'Premises')
-  test.skip(
-    !fixture && (!session.startsWith('[Test]') || !part),
-    'Requires a named local test session or the isolated location fixture.',
-  )
-  test.setTimeout(120_000)
-  await page.setViewportSize({ width: 390, height: 844 })
-  if (fixture) {
-    await useLocationFixture(page)
-  } else {
-    // Establish and verify the real local admin account before opening the static device bundle.
-    await page.request.get('/robots.txt', { headers: { accept: 'text/html' } })
-    const admin = await page.request.get('/admin', { headers: { accept: 'text/html' } })
-    expect(admin.ok()).toBe(true)
-    expect(new URL(admin.url()).pathname).toMatch(/^\/admin(?:\/|$)/)
-    expect(
-      (await (await page.request.get('/api/auth/get-session')).json()).user.id,
-    ).toBe('hype-local-agent-admin')
-  }
-
+/** Opens the bundled Recorder with native transport routed through the managed browser.
+ * @param page Managed Chrome page. @returns Once the Recorder entry page is open.
+ */
+async function openNativeRecorder(page: Page): Promise<void> {
   // Chrome shares the backend origin here; use its authenticated fetch in place of Tauri IPC.
   await page.addInitScript(() => {
     Object.defineProperty(window, 'isTauri', { value: true })
@@ -411,6 +389,38 @@ test('opens a shared session, swipes, selects a building part and persists a rec
       route.fulfill({ path: join(build, 'index.html'), contentType: 'text/html' }),
   )
   await page.goto('/')
+}
+
+test('opens a shared session, swipes, selects a building part and persists a record', async ({
+  page,
+  context,
+}) => {
+  const fixture = process.env.RECORDER_TEST_FIXTURE === '1'
+  const session = fixture
+    ? 'North tower survey'
+    : (process.env.RECORDER_TEST_SESSION ?? '')
+  const part = fixture ? 'Lift 2' : (process.env.RECORDER_TEST_PART ?? '')
+  const parent = fixture ? 'Building' : (process.env.RECORDER_TEST_PARENT ?? 'Premises')
+  test.skip(
+    !fixture && (!session.startsWith('[Test]') || !part),
+    'Requires a named local test session or the isolated location fixture.',
+  )
+  test.setTimeout(120_000)
+  await page.setViewportSize({ width: 390, height: 844 })
+  if (fixture) {
+    await useLocationFixture(page)
+  } else {
+    // Establish and verify the real local admin account before opening the static device bundle.
+    await page.request.get('/robots.txt', { headers: { accept: 'text/html' } })
+    const admin = await page.request.get('/admin', { headers: { accept: 'text/html' } })
+    expect(admin.ok()).toBe(true)
+    expect(new URL(admin.url()).pathname).toMatch(/^\/admin(?:\/|$)/)
+    expect(
+      (await (await page.request.get('/api/auth/get-session')).json()).user.id,
+    ).toBe('hype-local-agent-admin')
+  }
+
+  await openNativeRecorder(page)
   const testSession = page.getByRole('button', { name: session, exact: false })
   await expect(page.getByRole('button', { name: 'Sign out' })).toHaveCount(0)
   const menu = page.getByRole('navigation', { name: 'Main menu' })
@@ -733,4 +743,72 @@ test('opens a shared session, swipes, selects a building part and persists a rec
     await page.getByRole('button', { name: 'Sign out', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Sign in with HYPE' })).toBeVisible()
   }
+})
+
+test('reuses cached models and floor plans after restarting Recorder', async ({
+  page,
+}) => {
+  test.setTimeout(120_000)
+  await useLocationFixture(page)
+  await openNativeRecorder(page)
+  async function selectBuilding(): Promise<void> {
+    await page.getByRole('button', { name: 'North tower survey' }).click()
+    await page.getByRole('button', { name: 'Open location map' }).click()
+  }
+
+  const interior = page.getByRole('button', { name: 'Interior', exact: true })
+  const exterior = page.getByRole('button', { name: 'Exterior', exact: true })
+  const plan = page.getByRole('button', { name: 'Floor plan' })
+  const model = page.locator('model-viewer')
+  // A damaged release must be retryable at the same content-addressed URL.
+  await page.route('**/releases/*', route => route.fulfill({ json: {} }), { times: 1 })
+  await selectBuilding()
+  await page.getByRole('button', { name: 'Retry floor plan' }).click()
+  await expect(plan).toBeVisible()
+  // A glTF can parse as JSON and still fail when the viewer resolves its dependencies.
+  await page.route(
+    '**/assembly.gltf',
+    route => route.fulfill({ json: { buffers: [{ uri: 'invalid-resource' }] } }),
+    { times: 1 },
+  )
+  await exterior.click()
+  await page.getByRole('button', { name: 'Retry', exact: true }).click()
+  await expect(model).toHaveJSProperty('loaded', true, { timeout: 45000 })
+
+  // Keep the account and placement checks online, and make every asset download fail.
+  const downloads: string[] = []
+  await page.route(
+    /\/(?:releases\/[^/]+|assembly\.gltf|mesh\.bin|wall\.png)$/,
+    route => {
+      downloads.push(route.request().url())
+      return route.fulfill({ status: 503 })
+    },
+  )
+  await page.reload()
+  await selectBuilding()
+  await interior.click()
+  await expect(plan).toBeVisible()
+  await expect(plan.locator('image').first()).toHaveAttribute(
+    'href',
+    /^data:image\/png/,
+  )
+  await exterior.click()
+  await expect(model).toHaveJSProperty('loaded', true, { timeout: 45000 })
+  expect(downloads).toEqual([])
+
+  await interior.click()
+  await page.route('**/placement.json*', route => route.fulfill({ status: 403 }))
+  await exterior.click()
+  await expect(page.getByRole('alert')).toHaveText(
+    'Could not load the linked building model.',
+  )
+  await expect(page.locator('model-viewer')).toHaveCount(0)
+
+  await page.goBack()
+  await page.getByRole('button', { name: 'User', exact: true }).click()
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Sign in with HYPE' })).toBeVisible()
+  expect(await page.evaluate(() => caches.keys())).not.toContainEqual(
+    expect.stringMatching(/^hype-recorder-assets-/),
+  )
 })
