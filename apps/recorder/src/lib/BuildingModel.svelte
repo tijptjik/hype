@@ -1,6 +1,8 @@
 <script lang="ts">
 // I18N
 import { t } from './i18n'
+// COMPONENTS
+import BuildingModelSkeleton from './BuildingModelSkeleton.svelte'
 // API
 import { readRecorderAsset } from './assetCache'
 
@@ -124,11 +126,7 @@ $effect(() => {
 <div class="bg-surface relative h-[38dvh] min-h-52 overflow-hidden rounded-xl">
   <div bind:this={host} class="h-full w-full"></div>
   {#if loading}
-    <div
-      class="bg-panel absolute inset-0 animate-pulse"
-      role="status"
-      aria-label={t('loading_building_model')}
-    ></div>
+    <BuildingModelSkeleton />
   {:else if failed}
     <div class="absolute inset-0 grid place-content-center gap-2 px-4">
       <p role="alert">{t('building_model_failed')}</p>

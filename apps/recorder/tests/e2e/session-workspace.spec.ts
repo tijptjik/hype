@@ -771,9 +771,42 @@ test('reuses cached models and floor plans after restarting Recorder', async ({
     route => route.fulfill({ json: { buffers: [{ uri: 'invalid-resource' }] } }),
     { times: 1 },
   )
-  await exterior.click()
-  await page.getByRole('button', { name: 'Retry', exact: true }).click()
+  // Hold the real viewer in its pending state until both motion preferences have been checked.
+  let releasePlacement!: () => void
+  const pendingPlacement = new Promise<void>(resolve => {
+    releasePlacement = resolve
+  })
+  await page.route(
+    '**/placement.json*',
+    async route => {
+      await pendingPlacement
+      await route.fallback()
+    },
+    { times: 1 },
+  )
+  const loading = page.getByRole('status', { name: 'Loading building exterior model' })
+  const animationCount = () =>
+    loading.evaluate(el => el.getAnimations({ subtree: true }).length)
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  try {
+    await exterior.click()
+    await expect(loading).toBeVisible()
+    await expect.poll(animationCount).toBeGreaterThan(0)
+    const artifacts = process.env.DEV_RUNNER_ARTIFACTS
+    if (artifacts)
+      await loading.screenshot({ path: join(artifacts, 'building-model-loading.png') })
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await expect.poll(animationCount).toBe(0)
+    await expect(loading.locator('svg')).toBeVisible()
+  } finally {
+    releasePlacement()
+  }
+  const retry = page.getByRole('button', { name: 'Retry', exact: true })
+  await expect(retry).toBeVisible()
+  await expect(loading).toHaveCount(0)
+  await retry.click()
   await expect(model).toHaveJSProperty('loaded', true, { timeout: 45000 })
+  await expect(loading).toHaveCount(0)
 
   // Keep the account and placement checks online, and make every asset download fail.
   const downloads: string[] = []
