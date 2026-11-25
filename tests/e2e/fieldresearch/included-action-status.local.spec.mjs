@@ -34,6 +34,7 @@ test('shows saved relationships and distinguishes partial and complete session i
   await page.goto(
     '/admin/field-recorder?session=5e856112-1f64-457a-8c64-3170e874688b#locations',
   )
+  await page.getByRole('button', { name: 'Edit Locations', exact: true }).click()
   const list = page.getByRole('complementary', { name: 'Included Locations' })
   for (const included of [0, 1, 2]) {
     const row = list

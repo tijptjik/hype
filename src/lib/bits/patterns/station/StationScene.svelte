@@ -19,18 +19,22 @@ import { cameraTravel, floorInViewport } from '#lib/indoor/cameraTransition.js'
 import { stationFloorCallout } from '#lib/indoor/levels.js'
 import { stationProjection } from '#lib/indoor/scene.js'
 import { connectionCandidates, stairTreads } from '#lib/indoor/spatial.js'
+import type { GalleryCamera } from '#lib/indoor/galleryCamera.svelte.js'
 import type { StationState } from '#lib/indoor/station.svelte.js'
 let {
   station,
   data,
   onSelect,
   allowSelection = true,
+  galleryCamera,
 }: {
   station: StationState
   data: IndoorData
   onSelect: () => void
   /** Embedded profiles retain their selected building part while allowing camera controls. */
   allowSelection?: boolean
+  /** Optional camera-only synchronization for an exploded-model gallery. */
+  galleryCamera?: GalleryCamera
 } = $props()
 // Share the camera control preference between the public viewer and embedded maps.
 const screenAlignedLogos = $derived(station.screenAlignedLogos)
@@ -209,6 +213,12 @@ let zoom = $state(1),
 let svg: SVGSVGElement
 let width = $state(800),
   height = $state(600)
+// Preserve apparent zoom when an orbit freezes a frame with a different aspect ratio.
+const galleryZoom = $derived(
+  (Math.max(fittedView[2] / width, fittedView[3] / height) /
+    Math.max(baseView[2] / width, baseView[3] / height)) *
+    zoom,
+)
 let drag: {
   x: number
   y: number
@@ -255,6 +265,41 @@ $effect(() => {
     panY = 0
   })
 })
+// Receive after the normal fit reset, including the first mount of a lazy gallery card.
+const galleryCameraSource = {}
+$effect(() => {
+  const shared = galleryCamera
+  const pose = shared?.pose
+  const source = shared?.source
+  void station.fitRevision
+  void station.exploded
+  if (!pose || source === galleryCameraSource) return
+  untrack(() => {
+    station.bearing = pose.bearing
+    station.tilt = pose.tilt
+    retainedView = null
+    zoom = pose.zoom
+    panX = pose.panX * fittedView[2]
+    panY = pose.panY * fittedView[3]
+  })
+})
+/** Share only user-driven camera changes, preventing reactive feedback between cards.
+ * @returns Nothing. @remarks Normalize retained orbit frames against each model's fitted bounds.
+ */
+function shareGalleryCamera(): void {
+  if (!galleryCamera || !station.exploded) return
+  galleryCamera.update(galleryCameraSource, {
+    bearing: station.bearing,
+    tilt: station.tilt,
+    zoom: galleryZoom,
+    panX:
+      (baseView[0] + baseView[2] / 2 + panX - fittedView[0] - fittedView[2] / 2) /
+      fittedView[2],
+    panY:
+      (baseView[1] + baseView[3] / 2 + panY - fittedView[1] - fittedView[3] / 2) /
+      fittedView[3],
+  })
+}
 // Rank against the visible camera centre before index navigation changes floor or zoom.
 $effect(() => {
   station.rankIndexPlaces = candidates => {
@@ -509,6 +554,7 @@ function wheel(event: WheelEvent): void {
     lastWheelZoom = now
     changeZoom(zoom * Math.exp(-event.deltaY * 0.001), fresh)
   }
+  shareGalleryCamera()
 }
 function move(event: PointerEvent): void {
   if (pointers.has(event.pointerId))
@@ -532,6 +578,7 @@ function move(event: PointerEvent): void {
     panX = pinch.px - ((a.x + b.x) / 2 - pinch.x) * pinch.scale
     panY = pinch.py - ((a.y + b.y) / 2 - pinch.y) * pinch.scale
     dragged = true
+    shareGalleryCamera()
     return
   }
   if (!drag) return
@@ -557,6 +604,7 @@ function move(event: PointerEvent): void {
   }
   drag.moved ||= Math.hypot(event.clientX - drag.x, event.clientY - drag.y) > 4
   if (drag.moved) svg.setPointerCapture(event.pointerId)
+  shareGalleryCamera()
 }
 function activate(event: MouseEvent, feature: IndoorFeature): void {
   event.stopPropagation()
@@ -613,6 +661,7 @@ function chooseFloor(id: string): void {
       panX = 0
       panY = 0
     }
+    shareGalleryCamera()
   }}
 >
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions (Pointer gestures belong to the map; keyboard zoom is on its application wrapper.) -->
@@ -624,6 +673,19 @@ function chooseFloor(id: string): void {
     data-camera-animating={cameraAnimating}
     data-camera-bearing={displayedPose.bearing}
     data-camera-tilt={displayedPose.tilt}
+    data-camera-zoom={galleryZoom}
+    data-camera-pan-x={(baseView[0] +
+      baseView[2] / 2 +
+      panX -
+      fittedView[0] -
+      fittedView[2] / 2) /
+      fittedView[2]}
+    data-camera-pan-y={(baseView[1] +
+      baseView[3] / 2 +
+      panY -
+      fittedView[1] -
+      fittedView[3] / 2) /
+      fittedView[3]}
     data-logo-mode={screenAlignedLogos ? 'screen-aligned' : 'default'}
     class="h-full w-full touch-none outline-none select-none"
     data-station-scene={station.exploded ? 'exploded' : 'plan'}

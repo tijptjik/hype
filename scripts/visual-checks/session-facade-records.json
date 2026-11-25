@@ -68,15 +68,15 @@
     "locationId": "building:b9d25941b52020c0e9a8ecd4771ff342d1e1cd0dfa5d66c6a68596bfae23b7bf",
     "file": "comparison-a137ec0d1117f41f5f0b8955eeb9db088d6bd6cd4757980571eada78548220fb.glb",
     "floors": 6,
-    "revision": 1,
-    "movingLines": [3, 4]
+    "revision": 2,
+    "movingLines": [4, 5]
   },
   {
     "key": "unison",
     "locationId": "0wZvOLTSnVg8",
     "file": "comparison-1961aa874659700470cdc794f4b54645f6e98623ec0f12169703530c928e9a53.glb",
     "floors": 8,
-    "revision": 2,
+    "revision": 3,
     "movingLines": [2, 3, 4, 5, 6, 7]
   }
 ]

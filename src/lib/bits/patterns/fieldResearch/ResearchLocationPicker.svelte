@@ -41,7 +41,7 @@ let {
   physicalTarget,
   creationRequests,
   constituentOnly,
-  savingBuilding = $bindable(false),
+  savingSelection = $bindable(false),
   onPhysicalTarget,
   onMembersChanged,
 }: {
@@ -57,7 +57,7 @@ let {
   }>
   creationRequests: Map<string, string>
   constituentOnly: boolean
-  savingBuilding?: boolean
+  savingSelection?: boolean
   physicalTarget: {
     id: string
     address: string
@@ -115,7 +115,7 @@ async function attachMember(result: Result): Promise<void> {
   if (busy || disabled || !sourceId || !source) return
   busy = true
   failure = ''
-  savingBuilding = true
+  savingSelection = true
   const parent = physicalTarget
   try {
     const requestId = creationRequests.get(sourceId) ?? crypto.randomUUID()
@@ -137,7 +137,7 @@ async function attachMember(result: Result): Promise<void> {
   } catch (error) {
     failure = submissionErrorMessage(error) ?? 'Could not save the physical building.'
   } finally {
-    savingBuilding = false
+    savingSelection = false
     busy = false
   }
 }
@@ -250,6 +250,7 @@ function mapReady(map: MapController | null): void {
  */
 async function accept(result: Result): Promise<void> {
   if (busy || disabled) return
+  savingSelection = true
   busy = true
   failure = ''
   try {
@@ -285,6 +286,7 @@ async function accept(result: Result): Promise<void> {
   } catch (error) {
     failure = error instanceof Error ? error.message : String(error)
   } finally {
+    savingSelection = false
     busy = false
   }
 }

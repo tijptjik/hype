@@ -1,7 +1,7 @@
 // SVELTE
 import { error, type RequestHandler } from '@sveltejs/kit'
 // DATABASE
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { setupRequestHandler } from '#lib/api/index.js'
 import { locationExteriorModel } from '#lib/db/schema/locationExteriorModel.js'
 // AUTHORIZATION
@@ -42,11 +42,33 @@ export const GET: RequestHandler = async event => {
     .where(eq(locationExteriorModel.locationId, params.id))
     .get()
   if (!model || model.assetId !== params.asset) error(404, 'MODEL_NOT_FOUND')
-  // Check access to the current model before Recorder reuses its downloaded assets.
+  // Pair each immutable geometry with its own reviewed floor alignment.
   if (params.file === 'placement.json') {
     const comparisonFile = await textureComparisonFile(locals.platform, model.assetId)
+    const query = new URL(request.url).searchParams
+    const savedRevision = query.get('revision')
+    const alignmentFilter =
+      savedRevision === null
+        ? sql`a.revision=(SELECT max(b.revision) FROM locationExteriorAlignment b WHERE b.locationId=a.locationId AND b.assetId=a.assetId AND b.geometryId=a.geometryId)`
+        : sql`a.geometryId=${query.get('geometry')} AND a.revision=${Number(savedRevision)}`
+    const alignments = await ctx.db.all<{
+      geometryId: string
+      revision: number
+      alignment: string
+    }>(sql`
+      SELECT a.geometryId, a.revision, a.alignment FROM locationExteriorAlignment a
+      WHERE a.locationId=${model.locationId} AND a.assetId=${model.assetId}
+      AND ${alignmentFilter}`)
     return Response.json(
-      { comparisonFile },
+      {
+        comparisonFile,
+        alignments: Object.fromEntries(
+          alignments.map(row => [
+            row.geometryId,
+            { revision: row.revision, ...JSON.parse(row.alignment) },
+          ]),
+        ),
+      },
       { headers: { 'Cache-Control': 'private, no-store' } },
     )
   }

@@ -41,6 +41,8 @@ import {
   researchLocationInclusionSQL,
 } from '#lib/db/services/fieldResearchLocations.js'
 
+import { exteriorGalleryModel } from '#lib/locations/exterior/gallery.server.js'
+
 import { hasLocationRelationshipsSQL } from '#lib/db/services/locationRelationshipReview.js'
 
 const id = z.string().min(1).max(100)
@@ -120,7 +122,7 @@ export const getResearchLocations = guardedQuery(
       sql`WITH scope(organisationId) AS (VALUES (${session.organisationId}))
         SELECT l.id,l.matchingType kind,
           CASE WHEN l.matchingType='building' THEN ${hasLocationRelationshipsSQL(sql`sl.locationId`, sql`scope.organisationId`)} ELSE 0 END hasRelationships,
-          CASE WHEN l.matchingType IN ('building','premises') THEN ${researchLocationInclusionSQL(sql`sl.locationId`, sql`scope.organisationId`, sql`sl.sessionId`)} ELSE '{"total":0,"included":0}' END inclusion,
+          CASE WHEN l.matchingType IN ('building','premises') THEN ${researchLocationInclusionSQL(sql`sl.locationId`, session.organisationId, sql`sl.sessionId`)} ELSE '{"total":0,"included":0}' END inclusion,
           exterior.assetId,exterior.sourceModelId,
           (SELECT a.alignment->>'$.frontViewId' FROM locationExteriorAlignment a
            WHERE a.locationId=exterior.locationId AND a.assetId=exterior.assetId AND a.geometryId=exterior.assetId
@@ -148,7 +150,10 @@ export const getResearchLocations = guardedQuery(
         WHERE sl.sessionId=${input.sessionId} AND l.state!='redirect'
           AND (l.state!='manual' OR l.ownerOrganisationId=${session.organisationId}) ORDER BY l.id`,
     )
-    const locations = rows.map(row => {
+    const exteriors = await Promise.all(
+      rows.map(row => exteriorGalleryModel(ctx.db, ctx.event.locals.platform, row)),
+    )
+    const locations = rows.map((row, index) => {
       const names: Record<string, string> = JSON.parse(row.names ?? '{}')
       const location: {
         address?: FeatureAddress['source']
@@ -221,11 +226,7 @@ export const getResearchLocations = guardedQuery(
         hasRelationships: Boolean(row.hasRelationships),
         inclusion: JSON.parse(row.inclusion) as { total: number; included: number },
         hasExteriorMap: Boolean(row.assetId),
-        frontViewId: row.frontViewId,
-        exteriorUrl:
-          row.assetId && row.sourceModelId
-            ? `/api/location-exterior/${encodeURIComponent(row.id)}/${encodeURIComponent(row.assetId)}/${encodeURIComponent(row.sourceModelId)}.gltf`
-            : null,
+        ...exteriors[index],
         hasInteriorMap: interiorMaps.length > 0,
         interiorMaps,
         members: members.map(member => ({

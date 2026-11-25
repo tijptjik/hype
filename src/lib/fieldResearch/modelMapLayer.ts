@@ -18,6 +18,8 @@ import {
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 // COORDINATES
 import proj4 from 'proj4'
+// MATERIAL VARIANTS
+import { selectModelVariant } from './modelVariant'
 
 // EPSG:2326 with the EPSG:1825 HK1980-to-WGS84 transformation. proj4 uses position-vector rotation signs.
 const grid = proj4(
@@ -29,6 +31,7 @@ export type SessionMapBuilding = {
   id: string
   title: string
   exteriorUrl: string | null
+  exteriorVariant?: string | null
   coordinates: [number, number] | null
 }
 
@@ -105,7 +108,14 @@ export function sessionModelLayer(
         if (!building.exteriorUrl) continue
         void loader
           .loadAsync(building.exteriorUrl)
-          .then(({ scene: model }) => {
+          .then(async gltf => {
+            const model = gltf.scene
+            try {
+              await selectModelVariant(gltf, building.exteriorVariant)
+            } catch (error) {
+              disposeModel(model)
+              throw error
+            }
             if (disposed) return disposeModel(model)
             const bounds = new Box3().setFromObject(model)
             const center = bounds.getCenter(new Vector3())

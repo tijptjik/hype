@@ -250,7 +250,10 @@ export function relationshipScopeSql(
   scope: string | SQL | null,
 ): SQL {
   const root = table === 'locationTransition' ? 'transitionId' : 'relationshipId'
-  return sql`(r.scopeOrganisationId IS ${scope} OR (r.scopeOrganisationId IS NULL AND NOT EXISTS(SELECT 1 FROM ${sql.identifier(table + 'Head')} o WHERE o.${sql.identifier(root)}=r.${sql.identifier(root)} AND o.scopeOrganisationId IS ${scope} AND ${scope} IS NOT NULL)))`
+  // The non-null root IDs include suppressions. Read the scoped set once for a bound organisation.
+  return sql`(r.scopeOrganisationId IS ${scope} OR (r.scopeOrganisationId IS NULL AND r.${sql.identifier(root)} NOT IN (
+    SELECT o.${sql.identifier(root)} FROM ${sql.identifier(table + 'Head')} o WHERE o.scopeOrganisationId=${scope}
+  )))`
 }
 
 /** Read bounded authorized groupings without exposing raw evidence or private endpoint counts.

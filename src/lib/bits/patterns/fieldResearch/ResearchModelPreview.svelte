@@ -6,6 +6,7 @@ import type StationScene from '#lib/bits/patterns/station/StationScene.svelte'
 // TYPES
 import type { ModelViewerElement } from '@google/model-viewer'
 import type { StationState } from '#lib/indoor/station.svelte.js'
+import type { GalleryCamera } from '#lib/indoor/galleryCamera.svelte.js'
 import type { MapBundle } from '#lib/indoor/releases.js'
 
 let {
@@ -13,11 +14,13 @@ let {
   title,
   interior,
   frontViewId,
+  camera,
 }: {
   url: string
   title: string
   interior: boolean
   frontViewId: string | null
+  camera?: GalleryCamera
 } = $props()
 let host: HTMLDivElement
 let ready = $state(false)
@@ -33,11 +36,26 @@ onMount(() => {
   async function showExterior(viewer: ModelViewerElement): Promise<void> {
     // Use the same geometry and view IDs as the façade editor before revealing the model.
     try {
-      const blob = await viewer.exportScene({
-        binary: true,
-        onlyVisible: true,
-        maxTextureSize: 1,
-      })
+      const comparison = /\/comparison-[a-f0-9]{64}\.glb$/.test(url)
+      let blob: Blob
+      if (comparison) {
+        const response = await fetch(url, { signal })
+        if (!response.ok) throw new Error('Comparison unavailable')
+        blob = await response.blob()
+        // Exporting variants can activate other materials; read the exact reviewed geometry instead.
+        viewer.variantName = viewer.availableVariants.includes('AI-generated')
+          ? 'AI-generated'
+          : viewer.availableVariants.includes('Revised')
+            ? 'Revised'
+            : null
+        await viewer.updateComplete
+      } else {
+        blob = await viewer.exportScene({
+          binary: true,
+          onlyVisible: true,
+          maxTextureSize: 1,
+        })
+      }
       if (signal.aborted) return
       if (blob.size > 256 * 1024 * 1024) {
         ready = true
@@ -143,6 +161,7 @@ onMount(() => {
   {:else if IndoorScene && scene?.data}
     <IndoorScene
       station={scene}
+      galleryCamera={camera}
       data={scene.data}
       allowSelection={false}
       onSelect={() => {}}

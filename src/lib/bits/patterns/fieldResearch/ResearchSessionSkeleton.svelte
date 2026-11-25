@@ -1,6 +1,7 @@
 <script lang="ts">
 // COMPONENTS
 import { SectionHeader } from '#lib/bits/custom/form/index.js'
+import ResearchLocationCardsSkeleton from './ResearchLocationCardsSkeleton.svelte'
 import Skeleton from '#lib/bits/custom/skeleton/Skeleton.svelte'
 // ICONS
 import LayersIcon from 'virtual:icons/proicons/layers'
@@ -17,12 +18,8 @@ let { section = 'core' }: { section?: 'core' | 'fields' | 'locations' | 'all' } 
   <div aria-hidden="true">
     {#if section === 'locations'}
       <SectionHeader title="Locations for this session" icon={LocationIcon} />
-      <div class="space-y-4 px-6 py-5">
-        <Skeleton class="h-4 w-96 max-w-full" />
-        <div class="flex gap-2">
-          <Skeleton class="h-10 w-28" /><Skeleton class="h-10 w-28" />
-        </div>
-        <Skeleton class="h-12 w-full" />
+      <div class="px-6 py-5">
+        <ResearchLocationCardsSkeleton />
       </div>
     {:else}
       {#if section !== 'fields'}

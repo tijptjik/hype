@@ -5,6 +5,7 @@ import type { Component } from 'svelte'
 import { getResearchLocations } from '#lib/api/fieldResearchLocations.remote.js'
 // COMPONENTS
 import { SectionHeader } from '#lib/bits/custom/form/index.js'
+import { GalleryCamera } from '#lib/indoor/galleryCamera.svelte.js'
 import ResearchModelPreview from './ResearchModelPreview.svelte'
 // ICONS
 import BuildingIcon from 'virtual:icons/lucide/building-2'
@@ -27,6 +28,11 @@ let {
   sessionId: string
   revision: number
 } = $props()
+// A new session owns a fresh camera; lazy cards in this session inherit its latest pose.
+const interiorCamera = $derived.by(() => {
+  void sessionId
+  return new GalleryCamera()
+})
 const query = $derived(getResearchLocations({ sessionId, revision }))
 const buildings = $derived(
   (query.current ?? [])
@@ -134,6 +140,7 @@ const columns =
                     frontViewId={building.frontViewId}
                     title={building.title + ' ' + view}
                     interior={view === 'interior'}
+                    camera={view === 'interior' ? interiorCamera : undefined}
                   />
                 {:else}
                   <span

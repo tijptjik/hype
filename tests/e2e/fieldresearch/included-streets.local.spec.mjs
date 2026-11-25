@@ -15,6 +15,7 @@ test('groups the included buildings in the Kowloon City session by street and nu
     '/admin/field-recorder?session=5e856112-1f64-457a-8c64-3170e874688b#locations',
     { waitUntil: 'domcontentloaded' },
   )
+  await page.setViewportSize({ width: 1600, height: 1000 })
   const list = page.getByRole('complementary', { name: 'Included Locations' })
   const names = list.getByRole('heading', { level: 4 })
   await expect(names.first()).toHaveText('Kai Tak Road', { timeout: 60_000 })
@@ -69,6 +70,36 @@ test('groups the included buildings in the Kowloon City session by street and nu
   const controls = header.getByRole('group', { name: 'Location view controls' })
   const groupBy = controls.getByRole('combobox', { name: 'Group by' })
   const sortBy = controls.getByRole('combobox', { name: 'Sort by' })
+  const edit = controls.getByRole('button', { name: 'Edit Locations', exact: true })
+  const methods = controls.getByRole('group', { name: 'Location selection method' })
+  const remove = list.getByRole('button', { name: /^Remove .+ from session$/ })
+  await expect(methods).toHaveCount(0)
+  await expect(remove).toHaveCount(0)
+  await groupBy.selectOption('none')
+  const cards = list.locator('section > ul > li')
+  const positions = () =>
+    cards.evaluateAll(items =>
+      items.map(item => {
+        const { x, y } = item.getBoundingClientRect()
+        return { x, y }
+      }),
+    )
+  const wide = await positions()
+  expect(new Set(wide.map(card => card.x)).size).toBeGreaterThan(1)
+  expect(new Set(wide.map(card => card.y)).size).toBeGreaterThan(1)
+  await groupBy.selectOption('street')
+  await view.screenshot({
+    path: join(process.env.DEV_RUNNER_ARTIFACTS, 'session-locations-view.png'),
+  })
+  await view.evaluate(section => section.style.setProperty('max-width', '400px'))
+  const narrow = await positions()
+  expect(new Set(narrow.map(card => card.x).filter(x => x > 0)).size).toBe(1)
+  expect(
+    await view.evaluate(section => section.scrollWidth <= section.clientWidth),
+  ).toBe(true)
+  await view.evaluate(section => section.style.removeProperty('max-width'))
+  await edit.click()
+  await expect(remove.first()).toBeVisible()
   await expect(
     controls.getByRole('button', { name: 'Search', exact: true }),
   ).toBeVisible()
@@ -147,6 +178,10 @@ test('groups the included buildings in the Kowloon City session by street and nu
     path: join(process.env.DEV_RUNNER_ARTIFACTS, 'included-location-streets.png'),
   })
   await page.setViewportSize(viewport)
+  await controls.getByRole('button', { name: 'Done', exact: true }).click()
+  await expect(edit).toBeVisible()
+  await expect(methods).toHaveCount(0)
+  await expect(remove).toHaveCount(0)
   const building = street.getByRole('link', { name: 'Luen Fat Building' })
   const detail = new URL(await building.getAttribute('href'), page.url())
   await building.click()

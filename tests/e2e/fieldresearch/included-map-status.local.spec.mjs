@@ -1,5 +1,9 @@
 import { join } from 'node:path'
+import { createRequire } from 'node:module'
 import { expect, test } from '@playwright/test'
+
+const kit = createRequire(import.meta.resolve('@sveltejs/kit'))
+const { parse, stringify } = await import(kit.resolve('devalue'))
 
 test('shows map availability and explains the two dots on each included location', async ({
   page,
@@ -11,15 +15,25 @@ test('shows map availability and explains the two dots on each included location
   expect((await (await page.request.get('/api/auth/get-session')).json()).user.id).toBe(
     'hype-local-agent-admin',
   )
+  // Exercise both tooltip states even as the session gains new interior and exterior maps.
+  await page.route('**/_app/remote/*/getResearchLocations*', async route => {
+    const response = await route.fetch()
+    const body = await response.json()
+    const data = parse(body.data)
+    const [missing, mapped] = data._
+    Object.assign(missing, { hasInteriorMap: false, hasExteriorMap: false })
+    Object.assign(mapped, { hasInteriorMap: false, hasExteriorMap: true })
+    await route.fulfill({ response, json: { ...body, data: stringify(data) } })
+  })
   await page.goto(
     '/admin/field-recorder?session=5e856112-1f64-457a-8c64-3170e874688b#locations',
     { waitUntil: 'domcontentloaded' },
   )
   const list = page.getByRole('complementary', { name: 'Included Locations' })
-  const removeButtons = list.getByRole('button', { name: /^Remove .+ from session$/ })
+  const cards = list.locator('section > ul > li')
   const statuses = list.getByRole('button', { name: /^Interior map / })
   await expect(statuses.first()).toBeVisible({ timeout: 60_000 })
-  await expect(statuses).toHaveCount(await removeButtons.count())
+  await expect(statuses).toHaveCount(await cards.count())
   const mapped = statuses
     .and(
       page.getByRole('button', {

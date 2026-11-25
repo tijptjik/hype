@@ -16,13 +16,14 @@ describe('field session Location selection', () => {
       sqlite.exec(`CREATE TABLE location(id TEXT PRIMARY KEY, matchingType TEXT, state TEXT, ownerOrganisationId TEXT);
         CREATE TABLE locationCanonical(aliasId TEXT PRIMARY KEY, locationId TEXT);
         CREATE TABLE locationMembershipHead(relationshipId TEXT, parentLocationId TEXT, childLocationId TEXT, assertionState TEXT, membershipState TEXT, effectiveFrom TEXT, effectiveTo TEXT, scopeOrganisationId TEXT);
+        CREATE INDEX locationMembership_parentLocationId ON locationMembershipHead(parentLocationId,relationshipId);
         INSERT INTO location VALUES ('p','premises','linked',NULL),('b','building','linked',NULL),('f','building_part','linked',NULL),('u','building_part','linked',NULL),('foreign','building','manual','other'),('stale','building','linked',NULL),('blocked','building','linked',NULL);
         ALTER TABLE location ADD COLUMN redirectTargetId TEXT;
-        INSERT INTO location VALUES ('old-b','building','redirect',NULL,'b');
-        INSERT INTO locationCanonical VALUES ('old-b','b');
+        INSERT INTO location VALUES ('old-b','building','redirect',NULL,'b'),('old-f','building_part','redirect',NULL,'f');
+        INSERT INTO locationCanonical VALUES ('old-b','b'),('old-f','f');
         INSERT INTO locationMembershipHead VALUES
           ('p-b','p','b','asserted','current',NULL,NULL,NULL),
-          ('b-f','old-b','f','asserted','current',NULL,NULL,NULL),
+          ('b-f','old-b','old-f','asserted','current',NULL,NULL,NULL),
           ('f-u','f','u','asserted','current',NULL,NULL,NULL),
           ('p-foreign','p','foreign','asserted','current',NULL,NULL,NULL),
           ('p-stale','p','stale','asserted','former',NULL,NULL,NULL),
@@ -39,12 +40,18 @@ describe('field session Location selection', () => {
       ])
       sqlite.exec(`CREATE TABLE fieldResearchSessionLocation(sessionId TEXT, locationId TEXT);
         INSERT INTO fieldResearchSessionLocation VALUES ('s','b'),('another','f')`)
+      const inclusion = sql`SELECT ${researchLocationInclusionSQL(sql`root.id`, 'org', sql`'s'`)} counts FROM location root WHERE id='b'`
+      // A state-only lookup repeats unrelated memberships for every included part.
+      const plan = await db.all<{ detail: string }>(
+        sql`EXPLAIN QUERY PLAN ${inclusion}`,
+      )
+      expect(plan.map(step => step.detail)).toContainEqual(
+        expect.stringContaining(
+          'locationMembership_parentLocationId (parentLocationId=',
+        ),
+      )
       const counts = async () =>
-        JSON.parse(
-          (await db.get<{ counts: string }>(
-            sql`SELECT ${researchLocationInclusionSQL(sql`root.id`, sql`'org'`, sql`'s'`)} counts FROM location root WHERE id='b'`,
-          ))!.counts,
-        )
+        JSON.parse((await db.get<{ counts: string }>(inclusion))!.counts)
       expect(await counts()).toEqual({ included: 0, total: 2 })
       sqlite.exec("INSERT INTO fieldResearchSessionLocation VALUES ('s','f')")
       expect(await counts()).toEqual({ included: 1, total: 2 })

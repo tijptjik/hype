@@ -19,6 +19,7 @@ test.beforeEach(async ({ page }) => {
 test('keeps the read-only views available across all session tabs', async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 })
   await page.goto(session)
   const header = page.getByRole('banner')
   const button = name => header.getByRole('button', { name, exact: true })
@@ -27,7 +28,19 @@ test('keeps the read-only views available across all session tabs', async ({
     await button(tab).click()
     await expect(button(tab)).toHaveAttribute('aria-current', 'page')
     for (const view of views) await expect(button(view)).toBeVisible()
-    if (tab !== 'Locations') await button('Edit').click({ trial: true })
+    await expect(button('Records')).toBeVisible()
+    if (tab !== 'Locations') {
+      const edit = await button('Edit').boundingBox()
+      for (const label of ['Records', ...views]) {
+        const action = await button(label).boundingBox()
+        expect(action.x + action.width).toBeLessThanOrEqual(edit.x)
+      }
+      await button('Edit').click({ trial: true })
+      if (index === 0)
+        await header.screenshot({
+          path: join(process.env.DEV_RUNNER_ARTIFACTS, 'session-header.png'),
+        })
+    }
 
     const view = views[index]
     await button(view).click()
@@ -42,12 +55,231 @@ test('keeps the read-only views available across all session tabs', async ({
   }
 })
 
+test('lists captured records and restores the session tab from browser history', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1600, height: 1000 })
+  await page.goto(`${session}#fields`)
+  const header = page.getByRole('banner')
+  const records = header.getByRole('button', { name: 'Records', exact: true })
+  await records.click()
+  await expect(records).toHaveAttribute('aria-pressed', 'true')
+  const list = page.getByRole('region', { name: 'Records', exact: true })
+  const first = list.getByRole('link').first()
+  await expect(first).toBeVisible({ timeout: 60_000 })
+  await expect(first).toHaveAttribute('href', /^\/admin\/features\/[^/]+$/)
+  await expect(first.locator('time')).toHaveAttribute('datetime', /T/)
+  await expect(header.getByRole('button', { name: 'Edit', exact: true })).toBeHidden()
+  await first.click({ trial: true })
+  await page.screenshot({
+    path: join(process.env.DEV_RUNNER_ARTIFACTS, 'session-records.png'),
+  })
+  await page.reload()
+  await first.click({ trial: true })
+  await page.goBack()
+  await expect(
+    header.getByRole('button', { name: 'Fields', exact: true }),
+  ).toHaveAttribute('aria-current', 'page')
+  await expect(list).toHaveCount(0)
+})
+
+test('shows record-card addresses, capture tags and gallery thumbnails', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1566, height: 850 })
+  await page.goto(`${session}&view=records#locations`)
+  const list = page.getByRole('region', { name: 'Records', exact: true })
+  const photo = list.getByRole('link', { name: /#006/ })
+  await expect(photo.locator('strong')).toContainText('35 Kai Tak Road', {
+    timeout: 60_000,
+  })
+  await expect(photo.getByText('E', { exact: true })).toBeVisible()
+  const older = list.getByRole('link', { name: /#001/ })
+  // The isolated admin media bucket contains this capture's retained original.
+  await expect
+    .poll(() =>
+      older.locator('img').evaluate(img => img.complete && img.naturalWidth > 0),
+    )
+    .toBe(true)
+  await expect(older.locator('strong')).toHaveText('No address recorded')
+  await expect(older.getByText('E', { exact: true })).toBeVisible()
+  await expect(list.getByRole('link', { name: /#002/ }).locator('img')).toHaveCount(0)
+  await page.screenshot({
+    path: join(process.env.DEV_RUNNER_ARTIFACTS, 'record-card-identities.png'),
+  })
+  await list.getByRole('searchbox').fill('35 Kai Tak Road')
+  await expect(photo).toBeVisible()
+  await expect(older).toHaveCount(0)
+  await list.getByRole('searchbox').fill('#001')
+  await expect(older).toBeVisible()
+  await expect(photo).toHaveCount(0)
+})
+
+test('filters session records, selects matches and cancels a bulk deletion', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1566, height: 850 })
+  await page.goto(`${session}&view=records#locations`)
+  const list = page.getByRole('region', { name: 'Records', exact: true })
+  const filters = list.getByRole('group', { name: 'Record filters and bulk actions' })
+  const first = list.getByRole('link').first()
+  await expect(first).toBeVisible({ timeout: 60_000 })
+  const title = await first.locator('[title]').getAttribute('title')
+  const tag = await first.locator('.font-mono').last().textContent()
+  await filters.getByRole('searchbox').fill(title)
+  await expect(filters.getByLabel('Results: 1', { exact: true })).toBeVisible()
+  await filters.getByRole('button', { name: 'Bulk edit', exact: true }).click()
+  await filters.getByRole('button', { name: 'Select all matches' }).click()
+  const row = list.getByRole('button', { name: tag, exact: false })
+  await expect(row).toHaveAttribute('aria-pressed', 'true')
+  await filters.getByRole('button', { name: 'Invert selection' }).click()
+  await expect(row).toHaveAttribute('aria-pressed', 'false')
+  await row.press('Space')
+  await expect(row).toHaveAttribute('aria-pressed', 'true')
+  await filters.getByRole('combobox', { name: 'Action' }).click()
+  await page.getByRole('option', { name: 'Delete', exact: true }).click()
+  const confirmation = page.waitForEvent('dialog').then(async dialog => {
+    const message = dialog.message()
+    await dialog.dismiss()
+    return message
+  })
+  await filters.getByRole('button', { name: 'Apply', exact: true }).click()
+  expect(await confirmation).toContain('Permanently delete 1 selected')
+  await filters.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(first).toContainText(tag)
+  await filters.getByRole('searchbox').fill('')
+  await filters.getByRole('combobox', { name: 'Setting', exact: true }).click()
+  await page.getByRole('option', { name: 'Interior', exact: true }).click()
+  await expect(first).toContainText(/interior/i)
+  await page.screenshot({
+    path: join(process.env.DEV_RUNNER_ARTIFACTS, 'record-filters.png'),
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(page.getByRole('heading', { name: 'Window Too Small' })).toBeVisible()
+  await page.setViewportSize({ width: 1200, height: 844 })
+  await filters.getByRole('button', { name: 'Bulk edit', exact: true }).click()
+  await filters.getByRole('button', { name: 'Select all matches' }).click()
+  await expect(
+    filters.getByRole('button', { name: /^Bulk edit \([1-9]/ }),
+  ).toBeVisible()
+  await filters.getByRole('button', { name: 'Cancel', exact: true }).click()
+})
+
+test('opens recorded draft Features from the session and recovers from a failed detail read', async ({
+  page,
+}) => {
+  await page.goto(`${session}&view=records`)
+  const rows = page
+    .getByRole('region', { name: 'Records', exact: true })
+    .getByRole('link')
+  await expect(rows.first()).toBeVisible({ timeout: 60_000 })
+  const captures = await rows.evaluateAll(links =>
+    links.slice(0, 2).map(link => ({
+      title: link.querySelector('[title]').getAttribute('title'),
+      href: link.getAttribute('href'),
+    })),
+  )
+  expect(captures).toHaveLength(2)
+  const failedRead = '**/_app/remote/*/getFeature?*'
+  for (const [index, { title, href }] of captures.entries()) {
+    if (index === 0) await page.route(failedRead, route => route.abort('failed'))
+    await rows.and(page.locator(`[href="${href}"]`)).click()
+    await expect(page).toHaveURL(url => url.pathname === href)
+    if (index === 0) {
+      const retry = page.getByRole('alert').getByRole('button', { name: 'Retry' })
+      await expect(retry).toBeVisible({ timeout: 60_000 })
+      await page.unroute(failedRead)
+      await retry.click()
+    }
+    await expect(
+      page.getByRole('banner').getByRole('paragraph').filter({ hasText: title }),
+    ).toBeVisible({ timeout: 60_000 })
+    await expect(
+      page.getByRole('group', { name: 'Title · English', exact: true }),
+    ).toContainText(title)
+    if (index === 0)
+      await page.screenshot({
+        path: join(process.env.DEV_RUNNER_ARTIFACTS, 'record-feature-detail.png'),
+      })
+    await page.goBack()
+    await expect(rows.first()).toBeVisible({ timeout: 60_000 })
+  }
+})
+
+test('opens both recorded photos and the empty photo workspace', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 })
+  await page.goto(`${session}&view=records`)
+  const records = page.getByRole('region', { name: 'Records', exact: true })
+  await records.getByRole('link', { name: /#001/ }).click()
+  const photos = page
+    .getByRole('banner')
+    .getByRole('button', { name: 'Photos', exact: true })
+  await photos.click()
+  const facet = page.locator('[data-facet-id="images"]')
+  const viewport = facet.locator('[data-image-editor-viewport]')
+  await expect(viewport).toBeVisible({ timeout: 45_000 })
+  const thumbs = facet
+    .locator('button[aria-pressed]')
+    .filter({ has: page.locator('img') })
+  await expect(thumbs).toHaveCount(2, { timeout: 45_000 })
+  const revisions = new Set()
+  for (const thumb of await thumbs.all()) {
+    await thumb.click()
+    await expect(thumb).toHaveAttribute('aria-pressed', 'true')
+    await expect
+      .poll(() =>
+        thumb
+          .locator('img')
+          .evaluateAll(images =>
+            images.some(img => img.complete && img.naturalWidth > 0),
+          ),
+      )
+      .toBe(true)
+    const revision = await thumb
+      .locator('img')
+      .evaluateAll(
+        images =>
+          new URL(images.find(img => img.complete && img.naturalWidth > 0).currentSrc)
+            .pathname,
+      )
+    revisions.add(revision)
+    await expect
+      .poll(
+        () =>
+          viewport
+            .locator('.viewer-scene img')
+            .evaluateAll(
+              (images, path) =>
+                images.some(
+                  img =>
+                    img.complete &&
+                    img.naturalWidth > 0 &&
+                    new URL(img.currentSrc).pathname === path,
+                ),
+              revision,
+            ),
+        { timeout: 30_000 },
+      )
+      .toBe(true)
+  }
+  expect(revisions.size).toBe(2)
+  await page.screenshot({
+    path: join(process.env.DEV_RUNNER_ARTIFACTS, 'record-photos.png'),
+  })
+  await page.goto(`${session}&view=records`)
+  await records.getByRole('link', { name: /#002/ }).click()
+  await photos.click()
+  await expect(
+    viewport.getByText(/Drop or select images|No image/, { exact: true }),
+  ).toBeVisible({ timeout: 45_000 })
+})
+
 test('opens read-only session galleries and assembles the exterior models on the map', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 2160, height: 1024 })
   await page.goto(session + '#locations')
-  const actions = page.locator('[data-header-view-actions]')
+  const actions = page.getByRole('banner')
   const exterior = actions.getByRole('button', { name: 'Exterior gallery' })
   const interior = actions.getByRole('button', { name: 'Interior gallery' })
   const map = actions.getByRole('button', { name: '3D model map' })

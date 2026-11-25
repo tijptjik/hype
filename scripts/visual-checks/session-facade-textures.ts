@@ -43,7 +43,7 @@ try {
     await page.request.get(origin + '/api/auth/get-session')
   ).json()
   assert.equal(session.user.id, 'hype-local-agent-admin')
-  for (const item of records) {
+  for (const item of records.slice(Number(process.env.FACADE_CHECK_START ?? 0))) {
     const response = await page.goto(
       origin +
         '/admin/locations/' +
@@ -58,16 +58,19 @@ try {
     await expect(editor.getByRole('status')).toHaveText('Saved · r' + item.revision, {
       timeout: 60000,
     })
+    const viewer = page.locator('model-viewer')
+    await viewer.evaluate(element => element.scrollIntoView({ block: 'center' }))
     await expect(editor.getByRole('button', { name: /^Drag / })).toHaveCount(
       item.floors + 1,
+      { timeout: 60000 },
     )
-    const viewer = page.locator('model-viewer')
     await expect(viewer).toHaveAttribute(
       'src',
       new RegExp(item.file.replaceAll('.', '\\.')),
     )
     const group = page.getByRole('group', { name: 'Facade textures' })
     const frames: string[] = []
+    // Normalize to the base/top handles so focus scrolling cannot masquerade as line movement.
     const heights: number[][] = []
     for (const [index, label] of ['Government', 'Revised', 'AI-generated'].entries()) {
       await group.getByRole('button', { name: label, exact: true }).click()
@@ -87,9 +90,10 @@ try {
       frames.push(previous)
       heights[index] = await editor
         .getByRole('button', { name: /^Drag / })
-        .evaluateAll(elements =>
-          elements.map(element => element.getBoundingClientRect().y),
-        )
+        .evaluateAll(elements => {
+          const ys = elements.map(element => element.getBoundingClientRect().y)
+          return ys.map(y => (1000 * (y - ys[0])) / (ys[ys.length - 1] - ys[0]))
+        })
       await writeFile(
         join(output, item.key + '-' + index + '.png'),
         Buffer.from(previous.split(',')[1], 'base64'),
@@ -104,9 +108,10 @@ try {
     await expect(slider).toHaveValue('1.5')
     const midpoint = await editor
       .getByRole('button', { name: /^Drag / })
-      .evaluateAll(elements =>
-        elements.map(element => element.getBoundingClientRect().y),
-      )
+      .evaluateAll(elements => {
+        const ys = elements.map(element => element.getBoundingClientRect().y)
+        return ys.map(y => (1000 * (y - ys[0])) / (ys[ys.length - 1] - ys[0]))
+      })
     for (const index of item.movingLines) {
       assert.ok(
         Math.abs(heights[2][index] - heights[1][index]) > 0.1,
@@ -118,11 +123,13 @@ try {
       )
     }
     await page.reload({ waitUntil: 'domcontentloaded' })
+    await viewer.evaluate(element => element.scrollIntoView({ block: 'center' }))
     await expect(editor.getByRole('status')).toHaveText('Saved · r' + item.revision, {
       timeout: 110000,
     })
     await expect(editor.getByRole('button', { name: /^Drag / })).toHaveCount(
       item.floors + 1,
+      { timeout: 60000 },
     )
     await expect(viewer).toHaveAttribute(
       'src',
@@ -142,6 +149,15 @@ try {
     )
     console.log(item.key, 'verified')
   }
+} catch (error) {
+  await page
+    .screenshot({ path: join(output, 'failure.png'), fullPage: true })
+    .catch(() => {})
+  await writeFile(
+    join(output, 'failure-ui.txt'),
+    await page.locator('body').ariaSnapshot(),
+  ).catch(() => {})
+  throw error
 } finally {
   await browser.close()
 }

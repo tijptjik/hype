@@ -23,6 +23,8 @@ import BuildingConstituents from '#lib/bits/patterns/forms/locationRelationships
 import { SectionHeader } from '#lib/bits/custom/form/index.js'
 import SimpleTooltip from '#lib/bits/core/tooltip/SimpleTooltip.svelte'
 // ICONS
+import PencilIcon from 'virtual:icons/lucide/pencil'
+import CheckIcon from 'virtual:icons/lucide/check'
 import SearchIcon from 'virtual:icons/lucide/search'
 import MapIcon from 'virtual:icons/lucide/map'
 import ChevronRightIcon from 'virtual:icons/lucide/chevron-right'
@@ -37,6 +39,7 @@ import TrashIcon from 'virtual:icons/lucide/trash-2'
 import EstablishmentIcon from 'virtual:icons/lucide/store'
 import OperationalIcon from 'virtual:icons/lucide/settings'
 // COMPONENTS
+import ResearchLocationCardsSkeleton from './ResearchLocationCardsSkeleton.svelte'
 import ResearchLocationPicker from './ResearchLocationPicker.svelte'
 import PhysicalParentPicker from '#lib/bits/patterns/forms/locationRelationships/PhysicalParentPicker.svelte'
 let {
@@ -54,6 +57,8 @@ let {
   disabled?: boolean
   onSaved: () => Promise<void>
 } = $props()
+let editRequested = $state(false)
+const editing = $derived(editRequested && !disabled)
 let mode = $state<'search' | 'map'>('search')
 let active = $state<'premises' | 'building' | 'building_part'>('premises')
 let rows = $state<Awaited<ReturnType<typeof getResearchLocations>>>([])
@@ -84,7 +89,7 @@ const collapsedGroups = new SvelteSet<string>()
 let startFrom = $state<'parent' | 'constituent' | null>(null)
 // Retain creation tokens when an editor switches search methods before retrying inclusion.
 const creationRequests = new Map<string, string>()
-let savingBuilding = $state(false)
+let savingSelection = $state(false)
 let physicalId = $state<string | null>(null)
 const physicalTarget = $derived(
   active === 'building'
@@ -110,6 +115,7 @@ async function load(): Promise<void> {
     getResearchLocations({ sessionId, revision, includeDistricts }),
   )
   if (version !== loadVersion) return
+  failure = ''
   rows = result
   districtsReady = includeDistricts
   districtFailure = ''
@@ -135,7 +141,7 @@ async function add(
   locationId: string,
   mode: 'single' | 'buildings' | 'buildings_and_parts' | 'building_and_parts',
 ): Promise<void> {
-  if (busy || disabled) return
+  if (busy || !editing) return
   busy = true
   failure = ''
   try {
@@ -157,7 +163,7 @@ async function add(
  * @returns Once the session and constituent picker show the selected parent.
  */
 async function openParent(parentId: string): Promise<void> {
-  if (busy || disabled) return
+  if (busy || !editing) return
   if (!rows.some(row => row.id === parentId)) {
     try {
       await add(parentId, 'single')
@@ -171,7 +177,7 @@ async function openParent(parentId: string): Promise<void> {
 }
 /** Remove one selected Location. @param locationId Location identity. @returns Once refreshed. */
 async function remove(locationId: string): Promise<void> {
-  if (busy || disabled) return
+  if (busy || !editing) return
   busy = true
   failure = ''
   try {
@@ -191,7 +197,9 @@ onMount(() => void load().catch(error => (failure = String(error))))
     class="relative z-10 h-auto! grid-cols-1! gap-y-2 py-3! shadow-sm @min-[44rem]/locations:grid-cols-[minmax(0,1fr)_auto]! [&>div:last-child]:[container-type:normal]"
     title="Locations for this session"
     icon={LocationIcon}
-    description="Choose the Locations that can be used during recording."
+    description={editing
+      ? 'Choose the Locations that can be used during recording.'
+      : undefined}
   >
     {#snippet right()}
       <fieldset
@@ -224,158 +232,184 @@ onMount(() => void load().catch(error => (failure = String(error))))
             <option value="name-desc">Name Z–A</option>
           </select>
         </label>
-        <fieldset
-          aria-label="Location selection method"
-          class="border-border inline-flex rounded-lg border p-1"
-        >
-          {#each [
-            { value: 'search', label: 'Search', icon: SearchIcon },
-            { value: 'map', label: 'Map based', icon: MapIcon },
-          ] as option}
-            <button
-              type="button"
-              aria-label={option.label}
-              title={option.label}
-              aria-pressed={mode === option.value}
-              class="text-muted-foreground hover:bg-muted aria-pressed:bg-background aria-pressed:text-primary rounded-md p-2 aria-pressed:shadow-sm"
-              disabled={busy || savingBuilding}
-              onclick={() => (mode = option.value as 'search' | 'map')}
-            >
-              <option.icon class="size-5" />
-            </button>
-          {/each}
-        </fieldset>
+        {#if editing}
+          <fieldset
+            aria-label="Location selection method"
+            class="border-border inline-flex rounded-lg border p-1"
+          >
+            {#each [
+              { value: 'search', label: 'Search', icon: SearchIcon },
+              { value: 'map', label: 'Map based', icon: MapIcon },
+            ] as option}
+              <button
+                type="button"
+                aria-label={option.label}
+                title={option.label}
+                aria-pressed={mode === option.value}
+                class="text-muted-foreground hover:bg-muted aria-pressed:bg-background aria-pressed:text-primary rounded-md p-2 aria-pressed:shadow-sm"
+                disabled={busy || savingSelection}
+                onclick={() => (mode = option.value as 'search' | 'map')}
+              >
+                <option.icon class="size-5" />
+              </button>
+            {/each}
+          </fieldset>
+        {/if}
+        {#if !disabled}
+          <button
+            type="button"
+            class={`${control} hover:bg-muted inline-flex h-10 items-center gap-2 font-medium`}
+            disabled={busy || savingSelection}
+            onclick={() => (editRequested = !editRequested)}
+          >
+            {#if editing}
+              <CheckIcon class="size-4" />Done
+            {:else}
+              <PencilIcon class="size-4" />Edit Locations
+            {/if}
+          </button>
+        {/if}
       </fieldset>
     {/snippet}
   </SectionHeader>
-  <div class="grid items-start gap-6 px-6 py-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
-    <div class="min-w-0 space-y-4">
-      <p class="text-muted-foreground text-sm">
-        Related buildings and parts are added only when a current relationship exists.
-      </p>
-      {#if failure}
-        <p role="alert" class="text-error text-sm">{failure}</p>
-      {/if}
-      <fieldset aria-label="Location type" class="flex flex-wrap gap-2">
-        {#each kinds as item}
-          <button
-            type="button"
-            aria-pressed={active === item.id}
-            class={`${control} aria-pressed:border-primary aria-pressed:bg-primary/10 aria-pressed:text-primary`}
-            disabled={busy || savingBuilding}
-            onclick={() => {
-              active = item.id
-              startFrom = null
-              physicalId = null
-            }}
-          >
-            <item.icon class="mr-1 inline size-4" />{item.label}
-          </button>
-        {/each}
-        <button
-          type="button"
-          class={`${control} opacity-40`}
-          disabled
-          title="Coming later"
-        >
-          <EstablishmentIcon class="mr-1 inline size-4" />Establishments
-        </button>
-        <button
-          type="button"
-          class={`${control} opacity-40`}
-          disabled
-          title="Coming later"
-        >
-          <OperationalIcon class="mr-1 inline size-4" />Service Points
-        </button>
-      </fieldset>
-      {#if loaded && !physicalTarget && !disabled}
-        <fieldset aria-label="Physical building" class="flex flex-wrap gap-2">
-          {#each [
-            { value: 'parent', label: 'Find a physical building' },
-            { value: 'constituent', label: 'Start from a constituent' },
-          ] as choice (choice.value)}
+  {#if failure}
+    <p role="alert" class="text-error px-6 pt-4 text-sm">{failure}</p>
+  {/if}
+  <div
+    class={`grid items-start gap-6 px-6 py-5 ${editing ? 'xl:grid-cols-[minmax(0,1fr)_22rem]' : 'grid-cols-[minmax(0,1fr)]'}`}
+  >
+    {#if editing}
+      <div class="min-w-0 space-y-4">
+        <p class="text-muted-foreground text-sm">
+          Related buildings and parts are added only when a current relationship exists.
+        </p>
+        <fieldset aria-label="Location type" class="flex flex-wrap gap-2">
+          {#each kinds as item}
             <button
               type="button"
-              class={`${control} aria-pressed:border-primary aria-pressed:text-primary`}
-              aria-pressed={startFrom === choice.value}
-              disabled={busy || savingBuilding}
+              aria-pressed={active === item.id}
+              class={`${control} aria-pressed:border-primary aria-pressed:bg-primary/10 aria-pressed:text-primary`}
+              disabled={busy || savingSelection}
               onclick={() => {
-                active = 'building'
-                startFrom =
-                  startFrom === choice.value
-                    ? null
-                    : (choice.value as 'parent' | 'constituent')
+                active = item.id
+                startFrom = null
+                physicalId = null
               }}
             >
-              {choice.label}
+              <item.icon class="mr-1 inline size-4" />{item.label}
             </button>
           {/each}
+          <button
+            type="button"
+            class={`${control} opacity-40`}
+            disabled
+            title="Coming later"
+          >
+            <EstablishmentIcon class="mr-1 inline size-4" />Establishments
+          </button>
+          <button
+            type="button"
+            class={`${control} opacity-40`}
+            disabled
+            title="Coming later"
+          >
+            <OperationalIcon class="mr-1 inline size-4" />Service Points
+          </button>
         </fieldset>
-      {/if}
-      {#if loaded && startFrom === 'parent' && !physicalTarget}
-        <PhysicalParentPicker
-          {organisationId}
-          busy={busy || disabled}
-          actionLabel="Select physical building"
-          onPlace={openParent}
-        />
-      {:else if loaded}
-        {#key `${active}-${mode}-${startFrom ?? ''}-${physicalTarget?.id ?? ''}`}
-          <ResearchLocationPicker
-            {projectId}
-            included={added}
-            {mode}
-            kind={active}
-            disabled={busy || disabled}
-            {physicalTarget}
-            {creationRequests}
-            bind:savingBuilding
-            constituentOnly={startFrom === 'constituent'}
-            onPhysicalTarget={id => {
-              physicalId = id
-              startFrom = null
-            }}
-            onMembersChanged={load}
-            onSelect={id => add(id, 'single')}
+        {#if loaded && !physicalTarget && !disabled}
+          <fieldset aria-label="Physical building" class="flex flex-wrap gap-2">
+            {#each [
+              { value: 'parent', label: 'Find a physical building' },
+              { value: 'constituent', label: 'Start from a constituent' },
+            ] as choice (choice.value)}
+              <button
+                type="button"
+                class={`${control} aria-pressed:border-primary aria-pressed:text-primary`}
+                aria-pressed={startFrom === choice.value}
+                disabled={busy || savingSelection}
+                onclick={() => {
+                  active = 'building'
+                  startFrom =
+                    startFrom === choice.value
+                      ? null
+                      : (choice.value as 'parent' | 'constituent')
+                }}
+              >
+                {choice.label}
+              </button>
+            {/each}
+          </fieldset>
+        {/if}
+        {#if loaded && startFrom === 'parent' && !physicalTarget}
+          <PhysicalParentPicker
+            {organisationId}
+            busy={busy || disabled}
+            actionLabel="Select physical building"
+            onPlace={openParent}
           />
-        {/key}
-      {:else}
-        <div
-          role="status"
-          aria-label="Loading Locations"
-          class="animate-pulse space-y-4"
-        >
-          <div class="bg-muted h-10 w-64 max-w-full rounded-lg"></div>
-          {#if mode === 'search'}
-            <div class="flex items-center gap-2">
-              <div class="bg-muted h-5 w-12 rounded"></div>
-              <div class="bg-muted h-10 w-28 rounded-lg"></div>
-              <div class="bg-muted h-10 min-w-0 flex-1 rounded-lg"></div>
-              <div class="bg-muted h-10 w-10 rounded-lg"></div>
-              <div class="bg-muted h-10 w-20 rounded-lg"></div>
-            </div>
-            <div class="grid grid-cols-2 gap-6 py-10">
-              {#each [1, 2] as column (column)}
-                <div class="flex flex-col items-center gap-3">
-                  <div class="bg-muted h-5 w-44 max-w-full rounded"></div>
-                  <div class="bg-muted h-4 w-40 max-w-full rounded"></div>
-                  <div class="bg-muted mt-3 h-4 w-28 max-w-full rounded"></div>
-                </div>
-              {/each}
-            </div>
-          {:else}
-            <div class="bg-muted h-5 w-full max-w-xl rounded"></div>
-            <div class="bg-muted h-[28rem] rounded-lg"></div>
-          {/if}
-        </div>
-      {/if}
-    </div>
+        {:else if loaded}
+          {#key `${active}-${mode}-${startFrom ?? ''}-${physicalTarget?.id ?? ''}`}
+            <ResearchLocationPicker
+              {projectId}
+              included={added}
+              {mode}
+              kind={active}
+              disabled={busy || disabled}
+              {physicalTarget}
+              {creationRequests}
+              bind:savingSelection
+              constituentOnly={startFrom === 'constituent'}
+              onPhysicalTarget={id => {
+                physicalId = id
+                startFrom = null
+              }}
+              onMembersChanged={load}
+              onSelect={id => add(id, 'single')}
+            />
+          {/key}
+        {:else}
+          <div
+            role="status"
+            aria-label="Loading Locations"
+            class="animate-pulse space-y-4"
+          >
+            <div class="bg-muted h-10 w-64 max-w-full rounded-lg"></div>
+            {#if mode === 'search'}
+              <div class="flex items-center gap-2">
+                <div class="bg-muted h-5 w-12 rounded"></div>
+                <div class="bg-muted h-10 w-28 rounded-lg"></div>
+                <div class="bg-muted h-10 min-w-0 flex-1 rounded-lg"></div>
+                <div class="bg-muted h-10 w-10 rounded-lg"></div>
+                <div class="bg-muted h-10 w-20 rounded-lg"></div>
+              </div>
+              <div class="grid grid-cols-2 gap-6 py-10">
+                {#each [1, 2] as column (column)}
+                  <div class="flex flex-col items-center gap-3">
+                    <div class="bg-muted h-5 w-44 max-w-full rounded"></div>
+                    <div class="bg-muted h-4 w-40 max-w-full rounded"></div>
+                    <div class="bg-muted mt-3 h-4 w-28 max-w-full rounded"></div>
+                  </div>
+                {/each}
+              </div>
+            {:else}
+              <div class="bg-muted h-5 w-full max-w-xl rounded"></div>
+              <div class="bg-muted h-[28rem] rounded-lg"></div>
+            {/if}
+          </div>
+        {/if}
+      </div>
+    {/if}
     <aside
       aria-label="Included Locations"
-      class="border-border bg-panel text-foreground overflow-hidden rounded-xl border xl:sticky xl:top-4"
+      class={editing
+        ? 'border-border bg-panel text-foreground min-w-0 overflow-hidden rounded-xl border xl:sticky xl:top-4'
+        : 'min-w-0 space-y-6'}
     >
-      <header class="border-border flex items-center gap-2 border-b p-4">
+      <header
+        class={editing
+          ? 'border-border flex items-center gap-2 border-b p-4'
+          : 'sr-only'}
+      >
         <LocationIcon class="size-5" />
         <h3 class="font-semibold">Included Locations</h3>
         {#if loaded}
@@ -397,6 +431,16 @@ onMount(() => void load().catch(error => (failure = String(error))))
             Retry
           </button>
         </div>
+      {:else if !loaded && failure}
+        <button
+          type="button"
+          class={control}
+          onclick={() => void load().catch(error => (failure = String(error)))}
+        >
+          Retry
+        </button>
+      {:else if (!loaded || (grouping === 'district' && !districtsReady)) && !editing}
+        <ResearchLocationCardsSkeleton />
       {:else if !loaded || (grouping === 'district' && !districtsReady)}
         <div
           role="status"
@@ -423,7 +467,9 @@ onMount(() => void load().catch(error => (failure = String(error))))
         </div>
       {:else if !added.length}
         <p class="text-muted-foreground p-4 text-sm">
-          No Locations yet. Select a search result or a building on the map to add it.
+          No Locations yet.{editing
+            ? ' Select a search result or a building on the map to add it.'
+            : ''}
         </p>
       {:else}
         {#each groups as group (group.key)}
@@ -434,7 +480,11 @@ onMount(() => void load().catch(error => (failure = String(error))))
           {@const collapsed = collapsedGroups.has(groupId)}
           <section aria-label={grouping === 'none' ? undefined : heading}>
             {#if grouping !== 'none'}
-              <h4 class="border-border bg-muted/50 border-y">
+              <h4
+                class={editing
+                  ? 'border-border bg-muted/50 border-y'
+                  : 'border-border mb-3 border-b'}
+              >
                 <button
                   type="button"
                   class="hover:bg-muted focus-visible:outline-ring flex min-h-11 w-full items-center justify-between gap-2 px-4 py-2 text-left text-sm font-semibold focus-visible:outline-2 focus-visible:-outline-offset-2"
@@ -453,7 +503,13 @@ onMount(() => void load().catch(error => (failure = String(error))))
                 </button>
               </h4>
             {/if}
-            <ul id={groupId} hidden={collapsed} class="divide-border divide-y">
+            <ul
+              id={groupId}
+              hidden={collapsed}
+              class={editing
+                ? 'divide-border divide-y'
+                : 'grid grid-cols-[repeat(auto-fill,minmax(min(100%,16rem),1fr))] gap-8'}
+            >
               {#each group.rows as { item, addresses } (item.id)}
                 {@const type = kinds.find(kind => kind.id === item.kind)}
                 {@const Icon = type?.icon ?? LocationIcon}
@@ -469,7 +525,11 @@ onMount(() => void load().catch(error => (failure = String(error))))
                 {@const interiorStatus = item.hasInteriorMap
                   ? 'available'
                   : 'unavailable'}
-                <li class="space-y-3 p-4">
+                <li
+                  class={editing
+                    ? 'space-y-3 p-4'
+                    : 'border-border bg-panel min-w-0 rounded-xl border p-4'}
+                >
                   <div class="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-3">
                     <Icon class="text-primary mt-1 size-5" />
                     <div class="min-w-0">
@@ -522,87 +582,91 @@ onMount(() => void load().catch(error => (failure = String(error))))
                           </p>
                         {/if}
                       {/each}
-                      <BuildingConstituents members={item.members} {organisationId} />
+                      {#if editing}
+                        <BuildingConstituents members={item.members} {organisationId} />
+                      {/if}
                     </div>
                   </div>
-                  <div class="flex flex-wrap items-center gap-2">
-                    {#if item.canEditPhysicalBuilding && !disabled}
+                  {#if editing}
+                    <div class="flex flex-wrap items-center gap-2">
+                      {#if item.canEditPhysicalBuilding && !disabled}
+                        <button
+                          type="button"
+                          class={`${rowAction} hover:bg-muted gap-1 px-3`}
+                          aria-label="Add constituent building"
+                          title="Add constituent building"
+                          disabled={busy || savingSelection}
+                          onclick={() => openParent(item.id)}
+                        >
+                          <PlusIcon class="size-4" />
+                          <ConstituentIcon class="size-5" />
+                        </button>
+                      {/if}
+                      {#if item.kind === 'premises' || item.kind === 'building'}
+                        {@const targets =
+                          item.kind === 'premises'
+                            ? 'related buildings and building parts'
+                            : 'related building parts'}
+                        {@const { included, total } = item.inclusion}
+                        {@const complete = total > 0 && included === total}
+                        {@const addLabel = complete
+                          ? `All ${total} ${targets} included for ${item.name}`
+                          : included
+                            ? `Add remaining ${targets} for ${item.name} (${included} of ${total} included)`
+                            : total
+                              ? `Add ${targets} for ${item.name}`
+                              : `No ${targets} for ${item.name}`}
+                        <button
+                          type="button"
+                          class={`${rowAction} hover:bg-muted gap-1 px-3 ${included ? 'text-success' : ''}`}
+                          aria-label={addLabel}
+                          title={addLabel}
+                          aria-disabled={complete || !total}
+                          disabled={busy || disabled}
+                          onclick={() =>
+                            !complete &&
+                            total > 0 &&
+                            add(
+                              item.id,
+                              item.kind === 'premises'
+                                ? 'buildings_and_parts'
+                                : 'building_and_parts',
+                            ).catch(() => {})}
+                        >
+                          {#if !included}
+                            <PlusIcon class="size-4" aria-hidden="true" />
+                          {/if}
+                          {#if item.kind === 'premises'}
+                            <BuildingIcon class="size-5" aria-hidden="true" />
+                          {/if}
+                          <PartIcon class="size-5" aria-hidden="true" />
+                        </button>
+                      {/if}
+                      {#if item.kind === 'building' && !disabled}
+                        {@const relationshipLabel = item.hasRelationships
+                          ? m.location_relationships_recorded()
+                          : m.location_record_relationships()}
+                        <a
+                          class={`${rowAction} hover:bg-muted w-11 ${item.hasRelationships ? 'text-success' : ''}`}
+                          href={detailUrl + '&edit=true#relationships'}
+                          title={relationshipLabel}
+                        >
+                          <RelationshipsIcon class="size-5" aria-hidden="true" />
+                          <span class="sr-only">{relationshipLabel}</span>
+                        </a>
+                      {/if}
                       <button
                         type="button"
-                        class={`${rowAction} hover:bg-muted gap-1 px-3`}
-                        aria-label="Add constituent building"
-                        title="Add constituent building"
-                        disabled={busy || savingBuilding}
-                        onclick={() => openParent(item.id)}
-                      >
-                        <PlusIcon class="size-4" />
-                        <ConstituentIcon class="size-5" />
-                      </button>
-                    {/if}
-                    {#if item.kind === 'premises' || item.kind === 'building'}
-                      {@const targets =
-                        item.kind === 'premises'
-                          ? 'related buildings and building parts'
-                          : 'related building parts'}
-                      {@const { included, total } = item.inclusion}
-                      {@const complete = total > 0 && included === total}
-                      {@const addLabel = complete
-                        ? `All ${total} ${targets} included for ${item.name}`
-                        : included
-                          ? `Add remaining ${targets} for ${item.name} (${included} of ${total} included)`
-                          : total
-                            ? `Add ${targets} for ${item.name}`
-                            : `No ${targets} for ${item.name}`}
-                      <button
-                        type="button"
-                        class={`${rowAction} hover:bg-muted gap-1 px-3 ${included ? 'text-success' : ''}`}
-                        aria-label={addLabel}
-                        title={addLabel}
-                        aria-disabled={complete || !total}
+                        class={`${rowAction} text-muted-foreground hover:text-error ml-auto w-11`}
                         disabled={busy || disabled}
-                        onclick={() =>
-                          !complete &&
-                          total > 0 &&
-                          add(
-                            item.id,
-                            item.kind === 'premises'
-                              ? 'buildings_and_parts'
-                              : 'building_and_parts',
-                          ).catch(() => {})}
+                        aria-label={removeLabel}
+                        title={removeLabel}
+                        onclick={() => remove(item.id)}
                       >
-                        {#if !included}
-                          <PlusIcon class="size-4" aria-hidden="true" />
-                        {/if}
-                        {#if item.kind === 'premises'}
-                          <BuildingIcon class="size-5" aria-hidden="true" />
-                        {/if}
-                        <PartIcon class="size-5" aria-hidden="true" />
+                        <TrashIcon class="size-5" aria-hidden="true" />
                       </button>
-                    {/if}
-                    {#if item.kind === 'building' && !disabled}
-                      {@const relationshipLabel = item.hasRelationships
-                        ? m.location_relationships_recorded()
-                        : m.location_record_relationships()}
-                      <a
-                        class={`${rowAction} hover:bg-muted w-11 ${item.hasRelationships ? 'text-success' : ''}`}
-                        href={detailUrl + '&edit=true#relationships'}
-                        title={relationshipLabel}
-                      >
-                        <RelationshipsIcon class="size-5" aria-hidden="true" />
-                        <span class="sr-only">{relationshipLabel}</span>
-                      </a>
-                    {/if}
-                    <button
-                      type="button"
-                      class={`${rowAction} text-muted-foreground hover:text-error ml-auto w-11`}
-                      disabled={busy || disabled}
-                      aria-label={removeLabel}
-                      title={removeLabel}
-                      onclick={() => remove(item.id)}
-                    >
-                      <TrashIcon class="size-5" aria-hidden="true" />
-                    </button>
-                  </div>
+                    </div>
+                  {/if}
                 </li>
               {/each}
             </ul>
