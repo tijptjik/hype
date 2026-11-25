@@ -10,6 +10,13 @@ import {
   facilitySymbol,
   facilitySymbols,
 } from '#lib/indoor/facilities.js'
+import {
+  emptyFeatureAddress,
+  getAddressDisplay,
+  type FeatureAddress,
+} from '#lib/addresses/featureAddress.js'
+import { researchStreetAddresses } from '#lib/fieldResearch/locationStreets.js'
+import { linkedAddressLabels } from './buildingAddressLinks'
 import { locationFacilityNames } from '#lib/locations/facilityNames.js'
 import { locationReadFields } from './locationReadProjection'
 // TYPES
@@ -82,6 +89,49 @@ async function sessionOrganisation(ctx: Context, id: string): Promise<string> {
   return row.organisationId
 }
 
+/** Choose a readable address and derive its street and number ordering from the same label.
+ * @param source Effective location address. @param linked Current reviewed address labels in priority order.
+ * @param kind Location type. @param names Retained names to exclude from address-only subtitles.
+ * @returns Display address and natural ordering key, both empty when no address is recorded.
+ */
+function placeAddress(
+  source: FeatureAddress['source'] | undefined,
+  linked: (string | null)[],
+  kind: RecorderLocation['kind'],
+  names: Record<string, string>,
+): Pick<RecorderPlace, 'address' | 'addressSortKey'> {
+  const value = emptyFeatureAddress()
+  const normalizedNames = Object.values(names).map(name => name.trim().toLowerCase())
+  let address = ''
+  if (source) {
+    value.source = { ...value.source, ...source }
+    const content = source.canonical?.content ?? source.authored
+    for (const [locale, tag] of [
+      ['en', 'en'],
+      ['zhHant', 'zh-hant'],
+      ['zhHans', 'zh-hans'],
+    ] as const) {
+      // Some imported buildings retain a numbered street only in the original formatted label.
+      const candidate = (
+        getAddressDisplay(value, locale, [], kind) ||
+        (source.displayOverrides?.[tag] ?? content?.i18n[tag]?.formattedAddress)
+      )?.trim()
+      if (candidate && !normalizedNames.includes(candidate.toLowerCase())) {
+        address = candidate
+        break
+      }
+    }
+  }
+  address ||= linked.find(label => label?.trim())?.trim() ?? ''
+  const [first] = researchStreetAddresses(address)
+  return {
+    address,
+    addressSortKey: first.street
+      ? [first.street, first.number].join(' ').trim()
+      : address,
+  }
+}
+
 /** Project assigned Locations and their unambiguous, readable building and premises context.
  * @param ctx Request scope. @param id Session ID. @returns Only assignments as selectable search results.
  * @remarks Walk asserted containment through nested parts and merged identities; UNION terminates cycles.
@@ -146,25 +196,34 @@ export async function listRecorderLocations(
   const reached = JSON.stringify([...new Set(rows.map(row => row.id))])
   const assets = await ctx.db.all<{
     id: string
-    point: string | null
+    position: string | null
+    linked: string
     assetId: string | null
     sourceModelId: string | null
-  }>(sql`SELECT l.id,json_extract(${fields.location},'$.geometry.coordinates') point,e.assetId,e.sourceModelId
+  }>(sql`SELECT l.id,${fields.location} position,
+    ${linkedAddressLabels(sql`l.id`, org)} linked,e.assetId,e.sourceModelId
     FROM json_each(${reached}) ids JOIN location l ON l.id=ids.value
     LEFT JOIN locationExteriorModel e ON e.locationId=l.id
-    LEFT JOIN locationRevision r ON r.id=(SELECT current.id FROM locationRevision current WHERE current.locationId=l.id
+    LEFT JOIN locationRevisionContent r ON r.id=(SELECT current.id FROM locationRevision current WHERE current.locationId=l.id
       AND (l.state!='linked' OR current.origin='saanseoi') ORDER BY current.version DESC LIMIT 1)`)
   const assetsById = new Map(
-    assets.map(row => [
-      row.id,
-      {
-        point: row.point ? (JSON.parse(row.point) as MapPoint) : null,
-        exteriorUrl:
-          row.assetId && row.sourceModelId
-            ? `/api/location-exterior/${encodeURIComponent(row.id)}/${row.assetId}/${row.sourceModelId}.gltf`
-            : null,
-      },
-    ]),
+    assets.map(row => {
+      const position: {
+        geometry?: { coordinates: MapPoint }
+        address?: FeatureAddress['source']
+      } | null = JSON.parse(row.position ?? 'null')
+      return [
+        row.id,
+        {
+          position,
+          linked: JSON.parse(row.linked) as (string | null)[],
+          exteriorUrl:
+            row.assetId && row.sourceModelId
+              ? `/api/location-exterior/${encodeURIComponent(row.id)}/${row.assetId}/${row.sourceModelId}.gltf`
+              : null,
+        },
+      ] as const
+    }),
   )
   const links = await ctx.db.all<
     RecorderMap & { locationId: string }
@@ -184,10 +243,12 @@ export async function listRecorderLocations(
    */
   function option(row: Row): RecorderPlace {
     const names = locationFacilityNames(row.kind, JSON.parse(row.names ?? '{}'))
+    const asset = assetsById.get(row.id)
     return {
       id: row.id,
-      point: assetsById.get(row.id)?.point ?? null,
-      exteriorUrl: assetsById.get(row.id)?.exteriorUrl ?? null,
+      ...placeAddress(asset?.position?.address, asset?.linked ?? [], row.kind, names),
+      point: asset?.position?.geometry?.coordinates ?? null,
+      exteriorUrl: asset?.exteriorUrl ?? null,
       maps: maps.get(row.id) ?? [],
       name: names.en || Object.values(names).find(Boolean) || row.id,
     }
@@ -205,11 +266,23 @@ export async function listRecorderLocations(
         self.category === 'lift' ? 'elevator' : (self.category ?? ''),
         location.name,
       )
+      const building = parent('building')
+      const displayOverrides = assetsById.get(self.id)?.position?.address
+        ?.displayOverrides
+      // Mobile selectors can show an assigned part's containing address without duplicating its building facts.
+      const inheritAddress =
+        self.kind === 'building_part' &&
+        !location.address &&
+        building?.address &&
+        !Object.values(displayOverrides ?? {}).includes('')
       return {
         ...location,
+        ...(inheritAddress
+          ? { address: building.address, addressSortKey: building.addressSortKey }
+          : {}),
         kind: self.kind,
         premises: parent('premises'),
-        building: parent('building'),
+        building,
         iconPath:
           self.kind === 'building_part' && Object.hasOwn(facilitySymbols, category)
             ? facilitySymbol(category, location.name).path

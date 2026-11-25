@@ -90,6 +90,12 @@ describe('Android shared field sessions', () => {
       INSERT INTO locationPremisesMap VALUES('tower','plan');
       CREATE TABLE locationMembershipHead(childLocationId TEXT,parentLocationId TEXT,scopeOrganisationId TEXT,relationshipId TEXT,assertionState TEXT,membershipState TEXT,effectiveFrom TEXT,effectiveTo TEXT);
       CREATE TABLE locationRevision(id TEXT,locationId TEXT,version INTEGER,origin TEXT,facts TEXT,rawSource TEXT);
+      CREATE VIEW locationRevisionContent AS SELECT * FROM locationRevision;
+      CREATE VIEW locationCanonical AS SELECT id aliasId,id locationId FROM location;
+      CREATE TABLE locationAddressHead(locationId TEXT,relationshipId TEXT,scopeOrganisationId TEXT,priority INTEGER,assertionState TEXT,addressState TEXT,effectiveFrom TEXT,effectiveTo TEXT,addressRevisionId TEXT);
+      CREATE TABLE addressRevision(id TEXT,components TEXT);
+      INSERT INTO addressRevision VALUES('linked-address','{"i18n":{"en":{"formattedAddress":"12 Station Road"}}}');
+      INSERT INTO locationAddressHead VALUES('tower','addr',NULL,1,'asserted','current',NULL,NULL,'linked-address');
       CREATE TABLE locationRevisionI18n(revisionId TEXT,locale TEXT,name TEXT);
       CREATE TABLE organisationLocationHead(locationId TEXT,organisationId TEXT,overrides TEXT);
       INSERT INTO location VALUES ('lift','building_part','linked',NULL,NULL),('old','building_part','redirect',NULL,'lift'),
@@ -106,10 +112,14 @@ describe('Android shared field sessions', () => {
     const rows = await listRecorderLocations(maintainer, 'a')
     expect(rows.map(r => r.id).sort()).toEqual(['lift', 'solo'])
     expect(rows.find(r => r.id === 'lift')).toMatchObject({
+      address: '12 Station Road',
+      addressSortKey: 'Station Road 12',
       maps: [{ id: 'plan', unitId: 'unit-one', hash: 'published' }],
       building: {
         id: 'tower',
         name: 'East Tower',
+        address: '12 Station Road',
+        addressSortKey: 'Station Road 12',
         exteriorUrl: '/api/location-exterior/tower/asset/assembly.gltf',
         maps: [{ id: 'plan', unitId: null }],
       },
