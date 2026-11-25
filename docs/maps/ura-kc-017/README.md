@@ -47,6 +47,12 @@ and floor/area Location associations.
 
 ## Source qualifications
 
+- The local URA/KC-017 session also has a provisional outline for Kai King Mansion,
+  57–59 Lung Kong Road. Each of its seven levels uses the Lands Department tower
+  footprint, BuildingCSUID `3764621208T20050430`. The saved façade alignment places the
+  mezzanine between G/F and 1/F and ends at 5/F. Each level accepts an XY pin within the
+  same boundary and has zero mapped units.
+  [Kai King Mansion extraction](extractions/kai-king-mansion.json)
 - The plans record historical approved configurations. The combined drawings for 23–29
   Kai Tak Road meet at the party wall between Nos. 25 and 27. Their research-session
   building is labelled 25–31A Kai Tak Road. A 1971 restaurant alteration spans Nos.

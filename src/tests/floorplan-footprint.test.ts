@@ -2,6 +2,8 @@
 import { expect, it } from 'vitest'
 import { footprintFloorplan } from '#lib/indoor/floorplans/footprint.js'
 import { floorplanBundle } from '#lib/indoor/floorplans/extraction.js'
+import { contains } from '#lib/indoor/navigation/geometry.js'
+import kaiKingMansion from '../../docs/maps/ura-kc-017/extractions/kai-king-mansion.json'
 import type { ExteriorFootprint } from '#lib/locations/exterior/footprints.server.js'
 
 const feature: ExteriorFootprint = {
@@ -56,6 +58,27 @@ it('retains courtyards and north-up proportions without inventing rooms or floor
   expect(bundle.data.unit_polygon.features).toHaveLength(1)
   expect(bundle.data.unit_polygon.features[0].properties.unit_category).toBe('unknown')
   expect(bundle.data.connections).toEqual([])
+})
+it('retains seven independently addressable empty Kai King floors in one XY frame', () => {
+  const { data } = floorplanBundle(kaiKingMansion)
+  const floors = data.level_polygon.features
+  expect(floors.map(floor => floor.properties.level_name_en)).toEqual([
+    'G/F',
+    'Mezzanine',
+    '1/F',
+    '2/F',
+    '3/F',
+    '4/F',
+    '5/F',
+  ])
+  expect(new Set(floors.map(floor => floor.properties.level_id)).size).toBe(7)
+  for (const floor of floors) {
+    expect(floor.geometry).toEqual(floors[0].geometry)
+    expect(contains([420, 480], floor)).toBe(true)
+    expect(contains([-1, -1], floor)).toBe(false)
+  }
+  expect(data.unit_polygon.features).toEqual([])
+  expect(data.connections).toEqual([])
 })
 it('uses only the explicitly selected part of a multipart footprint', () => {
   const polygon =
