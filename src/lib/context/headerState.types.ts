@@ -55,6 +55,7 @@ type HeaderMetaState = {
 
 export type HeaderFormActionsState = {
   /** Standalone resource relationship action in the standard pre-search slot. */
+  relatedActions?: HeaderButtonActionConfig[]
   locationsAction?: HeaderButtonActionConfig | null
   featuresAction?: HeaderButtonActionConfig | null
   /** Resource-specific controls adjacent to Edit, subject to the owning route permissions. */

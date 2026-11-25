@@ -31,6 +31,8 @@ export const saveRecorder = command(
     revisionId: z.string().min(1).max(100),
     version: z.number().int().nonnegative(),
     modifiedAt: z.string().min(1).max(100),
+    title: z.string().max(128).optional(),
+    description: z.string().max(8192).optional(),
     status: researchFeatureDefaultsSchema,
     values: z.record(
       z.string().min(1).max(100),

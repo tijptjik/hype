@@ -15,6 +15,7 @@ import {
   getAddressDisplay,
   type FeatureAddress,
 } from '#lib/addresses/featureAddress.js'
+import { recorderIdentifierTags } from '#lib/fieldResearch/recorderIdentifier.js'
 import { researchStreetAddresses } from '#lib/fieldResearch/locationStreets.js'
 import { linkedAddressLabels } from './buildingAddressLinks'
 import { locationFacilityNames } from '#lib/locations/facilityNames.js'
@@ -79,11 +80,15 @@ export async function listRecorderSessions(ctx: Context): Promise<RecorderSessio
 }
 
 /** Resolve the organisation for a direct mobile session request.
- * @param ctx Request scope. @param id Session ID. @returns Authorised organisation ID.
+ * @param ctx Request scope. @param id Session ID. @param includeArchived Allow super-admin archive review. @returns Authorised organisation ID.
  */
-async function sessionOrganisation(ctx: Context, id: string): Promise<string> {
+async function sessionOrganisation(
+  ctx: Context,
+  id: string,
+  includeArchived = false,
+): Promise<string> {
   const row = await ctx.db.get<{ organisationId: string }>(
-    sql`SELECT s.organisationId FROM fieldResearchSession s WHERE s.id=${id} AND ${visible(ctx)}`,
+    sql`SELECT s.organisationId FROM fieldResearchSession s WHERE s.id=${id} AND (s.isArchived=0 OR ${includeArchived && ctx.user.superAdmin ? 1 : 0}) AND ${researchProjectAccess(ctx, sql`s.projectId`)}`,
   )
   if (!row) error(403, 'Session unavailable')
   return row.organisationId
@@ -97,7 +102,7 @@ async function sessionOrganisation(ctx: Context, id: string): Promise<string> {
 function placeAddress(
   source: FeatureAddress['source'] | undefined,
   linked: (string | null)[],
-  kind: RecorderLocation['kind'],
+  kind: RecorderPlace['kind'],
   names: Record<string, string>,
 ): Pick<RecorderPlace, 'address' | 'addressSortKey'> {
   const value = emptyFeatureAddress()
@@ -133,14 +138,15 @@ function placeAddress(
 }
 
 /** Project assigned Locations and their unambiguous, readable building and premises context.
- * @param ctx Request scope. @param id Session ID. @returns Only assignments as selectable search results.
+ * @param ctx Request scope. @param id Session ID. @param includeArchived Allow super-admin archive review. @returns Only assignments as selectable search results.
  * @remarks Walk asserted containment through nested parts and merged identities; UNION terminates cycles.
  */
 export async function listRecorderLocations(
   ctx: Context,
   id: string,
+  includeArchived = false,
 ): Promise<RecorderLocation[]> {
-  const org = await sessionOrganisation(ctx, id)
+  const org = await sessionOrganisation(ctx, id, includeArchived)
   const fields = await locationReadFields(
     ctx.db,
     sql`l.id`,
@@ -244,13 +250,17 @@ export async function listRecorderLocations(
   function option(row: Row): RecorderPlace {
     const names = locationFacilityNames(row.kind, JSON.parse(row.names ?? '{}'))
     const asset = assetsById.get(row.id)
+    const name = [names.en, ...Object.values(names)]
+      .map(value => value?.trim())
+      .find(value => value && value !== row.id)
     return {
       id: row.id,
+      kind: row.kind,
       ...placeAddress(asset?.position?.address, asset?.linked ?? [], row.kind, names),
       point: asset?.position?.geometry?.coordinates ?? null,
       exteriorUrl: asset?.exteriorUrl ?? null,
       maps: maps.get(row.id) ?? [],
-      name: names.en || Object.values(names).find(Boolean) || row.id,
+      name: name || (row.kind === 'building' ? 'Unnamed Building' : row.id),
     }
   }
   return rows
@@ -292,6 +302,17 @@ export async function listRecorderLocations(
     .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
 }
 
+/** Retain the original device identifier when a linked Feature is renamed. */
+export const recorderCaptureTitle = sql`(SELECT json_extract(v.content,'$.translations.en.title.value') FROM featureRevision v
+  WHERE v.featureId=f.id AND v.previousRevisionId IS NULL ORDER BY v.rowid LIMIT 1)`
+
+/** Shared record-card fields for the scoped capture (r), Feature (f), session (s) and layer settings (sl). */
+export const recorderCardFields = sql`s.code,
+      coalesce(json_extract(sl.overrides,'$.titleTemplate'),json_extract(s.configuration,'$.titleTemplate')) titleTemplate,
+      ${recorderCaptureTitle} captureTitle,
+      (SELECT p.imageRevisionId FROM featureRevisionImage p JOIN image i ON i.id=p.imageId AND i.isArchived=0
+       WHERE p.featureRevisionId=f.currentRevisionId ORDER BY (p.intent='canonical') DESC,p.position LIMIT 1) thumbnailRevision`
+
 /** Read all captures for an authorised session in creation order.
  * @param ctx Request scope. @param id Session ID. @returns Record identities, oldest first.
  */
@@ -300,8 +321,36 @@ export async function listRecorderRecords(
   id: string,
 ): Promise<RecorderRecord[]> {
   await sessionOrganisation(ctx, id)
-  const rows = await ctx.db.all<Omit<RecorderRecord, 'pin'> & { pin: string | null }>(
-    sql`SELECT r.id,r.featureId,r.spatialRealm,r.locationId,r.pin,(SELECT i.title FROM featureI18n i WHERE i.featureId=r.featureId ORDER BY i.locale='en' DESC LIMIT 1) title FROM fieldResearchRecord r WHERE r.sessionId=${id} ORDER BY r.rowid`,
+  // During the archive rollout, older databases contain only active receipts.
+  const columns = await ctx.db.all<{ name: string }>(
+    sql`PRAGMA table_info(fieldResearchRecord)`,
   )
-  return rows.map(row => ({ ...row, pin: row.pin ? JSON.parse(row.pin) : null }))
+  const active = columns.some(column => column.name === 'archivedAt')
+    ? sql`AND r.archivedAt IS NULL`
+    : sql``
+  // Prefer the current canonical photo, falling back to the first visible gallery entry.
+  const rows = await ctx.db.all<
+    Omit<RecorderRecord, 'pin' | 'identifierTags'> & {
+      pin: string | null
+      code: string | null
+      captureTitle: string | null
+      titleTemplate: string | null
+    }
+  >(sql`
+    SELECT r.id,r.featureId,r.spatialRealm,r.locationId,r.pin,${recorderCardFields},
+      (SELECT i.title FROM featureI18n i WHERE i.featureId=f.id ORDER BY i.locale='en' DESC LIMIT 1) title
+    FROM fieldResearchRecord r JOIN fieldResearchSession s ON s.id=r.sessionId
+    LEFT JOIN feature f ON f.id=r.featureId
+    LEFT JOIN layer l ON l.id=f.layerId
+    LEFT JOIN fieldResearchSessionLayer sl ON sl.sessionId=s.id AND sl.layerId=coalesce(l.historicalSourceLayerId,l.id)
+    WHERE r.sessionId=${id} ${active} ORDER BY r.rowid`)
+  return rows.map(({ code, titleTemplate, captureTitle, ...row }) => ({
+    ...row,
+    pin: row.pin ? JSON.parse(row.pin) : null,
+    identifierTags: recorderIdentifierTags(
+      captureTitle ?? row.title,
+      code,
+      titleTemplate,
+    ),
+  }))
 }

@@ -58,9 +58,9 @@ type Receipt = {
 // 2. Validated atomic record editing
 
 /** Read the current shared record through its session scope.
- * @param ctx Authenticated contributor. @param id Record identity. @returns Scoped receipt, revision, field catalogue and policy.
+ * @param ctx Authenticated contributor. @param id Record identity. @returns Scoped receipt, revision and write guard.
  */
-async function editorContext(ctx: Context, id: string) {
+async function recordContext(ctx: Context, id: string) {
   const access = researchProjectAccess(ctx, sql`s.projectId`)
   const receipt =
     await ctx.db.get<Receipt>(sql`SELECT r.featureId,r.sessionId,s.projectId,coalesce(l.historicalSourceLayerId,l.id) layerId,f.layerId actualLayerId,s.code,s.configuration,sl.overrides,f.isDraft,f.isPendingReview,f.modifiedAt,s.status='completed' completed,s.revision sessionRevision
@@ -70,15 +70,24 @@ async function editorContext(ctx: Context, id: string) {
     JOIN organisation o ON o.id=s.organisationId AND o.isArchived=0
     JOIN layer l ON l.id=f.layerId AND l.projectId=s.projectId AND l.isArchived=0
     JOIN fieldResearchSessionLayer sl ON sl.sessionId=s.id AND sl.layerId=coalesce(l.historicalSourceLayerId,l.id)
-    WHERE r.id=${id} AND s.isArchived=0 AND f.isArchived=0 AND ${access}`)
+    WHERE r.id=${id} AND r.archivedAt IS NULL AND s.isArchived=0 AND f.isArchived=0 AND ${access}`)
   if (!receipt) error(404, 'Record unavailable')
   const guard = sql`EXISTS(SELECT 1 FROM fieldResearchRecord r JOIN fieldResearchSession s ON s.id=r.sessionId JOIN project p ON p.id=s.projectId AND p.isArchived=0 JOIN organisation o ON o.id=s.organisationId AND o.isArchived=0 JOIN fieldResearchSessionLayer sl ON sl.sessionId=s.id AND sl.layerId=${receipt.layerId}
-    WHERE r.id=${id} AND r.featureId=${receipt.featureId} AND s.id=${receipt.sessionId} AND s.isArchived=0 AND s.revision=${receipt.sessionRevision} AND ${access})`
+    WHERE r.id=${id} AND r.archivedAt IS NULL AND r.featureId=${receipt.featureId} AND s.id=${receipt.sessionId} AND s.isArchived=0 AND s.revision=${receipt.sessionRevision} AND ${access})`
   const current = await readCurrentFeatureRevision(ctx.db, {
     featureId: receipt.featureId,
     guard,
   })
   if (!current) error(404, 'Record revision unavailable')
+  return { receipt, guard, current }
+}
+
+/** Resolve the editor catalogue and intent policy for a scoped record.
+ * @param ctx Authenticated contributor. @param id Record identity. @returns Editor context.
+ */
+async function editorContext(ctx: Context, id: string) {
+  const record = await recordContext(ctx, id)
+  const { receipt } = record
   const settings = resolveResearchConfiguration(
     researchConfigurationSchema.parse({
       ...JSON.parse(receipt.configuration),
@@ -93,7 +102,40 @@ async function editorContext(ctx: Context, id: string) {
     type: 'layer',
     id: receipt.layerId,
   })
-  return { receipt, guard, current, fields, policy }
+  return { ...record, fields, policy }
+}
+
+/** @param receipt Session state. @param current Feature revision. @returns Whether Recorder may edit this record. */
+function editableRecord(
+  receipt: Receipt,
+  current: Awaited<ReturnType<typeof recordContext>>['current'],
+): boolean {
+  return (
+    !receipt.completed &&
+    !current.state.isPublished &&
+    !current.retired &&
+    !current.content.placement.location
+  )
+}
+
+/** Authorize a new photo against the same session and Feature rules as a field edit.
+ * @param ctx Authenticated contributor. @param id Record identity. @returns Scoped Feature upload command.
+ */
+export async function recorderPhotoScope(ctx: Context, id: string) {
+  const { receipt, current, guard } = await recordContext(ctx, id)
+  if (!editableRecord(receipt, current))
+    error(403, 'This record is read-only in Recorder')
+  // Recheck session and Feature membership inside the revision transaction.
+  return {
+    featureId: receipt.featureId,
+    expectedRevisionId: current.revisionId,
+    expectedVersion: current.version,
+    guard: sql`(${guard}) AND EXISTS(SELECT 1 FROM fieldResearchSession s
+      JOIN feature f ON f.projectId=s.projectId AND f.organisationId=s.organisationId
+      JOIN layer l ON l.id=f.layerId AND l.projectId=s.projectId AND l.isArchived=0
+      WHERE s.id=${receipt.sessionId} AND s.status!='completed' AND f.id=${receipt.featureId}
+        AND f.layerId=${receipt.actualLayerId} AND f.isArchived=0 AND f.isPublished=0)`,
+  }
 }
 
 /** Decode a field without conflating false, zero and unset.
@@ -126,20 +168,19 @@ export async function readRecorderEditor(
   id: string,
 ): Promise<RecorderEditor> {
   const { receipt, current, fields, policy } = await editorContext(ctx, id)
+  const translation =
+    current.content.translations.en ?? Object.values(current.content.translations)[0]
   return {
     id,
-    title:
-      current.content.translations.en?.title.value ??
-      Object.values(current.content.translations)[0]?.title.value ??
-      'Record',
+    title: translation?.title.value ?? 'Record',
+    description: translation?.description.value ?? '',
     revisionId: current.revisionId,
     version: current.version,
     modifiedAt: receipt.modifiedAt,
-    editable:
-      !receipt.completed &&
-      !current.state.isPublished &&
-      !current.retired &&
-      !current.content.placement.location,
+    editable: editableRecord(receipt, current),
+    photoRevisions: current.content.gallery.order.map(
+      imageId => current.content.gallery.entries[imageId].imageRevisionId,
+    ),
     status: {
       featureType: current.content.profile.featureType ?? 'object',
       isVisitable: current.content.profile.visitability.isVisitable,
@@ -165,11 +206,14 @@ export async function readRecorderEditor(
       min: field.min,
       max: field.max,
       i18n: field.i18n ?? {},
-      values: (field.values ?? []).map(option => ({
-        id: option.id,
-        value: option.value ?? option.id,
-        i18n: option.i18n ?? {},
-      })),
+      values: (field.values ?? [])
+        .toSorted((a, b) => a.rank - b.rank || a.id.localeCompare(b.id))
+        .map(option => ({
+          icon: option.icon ?? null,
+          id: option.id,
+          value: option.value ?? option.id,
+          i18n: option.i18n ?? {},
+        })),
     })),
     values: Object.fromEntries(
       fields.map(field => [
@@ -292,12 +336,7 @@ export async function saveRecorderEditor(
     policy,
     guard: scope,
   } = await editorContext(ctx, input.id)
-  if (
-    receipt.completed ||
-    current.state.isPublished ||
-    current.retired ||
-    current.content.placement.location
-  )
+  if (!editableRecord(receipt, current))
     error(403, 'This record is read-only in Recorder')
   if (receipt.modifiedAt !== input.modifiedAt)
     error(409, 'This record changed. Reopen it before saving.')
@@ -323,6 +362,22 @@ export async function saveRecorderEditor(
     reason: 'Field research record edited',
     validate: () => [],
     derive: previous => {
+      // Edit the same locale shown on the device and preserve untouched generation flags.
+      const translation =
+        previous.translations.en ?? Object.values(previous.translations)[0]
+      if (input.title !== undefined || input.description !== undefined) {
+        if (!translation) error(409, 'Record translation unavailable')
+        if (input.title !== undefined && input.title !== translation.title.value)
+          translation.title = { value: input.title, generated: false }
+        if (
+          input.description !== undefined &&
+          input.description !== (translation.description.value ?? '')
+        )
+          translation.description = {
+            value: input.description || null,
+            generated: false,
+          }
+      }
       previous.profile.featureType = type.id
       previous.profile.kind = type.kind ?? (type.id === 'business' ? 'place' : 'object')
       previous.profile.associationRelation =

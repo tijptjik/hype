@@ -52,6 +52,8 @@ export const fieldResearchRecord = sqliteTable(
   {
     id: text('id').primaryKey(),
     featureId: text('featureId').references(() => feature.id),
+    archivedAt: text('archivedAt'),
+    archivedBy: text('archivedBy'),
     spatialRealm: text('spatialRealm', { enum: ['interior', 'exterior'] }),
     locationId: text('locationId').references(() => location.id),
     pin: text('pin', { mode: 'json' }).$type<RecorderPin>(),
@@ -61,9 +63,15 @@ export const fieldResearchRecord = sqliteTable(
   },
   table => [
     index('fieldResearchRecord_session').on(table.sessionId),
+    index('fieldResearchRecord_session_archive').on(table.sessionId, table.archivedAt),
     uniqueIndex('fieldResearchRecord_feature').on(table.featureId),
   ],
 )
+
+/** Deleted device retry keys prevent replay after a capture is removed. */
+export const fieldResearchDeletedRecord = sqliteTable('fieldResearchDeletedRecord', {
+  id: text('id').primaryKey().notNull(),
+})
 
 /** Configured project layers inherit their session defaults unless explicitly overridden. */
 export const fieldResearchSessionLayer = sqliteTable(

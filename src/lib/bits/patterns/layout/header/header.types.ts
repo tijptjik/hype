@@ -120,6 +120,7 @@ export interface HeaderFormActionsConfig {
   content?: Snippet | null
   isVisible?: boolean
   primaryAction?: HeaderButtonActionConfig | null
+  relatedActions?: HeaderButtonActionConfig[]
   locationsAction?: HeaderButtonActionConfig | null
   featuresAction?: HeaderButtonActionConfig | null
   changelogAction?: HeaderButtonActionConfig | null

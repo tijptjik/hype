@@ -31,9 +31,11 @@ import {
 import { normalizeLinkValue, displayLinkValue } from '#lib/properties/value.js'
 import { encodePropertySelection } from '#lib/properties/selection.js'
 // SERVICES
-import { resolveRecorderPoint } from './recorderPlacement'
+import {
+  resolveRecorderPoint,
+  type RecorderPlacementStorage,
+} from './recorderPlacement'
 import type { RecorderPlacement } from '#lib/fieldResearch/recorder.js'
-import type { R2Bucket } from '@cloudflare/workers-types'
 import { prepareFeatureCreationContent } from './featureCreationRevision'
 import { prepareNewLifecycleFeature } from './featureLifecycleIdentity'
 import { readFeatureIntentPolicy } from './featureIntentPolicy'
@@ -133,7 +135,9 @@ async function prepareRecordingFields(
       else properties.push({ propertyId, value: String(value) })
     }
   }
-  const title = renderDisplayTemplate(settings.titleTemplate, values).trim()
+  const title = renderDisplayTemplate(settings.titleTemplate, values, {
+    ignoreCase: true,
+  }).trim()
   if (!title)
     error(409, 'The configured title template produced an empty Feature title.')
   return { properties, title }
@@ -149,7 +153,7 @@ export async function createRecorderRecord(
   id: string,
   requestedLayer?: string,
   placement?: RecorderPlacement,
-  bucket?: R2Bucket,
+  bucket?: RecorderPlacementStorage,
 ): Promise<string> {
   const access = researchProjectAccess(ctx, sql`s.projectId`)
   const receipt = () =>
@@ -227,7 +231,8 @@ export async function createRecorderRecord(
   const guard = sql`EXISTS(SELECT 1 FROM fieldResearchSession s JOIN project p ON p.id=s.projectId AND p.organisationId=s.organisationId JOIN organisation o ON o.id=p.organisationId JOIN layer l ON l.id=${scope.layerId} AND l.projectId=p.id AND l.organisationId=o.id
     WHERE s.id=${sessionId} AND s.revision=${session.revision} AND s.recordSequence=${session.recordSequence} AND s.configurationVersion=${researchConfigurationVersion} AND s.isArchived=0 AND s.status!='completed' AND p.isArchived=0 AND o.isArchived=0 AND l.isArchived=0 AND l.historicalSourceLayerId IS NULL AND ${access})
     AND NOT EXISTS(SELECT 1 FROM json_each(${JSON.stringify(policy.lineage)}) entry WHERE coalesce((SELECT version FROM featureIntentPolicy WHERE scopeType=json_extract(entry.value,'$.scope.type') AND scopeId=json_extract(entry.value,'$.scope.id')),0)!=json_extract(entry.value,'$.version'))
-    AND NOT EXISTS(SELECT 1 FROM fieldResearchRecord WHERE id=${id} AND (sessionId!=${sessionId} OR featureId IS NOT NULL))`
+    AND NOT EXISTS(SELECT 1 FROM fieldResearchRecord WHERE id=${id} AND (sessionId!=${sessionId} OR featureId IS NOT NULL OR archivedAt IS NOT NULL))
+    AND NOT EXISTS(SELECT 1 FROM fieldResearchDeletedRecord WHERE id=${id})`
   const plan = await prepareNewLifecycleFeature(ctx.db, {
     featureId,
     scope,

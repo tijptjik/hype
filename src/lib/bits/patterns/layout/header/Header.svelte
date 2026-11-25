@@ -174,7 +174,8 @@ const rootClass = $derived(
         {/if}
 
         <div class="ml-auto flex shrink-0 items-center">
-          {#if formActions.locationsAction ||
+          {#if formActions.relatedActions?.length ||
+            formActions.locationsAction ||
             formActions.featuresAction ||
             formActions.usersAction ||
             formActions.historyAction ||
@@ -182,6 +183,7 @@ const rootClass = $derived(
             shareAction}
             <div class="mr-2 shrink-0">
               <HeaderPrimitive.FormActions
+                relatedActions={formActions.relatedActions}
                 locationsAction={formActions.locationsAction}
                 featuresAction={formActions.featuresAction}
                 usersAction={formActions.usersAction}

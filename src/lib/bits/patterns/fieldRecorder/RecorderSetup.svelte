@@ -13,6 +13,7 @@ import FilterOffIcon from 'virtual:icons/lucide/funnel-x'
 import ProjectIcon from 'virtual:icons/lucide/layout-grid'
 import ExteriorIcon from 'virtual:icons/lucide/box'
 import InteriorIcon from 'virtual:icons/lucide/layers-3'
+import RecordsIcon from 'virtual:icons/lucide/list'
 import ModelMapIcon from 'virtual:icons/lucide/map'
 // API
 import {
@@ -25,6 +26,7 @@ import {
 } from '#lib/api/fieldResearch.remote.js'
 import { refreshRemoteQuery } from '#lib/remote/index.js'
 // COMPONENTS
+import ResearchRecordIndex from '#lib/bits/patterns/fieldResearch/ResearchRecordIndex.svelte'
 import ResearchSessionIndex from '#lib/bits/patterns/fieldResearch/ResearchSessionIndex.svelte'
 import ResearchSessionFilterBar from '#lib/bits/patterns/fieldResearch/ResearchSessionFilterBar.svelte'
 import FormSurface from '#lib/bits/patterns/forms/formSurface/FormSurface.svelte'
@@ -90,13 +92,18 @@ const facets = new Map([
 const sessionId = $derived(page.url.searchParams.get('session'))
 const creating = $derived(!sessionId && page.url.searchParams.has('new'))
 const tabUrl = $derived(page.shallow?.url ?? page.url)
-const modelViews = [
+const sessionViews = [
+  { id: 'records', label: 'Records', icon: RecordsIcon },
   { id: 'exterior', label: 'Exterior gallery', icon: ExteriorIcon },
   { id: 'interior', label: 'Interior gallery', icon: InteriorIcon },
   { id: 'map', label: '3D model map', icon: ModelMapIcon },
 ] as const
-const modelView = $derived(
-  modelViews.find(view => view.id === tabUrl.searchParams.get('models')),
+const sessionView = $derived(
+  sessionViews.find(view =>
+    view.id === 'records'
+      ? tabUrl.searchParams.get('view') === 'records'
+      : view.id === tabUrl.searchParams.get('models'),
+  ),
 )
 const facet = $derived(
   tabUrl.hash === '#fields'
@@ -118,23 +125,27 @@ function startNew(): Promise<void> {
 function selectFacet(ref: string): void {
   if (!facets.has(ref)) return
   const url = new URL(tabUrl.href)
-  if (facet === ref && !modelView) return
+  if (facet === ref && !sessionView) return
   url.hash = ref
   url.searchParams.delete('models')
+  url.searchParams.delete('view')
   void goto(url, { shallow: true, state: page.state })
 }
 
-/** Toggle a read-only model view, retaining browser history and the active session.
+/** Toggle a read-only session view, retaining browser history and the active session.
  * @param id Requested view, or null to return to the previous tab. @returns Nothing.
  */
-function selectModels(id: string | null): void {
+function selectSessionView(id: string | null): void {
   const url = new URL(tabUrl.href)
-  if (id && modelView?.id !== id) url.searchParams.set('models', id)
-  else url.searchParams.delete('models')
+  url.searchParams.delete('view')
+  url.searchParams.delete('models')
+  if (id && sessionView?.id !== id)
+    url.searchParams.set(id === 'records' ? 'view' : 'models', id)
   void goto(url, { shallow: true, state: page.state })
 }
 
-const showModelMap = $derived(Boolean(sessionId) && modelView?.id === 'map')
+const showModelMap = $derived(Boolean(sessionId) && sessionView?.id === 'map')
+const showRecords = $derived(Boolean(sessionId) && sessionView?.id === 'records')
 const showLocations = $derived(
   facet === 'locations' &&
     current?.configurationVersion === researchConfigurationVersion,
@@ -146,7 +157,7 @@ $effect(() => {
 $effect(() => {
   const detail = Boolean(sessionId)
   const isNew = creating
-  const active = modelView?.id ?? facet
+  const active = sessionView?.id ?? facet
   const title = current?.name
   untrack(() => {
     if (detail || isNew) {
@@ -156,7 +167,7 @@ $effect(() => {
         facets,
         {
           showFacets: detail,
-          showViewActions: detail,
+          showViewActions: false,
           showControlBarToggle: false,
           showLayoutToggle: false,
           showFormActions: detail && (active === 'core' || active === 'fields'),
@@ -193,20 +204,23 @@ $effect(() => {
             },
           },
         ]
-      : detail
-        ? modelViews.map(view => ({
-            id: view.id,
-            text: view.label,
-            icon: view.icon,
-            color: modelView?.id === view.id ? 'primary' : 'neutral',
-            style: modelView?.id === view.id ? 'soft' : 'ghost',
-            alwaysHideLabel: true,
-            hideLabelInstantly: true,
-            attrs: { 'aria-pressed': modelView?.id === view.id, title: view.label },
-            onClick: () => selectModels(view.id),
-          }))
-        : [],
+      : [],
   )
+})
+$effect(() => {
+  header.setFormActions({
+    relatedActions: sessionId
+      ? sessionViews.map(view => ({
+          id: view.id,
+          text: view.label,
+          icon: view.icon,
+          style: sessionView?.id === view.id ? 'soft' : 'outline',
+          disabled: header.state.isEditing || busy,
+          attrs: { 'aria-pressed': sessionView?.id === view.id, title: view.label },
+          onClick: () => selectSessionView(view.id),
+        }))
+      : [],
+  })
 })
 onDestroy(() => header.setCreateAction(null))
 /** Archive or restore the current session without deleting its records. @returns Once refreshed. */
@@ -288,7 +302,11 @@ $effect(() => {
 onDestroy(() => {
   header.clearControlBar()
   header.setViewActions([])
-  header.setFormActions({ showDeleteAction: false, toggleDelete: () => {} })
+  header.setFormActions({
+    relatedActions: [],
+    showDeleteAction: false,
+    toggleDelete: () => {},
+  })
 })
 // Only the creation form needs the full set of authorized project choices.
 $effect(() => {
@@ -366,7 +384,7 @@ async function create(): Promise<void> {
 <div
   class={creating
     ? 'mx-auto w-full max-w-5xl min-w-0 px-4 py-6 sm:px-6'
-    : sessionId && !showModelMap
+    : sessionId && !showModelMap && !showRecords
       ? 'w-full min-w-0'
       : 'flex min-h-0 min-w-0 flex-1 flex-col'}
 >
@@ -402,8 +420,10 @@ async function create(): Promise<void> {
     ></div>
   {:else if current}
     {#key current.id}
-      <FormSurface class={showModelMap ? 'mb-0 flex min-h-0 flex-1 flex-col' : ''}>
-        <div hidden={Boolean(modelView) || showLocations}>
+      <FormSurface
+        class={showModelMap || showRecords ? 'mb-0 flex min-h-0 flex-1 flex-col' : ''}
+      >
+        <div hidden={Boolean(sessionView) || showLocations}>
           <ResearchConfiguration
             {header}
             section={facet === 'fields' ? 'fields' : 'core'}
@@ -417,11 +437,17 @@ async function create(): Promise<void> {
             onSaved={refresh}
           />
         </div>
-        {#if modelView}
+        {#if sessionView?.id === 'records'}
+          <ResearchRecordIndex
+            sessionId={current.id}
+            {isSuperAdmin}
+            readOnly={Boolean(current.isArchived)}
+          />
+        {:else if sessionView}
           <ResearchModelGallery
-            view={modelView.id}
-            title={modelView.label}
-            icon={modelView.icon}
+            view={sessionView.id}
+            title={sessionView.label}
+            icon={sessionView.icon}
             organisationId={current.organisationId}
             sessionId={current.id}
             revision={current.revision}

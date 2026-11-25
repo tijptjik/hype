@@ -19,6 +19,7 @@ import {
   type MapBundle,
 } from '#lib/indoor/releases.js'
 // TYPES
+import type { MapObjectReader } from '#lib/indoor/server/storage.js'
 import type { BatchItem } from 'drizzle-orm/batch'
 import type { Database } from '#lib/types.js'
 import type { R2Bucket } from '@cloudflare/workers-types'
@@ -27,7 +28,7 @@ import type { R2Bucket } from '@cloudflare/workers-types'
 
 /** Read an integrity-checked immutable map bundle. @param bucket Environment storage. @param id Map ID. @param hash Exact release. @returns Validated bundle. */
 export async function readMapBundle(
-  bucket: R2Bucket,
+  bucket: MapObjectReader,
   id: string,
   hash: string,
 ): Promise<MapBundle> {

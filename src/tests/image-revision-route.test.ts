@@ -11,6 +11,7 @@ const { database, readPin, getObject, getDerived, authorizePreview } = vi.hoiste
     authorizePreview: vi.fn(),
   }),
 )
+vi.mock('$app/env', async original => ({ ...(await original<object>()), dev: true }))
 vi.mock('#lib/api/index.js', () => ({
   getDatabaseWithoutAuth: vi.fn(async () => ({ db: database })),
 }))
@@ -127,6 +128,65 @@ describe('immutable image HTTP delivery', () => {
       })
       await expect(request()).rejects.toMatchObject({ status: 409 })
       expect(getObject).toHaveBeenCalledTimes(1)
+    },
+  )
+  it('lets installed Recorder clients follow a temporary original URL when local thumbnail rendering is unavailable', async () => {
+    const pin = await readPin()
+    readPin.mockResolvedValue({
+      ...pin,
+      storageKey: 'h/features/f/recorder/u/photo',
+      metadata: { version: 1 },
+    })
+    const url = new URL(
+      'https://example.test/api/images/revisions/r1?t=c_fit,w_320,h_320',
+    )
+    const event = {
+      params: { revision: 'r1' },
+      locals: { platform: {} },
+      url,
+      request: new Request(url, { headers: { 'sec-fetch-dest': 'image' } }),
+    }
+    const response = await GET(event as never)
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe(url.pathname)
+    expect(response.headers.get('cache-control')).toBe('no-store')
+    // A raw original cannot stand in for explicitly edited pixels.
+    readPin.mockResolvedValue({
+      ...pin,
+      storageKey: 'h/features/f/recorder/u/photo',
+      metadata: { version: 1, renderRotation: 90 },
+    })
+    await expect(GET(event as never)).rejects.toMatchObject({ status: 503 })
+  })
+  it.each(['c_fill,h_256,w_256', 'c_fit,h_1024,w_1024', 'h_2048,w_2048'])(
+    'recovers local Recorder gallery display %s when the transformer is offline',
+    async transform => {
+      const pin = await readPin()
+      readPin.mockResolvedValue({
+        ...pin,
+        storageKey: 'h/features/f/recorder/u/photo',
+        metadata: { version: 1 },
+      })
+      const url = new URL('https://example.test/api/images/revisions/r1')
+      url.search = new URLSearchParams({
+        feature: 'f',
+        v: '1',
+        t: transform,
+        format: 'auto',
+        quality: 'auto',
+        gravity: 'auto',
+      }).toString()
+      const event = {
+        params: { revision: 'r1' },
+        locals: { platform: {} },
+        url,
+        request: new Request(url, { headers: { 'sec-fetch-dest': 'image' } }),
+      }
+      const response = await GET(event as never)
+      expect(response.status).toBe(307)
+      expect(response.headers.get('location')).toBe(url.pathname)
+      url.searchParams.set('format', 'png')
+      await expect(GET(event as never)).rejects.toMatchObject({ status: 503 })
     },
   )
   it('does not read storage when the exact revision does not exist', async () => {

@@ -1203,6 +1203,7 @@ export function useAdminHeaderModel(
       isVisible: resolvedVisibility.showFormActions,
       primaryAction,
       content: formActions?.content ?? null,
+      relatedActions: formActions?.relatedActions,
       locationsAction: formActions?.locationsAction ?? null,
       featuresAction,
       usersAction,

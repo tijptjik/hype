@@ -23,6 +23,7 @@ import {
 let {
   primaryAction = null,
   content = null,
+  relatedActions = [],
   locationsAction = null,
   featuresAction = null,
   usersAction = null,
@@ -48,6 +49,22 @@ function resolveIconClasses(icon?: unknown): string {
 
 <!-- Outgoing controls can outlive their action while navigation clears the header. -->
 <div class={cx(HEADER_FORM_ACTIONS_CLASSES, 'relative')}>
+  {#each relatedActions as action (action.id ?? action.text)}
+    <Button
+      size="sm"
+      text={action.text}
+      attrs={action.attrs}
+      color={action.color ?? 'neutral'}
+      style={action.style ?? 'outline'}
+      iconComponent={action.icon}
+      class={resolveActionClass(action.class)}
+      hideLabel
+      hideLabelInstantly
+      disabled={action.disabled}
+      onClick={action.onClick}
+    />
+  {/each}
+
   {#if featuresAction}
     <Button
       size="sm"

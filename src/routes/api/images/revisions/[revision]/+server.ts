@@ -1,5 +1,6 @@
 // SVELTE
-import { error } from '@sveltejs/kit'
+import { error, isHttpError } from '@sveltejs/kit'
+import { dev } from '$app/env'
 // API
 import { getDatabaseWithoutAuth } from '#lib/api/index.js'
 // SERVICES
@@ -12,12 +13,25 @@ import {
   getDerivedBucketForStage,
   toMetadataProfilePayload,
 } from '#lib/images/storage.js'
+// RECORDER
+import { recorderPhotoThumbnailTransform } from '#lib/fieldResearch/recorderPhotos.js'
+// IMAGE DELIVERY
+import {
+  IMAGE_PRERENDER_TRANSFORMATIONS,
+  IMAGE_RAW_INTERMEDIATE_TRANSFORMATION,
+} from '#lib/images/delivery.js'
 // VALIDATION
 import { ImageMetadataFullSchema } from '#lib/db/zod/schema/image.js'
 import { revisionDerivativeKey } from '#lib/images/revisionDerivative.js'
 import { transformImageRevision } from '#lib/images/revisionTransform.js'
 // TYPES
 import type { RequestHandler } from './$types'
+
+const recorderDisplayTransforms = new Set<string>([
+  recorderPhotoThumbnailTransform,
+  ...IMAGE_PRERENDER_TRANSFORMATIONS,
+  IMAGE_RAW_INTERMEDIATE_TRANSFORMATION,
+])
 
 /**
  * Delivers an exact image by its opaque address, independently of the viewer's session.
@@ -26,7 +40,7 @@ import type { RequestHandler } from './$types'
  * @remarks Task/feature APIs control discovery. Known image addresses grant delivery;
  * cached derivatives bypass original processing, and source misses never use latest bytes.
  */
-export const GET: RequestHandler = async ({ params, locals, url }) => {
+export const GET: RequestHandler = async ({ params, locals, url, request }) => {
   const { db } = await getDatabaseWithoutAuth(locals.platform)
   const pin = await readImageRevisionAddress(db, params.revision)
   if (!pin) throw error(404, 'Image revision not available')
@@ -83,13 +97,36 @@ export const GET: RequestHandler = async ({ params, locals, url }) => {
   if (!(await verifyImageRevisionBytes(pin, bytes)))
     throw error(409, 'Image revision integrity mismatch')
   // Render only cache misses from the retained source and immutable metadata.
-  const transformed = await transformImageRevision(
-    locals.platform?.env?.ASSET_TRANSFORMER,
-    bytes,
-    pin.mediaType,
-    pin.metadata,
-    url,
-  )
+  let transformed: Response | null
+  try {
+    transformed = await transformImageRevision(
+      locals.platform?.env?.ASSET_TRANSFORMER,
+      bytes,
+      pin.mediaType,
+      pin.metadata,
+      url,
+    )
+  } catch (cause) {
+    // Recorder and admin gallery image elements can display the verified original while the local Worker is offline.
+    if (
+      dev &&
+      isHttpError(cause, 503) &&
+      pin.storageNamespace === 'local' &&
+      pin.storageKey.includes('/recorder/') &&
+      request.headers.get('sec-fetch-dest') === 'image' &&
+      recorderDisplayTransforms.has(url.searchParams.get('t') ?? '') &&
+      ['format', 'quality', 'gravity'].every(
+        key => (url.searchParams.get(key) ?? 'auto') === 'auto',
+      ) &&
+      derivativeKey
+    ) {
+      return new Response(null, {
+        status: 307,
+        headers: { location: url.pathname, 'cache-control': 'no-store' },
+      })
+    }
+    throw cause
+  }
   if (transformed)
     return new Response(transformed.body, {
       headers: {

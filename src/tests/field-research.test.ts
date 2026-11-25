@@ -17,7 +17,7 @@ import { withRemoteMeta } from './remote-function-mock'
 const endpointContext = vi.hoisted(() => ({
   db: {} as Database,
   user: { id: 'researcher', superAdmin: true },
-  userRoles: [],
+  userRoles: [] as { type: 'project'; role: 'maintainer'; projectId: string }[],
 }))
 vi.mock('#lib/api/server/guarded.js', () => {
   const wrap =
@@ -46,18 +46,23 @@ vi.mock('#lib/db/services/property.js', () => ({
 
 const stores: ReturnType<typeof lifecycleFixture>[] = []
 afterEach(() => {
+  endpointContext.user.superAdmin = true
+  endpointContext.userRoles = []
   for (const store of stores.splice(0)) store.sqlite.close()
 })
 
 /** Build a realistic retained session alongside the accepted Feature revision schema.
+ * @param legacyRecords Number of historical receipts to seed before the Feature-link migration.
  * @returns Isolated D1 adapter enforcing the production variable ceiling.
  */
-async function fixture() {
+async function fixture(legacyRecords = 0) {
   const f = lifecycleFixture(false, false, 100)
   stores.push(f)
   f.sqlite.exec('DROP TABLE featureOrigin')
   f.sqlite.exec(
-    'CREATE TABLE IF NOT EXISTS layerProperty(layerId TEXT,propertyId TEXT,isVisible INTEGER,isUserContributable INTEGER)',
+    `CREATE TABLE IF NOT EXISTS layerProperty(layerId TEXT,propertyId TEXT,isVisible INTEGER,isUserContributable INTEGER);
+     CREATE TABLE IF NOT EXISTS projectProperty(projectId TEXT,propertyId TEXT);
+     INSERT INTO projectProperty(projectId,propertyId) VALUES('project','choice');`,
   )
   f.sqlite.exec(readFileSync('migrations/0242_field_research.sql', 'utf8'))
   f.sqlite.exec(
@@ -71,10 +76,21 @@ async function fixture() {
     `INSERT INTO user(id) VALUES ('researcher'); CREATE TABLE featureIntentPolicy(scopeType TEXT,scopeId TEXT,definition TEXT,namingRules TEXT,version INTEGER);`,
   )
   f.sqlite.exec(readFileSync('migrations/0265_field_research_record.sql', 'utf8'))
+  if (legacyRecords) {
+    f.sqlite.exec(`INSERT INTO fieldResearchSession(id,name,organisationId,projectId,createdBy,createdAt,updatedAt,status)
+      VALUES('legacy','Historical outing','org','project','researcher','now','now','uploading')`)
+    const receipt = f.sqlite.prepare(
+      "INSERT INTO fieldResearchRecord(id,sessionId) VALUES(?,'legacy')",
+    )
+    for (let n = 1; n <= legacyRecords; n++) receipt.run(`receipt-${n}`)
+  }
   f.sqlite.exec(readFileSync('migrations/0266_field_research_features.sql', 'utf8'))
   f.sqlite.exec('CREATE TABLE IF NOT EXISTS location(id TEXT PRIMARY KEY)')
   f.sqlite.exec(
     readFileSync('migrations/0267_field_research_record_placement.sql', 'utf8'),
+  )
+  f.sqlite.exec(
+    readFileSync('migrations/0276_field_research_record_archive.sql', 'utf8'),
   )
   await f.db.insert(fieldResearchSession).values({
     id: 'session',
@@ -160,6 +176,96 @@ describe('research session archive', () => {
   })
 })
 
+it('pages retained records in capture order without dropping unlinked receipts', async () => {
+  const f = await fixture(51)
+  endpointContext.db = f.db
+  const { getResearchRecords } = await import('#lib/api/fieldResearch.remote.js')
+  expect(await getResearchRecords({ sessionId: 'session' })).toEqual({
+    records: [],
+    next: null,
+  })
+  const input = { sessionId: 'legacy' }
+  const first = await getResearchRecords(input)
+  expect(first.records).toHaveLength(50)
+  expect(first.records[0]).toMatchObject({
+    id: 'receipt-51',
+    featureId: null,
+    title: null,
+    recordedAt: null,
+  })
+  expect(first.next).toEqual(expect.any(Number))
+  const last = await getResearchRecords({ ...input, before: first.next ?? undefined })
+  expect(last.records.map(record => record.id)).toEqual(['receipt-1'])
+  expect(last.next).toBeNull()
+  await expect(getResearchRecords({ sessionId: 'missing' })).rejects.toThrow()
+})
+
+it('filters and bulk manages receipts within the session and enforces delete authority', async () => {
+  const { db, sqlite } = await fixture(125)
+  endpointContext.db = db
+  const { getResearchRecords, getMatchingResearchRecordIds, updateResearchRecords } =
+    await import('#lib/api/fieldResearch.remote.js')
+  const input = { sessionId: 'legacy' }
+  sqlite.exec(
+    "UPDATE fieldResearchRecord SET spatialRealm='exterior' WHERE id='receipt-125'",
+  )
+  expect(
+    await getMatchingResearchRecordIds({
+      ...input,
+      setting: 'exterior',
+      search: 'RECEIPT-12',
+    }),
+  ).toEqual(['receipt-125'])
+  const ids = await getMatchingResearchRecordIds({ ...input, setting: 'unspecified' })
+  expect(ids).toHaveLength(124)
+  const selection = { ...input, ids, archived: false }
+  endpointContext.user.superAdmin = false
+  await expect(
+    updateResearchRecords({ ...selection, action: 'archive' }),
+  ).rejects.toMatchObject({ status: 409 })
+  endpointContext.userRoles = [
+    { type: 'project', role: 'maintainer', projectId: 'project' },
+  ]
+  await expect(
+    updateResearchRecords({ ...selection, action: 'delete' }),
+  ).rejects.toMatchObject({ status: 403 })
+  await expect(
+    updateResearchRecords({ ...selection, sessionId: 'session', action: 'archive' }),
+  ).rejects.toMatchObject({ status: 409 })
+  await expect(
+    updateResearchRecords({
+      ...selection,
+      ids: [...ids, 'missing'],
+      action: 'archive',
+    }),
+  ).rejects.toMatchObject({ status: 409 })
+  expect((await getResearchRecords(input)).records[0]?.total).toBe(125)
+  expect(await updateResearchRecords({ ...selection, action: 'archive' })).toEqual({
+    count: 124,
+  })
+  expect(await getMatchingResearchRecordIds(input)).toEqual(['receipt-125'])
+  await expect(getResearchRecords({ ...input, archived: true })).rejects.toMatchObject({
+    status: 403,
+  })
+  endpointContext.user.superAdmin = true
+  expect(
+    (await getMatchingResearchRecordIds({ ...input, archived: true })).length,
+  ).toBe(124)
+  await expect(
+    updateResearchRecords({ ...selection, action: 'delete' }),
+  ).rejects.toMatchObject({ status: 409 })
+  expect(
+    await updateResearchRecords({ ...selection, archived: true, action: 'restore' }),
+  ).toEqual({ count: 124 })
+  expect(await updateResearchRecords({ ...selection, action: 'delete' })).toEqual({
+    count: 124,
+  })
+  expect(await getMatchingResearchRecordIds(input)).toEqual(['receipt-125'])
+  expect(
+    sqlite.prepare('SELECT count(*) n FROM fieldResearchDeletedRecord').get(),
+  ).toEqual({ n: 124 })
+})
+
 describe('mobile provisional Feature creation', () => {
   it('applies session and layer defaults to one unpublished Feature per device request', async () => {
     const { sqlite, db } = await fixture()
@@ -212,6 +318,50 @@ describe('mobile provisional Feature creation', () => {
     expect(
       sqlite.prepare('SELECT recordSequence FROM fieldResearchSession').get()
         ?.recordSequence,
+    ).toBe(2)
+    endpointContext.db = db
+    const { updateResearchRecords, getResearchRecords, getMatchingResearchRecordIds } =
+      await import('#lib/api/fieldResearch.remote.js')
+    // Renaming a Feature preserves its capture identifier and both search paths.
+    const { readRecorderEditor, saveRecorderEditor } = await import(
+      '#lib/db/services/recorderEditor.js'
+    )
+    const editor = await readRecorderEditor(ctx, 'capture')
+    await saveRecorderEditor(ctx, { ...editor, title: 'Market stall', values: {} })
+    for (const search of ['#001', 'Market stall']) {
+      const filters = { sessionId: 'session', search }
+      expect(await getMatchingResearchRecordIds(filters)).toEqual(['capture'])
+      expect((await getResearchRecords(filters)).records[0]).toMatchObject({
+        id: 'capture',
+        customTitle: 'Market stall',
+        identifierTags: ['#001'],
+        address: null,
+        thumbnailRevision: null,
+      })
+    }
+    const selection = { sessionId: 'session', ids: ['next'], archived: false }
+    const linked = sqlite
+      .prepare("SELECT featureId FROM fieldResearchRecord WHERE id='next'")
+      .get()
+    expect(await updateResearchRecords({ ...selection, action: 'archive' })).toEqual({
+      count: 1,
+    })
+    expect(await createRecorderRecord(ctx, 'session', 'next')).toBe('next')
+    expect(
+      await updateResearchRecords({ ...selection, archived: true, action: 'delete' }),
+    ).toEqual({ count: 1 })
+    await expect(createRecorderRecord(ctx, 'session', 'next')).rejects.toMatchObject({
+      status: 409,
+    })
+    expect(
+      sqlite
+        .prepare('SELECT isArchived FROM feature WHERE id=?')
+        .get(String(linked?.featureId)),
+    ).toEqual({ isArchived: 0 })
+    expect(
+      sqlite
+        .prepare("SELECT recordSequence FROM fieldResearchSession WHERE id='session'")
+        .get()?.recordSequence,
     ).toBe(2)
     sqlite.exec('UPDATE fieldResearchSession SET configurationVersion=0')
     await expect(createRecorderRecord(ctx, 'session', 'old')).rejects.toMatchObject({

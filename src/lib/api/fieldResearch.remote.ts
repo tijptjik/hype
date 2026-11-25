@@ -3,12 +3,13 @@ import { error } from '@sveltejs/kit'
 // VALIDATION
 import { z } from 'zod'
 // DRIZZLE
-import { and, asc, desc, eq, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, sql, type SQL } from 'drizzle-orm'
 // API
 import { guardedCommand, guardedQuery } from './server/guarded.js'
 // SCHEMA
 import {
   fieldResearchConfigurationHistory as history,
+  fieldResearchRecord as captures,
   fieldResearchSession as sessions,
   fieldResearchSessionLayer as sessionLayers,
 } from '#lib/db/schema/fieldResearch.js'
@@ -30,7 +31,14 @@ import {
 import { listResolvedProjectProperties } from '#lib/db/services/property.js'
 import { researchProjectProperties } from '#lib/fieldResearch/propertyChoices.js'
 import { requireFeatureType } from '#lib/features/intents.js'
+import { recorderIdentifierTags } from '#lib/fieldResearch/recorderIdentifier.js'
+import { recorderLocationAddresses } from '#lib/fieldResearch/recorder.js'
 // SERVICES
+import {
+  listRecorderLocations,
+  recorderCardFields,
+  recorderCaptureTitle,
+} from '#lib/db/services/recorderSessions.js'
 import {
   firstResearchLayerSQL,
   initialResearchLayersSQL,
@@ -49,6 +57,8 @@ import type { GuardedBaseContext } from './guarded.types.js'
 // 1. Authorization and scope choices
 // 2. Session reads and edits
 // 3. Versioned configuration and session metadata
+// 4. Record filtering and bulk actions
+// 5. Session status updates
 
 const id = z.string().min(1).max(100)
 const sessionPrisms = z.object({
@@ -180,7 +190,7 @@ export const getResearchSessions = guardedQuery(
       .select({
         ...researchSessionMetadata,
         totalCount: sql<number>`count(*) over()`,
-        recordCount: sql<number>`(SELECT count(*) FROM fieldResearchRecord WHERE sessionId=fieldResearchSession.id)`,
+        recordCount: sql<number>`(SELECT count(*) FROM fieldResearchRecord WHERE archivedAt IS NULL AND sessionId=fieldResearchSession.id)`,
         projectName: sql<
           string | null
         >`(SELECT name FROM projectI18n WHERE projectId=fieldResearchSession.projectId ORDER BY locale='en' DESC LIMIT 1)`,
@@ -216,8 +226,8 @@ export const getResearchSessions = guardedQuery(
           input.hasRecords === undefined
             ? undefined
             : input.hasRecords
-              ? sql`EXISTS (SELECT 1 FROM fieldResearchRecord WHERE sessionId=${sessions.id})`
-              : sql`NOT EXISTS (SELECT 1 FROM fieldResearchRecord WHERE sessionId=${sessions.id})`,
+              ? sql`EXISTS (SELECT 1 FROM fieldResearchRecord WHERE archivedAt IS NULL AND sessionId=${sessions.id})`
+              : sql`NOT EXISTS (SELECT 1 FROM fieldResearchRecord WHERE archivedAt IS NULL AND sessionId=${sessions.id})`,
           input.query?.trim()
             ? sql`instr(lower(${sessions.name}),lower(${input.query.trim()})) > 0`
             : undefined,
@@ -259,8 +269,8 @@ export const getResearchSessionFilters = guardedQuery(
         input.hasRecords === undefined
           ? undefined
           : input.hasRecords
-            ? sql`EXISTS (SELECT 1 FROM fieldResearchRecord WHERE sessionId=s.id)`
-            : sql`NOT EXISTS (SELECT 1 FROM fieldResearchRecord WHERE sessionId=s.id)`,
+            ? sql`EXISTS (SELECT 1 FROM fieldResearchRecord WHERE archivedAt IS NULL AND sessionId=s.id)`
+            : sql`NOT EXISTS (SELECT 1 FROM fieldResearchRecord WHERE archivedAt IS NULL AND sessionId=s.id)`,
         input.archive === 'all'
           ? undefined
           : sql`s.isArchived=${input.archive === 'archived' ? 1 : 0}`,
@@ -708,6 +718,187 @@ export const getResearchSession = guardedQuery(
     await requireResearchSessionAccess(ctx, input.sessionId)
     const session = await readResearchSession(ctx.db, input.sessionId)
     return { session }
+  },
+)
+
+const recordFilters = z.object({
+  sessionId: id,
+  archived: z.boolean().optional(),
+  setting: z.enum(['interior', 'exterior', 'unspecified']).optional(),
+  search: z.string().trim().max(200).optional(),
+})
+const recordTitle = sql`(SELECT i.title FROM featureI18n i WHERE i.featureId=f.id AND i.title!=''
+  ORDER BY i.locale='en' DESC,i.locale LIMIT 1)`
+
+/** Share visibility, title resolution and filters between paging and select-all.
+ * @param input Session and record filters. @param ctx Authenticated request.
+ * @param showAddresses Include address labels when reading a page.
+ * @returns Scoped joins, display address and predicates for record queries.
+ */
+async function recordScope(
+  input: z.infer<typeof recordFilters>,
+  ctx: GuardedBaseContext,
+  showAddresses: boolean,
+): Promise<{ scope: SQL; address: SQL }> {
+  requireResearch(ctx)
+  if (input.archived && !ctx.user.superAdmin)
+    error(403, 'Archived records require super admin access.')
+  await requireResearchSessionAccess(ctx, input.sessionId)
+  // Resolve shared Location addresses once for the query, including addresses inherited from buildings.
+  const located =
+    showAddresses || input.search
+      ? await ctx.db.all<{
+          locationId: string
+        }>(sql`SELECT DISTINCT locationId FROM fieldResearchRecord
+      WHERE sessionId=${input.sessionId} AND (archivedAt IS NOT NULL)=${input.archived ? 1 : 0}
+      AND locationId IS NOT NULL AND nullif(json_extract(pin,'$.unitAddress'),'') IS NULL`)
+      : []
+  const places = located.length
+    ? recorderLocationAddresses(await listRecorderLocations(ctx, input.sessionId, true))
+    : new Map<string, string>()
+  const addresses = located.flatMap(({ locationId }) => {
+    const label = places.get(locationId)
+    return label ? [[locationId, label]] : []
+  })
+  const address = sql`coalesce(nullif(json_extract(r.pin,'$.unitAddress'),''), addr.value,
+    (SELECT nullif(trim(i.displayAddress),'') FROM featureI18n i WHERE i.featureId=f.id AND trim(i.displayAddress)!=''
+     ORDER BY i.locale='en' DESC,i.locale LIMIT 1))`
+  const search = input.search
+  const sequence = search?.match(/^#(\d+)$/)?.[1]
+  const predicates = and(
+    sql`r.sessionId=${input.sessionId}`,
+    sql`(s.isArchived=0 OR ${ctx.user.superAdmin ? 1 : 0})`,
+    researchProjectAccess(ctx, sql`s.projectId`),
+    input.archived ? sql`r.archivedAt IS NOT NULL` : sql`r.archivedAt IS NULL`,
+    input.setting === 'unspecified'
+      ? sql`r.spatialRealm IS NULL`
+      : input.setting
+        ? sql`r.spatialRealm=${input.setting}`
+        : undefined,
+    search
+      ? sql`(instr(lower(r.id),lower(${search}))>0 OR instr(lower(${recordTitle}),lower(${search}))>0
+          OR instr(lower(${address}),lower(${search}))>0
+          ${sequence ? sql`OR substr(coalesce(${recorderCaptureTitle},${recordTitle}),-${sequence.length + 1})=${`-${sequence}`}` : sql``})`
+      : undefined,
+  )
+  const scope = sql`FROM fieldResearchRecord r JOIN fieldResearchSession s ON s.id=r.sessionId
+    LEFT JOIN feature f ON f.id=r.featureId AND f.projectId=s.projectId AND f.organisationId=s.organisationId
+    LEFT JOIN layer l ON l.id=f.layerId
+    LEFT JOIN fieldResearchSessionLayer sl ON sl.sessionId=s.id AND sl.layerId=coalesce(l.historicalSourceLayerId,l.id)
+    LEFT JOIN featureOrigin origin ON origin.featureId=f.id AND origin.origin='field_research' AND origin.originId=s.id
+    LEFT JOIN json_each(${JSON.stringify(Object.fromEntries(addresses))}) addr ON addr.key=r.locationId
+    WHERE ${predicates}`
+  return { scope, address }
+}
+
+/** List captures for the session, including receipts created before Feature linking.
+ * @param input Session filters and optional exclusive cursor from the preceding page.
+ * @returns A page in reverse capture order, its cursor and the first page's matching count.
+ */
+export const getResearchRecords = guardedQuery(
+  recordFilters.extend({ before: z.number().int().positive().optional() }),
+  async (input, ctx) => {
+    const { scope, address } = await recordScope(input, ctx, true)
+    // Count matching receipts on the initial page only.
+    const rows = await ctx.db.all<{
+      cursor: number
+      id: string
+      featureId: string | null
+      title: string | null
+      recordedAt: string | null
+      address: string | null
+      titleTemplate: string | null
+      captureTitle: string | null
+      thumbnailRevision: string | null
+      code: string | null
+      spatialRealm: 'interior' | 'exterior' | null
+      total: number | null
+    }>(sql`SELECT r.rowid cursor, r.id, f.id featureId, r.spatialRealm, origin.recordedAt,
+        ${recorderCardFields}, ${address} address, ${recordTitle} title, ${input.before ? sql`NULL` : sql`count(*) OVER ()`} total
+      ${scope} ${input.before === undefined ? sql`` : sql`AND r.rowid<${input.before}`}
+      ORDER BY r.rowid DESC LIMIT 51`)
+    const records = rows
+      .slice(0, 50)
+      .map(({ code, captureTitle, titleTemplate, ...row }) => {
+        const identifierTags = recorderIdentifierTags(
+          captureTitle ?? row.title,
+          code,
+          titleTemplate,
+        )
+        const customTitle =
+          identifierTags.length && (!row.title || row.title === captureTitle)
+            ? null
+            : row.title
+        return { ...row, identifierTags, customTitle }
+      })
+    return {
+      records,
+      next: rows.length > records.length ? (records.at(-1)?.cursor ?? null) : null,
+    }
+  },
+)
+
+/** Collect all matching IDs for a single atomic bulk action, including undisplayed pages.
+ * @param input Current session and filters. @returns Selected record IDs.
+ */
+export const getMatchingResearchRecordIds = guardedQuery(
+  recordFilters,
+  async (input, ctx) => {
+    const { scope } = await recordScope(input, ctx, false)
+    const rows = await ctx.db.all<{ id: string }>(sql`SELECT r.id ${scope} LIMIT 5001`)
+    if (rows.length > 5000)
+      error(400, 'Narrow your filters to select at most 5,000 records.')
+    return rows.map(row => row.id)
+  },
+)
+
+/** Change selected session receipts atomically, preserving independently managed Features.
+ * @param input Session, observed archive state, selected record IDs and requested action.
+ * @returns Number of changed records.
+ */
+export const updateResearchRecords = guardedCommand(
+  z.object({
+    sessionId: id,
+    ids: z.array(id).min(1).max(5000),
+    archived: z.boolean(),
+    action: z.enum(['archive', 'restore', 'delete']),
+  }),
+  async (input, ctx) => {
+    requireResearch(ctx)
+    if ((input.action !== 'archive' || input.archived) && !ctx.user.superAdmin)
+      error(403, 'Only super admins can restore or delete records.')
+    if (input.action !== 'delete' && (input.action === 'archive') === input.archived)
+      error(400, 'The selected action does not change the archive state.')
+    const ids = [...new Set(input.ids)]
+    const picked = sql`SELECT value FROM json_each(${JSON.stringify(ids)})`
+    const selection = sql`sessionId=${input.sessionId} AND id IN (${picked})
+      AND (archivedAt IS NOT NULL)=${input.archived ? 1 : 0}`
+    // Recheck permission and membership for the entire selection inside the write transaction.
+    const guard = sql`EXISTS(SELECT 1 FROM fieldResearchSession s WHERE s.id=${input.sessionId}
+      AND s.isArchived=0 AND ${researchProjectAccess(ctx, sql`s.projectId`)})
+      AND (SELECT count(*) FROM fieldResearchRecord WHERE ${selection})=${ids.length}`
+    const now = new Date().toISOString()
+    const changed = await executeRevisionBatch(ctx.db, guard, [
+      input.action === 'delete'
+        ? ctx.db.delete(captures).where(selection)
+        : ctx.db
+            .update(captures)
+            .set({
+              archivedAt: input.action === 'archive' ? now : null,
+              archivedBy: input.action === 'archive' ? ctx.user.id : null,
+            })
+            .where(selection),
+      ctx.db
+        .update(sessions)
+        .set({ updatedAt: now })
+        .where(eq(sessions.id, input.sessionId)),
+    ])
+    if (!changed)
+      error(
+        409,
+        'The selection changed or is no longer editable. Refresh and select the records again.',
+      )
+    return { count: ids.length }
   },
 )
 

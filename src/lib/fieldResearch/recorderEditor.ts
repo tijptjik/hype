@@ -14,6 +14,7 @@ export type RecorderField = {
   values?: {
     id: string
     value: string
+    icon?: string | null
     i18n?: Record<string, { value?: string | null }>
   }[]
 }
@@ -28,10 +29,12 @@ export type RecorderStatus = {
 }
 export type RecorderEditor = {
   id: string
+  description: string
   title: string
   revisionId: string
   version: number
   modifiedAt: string
+  photoRevisions: string[]
   editable: boolean
   status: RecorderStatus
   types: { id: string; label: string; kind?: string }[]
@@ -41,4 +44,5 @@ export type RecorderEditor = {
 export type RecorderEdit = Pick<
   RecorderEditor,
   'id' | 'revisionId' | 'version' | 'modifiedAt' | 'status' | 'values'
->
+> &
+  Partial<Pick<RecorderEditor, 'title' | 'description'>>
