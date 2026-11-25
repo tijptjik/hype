@@ -62,8 +62,10 @@ let {
   loadExamples,
   allowSequence = false,
   previewValues,
+  ignoreCase = false,
 }: {
   allowSequence?: boolean
+  ignoreCase?: boolean
   previewValues?: TemplateValues
   value: string
   onChange: (source: string) => void
@@ -136,6 +138,7 @@ const preview = $derived.by(() => {
               ),
         ]),
       ),
+      { ignoreCase },
     )
   } catch {
     return ''
@@ -207,7 +210,7 @@ $effect(() => {
  */
 function exampleName(example: FeatureNamingExample): string {
   try {
-    return renderDisplayTemplate(exampleSource, example.values)
+    return renderDisplayTemplate(exampleSource, example.values, { ignoreCase })
   } catch {
     return ''
   }
@@ -608,7 +611,9 @@ function changeMapping(index?: number): void {
             <li>
               <strong>Cases</strong>
               <p class="text-muted-foreground">
-                Replace exact values with chosen text, such as abbreviations.
+                {ignoreCase
+                  ? 'Replace values with chosen text, such as abbreviations. Capitalization can differ.'
+                  : 'Replace exact values with chosen text, such as abbreviations.'}
               </p>
             </li>
             <li>

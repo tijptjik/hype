@@ -35,6 +35,7 @@ import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // DOMAIN
 import { validResearchPropertyDefault } from '#lib/fieldResearch/configurationMigration.js'
 import {
+  resolveResearchConfiguration,
   researchConfigurationVersion,
   researchConfigurationSchema,
   researchPropertyIncluded,
@@ -144,6 +145,31 @@ const templateProperties = $derived([
         : undefined,
   })),
 ])
+
+// Use the same option labels and inherited defaults a new capture will receive.
+const previewValues = $derived.by(() => {
+  if (!settings) return {}
+  const effective = resolveResearchConfiguration(settings, selected?.overrides)
+  const values: Record<string, string | number | boolean | null> = {
+    'session.code': effective.code,
+    'session.sequence': 1,
+  }
+  for (const property of data?.properties ?? []) {
+    const field = effective.properties[property.id]
+    const value = field?.defaultValue
+    if (!field?.isRecordable || value == null) continue
+    const label = (id: string) => {
+      const option = property.values?.find(option => option.id === id)
+      return option?.i18n?.en?.value || option?.value || id
+    }
+    values['properties.' + property.id] = Array.isArray(value)
+      ? value.map(label).join(', ')
+      : property.values?.length
+        ? label(String(value))
+        : value
+  }
+  return values
+})
 
 /** Load the current configuration without creating one for legacy sessions.
  * @returns Once the authorized session settings are available.
@@ -947,7 +973,8 @@ onDestroy(() => {
                 }}
                 properties={templateProperties}
                 allowSequence={true}
-                previewValues={{ 'session.code': settings.code, 'session.sequence': 1 }}
+                {previewValues}
+                ignoreCase
                 isEditing={editing}
                 showLLMButton={false}
                 {disabled}

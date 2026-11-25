@@ -57,6 +57,19 @@ describe('localized display language', () => {
       parseDisplayTemplate('{{ cases(site, "a", "b", "c", "d", "e") }}'),
     ).toThrow()
   })
+  it('matches research options ignoring case while preserving exact and ambiguous labels', () => {
+    const title = '{{ cases(site, "east", "e", "main", "m") }}'
+    expect(renderDisplayTemplate(title, { site: 'East' }, { ignoreCase: true })).toBe(
+      'e',
+    )
+    const variants = '{{ cases(site, "US", "country", "us", "pronoun") }}'
+    expect(renderDisplayTemplate(variants, { site: 'us' }, { ignoreCase: true })).toBe(
+      'pronoun',
+    )
+    expect(renderDisplayTemplate(variants, { site: 'Us' }, { ignoreCase: true })).toBe(
+      'Us',
+    )
+  })
   it('supports ternary while retaining legacy cases and trilean', () => {
     const source = '{{ ternary(flag, "Yes", "No", "Unknown") }}'
     expect(renderDisplayTemplate(source, { flag: true })).toBe('Yes')

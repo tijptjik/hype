@@ -185,13 +185,18 @@ function present(value: TemplateScalar): boolean {
 
 /** Render one localized template using an accepted, already resolved value map.
  * @param source Validated source text. @param values Flat scalar properties, without live database access.
+ * @param options Enable case-insensitive fallback for research option labels. Exact matches take precedence.
  * @returns Plain text; callers must render as text, never HTML.
  * @remarks pair requires both sides; optional adds prefix/suffix only when present;
  * join keeps either present side and inserts its separator only between two values;
  * ternary distinguishes false from missing; legacy four-argument cases does the same.
  * Other cases calls map exact string values and leave unmatched values unchanged.
  */
-export function renderDisplayTemplate(source: string, values: TemplateValues): string {
+export function renderDisplayTemplate(
+  source: string,
+  values: TemplateValues,
+  options: { ignoreCase?: boolean } = {},
+): string {
   const parsed = parseDisplayTemplate(source)
   const evaluate = (node: TemplateExpression): TemplateScalar => {
     switch (node.kind) {
@@ -225,11 +230,19 @@ export function renderDisplayTemplate(source: string, values: TemplateValues): s
           return evaluate(node.args[!present(first) ? 3 : first === false ? 2 : 1])
         if (node.name === 'cases') {
           if (!present(first)) return undefined
+          const input = String(first)
+          const folded = options.ignoreCase ? input.toLowerCase() : undefined
+          let match: TemplateExpression | undefined
+          let ambiguous = false
           for (let index = 1; index < node.args.length; index += 2) {
-            if (String(first) === String(evaluate(node.args[index]) ?? ''))
-              return evaluate(node.args[index + 1])
+            const key = String(evaluate(node.args[index]) ?? '')
+            if (input === key) return evaluate(node.args[index + 1])
+            if (folded !== undefined && folded === key.toLowerCase()) {
+              if (match) ambiguous = true
+              match = node.args[index + 1]
+            }
           }
-          return first
+          return match && !ambiguous ? evaluate(match) : first
         }
         const second = evaluate(node.args[1])
         if (node.name === 'join')
