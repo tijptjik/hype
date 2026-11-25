@@ -539,13 +539,106 @@ test('opens a shared session, swipes, selects a building part and persists a rec
     await location.selectOption('lift')
     await page.getByRole('button', { name: /^interior$/i }).click()
     const plan = page.getByRole('button', { name: 'Floor plan' })
-    await expect(plan.locator('g[data-level]')).toHaveCount(2)
+    const floor = page.getByRole('combobox', { name: 'Floor', exact: true })
+    await expect(plan.locator('[data-level]')).toHaveCount(1)
     await expect(plan.locator('image')).toBeVisible()
-    await page
-      .getByRole('combobox', { name: 'Floor', exact: true })
-      .selectOption('upper')
-    await expect(plan.locator('g[data-level]')).toHaveCount(1)
-    await page.getByRole('combobox', { name: 'Floor', exact: true }).selectOption('g')
+    await floor.selectOption({ label: 'ALL' })
+    const upper = plan.locator('[data-level="upper"] > path').first()
+    await expect(page.getByRole('button', { name: 'Zoom in' })).toBeEnabled()
+    await upper.click()
+    await expect(floor).toHaveValue('upper')
+    await expect(plan.locator('[data-level]')).toHaveCount(1)
+    const planTouch = (
+      type: 'touchStart' | 'touchMove' | 'touchEnd',
+      touchPoints: { x: number; y: number; id: number }[],
+    ) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints })
+    const planBounds = (await plan.boundingBox())!
+    const x = planBounds.x + planBounds.width / 2
+    const y = planBounds.y + planBounds.height / 2
+    async function pinchOut(): Promise<void> {
+      await planTouch('touchStart', [
+        { x: x - 48, y, id: 1 },
+        { x: x + 48, y, id: 2 },
+      ])
+      await planTouch('touchMove', [
+        { x: x - 21, y, id: 1 },
+        { x: x + 21, y, id: 2 },
+      ])
+      await planTouch('touchMove', [
+        { x: x - 14, y, id: 1 },
+        { x: x + 14, y, id: 2 },
+      ])
+      await planTouch('touchEnd', [])
+    }
+    await pinchOut()
+    await expect(floor).toHaveValue('upper')
+    const sampled = await plan.evaluateHandle(element => {
+      const upper = element.querySelector('[data-level="upper"]')!
+      const frames: { transform: string; view: string }[] = []
+      const observer = new MutationObserver(() => {
+        const transform = upper.getAttribute('transform')
+        const view = element.getAttribute('viewBox')
+        if (transform && view) frames.push({ transform, view })
+      })
+      observer.observe(upper, { attributes: true, attributeFilter: ['transform'] })
+      return { frames, stop: () => observer.disconnect() }
+    })
+    await pinchOut()
+    await expect(floor).toHaveValue('__all_floors__')
+    await expect(plan.locator('[data-level]')).toHaveCount(2)
+    await expect(page.getByRole('button', { name: 'Zoom in' })).toBeEnabled()
+    const frames = await sampled.evaluate(sample => {
+      sample.stop()
+      return sample.frames
+    })
+    if (
+      !(await page.evaluate(
+        () => matchMedia('(prefers-reduced-motion: reduce)').matches,
+      ))
+    ) {
+      expect(new Set(frames.map(frame => frame.transform)).size).toBeGreaterThan(1)
+      expect(new Set(frames.map(frame => frame.view)).size).toBeGreaterThan(1)
+    }
+    // Orbit the stack from the touch surface, then change layer spacing independently.
+    const rotation = page.getByRole('slider', { name: 'Rotation' })
+    const tilt = page.getByRole('slider', { name: 'Tilt' })
+    const spacing = page.getByRole('slider', { name: 'Floor spacing' })
+    const pose = () => upper.locator('..').getAttribute('transform')
+    const initialPose = await pose()
+    const stackBounds = (await plan.boundingBox())!
+    const midX = stackBounds.x + stackBounds.width / 2
+    const midY = stackBounds.y + stackBounds.height / 2
+    await planTouch('touchStart', [{ x: midX, y: midY, id: 1 }])
+    await planTouch('touchMove', [{ x: midX + 55, y: midY + 32, id: 1 }])
+    await planTouch('touchEnd', [])
+    await expect.poll(pose).not.toEqual(initialPose)
+    await expect
+      .poll(async () => Number(await rotation.inputValue()))
+      .toBeGreaterThan(0)
+    await expect.poll(async () => Number(await tilt.inputValue())).toBeLessThan(60)
+    const orbited = await pose()
+    await spacing.press('ArrowRight')
+    await expect.poll(pose).not.toEqual(orbited)
+    // Spread and translate the contacts together, preserving the exploded selection.
+    const previousView = await plan.getAttribute('viewBox')
+    await planTouch('touchStart', [
+      { x: midX - 18, y: midY, id: 1 },
+      { x: midX + 18, y: midY, id: 2 },
+    ])
+    await planTouch('touchMove', [
+      { x: midX - 26, y: midY + 28, id: 1 },
+      { x: midX + 70, y: midY + 12, id: 2 },
+    ])
+    await planTouch('touchEnd', [])
+    await expect(plan).not.toHaveAttribute('viewBox', previousView!)
+    await expect(floor).toHaveValue('__all_floors__')
+    await page.getByRole('button', { name: 'Reset view' }).click()
+    await expect.poll(pose).toEqual(initialPose)
+    const stackArtifacts = process.env.DEV_RUNNER_ARTIFACTS
+    if (stackArtifacts)
+      await page.screenshot({ path: join(stackArtifacts, 'recorder-floor-stack.png') })
+    await floor.selectOption('g')
+    await expect(plan.locator('[data-level]')).toHaveCount(1)
     await plan.click()
     await expect(page.getByText('Pin placed.')).toBeVisible()
     if (themeArtifacts)
