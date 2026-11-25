@@ -103,7 +103,23 @@ test('shows record-card addresses, capture tags and gallery thumbnails', async (
     .toBe(true)
   await expect(older.locator('strong')).toHaveText('No address recorded')
   await expect(older.getByText('E', { exact: true })).toBeVisible()
-  await expect(list.getByRole('link', { name: /#002/ }).locator('img')).toHaveCount(0)
+  await expect(older.locator('img')).toHaveAttribute(
+    'src',
+    /^\/api\/images\/revisions\//,
+  )
+  const noPhoto = list.getByRole('link', { name: /#002/ })
+  const placeholder = noPhoto.locator('img')
+  await expect(placeholder).toHaveAttribute('src', /^data:image\/svg\+xml/)
+  await expect
+    .poll(() => placeholder.evaluate(img => img.complete && img.naturalWidth > 0))
+    .toBe(true)
+  expect((await noPhoto.locator('strong').boundingBox()).x).toBe(
+    (await older.locator('strong').boundingBox()).x,
+  )
+  const icon = await placeholder.getAttribute('src')
+  expect(
+    await list.getByRole('link', { name: /#003/ }).locator('img').getAttribute('src'),
+  ).not.toBe(icon)
   await page.screenshot({
     path: join(process.env.DEV_RUNNER_ARTIFACTS, 'record-card-identities.png'),
   })
@@ -113,6 +129,8 @@ test('shows record-card addresses, capture tags and gallery thumbnails', async (
   await list.getByRole('searchbox').fill('#001')
   await expect(older).toBeVisible()
   await expect(photo).toHaveCount(0)
+  await list.getByRole('searchbox').fill('#002')
+  await expect(placeholder).toHaveAttribute('src', icon)
 })
 
 test('filters session records, selects matches and cancels a bulk deletion', async ({

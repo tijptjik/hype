@@ -136,6 +136,7 @@ test('creates from a constituent, reopens the physical parent and adds a sibling
     .getByRole('link')
   await expect(children).toHaveCount(2)
   await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: 'Edit Locations', exact: true }).click()
   await expect(children).toHaveCount(2, { timeout: 60_000 })
   expect(inclusionWrites).toBe(1)
 })

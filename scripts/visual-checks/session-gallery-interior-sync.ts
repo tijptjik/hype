@@ -28,9 +28,7 @@ const page = await browser.newPage({ viewport: { width: 2160, height: 1400 } })
  * @param scene Rendered station SVG.
  * @returns Camera bearing, tilt and viewBox width.
  */
-async function pose(
-  scene: Locator,
-): Promise<{
+async function pose(scene: Locator): Promise<{
   bearing: number
   tilt: number
   zoom: number
@@ -72,6 +70,12 @@ try {
   const second = scenes.nth(1)
   await expect(first).toBeVisible()
   await expect(second).toBeVisible()
+  await expect(first).toHaveAttribute('data-station-transition', 'settled', {
+    timeout: 30000,
+  })
+  await expect(second).toHaveAttribute('data-station-transition', 'settled', {
+    timeout: 30000,
+  })
   const before = await Promise.all([pose(first), pose(second)])
   const box = await first.boundingBox()
   assert.ok(box)

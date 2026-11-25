@@ -69,6 +69,7 @@ test('opens each retained Kai Tak Road address on its own catalogue record', asy
   await page.goto(
     '/admin/field-recorder?session=5e856112-1f64-457a-8c64-3170e874688b#locations',
   )
+  await page.getByRole('button', { name: 'Edit Locations', exact: true }).click()
   const members = page
     .getByRole('complementary', { name: 'Included Locations' })
     .locator('details')
