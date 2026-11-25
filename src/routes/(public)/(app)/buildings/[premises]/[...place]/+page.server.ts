@@ -13,7 +13,8 @@ import type { PageServerLoad } from './$types'
  * @returns Empty data; the shared indoor surface loads the geometry.
  */
 export const load: PageServerLoad = async ({ params, locals }) => {
-  if (params.place && !/^places\/[0-9a-f-]{36}$/.test(params.place))
+  // Published plan units use a floor slug and a polygon slug, each up to 100 characters.
+  if (params.place && !/^places\/[a-z0-9][a-z0-9-]{0,200}$/.test(params.place))
     error(404, 'Place not found')
   const { db } = await getDatabaseWithoutAuth(locals.platform)
   const map = await db

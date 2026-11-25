@@ -154,6 +154,7 @@ export async function publishMapDraft(
   const isExtractedBuilding = /^(?:gbp|footprint):/.test(
     bundle.data.sourceDataset ?? '',
   )
+  const venue = bundle.data.venue_polygon.features[0]?.properties
   const unitAssociations = isExtractedBuilding
     ? bundle.data.unit_polygon.features.flatMap(feature => {
         const id = feature.properties.canonical_location_id
@@ -172,6 +173,14 @@ export async function publishMapDraft(
         draftHash: publishedHash,
         draftVersion,
         publishedVersion: version,
+        ...(isExtractedBuilding && typeof venue?.venue_name_en === 'string'
+          ? {
+              name: venue.venue_name_en,
+              ...(typeof venue.venue_name_zh === 'string'
+                ? { nameZh: venue.venue_name_zh }
+                : {}),
+            }
+          : {}),
         footprint:
           bundle.data.coordinateSpace === 'image-pixels'
             ? null

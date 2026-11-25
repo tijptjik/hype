@@ -29,7 +29,8 @@ export let buildings: PremisesRecord[] = []
 let publishedPremises: PremisesRecord[] = []
 /** Finds an indoor venue. @param code Registry code. @returns Venue metadata. */
 export const findPremises = (code: string) =>
-  publishedPremises.find(b => b.id === code.toUpperCase()) ?? findStation(code)
+  publishedPremises.find(b => b.id.toUpperCase() === code.toUpperCase()) ??
+  findStation(code)
 /** Resolves a public slug without aliasing unrelated places. @param slug URL segment. @returns Registry code if known. */
 export function premisesCode(slug: string): string | undefined {
   return (
@@ -143,7 +144,7 @@ export function premisesMapForCode(
   code: string,
 ): (PremisesMap & { href: string }) | null {
   return availablePremisesMap(
-    premisesMaps.find(entry => entry.code === code.toUpperCase())?.id,
+    premisesMaps.find(entry => entry.code.toUpperCase() === code.toUpperCase())?.id,
   )
 }
 
