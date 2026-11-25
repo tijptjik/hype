@@ -877,11 +877,17 @@ export const syncPropertyValues = async (
   // Fence the complete option set: a concurrent insertion must not become an unrecorded cascade.
   const snapshot = JSON.stringify(
     existingValues
-      .map(({ id, propertyId, rank, value }) => ({ id, propertyId, rank, value }))
+      .map(({ id, propertyId, rank, value, icon }) => ({
+        id,
+        propertyId,
+        rank,
+        value,
+        icon,
+      }))
       .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)),
   )
-  const unchanged = sql`(SELECT json_group_array(json_object('id',id,'propertyId',propertyId,'rank',rank,'value',value))
-    FROM (SELECT id,propertyId,rank,value FROM propertyValue WHERE propertyId=${propertyId} ORDER BY id))=${snapshot}`
+  const unchanged = sql`(SELECT json_group_array(json_object('id',id,'propertyId',propertyId,'rank',rank,'value',value,'icon',icon))
+    FROM (SELECT id,propertyId,rank,value,icon FROM propertyValue WHERE propertyId=${propertyId} ORDER BY id))=${snapshot}`
   try {
     // Keep deletion, creates, guarded updates, Feature history, and readback in one transaction.
     const results = await executeRevisionBatch(db, unchanged, [

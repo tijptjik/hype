@@ -1,4 +1,6 @@
 <script lang="ts">
+// PROPERTY OPTIONS
+import { propertyOptionIcons } from '#lib/properties/optionIcons.js'
 // HUB TRANSLATION REVIEW
 import {
   hubTranslationReviewKey,
@@ -1774,6 +1776,34 @@ $effect(() => {
                               >Option {valueIndex + 1}</span
                             >
                           </button>
+                          {#if isEditing && !optionRemoveMode && !removeMode}
+                            <select
+                              aria-label={`Icon for option ${valueIndex + 1}`}
+                              class="bg-background text-foreground mb-2 max-w-28 min-w-0 rounded border px-1 text-xs"
+                              value={value.icon ?? ''}
+                              onchange={event =>
+                                onUpdateValue(
+                                  property.id,
+                                  value.id,
+                                  'icon',
+                                  event.currentTarget.value,
+                                )}
+                            >
+                              <option value="">No icon</option>
+                              {#each Object.keys(propertyOptionIcons) as icon (icon)}
+                                <option value={icon}>
+                                  {icon.replaceAll('-', ' ')}
+                                </option>
+                              {/each}
+                            </select>
+                          {/if}
+                          <input
+                            {...getFieldAttrsWithValue(
+                              ['values', resolvedValueIndex, 'icon'],
+                              'hidden',
+                              value.icon ?? '',
+                            )}
+                          >
                           {#if !optionRemoveMode && !removeMode}
                             <div
                               class="pointer-events-none ml-auto min-w-0 pb-2 opacity-0 transition-opacity duration-150 group-focus-within/option:pointer-events-auto group-focus-within/option:opacity-100 group-hover/option:pointer-events-auto group-hover/option:opacity-100 motion-reduce:transition-none"

@@ -246,6 +246,11 @@ export const PropertyValueI18nByLocaleFormData = contentLocaleMap(
 })
 
 export const ProjectPropertyValueFormData = z.object({
+  icon: z
+    .string()
+    .max(80)
+    .transform(value => value || null)
+    .nullish(),
   id: z.string().optional(),
   propertyId: z.string().optional(),
   rank: z.coerce.number().int().optional(),

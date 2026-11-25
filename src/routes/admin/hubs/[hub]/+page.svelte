@@ -629,7 +629,7 @@ const updatePropertyValueI18n = (
 const updatePropertyValue = (
   propertyId: Id,
   valueId: Id,
-  key: 'value',
+  key: 'value' | 'icon',
   value: string,
 ): void => {
   updateProjectPropertyValue(hubPropertyFormAdapter, propertyId, valueId, key, value)

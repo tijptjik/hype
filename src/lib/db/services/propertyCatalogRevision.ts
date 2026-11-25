@@ -79,12 +79,15 @@ export function propertyCatalogSnapshot(target: PropertyCatalogScope): SQL {
         : property.projectId
   const record = rowSnapshot(property, ['id', 'createdAt', 'modifiedAt'])
   const translation = rowSnapshot(propertyI18n, ['propertyId', 'locale'])
-  const option = rowSnapshot(propertyValue, [
+  // Omit absent icons so catalogues recorded before option artwork still match their heads.
+  const baseOption = rowSnapshot(propertyValue, [
+    'icon',
     'id',
     'propertyId',
     'createdAt',
     'modifiedAt',
   ])
+  const option = sql`CASE WHEN ${propertyValue.icon} IS NULL THEN ${baseOption} ELSE json_set(${baseOption},'$.icon',${propertyValue.icon}) END`
   const optionTranslation = rowSnapshot(propertyValueI18n, [
     'propertyValueId',
     'locale',

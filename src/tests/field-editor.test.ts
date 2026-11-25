@@ -84,6 +84,20 @@ function submitted(container: HTMLElement) {
   return convert_formdata('field-editor', new FormData(form)).data.properties[0]
 }
 
+it('submits the selected icon and an explicit clear for the same option', async () => {
+  const { container } = render(Fixture)
+  const picker = screen.getByRole('combobox', {
+    name: 'Icon for option 1',
+  })
+  await fireEvent.change(picker, { target: { value: 'priority-medium' } })
+  expect(submitted(container).values[0]).toMatchObject({
+    id: 'option-0',
+    icon: 'priority-medium',
+  })
+  await fireEvent.change(picker, { target: { value: '' } })
+  expect(submitted(container).values[0]).toMatchObject({ id: 'option-0', icon: '' })
+})
+
 it('places the shared label error beside the visible Name in UI control', async () => {
   const view = render(Fixture, {
     allIssues: [

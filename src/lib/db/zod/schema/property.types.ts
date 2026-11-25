@@ -86,7 +86,12 @@ export type FormFieldCardBodyProps = {
   onRemoveValue: (propertyId: Id, valueId: Id) => void
   onMoveValue: (propertyId: Id, valueId: Id, targetIndex: number) => void
   removeMode?: boolean
-  onUpdateValue: (propertyId: Id, valueId: Id, key: 'value', value: string) => void
+  onUpdateValue: (
+    propertyId: Id,
+    valueId: Id,
+    key: 'value' | 'icon',
+    value: string,
+  ) => void
   onUpdateValueI18n: (
     propertyId: Id,
     valueId: Id,

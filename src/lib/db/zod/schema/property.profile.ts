@@ -51,6 +51,7 @@ export const PropertyValueRecord = z.object({
   id: z.string(),
   propertyId: z.string(),
   rank: storedInteger,
+  icon: z.string().nullish(),
   value: z.string().nullable(),
 })
 export const PropertyI18nRecord = z.object({

@@ -136,7 +136,7 @@ export interface FormFieldsSectionCardConfig extends FormFieldCardCallbacks {
 
 type ValueI18nField = 'value'
 type PropertyI18nField = 'label' | 'placeholder' | 'labelGen' | 'placeholderGen'
-type PropertyValueField = 'value'
+type PropertyValueField = 'value' | 'icon'
 
 export interface FormFieldCardCallbacks {
   onIncreaseRank: (event: Event, propertyId: Id) => void | Promise<void>

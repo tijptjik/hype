@@ -581,7 +581,7 @@ describe.each(['hub', 'organisation'] as const)(
 
     it('rejects a value owned by another property without changing either catalog', async () => {
       sqlite.exec(
-        "INSERT INTO propertyValue VALUES ('foreign-value', 'local', 0, 'unchanged')",
+        "INSERT INTO propertyValue(id,propertyId,rank,value) VALUES ('foreign-value', 'local', 0, 'unchanged')",
       )
       const before = catalogSnapshot()
       await expect(
@@ -653,7 +653,7 @@ describe('local project property value translations', () => {
   })
 
   it('rejects a failed translation write and restores the entire prior subtree', async () => {
-    sqlite.exec(`INSERT INTO propertyValue VALUES ('existing', 'local', 0, 'original');
+    sqlite.exec(`INSERT INTO propertyValue(id,propertyId,rank,value) VALUES ('existing', 'local', 0, 'original');
       INSERT INTO propertyValueI18n(propertyValueId,locale,value,valueGen) VALUES ('existing', 'en', 'Original', 0);
       INSERT INTO propertyI18n (propertyId, locale, label) VALUES ('local', 'en', 'Original label');
       CREATE TRIGGER reject_translation BEFORE INSERT ON propertyValueI18n
@@ -715,7 +715,9 @@ describe('local project property value translations', () => {
   })
 
   it('creates a hydrated property subtree and preserves omitted values on retained properties', async () => {
-    sqlite.exec("INSERT INTO propertyValue VALUES ('existing', 'local', 0, 'keep')")
+    sqlite.exec(
+      "INSERT INTO propertyValue(id,propertyId,rank,value) VALUES ('existing', 'local', 0, 'keep')",
+    )
     const result = await upsertProjectProperties(
       db,
       [
@@ -774,7 +776,7 @@ describe('local project property value translations', () => {
     'rejects a retained %s moved out of scope before the batch',
     async target => {
       sqlite.exec(
-        "INSERT INTO propertyValue VALUES ('existing', 'local', 0, 'original')",
+        "INSERT INTO propertyValue(id,propertyId,rank,value) VALUES ('existing', 'local', 0, 'original')",
       )
       let before = propertySnapshot()
       beforeBatch = () => {
@@ -805,7 +807,9 @@ describe('local project property value translations', () => {
   )
 
   it('does not claim another property value through a supplied ID', async () => {
-    sqlite.exec("INSERT INTO propertyValue VALUES ('foreign', 'old', 0, 'untouched')")
+    sqlite.exec(
+      "INSERT INTO propertyValue(id,propertyId,rank,value) VALUES ('foreign', 'old', 0, 'untouched')",
+    )
     const before = propertySnapshot()
     await expect(
       upsertProjectProperties(
@@ -842,7 +846,7 @@ describe('local project property value translations', () => {
   })
 
   it('clears only local properties and cascades child deletions atomically', async () => {
-    sqlite.exec(`INSERT INTO propertyValue VALUES ('local-value', 'local', 0, 'local'), ('foreign', 'old', 0, 'foreign');
+    sqlite.exec(`INSERT INTO propertyValue(id,propertyId,rank,value) VALUES ('local-value', 'local', 0, 'local'), ('foreign', 'old', 0, 'foreign');
       INSERT INTO propertyValueI18n(propertyValueId,locale,value,valueGen) VALUES ('local-value', 'en', 'Local', 0), ('foreign', 'en', 'Foreign', 0)`)
     expect(await upsertProjectProperties(db, [], 'project')).toEqual([])
     expect(propertySnapshot().values.map(row => row.id)).toEqual(['foreign'])

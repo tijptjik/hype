@@ -1403,11 +1403,12 @@ export function updateProjectPropertyValue(
   form: FormDataUpdaterForm<PropertyFormData>,
   propertyId: Id,
   valueId: Id,
-  key: 'value',
+  key: 'value' | 'icon',
   value: string,
 ): void {
   mutatePropertyValueById(form, propertyId, valueId, targetValue => {
-    targetValue[key] = value
+    if (key === 'icon') targetValue.icon = value || null
+    else targetValue.value = value
   })
 }
 

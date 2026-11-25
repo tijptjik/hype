@@ -235,6 +235,8 @@ export const propertyValue = sqliteTable('propertyValue', {
   rank: integer('rank').notNull().default(0),
   // Canonical value for non-translatable classifier values.
   value: text('value'),
+  // Stable glyph identifier shared by every translation of this option.
+  icon: text('icon'),
 })
 
 /**
