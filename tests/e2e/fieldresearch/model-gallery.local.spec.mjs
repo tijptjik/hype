@@ -107,7 +107,44 @@ test('shows record-card addresses, capture tags and gallery thumbnails', async (
     'src',
     /^\/api\/images\/revisions\//,
   )
-  const noPhoto = list.getByRole('link', { name: /#002/ })
+  await page.screenshot({
+    path: join(process.env.DEV_RUNNER_ARTIFACTS, 'record-card-identities.png'),
+  })
+  await list.getByRole('searchbox').fill('35 Kai Tak Road')
+  await expect(photo).toBeVisible()
+  await expect(older).toHaveCount(0)
+  await list.getByRole('searchbox').fill('#001')
+  await expect(older).toBeVisible()
+  await expect(photo).toHaveCount(0)
+})
+
+test('keeps record thumbnails aligned when photos are missing or unavailable', async ({
+  page,
+}) => {
+  // This session's active records change. Simulate missing media without editing its captures.
+  await page.route('**/_app/remote/*/getResearchRecords*', async route => {
+    const response = await route.fetch()
+    const body = await response.json()
+    const payload = parse(body.data)
+    for (const record of payload._.records) {
+      if (record.identifierTags.includes('#005')) record.thumbnailRevision = null
+      if (record.identifierTags.includes('#006'))
+        record.thumbnailRevision = 'unavailable-test-photo'
+    }
+    for (const cached of Object.values(payload.q ?? {})) cached.v = payload._
+    await route.fulfill({ response, json: { ...body, data: stringify(payload) } })
+  })
+  await page.route('**/api/images/revisions/unavailable-test-photo*', route =>
+    route.fulfill({ status: 404 }),
+  )
+  await page.goto(`${session}&view=records#locations`)
+  const list = page.getByRole('region', { name: 'Records', exact: true })
+  const older = list.getByRole('link', { name: /#001/ })
+  const unavailable = list.getByRole('link', { name: /#006/ }).locator('img')
+  await expect(unavailable).toHaveAttribute('src', /^data:image\/svg\+xml/, {
+    timeout: 60_000,
+  })
+  const noPhoto = list.getByRole('link', { name: /#005/ })
   const placeholder = noPhoto.locator('img')
   await expect(placeholder).toHaveAttribute('src', /^data:image\/svg\+xml/)
   await expect
@@ -118,18 +155,11 @@ test('shows record-card addresses, capture tags and gallery thumbnails', async (
   )
   const icon = await placeholder.getAttribute('src')
   expect(
-    await list.getByRole('link', { name: /#003/ }).locator('img').getAttribute('src'),
+    await list.getByRole('link', { name: /#006/ }).locator('img').getAttribute('src'),
   ).not.toBe(icon)
-  await page.screenshot({
-    path: join(process.env.DEV_RUNNER_ARTIFACTS, 'record-card-identities.png'),
-  })
-  await list.getByRole('searchbox').fill('35 Kai Tak Road')
-  await expect(photo).toBeVisible()
-  await expect(older).toHaveCount(0)
   await list.getByRole('searchbox').fill('#001')
-  await expect(older).toBeVisible()
-  await expect(photo).toHaveCount(0)
-  await list.getByRole('searchbox').fill('#002')
+  await expect(placeholder).toHaveCount(0)
+  await list.getByRole('searchbox').fill('#005')
   await expect(placeholder).toHaveAttribute('src', icon)
 })
 
