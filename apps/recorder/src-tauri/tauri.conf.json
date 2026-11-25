@@ -13,7 +13,7 @@
     "windows": [{ "title": "Hype Recorder", "width": 420, "height": 800 }],
     "security": {
       "capabilities": ["recorder"],
-      "csp": "default-src 'self'; connect-src 'self' blob: ipc: http://ipc.localhost https://mapapi.geodata.gov.hk; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://mapapi.geodata.gov.hk https://lh3.googleusercontent.com https://lh4.googleusercontent.com https://lh5.googleusercontent.com https://lh6.googleusercontent.com"
+      "csp": "default-src 'self'; connect-src 'self' blob: ipc: http://ipc.localhost https://mapapi.geodata.gov.hk; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://hype.hk/api/images/revisions/ https://fi.tailb49776.ts.net:9443/api/images/revisions/ https://mapapi.geodata.gov.hk https://lh3.googleusercontent.com https://lh4.googleusercontent.com https://lh5.googleusercontent.com https://lh6.googleusercontent.com"
     }
   },
   "bundle": { "icon": ["icons/icon.png"] }

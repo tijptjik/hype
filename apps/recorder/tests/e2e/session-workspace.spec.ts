@@ -8,13 +8,23 @@ import { expect, test, type Page } from '@playwright/test'
 /** Serve a known part hierarchy and capture receipts in the isolated browser test.
  * @param page Managed Chrome page. @returns Once all Recorder remote handlers are registered.
  */
-async function useLocationFixture(page: Page): Promise<void> {
+async function useLocationFixture(
+  page: Page,
+  withRecord: boolean | 'grouped' = false,
+): Promise<void> {
   // Match the wire serializer from the installed SvelteKit package in isolated Bun workspaces.
   const fromKit = createRequire(
     createRequire(import.meta.url).resolve('@sveltejs/kit/package.json'),
   )
   const { parse, stringify } = await import(fromKit.resolve('devalue'))
-  const records: { id: string; title: string; featureId: string }[] = []
+  const records: {
+    id: string
+    title: string
+    featureId: string
+    locationId?: string
+    pin?: object
+    identifierTags?: string[]
+  }[] = []
   const sessions = [
     'North tower survey',
     'West tower survey',
@@ -44,13 +54,30 @@ async function useLocationFixture(page: Page): Promise<void> {
     type: 'FeatureCollection',
     features: properties.map(properties => ({
       type: 'Feature',
-      geometry: polygon,
+      geometry: properties.unit_id
+        ? {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [40, 40],
+                [60, 40],
+                [60, 60],
+                [40, 60],
+                [40, 40],
+              ],
+            ],
+          }
+        : polygon,
       properties,
     })),
   })
   const texture = Buffer.from(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aXkAAAAASUVORK5CYII=',
     'base64',
+  )
+  // The placement fixture uses a local tile to avoid depending on the external basemap service.
+  await page.route('https://mapapi.geodata.gov.hk/**', route =>
+    route.fulfill({ body: texture, contentType: 'image/png' }),
   )
   const exterior = '/api/location-exterior/north/11111111-1111-4111-8111-111111111111/'
   const model = {
@@ -84,7 +111,25 @@ async function useLocationFixture(page: Page): Promise<void> {
     images: [{ uri: 'wall.png' }],
   }
   await page.route('**' + exterior + 'placement.json*', route =>
-    route.fulfill({ json: { comparisonFile: null } }),
+    route.fulfill({
+      json: {
+        comparisonFile: null,
+        alignments: {
+          '11111111-1111-4111-8111-111111111111': {
+            revision: 1,
+            lines: [
+              {
+                id: 'ground',
+                elevation: 0,
+                locked: true,
+                designation: { type: 'ground' },
+              },
+              { id: 'roof', elevation: 1, locked: true },
+            ],
+          },
+        },
+      },
+    }),
   )
   await page.route('**' + exterior + 'assembly.gltf', route =>
     route.fulfill({ json: model }),
@@ -122,6 +167,8 @@ async function useLocationFixture(page: Page): Promise<void> {
         level_id: 'g',
         unit_id: 'lift-unit',
         unit_category: 'elevator',
+        unit_address_en: 'Lift 2, G/F, 12 Kai Tak Road',
+        canonical_location_id: 'lift',
       }),
       opening_line: layer(),
       amenity_point: layer(),
@@ -136,6 +183,8 @@ async function useLocationFixture(page: Page): Promise<void> {
   const editor = {
     id: '',
     title: 'Survey 1',
+    description: '',
+    photoRevisions: [] as string[],
     revisionId: 'revision-1',
     version: 1,
     modifiedAt: '2026-11-24',
@@ -154,14 +203,28 @@ async function useLocationFixture(page: Page): Promise<void> {
     fields: [
       {
         id: 'vitality',
-        key: 'vitality',
+        key: 'Condition',
         type: 'classifier',
         component: 'SelectField',
         dataType: 'text',
         cardinality: 'one',
         values: [
-          { id: 'good', value: 'Good' },
-          { id: 'poor', value: 'Poor' },
+          { id: 'poor', value: 'Heavily Deteriorated', icon: 'condition-deteriorated' },
+          { id: 'weathered', value: 'Weathered', icon: 'condition-weathered' },
+          { id: 'good', value: 'Well Preserved', icon: 'condition-preserved' },
+        ],
+      },
+      {
+        id: 'materials',
+        key: 'Materials',
+        type: 'classifier',
+        component: 'SelectField',
+        dataType: 'text',
+        cardinality: 'many',
+        values: [
+          { id: 'metal', value: 'Metal', icon: 'material-metal' },
+          { id: 'glass', value: 'Acrylic', icon: 'material-acrylic' },
+          { id: 'wood', value: 'Wood', icon: 'material-wood' },
         ],
       },
       {
@@ -203,6 +266,7 @@ async function useLocationFixture(page: Page): Promise<void> {
     ],
     values: {
       vitality: 'good',
+      materials: ['metal'],
       notes: null,
       count: null,
       hours: null,
@@ -220,6 +284,9 @@ async function useLocationFixture(page: Page): Promise<void> {
         exteriorUrl: exterior + 'assembly.gltf',
         id: 'north',
         name: 'North Tower',
+        kind: 'building',
+        address: '12 Kai Tak Road',
+        addressSortKey: 'Kai Tak Road 12',
         maps: [map],
         point: [114.17, 22.3],
       },
@@ -229,7 +296,9 @@ async function useLocationFixture(page: Page): Promise<void> {
     },
     {
       id: 'unmapped',
-      name: 'Annex',
+      name: 'Unnamed Building',
+      address: '2 Kai Tak Road',
+      addressSortKey: 'Kai Tak Road 2',
       kind: 'building',
       premises: null,
       building: null,
@@ -238,7 +307,96 @@ async function useLocationFixture(page: Page): Promise<void> {
       point: null,
       iconPath: null,
     },
+    {
+      id: 'east',
+      name: 'Unnamed Building',
+      kind: 'building',
+      address: '1 Lung Kong Road',
+      addressSortKey: 'Lung Kong Road 1',
+      building: null,
+      premises: null,
+      maps: [],
+      point: null,
+    },
+    {
+      id: 'arcade',
+      name: 'Arcade',
+      kind: 'building',
+      address: '',
+      addressSortKey: '',
+      building: null,
+      premises: null,
+      maps: [],
+      point: null,
+    },
   ]
+  if (withRecord) {
+    editor.id = 'survey-record'
+    records.push({ id: editor.id, title: editor.title, featureId: 'survey-feature' })
+  }
+  if (withRecord === 'grouped') {
+    const placements = [
+      { locationId: 'unmapped' },
+      {
+        locationId: 'lift',
+        pin: { realm: 'interior', mapId: map.id, hash, floorId: 'g' },
+      },
+      {
+        locationId: 'north',
+        pin: {
+          realm: 'exterior',
+          surface: 'facade',
+          floorId: 'gf',
+          floorLabel: 'Ground floor',
+        },
+      },
+      {
+        locationId: 'north',
+        pin: { realm: 'interior', mapId: map.id, hash, floorId: 'upper' },
+      },
+    ]
+    for (const [i, placement] of placements.entries()) {
+      records.push({
+        ...placement,
+        id: 'r' + i,
+        featureId: 'f' + i,
+        title: 'Capture ' + (i + 2),
+      })
+    }
+  }
+  const uploads = new Map<string, string>()
+  let interrupted = false
+  await page.route('**/api/images/revisions/*', route => {
+    const url = new URL(route.request().url())
+    const firstRevision = editor.photoRevisions[0]
+    if (url.searchParams.has('t') && url.pathname.endsWith('/' + firstRevision))
+      return route.fulfill({ status: 503 })
+    return route.fulfill({ body: texture, contentType: 'image/png' })
+  })
+  await page.route('**/api/recorder/records/*/photos/*', async route => {
+    const request = route.request()
+    const url = new URL(request.url())
+    const name = url.searchParams.get('filename')!
+    expect(url.pathname.split('/')[4]).toBe(editor.id)
+    expect(request.method()).toBe('PUT')
+    expect(request.postDataBuffer()).toEqual(texture)
+    expect(['first.png', 'last.png']).toContain(name)
+    if (uploads.has(name)) {
+      expect(name).toBe('last.png')
+      expect(uploads.get(name)).toBe(url.pathname)
+    } else {
+      uploads.set(name, url.pathname)
+      editor.photoRevisions.push(url.pathname.split('/').at(-1)!)
+      editor.version++
+    }
+    // Lose the last acknowledgement after acceptance, then recognize the retry.
+    if (name === 'last.png' && !interrupted) {
+      interrupted = true
+      await route.fulfill({ status: 503 })
+    } else {
+      await route.fulfill({ json: editor })
+    }
+  })
   await page.route('**/_app/remote/**', async route => {
     const request = route.request()
     const url = new URL(request.url())
@@ -254,7 +412,11 @@ async function useLocationFixture(page: Page): Promise<void> {
       },
       recorderSessions: sessions,
       recorderLocations: locations,
-      recorderRecords: records,
+      recorderRecords: records.map(row => ({
+        ...row,
+        thumbnailRevision:
+          row.id === editor.id ? (editor.photoRevisions[0] ?? null) : null,
+      })),
       recorderEditor: editor,
     }
     if (method === 'recordFeature') {
@@ -263,18 +425,31 @@ async function useLocationFixture(page: Page): Promise<void> {
       )
       expect(payload.sessionId).toBe(sessions[0].id)
       expect(payload.layerId).toBe('layer')
-      expect(payload.placement).toMatchObject({
-        spatialRealm: 'interior',
-        locationId: 'lift',
-        pin: {
-          realm: 'interior',
-          mapId: map.id,
-          hash,
-          floorId: 'g',
-          point: [expect.any(Number), expect.any(Number)],
-        },
-      })
+      if (payload.placement.spatialRealm === 'exterior')
+        expect(payload.placement.pin).toMatchObject({
+          surface: 'facade',
+          percent: [expect.any(Number), expect.any(Number)],
+          floorId: 'ground',
+          alignmentRevision: 1,
+        })
+      else
+        expect(payload.placement).toMatchObject({
+          spatialRealm: 'interior',
+          locationId: 'lift',
+          pin: {
+            realm: 'interior',
+            mapId: map.id,
+            hash,
+            floorId: 'g',
+            unitId: 'lift-unit',
+            unitLocationId: 'lift',
+            unitAddress: 'Lift 2, G/F, 12 Kai Tak Road',
+            percent: [expect.any(Number), expect.any(Number)],
+            point: [expect.any(Number), expect.any(Number)],
+          },
+        })
       records.push({
+        identifierTags: ['E', '#001'],
         ...payload.placement,
         id: payload.id,
         featureId: 'feature-' + payload.id,
@@ -299,7 +474,7 @@ async function useLocationFixture(page: Page): Promise<void> {
   })
 }
 
-/** Opens the bundled Recorder with native transport routed through the managed browser.
+/** Opens the bundled Recorder in Chrome with native requests routed through the test origin.
  * @param page Managed Chrome page. @returns Once the Recorder entry page is open.
  */
 async function openNativeRecorder(page: Page): Promise<void> {
@@ -316,6 +491,14 @@ async function openNativeRecorder(page: Page): Promise<void> {
           args: Uint8Array | { rid: number },
           options?: { headers?: Record<string, string> },
         ) => {
+          if (command === 'plugin:opener|open_url') {
+            // The Android browser takes foreground ownership until the contributor returns.
+            Object.defineProperty(document, 'hidden', {
+              configurable: true,
+              value: true,
+            })
+            return
+          }
           if (command === 'plugin:http|fetch') {
             const config = JSON.parse(
               decodeURIComponent(options?.headers?.['client-config'] ?? ''),
@@ -334,10 +517,9 @@ async function openNativeRecorder(page: Page): Promise<void> {
               const response = await browserFetch(url.pathname + url.search, {
                 method: config.method,
                 headers: config.headers,
-                body:
-                  config.method === 'POST'
-                    ? (args as Uint8Array<ArrayBuffer>)
-                    : undefined,
+                body: ['POST', 'PUT'].includes(config.method)
+                  ? (args as Uint8Array<ArrayBuffer>)
+                  : undefined,
               })
               requests.set(id, response)
             }
@@ -391,9 +573,237 @@ async function openNativeRecorder(page: Page): Promise<void> {
   await page.goto('/')
 }
 
-test('opens a shared session, swipes, selects a building part and persists a record', async ({
+test('resumes browser approval and retries account loading without pairing again', async ({
   page,
-  context,
+}) => {
+  let grants = 0
+  let exchanges = 0
+  let interruptAccount = true
+  await useLocationFixture(page)
+  await page.route('**/api/auth/device/code', route => {
+    grants++
+    return route.fulfill({
+      json: {
+        device_code: 'test-grant',
+        user_code: 'TESTCODE',
+        interval: 5,
+        expires_in: 600,
+      },
+    })
+  })
+  await page.route('**/api/auth/device/token', route => {
+    exchanges++
+    return route.fulfill({ json: { access_token: 'test-session' } })
+  })
+  await page.route('**/_app/remote/*/recorderAccount', route => {
+    if (!exchanges)
+      return route.fulfill({ json: { type: 'result', data: '[{"_":1},null]' } })
+    if (interruptAccount) {
+      interruptAccount = false
+      return route.fulfill({ status: 503 })
+    }
+    return route.fallback()
+  })
+
+  await openNativeRecorder(page)
+  await page.clock.install()
+  await page.getByRole('button', { name: 'Sign in with HYPE' }).click()
+  await expect(page.getByText('TESTCODE')).toBeVisible()
+  await expect.poll(() => page.evaluate(() => document.hidden)).toBe(true)
+  await page.clock.fastForward(6000)
+  expect(exchanges).toBe(0)
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, value: false })
+  })
+  await page.clock.fastForward(6000)
+  await page.getByRole('button', { name: 'Try again' }).click()
+  await expect(page.getByRole('heading', { name: 'Sessions' })).toBeVisible()
+  expect(grants).toBe(1)
+  expect(exchanges).toBe(1)
+})
+
+test.describe('mobile building picker', () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } })
+
+  test('sorts buildings by street and highlights the tapped address', async ({
+    page,
+  }) => {
+    await useLocationFixture(page)
+    await openNativeRecorder(page)
+    await page.getByRole('button', { name: 'North tower survey' }).tap()
+    await page.getByRole('button', { name: 'Location', exact: true }).tap()
+    const building = page.getByRole('button', { name: 'Building', exact: true })
+    await building.tap()
+    const choices = page.getByRole('dialog', { name: 'Building' })
+    const rows = choices.locator('button[aria-pressed]')
+    await expect(rows).toHaveText([
+      /Unnamed Building\s*2 Kai Tak Road/,
+      /North Tower\s*12 Kai Tak Road/,
+      /Unnamed Building\s*1 Lung Kong Road/,
+      /Arcade/,
+    ])
+    await rows.first().tap()
+    await expect(choices).toBeHidden()
+    await expect(building).toContainText('2 Kai Tak Road')
+    await building.tap()
+    await expect(rows.first()).toHaveAttribute('aria-pressed', 'true')
+    await expect(rows.last()).toHaveAttribute('aria-pressed', 'false')
+    const themeArtifacts = process.env.DEV_RUNNER_ARTIFACTS
+    if (themeArtifacts)
+      await page.screenshot({ path: join(themeArtifacts, 'building-picker.png') })
+    await page.keyboard.press('Escape')
+    await expect(building).toBeFocused()
+  })
+  test('pinches and pans the plan and flicks between floors', async ({
+    page,
+    context,
+  }) => {
+    await useLocationFixture(page)
+    await openNativeRecorder(page)
+    await page.getByRole('button', { name: 'North tower survey' }).tap()
+    await page.getByRole('button', { name: 'Location', exact: true }).tap()
+    await page.getByRole('button', { name: 'Building', exact: true }).tap()
+    await page
+      .getByRole('dialog', { name: 'Building' })
+      .getByRole('button', { name: /North Tower/ })
+      .tap()
+    await page.getByRole('button', { name: 'Interior', exact: true }).tap()
+    const plan = page.getByRole('button', { name: 'Floor plan' })
+    await expect(plan).toBeVisible()
+    const cdp = await context.newCDPSession(page)
+    const touch = (
+      type: 'touchStart' | 'touchMove' | 'touchEnd',
+      points: { x: number; y: number; id: number }[],
+    ) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points })
+    const bounds = await plan.boundingBox()
+    const x = bounds!.x + bounds!.width / 2,
+      y = bounds!.y + bounds!.height / 2
+    const width = () =>
+      plan.evaluate(el => (el as unknown as SVGSVGElement).viewBox.baseVal.width)
+    const before = await width()
+    await touch('touchStart', [
+      { x: x - 20, y, id: 1 },
+      { x: x + 20, y, id: 2 },
+    ])
+    await touch('touchMove', [
+      { x: x - 48, y, id: 1 },
+      { x: x + 48, y, id: 2 },
+    ])
+    await touch('touchEnd', [])
+    await expect.poll(width).toBeLessThan(before)
+    const zoomed = await plan.getAttribute('viewBox')
+    await touch('touchStart', [{ x, y, id: 1 }])
+    await touch('touchMove', [{ x: x + 30, y: y + 12, id: 1 }])
+    await touch('touchEnd', [])
+    await expect(plan).not.toHaveAttribute('viewBox', zoomed!)
+    const floor = page.getByRole('button', { name: 'Floor', exact: true })
+    const rect = await floor.boundingBox()
+    const point = { x: rect!.x + rect!.width / 2, y: rect!.y + rect!.height / 2, id: 1 }
+    await touch('touchStart', [point])
+    await touch('touchMove', [{ ...point, y: point.y - 32 }])
+    await touch('touchEnd', [])
+    await expect(floor).toContainText('Upper')
+    await expect(page.getByRole('dialog', { name: 'Floor' })).toBeHidden()
+    // Activate the chooser independently of Chrome's synthesized tap immediately after a native flick.
+    await floor.press('Enter')
+    await expect(page.getByRole('dialog', { name: 'Floor' })).toBeVisible()
+    await page
+      .getByRole('dialog', { name: 'Floor' })
+      .getByRole('button', { name: 'ALL', exact: true })
+      .tap()
+    const upper = plan.locator('[data-level="upper"] > path').first()
+    await expect(page.getByRole('button', { name: 'Zoom in' })).toBeEnabled()
+    await upper.tap()
+    await expect(floor).toContainText('Upper')
+    await expect(plan.locator('[data-level]')).toHaveCount(1)
+    async function pinchOut(): Promise<void> {
+      await touch('touchStart', [
+        { x: x - 48, y, id: 1 },
+        { x: x + 48, y, id: 2 },
+      ])
+      await touch('touchMove', [
+        { x: x - 21, y, id: 1 },
+        { x: x + 21, y, id: 2 },
+      ])
+      await touch('touchMove', [
+        { x: x - 14, y, id: 1 },
+        { x: x + 14, y, id: 2 },
+      ])
+      await touch('touchEnd', [])
+    }
+    await pinchOut()
+    await expect(floor).toContainText('Upper')
+    const sampled = await plan.evaluateHandle(element => {
+      const upper = element.querySelector('[data-level="upper"]')!
+      const frames: { transform: string; view: string }[] = []
+      const observer = new MutationObserver(() => {
+        const transform = upper.getAttribute('transform')
+        const view = element.getAttribute('viewBox')
+        if (transform && view) frames.push({ transform, view })
+      })
+      observer.observe(upper, { attributes: true, attributeFilter: ['transform'] })
+      return { frames, stop: () => observer.disconnect() }
+    })
+    await pinchOut()
+    await expect(floor).toContainText('ALL')
+    await expect(plan.locator('[data-level]')).toHaveCount(2)
+    await expect(page.getByRole('button', { name: 'Zoom in' })).toBeEnabled()
+    const frames = await sampled.evaluate(sample => {
+      sample.stop()
+      return sample.frames
+    })
+    if (
+      !(await page.evaluate(
+        () => matchMedia('(prefers-reduced-motion: reduce)').matches,
+      ))
+    ) {
+      expect(new Set(frames.map(frame => frame.transform)).size).toBeGreaterThan(1)
+      expect(new Set(frames.map(frame => frame.view)).size).toBeGreaterThan(1)
+    }
+    // Orbit the stack from the touch surface, then change layer spacing independently.
+    const rotation = page.getByRole('slider', { name: 'Rotation' })
+    const tilt = page.getByRole('slider', { name: 'Tilt' })
+    const spacing = page.getByRole('slider', { name: 'Floor spacing' })
+    const pose = () => upper.locator('..').getAttribute('transform')
+    const initialPose = await pose()
+    const stackBounds = (await plan.boundingBox())!
+    const midX = stackBounds.x + stackBounds.width / 2
+    const midY = stackBounds.y + stackBounds.height / 2
+    await touch('touchStart', [{ x: midX, y: midY, id: 1 }])
+    await touch('touchMove', [{ x: midX + 55, y: midY + 32, id: 1 }])
+    await touch('touchEnd', [])
+    await expect.poll(pose).not.toEqual(initialPose)
+    await expect
+      .poll(async () => Number(await rotation.inputValue()))
+      .toBeGreaterThan(0)
+    await expect.poll(async () => Number(await tilt.inputValue())).toBeLessThan(60)
+    const orbited = await pose()
+    await spacing.press('ArrowRight')
+    await expect.poll(pose).not.toEqual(orbited)
+    // Spread and translate the contacts together, preserving the exploded selection.
+    const previousView = await plan.getAttribute('viewBox')
+    await touch('touchStart', [
+      { x: midX - 18, y: midY, id: 1 },
+      { x: midX + 18, y: midY, id: 2 },
+    ])
+    await touch('touchMove', [
+      { x: midX - 26, y: midY + 28, id: 1 },
+      { x: midX + 70, y: midY + 12, id: 2 },
+    ])
+    await touch('touchEnd', [])
+    await expect(plan).not.toHaveAttribute('viewBox', previousView!)
+    await expect(floor).toContainText('ALL')
+    await page.getByRole('button', { name: 'Reset view' }).tap()
+    await expect.poll(pose).toEqual(initialPose)
+    const artifacts = process.env.DEV_RUNNER_ARTIFACTS
+    if (artifacts)
+      await page.screenshot({ path: join(artifacts, 'recorder-floor-stack.png') })
+    await cdp.detach()
+  })
+})
+
+test('interrupts a session, selects an interior and reopens its saved record', async ({
+  page,
 }) => {
   const fixture = process.env.RECORDER_TEST_FIXTURE === '1'
   const session = fixture
@@ -465,210 +875,55 @@ test('opens a shared session, swipes, selects a building part and persists a rec
   await testSession.click()
   const skeleton = page.getByRole('status', { name: 'Loading session', exact: true })
   await expect(skeleton).toBeVisible()
-  const realm = page.getByRole('group', { name: 'Spatial realm' })
-  const beforeLoad = await realm.boundingBox()
   await expect(skeleton).toHaveCount(0)
-  const afterLoad = await realm.boundingBox()
-  expect(Math.abs(beforeLoad!.y - afterLoad!.y)).toBeLessThan(2)
-  const picker = page.getByRole('combobox', { name: 'Session', exact: true })
-  const id = await picker.inputValue()
-  const bounds = await picker.boundingBox()
-  if (!bounds) throw new Error('Session selector has no touch target')
-  const index = await picker.evaluate(el => (el as HTMLSelectElement).selectedIndex)
-  const count = await picker.locator('option').count()
-  expect(count).toBeGreaterThan(1)
-  const cdp = await context.newCDPSession(page)
-  const x = bounds.x + bounds.width / 2
-  const y = bounds.y + bounds.height / 2
-  const dy = index === count - 1 ? 31 : -31
-  await cdp.send('Input.dispatchTouchEvent', {
-    type: 'touchStart',
-    touchPoints: [{ x, y }],
-  })
-  await cdp.send('Input.dispatchTouchEvent', {
-    type: 'touchMove',
-    touchPoints: [{ x, y: y + dy }],
-  })
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
-  await expect(picker).not.toHaveValue(id)
-  await picker.selectOption(id)
-
-  await page.getByRole('button', { name: 'Search session locations' }).click()
-  await page.goBack()
-  await expect(page.getByRole('dialog')).toHaveCount(0)
-  await page.goBack()
-  await expect(testSession).toBeVisible()
+  await expect(page.getByRole('heading', { name: session })).toBeVisible()
+  const interrupt = page.getByRole('button', { name: 'Interrupt session' })
+  await interrupt.click()
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
+  await interrupt.click()
+  await page.getByRole('button', { name: 'Yes', exact: true }).click()
   await testSession.click()
-  await expect(
-    page.getByRole('button', { name: '‹ Sessions', exact: true }),
-  ).toHaveCount(0)
-  await page.getByRole('button', { name: 'Search session locations' }).click()
-  await page.getByRole('searchbox').fill(part)
-  await page.getByRole('dialog').getByRole('button', { name: part }).first().click()
-  await expect(
-    page.getByRole('combobox', {
-      name: parent,
-      exact: true,
-    }),
-  ).toHaveValue(/.+/)
-  await expect(page.getByRole('combobox', { name: 'Building part' })).toHaveValue(/.+/)
-  if (fixture) {
-    await page.getByRole('button', { name: /^exterior$/i }).click()
-    await page.getByRole('button', { name: 'Open location map' }).click()
-    await expect(page.getByRole('button', { name: /^exterior$/i })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
-    const location = page.getByRole('combobox', { name: 'Location', exact: true })
-    const model = page.locator('model-viewer')
-    await expect(model).toHaveJSProperty('loaded', true, { timeout: 30000 })
-    if (themeArtifacts)
-      await model.screenshot({
-        path: join(themeArtifacts, 'recorder-building-model.png'),
-      })
-    await location.scrollIntoViewIfNeeded()
-    const box = (await location.boundingBox())!
-    const touch = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
-    await cdp.send('Input.dispatchTouchEvent', {
-      type: 'touchStart',
-      touchPoints: [touch],
-    })
-    await cdp.send('Input.dispatchTouchEvent', {
-      type: 'touchMove',
-      touchPoints: [{ ...touch, y: touch.y - 32 }],
-    })
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
-    await expect(location).toHaveValue('north')
-    await location.hover()
-    await page.mouse.wheel(0, 80)
-    await expect(location).toHaveValue('unmapped')
-    await expect(model).toHaveCount(0)
-    await expect(
-      page.getByText('No exterior model is linked to this location.'),
-    ).toBeVisible()
-    await location.selectOption('lift')
-    await page.getByRole('button', { name: /^interior$/i }).click()
-    const plan = page.getByRole('button', { name: 'Floor plan' })
-    const floor = page.getByRole('combobox', { name: 'Floor', exact: true })
-    await expect(plan.locator('[data-level]')).toHaveCount(1)
-    await expect(plan.locator('image')).toBeVisible()
-    await floor.selectOption({ label: 'ALL' })
-    const upper = plan.locator('[data-level="upper"] > path').first()
-    await expect(page.getByRole('button', { name: 'Zoom in' })).toBeEnabled()
-    await upper.click()
-    await expect(floor).toHaveValue('upper')
-    await expect(plan.locator('[data-level]')).toHaveCount(1)
-    const planTouch = (
-      type: 'touchStart' | 'touchMove' | 'touchEnd',
-      touchPoints: { x: number; y: number; id: number }[],
-    ) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints })
-    const planBounds = (await plan.boundingBox())!
-    const x = planBounds.x + planBounds.width / 2
-    const y = planBounds.y + planBounds.height / 2
-    async function pinchOut(): Promise<void> {
-      await planTouch('touchStart', [
-        { x: x - 48, y, id: 1 },
-        { x: x + 48, y, id: 2 },
-      ])
-      await planTouch('touchMove', [
-        { x: x - 21, y, id: 1 },
-        { x: x + 21, y, id: 2 },
-      ])
-      await planTouch('touchMove', [
-        { x: x - 14, y, id: 1 },
-        { x: x + 14, y, id: 2 },
-      ])
-      await planTouch('touchEnd', [])
-    }
-    await pinchOut()
-    await expect(floor).toHaveValue('upper')
-    const sampled = await plan.evaluateHandle(element => {
-      const upper = element.querySelector('[data-level="upper"]')!
-      const frames: { transform: string; view: string }[] = []
-      const observer = new MutationObserver(() => {
-        const transform = upper.getAttribute('transform')
-        const view = element.getAttribute('viewBox')
-        if (transform && view) frames.push({ transform, view })
-      })
-      observer.observe(upper, { attributes: true, attributeFilter: ['transform'] })
-      return { frames, stop: () => observer.disconnect() }
-    })
-    await pinchOut()
-    await expect(floor).toHaveValue('__all_floors__')
-    await expect(plan.locator('[data-level]')).toHaveCount(2)
-    await expect(page.getByRole('button', { name: 'Zoom in' })).toBeEnabled()
-    const frames = await sampled.evaluate(sample => {
-      sample.stop()
-      return sample.frames
-    })
-    if (
-      !(await page.evaluate(
-        () => matchMedia('(prefers-reduced-motion: reduce)').matches,
-      ))
-    ) {
-      expect(new Set(frames.map(frame => frame.transform)).size).toBeGreaterThan(1)
-      expect(new Set(frames.map(frame => frame.view)).size).toBeGreaterThan(1)
-    }
-    // Orbit the stack from the touch surface, then change layer spacing independently.
-    const rotation = page.getByRole('slider', { name: 'Rotation' })
-    const tilt = page.getByRole('slider', { name: 'Tilt' })
-    const spacing = page.getByRole('slider', { name: 'Floor spacing' })
-    const pose = () => upper.locator('..').getAttribute('transform')
-    const initialPose = await pose()
-    const stackBounds = (await plan.boundingBox())!
-    const midX = stackBounds.x + stackBounds.width / 2
-    const midY = stackBounds.y + stackBounds.height / 2
-    await planTouch('touchStart', [{ x: midX, y: midY, id: 1 }])
-    await planTouch('touchMove', [{ x: midX + 55, y: midY + 32, id: 1 }])
-    await planTouch('touchEnd', [])
-    await expect.poll(pose).not.toEqual(initialPose)
-    await expect
-      .poll(async () => Number(await rotation.inputValue()))
-      .toBeGreaterThan(0)
-    await expect.poll(async () => Number(await tilt.inputValue())).toBeLessThan(60)
-    const orbited = await pose()
-    await spacing.press('ArrowRight')
-    await expect.poll(pose).not.toEqual(orbited)
-    // Spread and translate the contacts together, preserving the exploded selection.
-    const previousView = await plan.getAttribute('viewBox')
-    await planTouch('touchStart', [
-      { x: midX - 18, y: midY, id: 1 },
-      { x: midX + 18, y: midY, id: 2 },
-    ])
-    await planTouch('touchMove', [
-      { x: midX - 26, y: midY + 28, id: 1 },
-      { x: midX + 70, y: midY + 12, id: 2 },
-    ])
-    await planTouch('touchEnd', [])
-    await expect(plan).not.toHaveAttribute('viewBox', previousView!)
-    await expect(floor).toHaveValue('__all_floors__')
-    await page.getByRole('button', { name: 'Reset view' }).click()
-    await expect.poll(pose).toEqual(initialPose)
-    const stackArtifacts = process.env.DEV_RUNNER_ARTIFACTS
-    if (stackArtifacts)
-      await page.screenshot({ path: join(stackArtifacts, 'recorder-floor-stack.png') })
-    await floor.selectOption('g')
-    await expect(plan.locator('[data-level]')).toHaveCount(1)
-    await plan.click()
-    await expect(page.getByText('Pin placed.')).toBeVisible()
-    if (themeArtifacts)
-      await page.screenshot({ path: join(themeArtifacts, 'indoor-milque.png') })
-    await page.getByRole('button', { name: 'Use location' }).click()
-    await expect(page.getByRole('button', { name: /^interior$/i })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
-    await expect(page.getByText('Map pin selected.')).toBeVisible()
-  }
+  const location = page.getByRole('button', { name: 'Location', exact: true })
+  await expect(page.getByRole('heading', { name: 'Records' })).toBeVisible()
+  const before = await page.getByRole('list').locator('li:has(button)').count()
   const artifacts = process.env.DEV_RUNNER_ARTIFACTS
-  if (artifacts)
-    await page.screenshot({ path: join(artifacts, 'recorder-location.png') })
-
-  await page.getByRole('button', { name: 'See Records' }).click()
-  await expect(page.getByRole('list')).toBeVisible()
-  const before = await page.getByRole('list').locator('li small').count()
-  await page.getByRole('button', { name: '‹ Session', exact: true }).click()
-  await page.getByRole('button', { name: 'Record', exact: true }).click()
+  await location.click()
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(page.getByRole('list').locator('li:has(button)')).toHaveCount(before)
+  await location.click()
+  await expect(
+    page.getByRole('button', { name: 'Interior', exact: true }),
+  ).toHaveAttribute('aria-pressed', 'false')
+  const building = page.getByRole('button', { name: 'Building', exact: true })
+  await building.click()
+  await page.getByRole('searchbox').fill(fixture ? 'North Tower' : parent)
+  await page
+    .getByRole('dialog', { name: 'Building' })
+    .locator('button[aria-pressed]')
+    .first()
+    .click()
+  await page.getByRole('button', { name: 'Interior', exact: true }).click()
+  const plan = page.getByRole('button', { name: 'Floor plan' })
+  await expect(plan.locator('image')).toBeVisible()
+  const floor = page.getByRole('button', { name: 'Floor', exact: true })
+  await floor.press('ArrowDown')
+  await expect(floor).toContainText('Upper')
+  await floor.press('ArrowUp')
+  if (fixture) {
+    const fitted = await plan.getAttribute('viewBox')
+    await plan.dblclick()
+    await expect(plan).not.toHaveAttribute('viewBox', fitted!)
+    const viewport = (await plan.boundingBox())!
+    await plan.click({ position: { x: 12, y: viewport.height / 2 } })
+    await expect(plan).toHaveAttribute('viewBox', fitted!)
+    await expect(page.getByRole('heading', { name: part })).toHaveCount(0)
+  }
+  await plan.dblclick()
+  await expect(page.getByRole('heading', { name: part })).toBeVisible()
+  await plan.click()
+  if (themeArtifacts)
+    await page.screenshot({ path: join(themeArtifacts, 'recorder-interior.png') })
+  await page.getByRole('button', { name: 'Accept', exact: true }).click()
   await expect(page.getByRole('button', { name: /^Status/ })).toHaveAttribute(
     'aria-expanded',
     'false',
@@ -678,14 +933,30 @@ test('opens a shared session, swipes, selects a building part and persists a rec
     'true',
   )
   if (fixture) {
-    await page.getByLabel('vitality', { exact: true }).selectOption('poor')
+    await expect(
+      page.getByRole('heading', { name: 'Lift 2, G/F, 12 Kai Tak Road' }),
+    ).toBeVisible()
+    await expect(page.getByText('#001', { exact: true })).toBeVisible()
+    await page.getByLabel('Title', { exact: true }).fill('Painted shop sign')
+    await page
+      .getByLabel('Description', { exact: true })
+      .fill('Red letters above the lift.')
+    await page
+      .getByRole('group', { name: 'Condition' })
+      .getByRole('button', { name: 'Degraded' })
+      .click()
     await page.getByLabel('notes', { exact: true }).fill('Observed during survey')
     await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeEnabled()
     await page.goBack()
-    await page.getByRole('button', { name: 'See Records' }).click()
-    await page.getByRole('button', { name: 'Survey 1', exact: true }).click()
+    await page.getByRole('button', { name: /Lift 2.*E.*#001/ }).click()
     await expect(page.getByLabel('notes', { exact: true })).toHaveValue(
       'Observed during survey',
+    )
+    await expect(page.getByLabel('Title', { exact: true })).toHaveValue(
+      'Painted shop sign',
+    )
+    await expect(page.getByLabel('Description', { exact: true })).toHaveValue(
+      'Red letters above the lift.',
     )
     await page.getByLabel('count', { exact: true }).fill('0')
     await page.getByLabel('From', { exact: true }).fill('24:00')
@@ -701,23 +972,22 @@ test('opens a shared session, swipes, selects a building part and persists a rec
       .getByRole('group', { name: 'Draft', exact: true })
       .getByRole('button', { name: 'No', exact: true })
       .click()
-    await page.getByRole('button', { name: 'Save', exact: true }).click()
-    await expect(
-      page.getByRole('button', { name: 'Save', exact: true }).locator('svg'),
-    ).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeDisabled()
     if (artifacts)
       await page.screenshot({
         path: join(artifacts, 'recorder-editor.png'),
         fullPage: true,
       })
   }
-  await page.goBack()
-  if (!fixture) await page.getByRole('button', { name: 'See Records' }).click()
-  await expect(page.getByRole('list').locator('li small')).toHaveCount(before + 1)
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Records' })).toBeVisible()
+  await expect(page.getByRole('list').locator('li:has(button)')).toHaveCount(before + 1)
   if (fixture) {
-    await page.getByRole('button', { name: 'Survey 1', exact: true }).click()
-    await expect(page.getByLabel('vitality', { exact: true })).toHaveValue('poor')
+    await page.getByRole('button', { name: /Lift 2.*E.*#001/ }).click()
+    await expect(
+      page
+        .getByRole('group', { name: 'Condition' })
+        .getByRole('button', { name: 'Degraded' }),
+    ).toHaveAttribute('aria-pressed', 'true')
     await expect(page.getByLabel('notes', { exact: true })).toHaveValue(
       'Observed during survey',
     )
@@ -731,9 +1001,10 @@ test('opens a shared session, swipes, selects a building part and persists a rec
   }
   await page.reload()
   await testSession.click()
-  await page.getByRole('button', { name: 'See Records' }).click()
-  await expect(page.getByRole('list').locator('li small')).toHaveCount(before + 1)
+  await expect(page.getByRole('list').locator('li:has(button)')).toHaveCount(before + 1)
   if (fixture) {
+    await interrupt.click()
+    await page.getByRole('button', { name: 'Yes', exact: true }).click()
     await page.getByRole('button', { name: 'User', exact: true }).click()
     await expect(
       page.getByRole('dialog', { name: 'Account' }).locator('img'),
@@ -753,16 +1024,22 @@ test('reuses cached models and floor plans after restarting Recorder', async ({
   await openNativeRecorder(page)
   async function selectBuilding(): Promise<void> {
     await page.getByRole('button', { name: 'North tower survey' }).click()
-    await page.getByRole('button', { name: 'Open location map' }).click()
+    await page.getByRole('button', { name: 'Location', exact: true }).click()
+    await page.getByRole('button', { name: 'Building', exact: true }).click()
+    await page
+      .getByRole('dialog', { name: 'Building' })
+      .getByRole('button', { name: /North Tower/ })
+      .click()
   }
 
   const interior = page.getByRole('button', { name: 'Interior', exact: true })
   const exterior = page.getByRole('button', { name: 'Exterior', exact: true })
   const plan = page.getByRole('button', { name: 'Floor plan' })
-  const model = page.locator('model-viewer')
+  const facade = page.getByRole('button', { name: 'Facade', exact: true })
+  await selectBuilding()
   // A damaged release must be retryable at the same content-addressed URL.
   await page.route('**/releases/*', route => route.fulfill({ json: {} }), { times: 1 })
-  await selectBuilding()
+  await interior.click()
   await page.getByRole('button', { name: 'Retry floor plan' }).click()
   await expect(plan).toBeVisible()
   // A glTF can parse as JSON and still fail when the viewer resolves its dependencies.
@@ -805,7 +1082,7 @@ test('reuses cached models and floor plans after restarting Recorder', async ({
   await expect(retry).toBeVisible()
   await expect(loading).toHaveCount(0)
   await retry.click()
-  await expect(model).toHaveJSProperty('loaded', true, { timeout: 45000 })
+  await expect(facade).toBeEnabled({ timeout: 45000 })
   await expect(loading).toHaveCount(0)
 
   // Keep the account and placement checks online, and make every asset download fail.
@@ -821,27 +1098,267 @@ test('reuses cached models and floor plans after restarting Recorder', async ({
   await selectBuilding()
   await interior.click()
   await expect(plan).toBeVisible()
-  await expect(plan.locator('image').first()).toHaveAttribute(
-    'href',
-    /^data:image\/png/,
-  )
+  await expect(plan.locator('image')).toHaveAttribute('href', /^data:image\/png/)
   await exterior.click()
-  await expect(model).toHaveJSProperty('loaded', true, { timeout: 45000 })
+  await expect(facade).toBeEnabled({ timeout: 45000 })
   expect(downloads).toEqual([])
 
   await interior.click()
   await page.route('**/placement.json*', route => route.fulfill({ status: 403 }))
   await exterior.click()
-  await expect(page.getByRole('alert')).toHaveText(
-    'Could not load the linked building model.',
-  )
+  await expect(page.getByRole('alert')).toHaveText('Could not load facade information.')
   await expect(page.locator('model-viewer')).toHaveCount(0)
 
-  await page.goBack()
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await page.getByRole('button', { name: 'Interrupt session' }).click()
+  await page.getByRole('button', { name: 'Yes', exact: true }).click()
   await page.getByRole('button', { name: 'User', exact: true }).click()
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Sign in with HYPE' })).toBeVisible()
   expect(await page.evaluate(() => caches.keys())).not.toContainEqual(
     expect.stringMatching(/^hype-recorder-assets-/),
   )
+})
+
+test('selects a model wall and restores its facade marker', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await useLocationFixture(page)
+  await openNativeRecorder(page)
+  await page.getByRole('button', { name: 'North tower survey' }).click()
+  await page.getByRole('button', { name: 'Location', exact: true }).click()
+  await page.getByRole('button', { name: 'Building', exact: true }).click()
+  await page
+    .getByRole('dialog', { name: 'Building' })
+    .getByRole('button', { name: /North Tower/ })
+    .click()
+  await page.getByRole('button', { name: 'Exterior', exact: true }).click()
+  await expect(page.getByRole('button', { name: '3D', exact: true })).toHaveCount(0)
+  const modelBack = page.getByRole('button', { name: 'Return to 3D model' })
+  await expect(modelBack).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Facade', exact: true })).toBeEnabled({
+    timeout: 45000,
+  })
+  const model = page.locator('model-viewer')
+  async function tapMesh() {
+    const point = await model.evaluate(async el => {
+      // A tap must land inside the triangle after the facade camera has settled.
+      const viewer = el as import('@google/model-viewer').ModelViewerElement
+      await viewer.updateComplete
+      viewer.jumpCameraToGoal()
+      await new Promise(resolve =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      )
+      const r = el.getBoundingClientRect()
+      for (let y = 0.15; y < 0.9; y += 0.025) {
+        for (let x = 0.15; x < 0.9; x += 0.025) {
+          const cx = Math.round(r.x + x * r.width),
+            cy = Math.round(r.y + y * r.height)
+          const hit = viewer.positionAndNormalFromPoint(cx, cy)
+          if (
+            hit &&
+            hit.position.x > 0.12 &&
+            hit.position.y > 0.12 &&
+            hit.position.x + hit.position.y < 0.85
+          )
+            return { x: cx, y: cy }
+        }
+      }
+      throw Error('No visible interior point on the fixture wall')
+    })
+    await page.mouse.click(point.x, point.y)
+  }
+  await tapMesh()
+  await expect(modelBack).toBeVisible()
+  await expect(model).toHaveJSProperty('zoomSensitivity', 0.65)
+  await modelBack.click()
+  await expect(modelBack).toHaveCount(0)
+  await expect(model).toHaveJSProperty('zoomSensitivity', 1)
+  await tapMesh()
+  await expect(modelBack).toBeVisible()
+  await tapMesh()
+  await expect(page.getByLabel('Map marker')).toBeVisible()
+  if (process.env.DEV_RUNNER_ARTIFACTS)
+    await page.screenshot({
+      path: join(process.env.DEV_RUNNER_ARTIFACTS, 'recorder-facade.png'),
+    })
+  await page.getByRole('button', { name: 'Accept', exact: true }).click()
+  await expect(page.getByRole('heading', { name: '12 Kai Tak Road' })).toBeVisible()
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Records' })).toBeVisible()
+  await expect(page.getByRole('list').locator('li:has(button)')).toHaveCount(1)
+  await page.getByRole('button', { name: 'View on map' }).click()
+  await expect(page.getByLabel('Map marker')).toBeVisible({ timeout: 45000 })
+})
+
+test('edits and reopens single and multiple fixed-choice properties', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await useLocationFixture(page, true)
+  await openNativeRecorder(page)
+  await page.getByRole('button', { name: 'North tower survey' }).click()
+  const entry = page.getByRole('button', { name: 'Survey 1', exact: true })
+  await entry.click()
+
+  const single = page.getByRole('group', { name: 'Condition' })
+  const good = single.getByRole('button', { name: 'Preserved' })
+  const poor = single.getByRole('button', { name: 'Degraded' })
+  const multi = page.getByRole('group', { name: 'Materials' })
+  const metal = multi.getByRole('button', { name: 'Metal' })
+  const glass = multi.getByRole('button', { name: 'Acrylic' })
+  const wood = multi.getByRole('button', { name: 'Wood' })
+  const buttons = single.getByRole('button')
+  await expect(buttons).toHaveText(['Degraded', 'Weathered', 'Preserved'])
+  await expect(buttons.locator('svg')).toHaveCount(3)
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    const tops = await buttons.evaluateAll(nodes =>
+      nodes.map(node => node.getBoundingClientRect().top),
+    )
+    expect(new Set(tops).size).toBe(1)
+    await expect(good).toHaveCSS('flex-direction', 'column')
+  }
+  await expect(good).toHaveAttribute('aria-pressed', 'true')
+  await expect(metal).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Clear Condition' })).toHaveCount(0)
+  await good.click()
+  await expect(good).toHaveAttribute('aria-pressed', 'false')
+  await good.click()
+  await poor.click()
+  await expect(good).toHaveAttribute('aria-pressed', 'false')
+  await metal.click()
+  await expect(multi.locator('[aria-pressed=true]')).toHaveCount(0)
+  await glass.click()
+  await wood.click()
+  const save = page.getByRole('button', { name: 'Save', exact: true })
+  await save.click()
+  await expect(page.getByRole('heading', { name: 'Records' })).toBeVisible()
+  await entry.click()
+  await expect(poor).toHaveAttribute('aria-pressed', 'true')
+  await expect(metal).toHaveAttribute('aria-pressed', 'false')
+  await expect(glass).toHaveAttribute('aria-pressed', 'true')
+  await expect(wood).toHaveAttribute('aria-pressed', 'true')
+  if (process.env.DEV_RUNNER_ARTIFACTS) {
+    await single.scrollIntoViewIfNeeded()
+    await page.screenshot({
+      path: join(process.env.DEV_RUNNER_ARTIFACTS, 'property-buttons.png'),
+    })
+  }
+  const fields = page.getByRole('button', { name: /^Fields/ })
+  await fields.click()
+  await expect(fields).toHaveAccessibleName(/Condition: Degraded/)
+  await expect(fields.locator('svg')).toHaveCount(3)
+  await expect(fields.locator('.sr-only').filter({ hasText: 'Condition' })).toHaveCount(
+    1,
+  )
+  if (process.env.DEV_RUNNER_ARTIFACTS) {
+    await fields.screenshot({
+      path: join(process.env.DEV_RUNNER_ARTIFACTS, 'collapsed-options.png'),
+    })
+  }
+})
+
+test('reviews captured photos and retries only the remaining selection', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await useLocationFixture(page, true)
+  await openNativeRecorder(page)
+  await page.getByRole('button', { name: /North tower survey/ }).click()
+  await page.getByRole('button', { name: 'Survey 1', exact: true }).click()
+  const camera = page.getByRole('button', { name: 'Take photo' })
+  const save = page.getByRole('button', { name: 'Save', exact: true })
+  const image = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aXkAAAAASUVORK5CYII=',
+    'base64',
+  )
+  for (const name of ['first.png', 'skip.png', 'remove.png', 'last.png']) {
+    const chooserEvent = page.waitForEvent('filechooser')
+    if (name === 'skip.png')
+      await page.getByRole('button', { name: 'Gallery', exact: true }).click()
+    else await camera.click()
+    const chooser = await chooserEvent
+    expect(await chooser.element().getAttribute('capture')).toBe(
+      name === 'skip.png' ? null : 'environment',
+    )
+    await chooser.setFiles({ name, mimeType: 'image/png', buffer: image })
+  }
+  await page.getByRole('checkbox', { name: 'Upload photo 2' }).uncheck()
+  await page.getByRole('button', { name: 'Remove photo 3' }).click()
+  await page.goBack()
+  await page.getByRole('button', { name: 'Survey 1', exact: true }).click()
+  await expect(page.getByRole('checkbox', { name: 'Upload photo 2' })).not.toBeChecked()
+  await expect(page.getByRole('img', { name: 'Preview of photo 1' })).toHaveJSProperty(
+    'naturalWidth',
+    1,
+  )
+  await save.click()
+  await expect(page.getByRole('alert')).toContainText('Tap Save to retry')
+  const first = page.getByRole('img', { name: 'Saved photo 1' })
+  await first.scrollIntoViewIfNeeded()
+  await expect(first).toHaveJSProperty('naturalWidth', 1)
+  await save.click()
+  await expect(page.getByRole('heading', { name: 'Records' })).toBeVisible()
+  const card = page.getByRole('button', { name: 'Survey 1', exact: true })
+  await expect(card.locator('img')).toHaveJSProperty('naturalWidth', 1)
+  await expect(card).toContainText('No address recorded')
+  await expect(page.getByText('survey-record', { exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Survey 1', exact: true }).click()
+  await expect(
+    page.getByRole('list', { name: 'Saved photos' }).locator('img'),
+  ).toHaveCount(2)
+  await first.scrollIntoViewIfNeeded()
+  await expect(first).toHaveJSProperty('naturalWidth', 1)
+  // Photos excluded from this Save remain in the local draft when returning from the index.
+  await expect(page.getByRole('checkbox')).toHaveCount(1)
+  await expect(page.getByRole('checkbox')).not.toBeChecked()
+  await page.getByRole('button', { name: 'Remove photo 1' }).click()
+  await expect(first).toHaveAttribute('src', /\/revisions\/[^?]+$/)
+  const second = page.getByRole('img', { name: 'Saved photo 2' })
+  await expect(second).toHaveJSProperty('naturalWidth', 1)
+  await expect(second).toHaveAttribute('src', /\?t=c_fit,w_320,h_320$/)
+})
+
+test('cycles through building and floor groups and keeps the selected index view', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 740 })
+  await useLocationFixture(page, 'grouped')
+  await openNativeRecorder(page)
+  await page.getByRole('button', { name: 'North tower survey' }).click()
+  const items = page.getByRole('listitem')
+  await expect(items.first()).toContainText('Capture 5')
+  await page.getByRole('button', { name: 'Newest first' }).click()
+  await expect(items.first()).toContainText('Survey 1')
+  const cycle = page.getByRole('button', { name: /^Group records:/ })
+  await cycle.click()
+  const buildings = page.getByRole('heading', { level: 3 })
+  await expect(buildings).toHaveText([
+    /2 Kai Tak Road/,
+    /12 Kai Tak Road/,
+    /No building recorded/,
+  ])
+  const north = buildings.nth(1).getByRole('button')
+  await north.click()
+  await expect(items).toHaveCount(2)
+  await north.click()
+  await cycle.click()
+  const ground = page.getByRole('button', { name: /Ground floor.*2/ })
+  await expect(ground).toBeVisible()
+  await expect(page.getByRole('heading', { level: 4, name: /Upper/ })).toBeVisible()
+  await ground.click()
+  await expect(items).toHaveCount(3)
+  await page.getByRole('button', { name: 'Collapse all sections' }).click()
+  await expect(items).toHaveCount(0)
+  await page.getByRole('button', { name: 'Expand all sections' }).click()
+  await expect(items).toHaveCount(5)
+  await ground.click()
+  await page.getByRole('button', { name: 'Survey 1', exact: true }).click()
+  await expect(page.getByLabel('Title', { exact: true })).toBeVisible()
+  await page.goBack()
+  await expect(ground).toHaveAttribute('aria-expanded', 'false')
+  await expect(page.getByRole('button', { name: 'Oldest first' })).toBeVisible()
+  await cycle.click()
+  await expect(buildings).toHaveCount(0)
+  await expect(items.first()).toContainText('Survey 1')
 })

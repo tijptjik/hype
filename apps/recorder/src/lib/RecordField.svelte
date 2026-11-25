@@ -3,6 +3,7 @@
 import { t, errorMessage } from './i18n'
 // COMPONENTS
 import Choice from './Choice.svelte'
+import { optionLabel } from './optionLabel'
 // DOMAIN
 import {
   formatRangeEndpoint,
@@ -105,45 +106,30 @@ const inputClass =
         { value: 'true', label: t('yes') },
         { value: 'false', label: t('no') },
       ]}
-      onchange={v => onchange(v === 'true')}
+      onchange={v => onchange(String(value) === v ? null : v === 'true')}
     />
-  {:else if choice && field.cardinality === 'many'}
-    <fieldset {disabled}>
-      <legend class="text-muted mb-2 text-sm">{label}</legend>
-      <div class="grid gap-2">
-        {#each field.values ?? [] as option (option.id)}
-          <label class="bg-surface flex min-h-12 items-center gap-3 rounded-xl px-3"
-            ><input
-              type="checkbox"
-              checked={Array.isArray(value) && value.includes(option.id)}
-              onchange={event =>
-                onchange(
-                  event.currentTarget.checked
-                    ? [...(Array.isArray(value) ? value : []), option.id]
-                    : (Array.isArray(value) ? value : []).filter(
-                        id => id !== option.id,
-                      ),
-                )}
-            >{option.i18n?.en?.value || option.value}</label
-          >
-        {/each}
-      </div>
-    </fieldset>
   {:else if choice}
-    <label for={'field-' + field.id} class="text-muted text-sm">{label}</label>
-    <select
-      data-recorder-select
-      id={'field-' + field.id}
+    <Choice
       {disabled}
-      class={[inputClass, 'pr-11']}
-      value={value ?? ''}
-      onchange={event => onchange(event.currentTarget.value || null)}
-    >
-      <option value="">{t('not_set')}</option>
-      {#each field.values ?? [] as option (option.id)}
-        <option value={option.id}>{option.i18n?.en?.value || option.value}</option>
-      {/each}
-    </select>
+      {label}
+      value={Array.isArray(value) ? value : String(value ?? '')}
+      options={(field.values ?? []).map(option => ({
+        value: option.id,
+        icon: option.icon,
+        label: optionLabel(option),
+      }))}
+      onchange={id => {
+        if (field.cardinality !== 'many') {
+          onchange(value === id ? null : id)
+          return
+        }
+        const selected = Array.isArray(value) ? value : []
+        const next = selected.includes(id)
+          ? selected.filter(item => item !== id)
+          : [...selected, id]
+        onchange(next.length ? next : null)
+      }}
+    />
   {:else if range}
     <fieldset {disabled} class="grid gap-2">
       <legend class="text-muted mb-2 text-sm">{label}</legend>
@@ -310,7 +296,7 @@ const inputClass =
       >
     {/if}
   {/if}
-  {#if !disabled && value != null}
+  {#if !disabled && range && value != null}
     <button
       type="button"
       class="text-muted min-h-10 justify-self-end px-2 text-sm"

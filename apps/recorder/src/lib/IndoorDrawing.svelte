@@ -5,8 +5,9 @@ import { prefersReducedMotion } from 'svelte/motion'
 import Selector from './Selector.svelte'
 import { t } from './i18n'
 // API
-import { readRecorderAsset } from './assetCache'
+import { readRecorderPlan } from './recorderPlan'
 // DOMAIN
+import { polygonPercent } from '../../../../src/lib/fieldResearch/recorderCoordinates'
 import { connectionAnchor } from '../../../../src/lib/indoor/connectionEditor'
 import {
   centre,
@@ -20,7 +21,6 @@ import { polygonLabels, fitPolygonText } from '../../../../src/lib/indoor/labels
 import { reviewedTreads } from '../../../../src/lib/indoor/stairFlights'
 import { contains } from '../../../../src/lib/indoor/navigation/geometry'
 import { stationProjection, stationFill } from '../../../../src/lib/indoor/scene'
-import { mapHash, validateMapBundle } from '../../../../src/lib/indoor/releases'
 // TYPES
 import type {
   InteriorPin,
@@ -33,18 +33,21 @@ let {
   pin,
   units,
   locationId,
+  buildingId,
   onpick,
 }: {
   map: RecorderMap
   pin: InteriorPin | null
-  units: { id: string; unitId: string }[]
+  units: { id: string; unitId: string; name: string }[]
+  buildingId: string
   locationId: string
-  onpick?: (pin: InteriorPin, locationId: string) => void
+  onpick?: (pin: InteriorPin | null, locationId: string) => void
 } = $props()
 let data = $state.raw<IndoorData>()
 let failed = $state(false)
 let attempt = $state(0)
 let chosenFloor = $state('')
+let focusedUnit = ''
 const allFloors = '__all_floors__'
 let exploded = $state(false)
 let spread = $state(0)
@@ -61,7 +64,6 @@ let lastWheel = -Infinity
 let wheelCanExplode = false
 let zoom = $state(1)
 let offset = $state<MapPoint>([0, 0])
-let hint = $state('')
 let svg = $state<SVGSVGElement>()
 let mapId = $derived(map.id)
 let releaseHash = $derived(map.hash)
@@ -73,7 +75,7 @@ $effect(() => {
   data = undefined
   failed = false
   chosenFloor = ''
-  hint = ''
+  focusedUnit = ''
   exploded = false
   spread = 0
   animatedView = null
@@ -83,15 +85,7 @@ $effect(() => {
   offset = [0, 0]
   async function load(): Promise<void> {
     try {
-      const bundle = await readRecorderAsset(
-        '/api/premises-maps/' + encodeURIComponent(id) + '/releases/' + hash,
-        controller.signal,
-        async blob => {
-          const text = await blob.text()
-          if ((await mapHash(text)) !== hash) throw new Error()
-          return validateMapBundle(JSON.parse(text))
-        },
-      )
+      const bundle = await readRecorderPlan({ id, hash }, controller.signal)
       if (!bundle) throw new Error()
       if (!controller.signal.aborted) {
         data = bundle.data
@@ -130,10 +124,6 @@ let displayedProjection = $derived(
           spacing: spacing * spread,
         }),
 )
-$effect(() => {
-  map.unitId
-  chosenFloor = ''
-})
 let linkedUnit = $derived(
   data?.unit_polygon.features.find(f => f.properties.unit_id === map.unitId),
 )
@@ -208,6 +198,7 @@ function imageTransform(level: IndoorFeature): string | undefined {
 const fingers = new Map<number, MapPoint>()
 let travelled = false
 let origin: MapPoint = [0, 0]
+let lastTap: { key: string; time: number; x: number; y: number } | null = null
 const camera = $derived([
   box[0] + box[2] / 2 + offset[0],
   box[1] + box[3] / 2 + offset[1],
@@ -240,8 +231,10 @@ function showView(next: string): void {
   const end = all ? 1 : 0
   cancelAnimationFrame(frame)
   exploded = all
+  focusedUnit = ''
   if (!all) chosenFloor = next
   atMinimum = false
+  lastTap = null
   zoom = 1
   offset = [0, 0]
   if (prefersReducedMotion.current || start === end) {
@@ -332,6 +325,7 @@ function down(event: PointerEvent): void {
     const first = fingers.values().next().value!
     pinchDistance = Math.hypot(first[0] - point[0], first[1] - point[1])
     travelled = true
+    lastTap = null
   }
   fingers.set(event.pointerId, point)
   svg?.setPointerCapture(event.pointerId)
@@ -344,6 +338,7 @@ function move(event: PointerEvent): void {
   fingers.set(event.pointerId, next)
   if (!travelled && Math.hypot(next[0] - origin[0], next[1] - origin[1]) < 5) return
   travelled = true
+  lastTap = null
   if (dragOrbits && !other) {
     orbit((next[0] - prev[0]) * 0.4, (prev[1] - next[1]) * 0.3)
     return
@@ -374,25 +369,76 @@ function move(event: PointerEvent): void {
     offset[1] + from[1] - camera[1] - ((to[1] - camera[1]) * previousZoom) / scale,
   ]
 }
-function selectPoint(point: MapPoint, level: IndoorFeature): void {
-  if (!onpick) return
-  const id = value(level.properties, 'level_id')
-  if (!contains(point, level)) {
-    hint = t('tap_inside_the_floor_outline')
+function selectPoint(point: MapPoint, client: MapPoint): void {
+  if (!floor || !projection || !onpick) return
+  // An outside tap backs out one level, even if it lands in another room or off the plan.
+  if (
+    focusedUnit &&
+    !rooms.some(
+      room =>
+        value(room.properties, 'unit_id') === focusedUnit && contains(point, room),
+    )
+  ) {
+    changeFloor(floorId)
     return
   }
-  const room = roomsByFloor
-    .get(id)
-    ?.find(f => assigned.has(value(f.properties, 'unit_id')) && contains(point, f))
-  if (!room && selectedUnits.size) {
-    hint = t('tap_a_highlighted_building_part')
+  if (!contains(point, floor)) return
+  const room = rooms.findLast(room => contains(point, room))
+  const unitId = room && value(room.properties, 'unit_id')
+  const target = room ?? floor
+  const key = unitId || floorId
+  const selected = pin?.floorId === floorId && (pin?.unitId || floorId) === key
+  const now = performance.now()
+  const twice =
+    lastTap?.key === key &&
+    now - lastTap.time < 350 &&
+    Math.hypot(client[0] - lastTap.x, client[1] - lastTap.y) < 22
+  lastTap = twice ? null : { key, time: now, x: client[0], y: client[1] }
+  if (twice) {
+    focusedUnit = unitId || ''
+    const [x, y, w, h] = projection.box([target])
+    offset = [x + w / 2 - box[0] - box[2] / 2, y + h / 2 - box[1] - box[3] / 2]
+    zoom = Math.min(
+      16,
+      Math.max(1, Math.min(box[2] / (w || 1), box[3] / (h || 1)) * 0.85),
+    )
     return
   }
-  hint = ''
-  chosenFloor = id
+  const matches = units.filter(row => row.unitId === unitId)
+  const linked =
+    matches.find(row => row.id === locationId) ??
+    (matches.length === 1 ? matches[0] : undefined)
+  const unitLabel =
+    linked?.name ||
+    (room &&
+      (value(room.properties, 'unit_name_en') ||
+        value(room.properties, 'unit_unitnumbername') ||
+        value(room.properties, 'unit_category'))) ||
+    unitId
+  const percent = polygonPercent(
+    target,
+    point,
+    data?.coordinateSpace === 'image-pixels',
+  )
   onpick(
-    { realm: 'interior', mapId: map.id, hash: map.hash, floorId: id, point },
-    room ? assigned.get(value(room.properties, 'unit_id'))! : locationId,
+    {
+      realm: 'interior',
+      mapId: map.id,
+      hash: map.hash,
+      floorId,
+      unitId: unitId || undefined,
+      unitCategory: room ? value(room.properties, 'unit_category') : undefined,
+      unitLabel: unitLabel || undefined,
+      unitAddress: room
+        ? value(room.properties, 'unit_address_en') || undefined
+        : undefined,
+      unitLocationId: room
+        ? value(room.properties, 'canonical_location_id') || undefined
+        : undefined,
+      point: selected ? point : null,
+      percent: selected ? percent : undefined,
+    },
+    linked?.id || buildingId,
   )
 }
 function up(event: PointerEvent): void {
@@ -406,7 +452,16 @@ function up(event: PointerEvent): void {
       return contains(displayedProjection!.unproject(position, id), f)
     })
     if (level) showView(value(level.properties, 'level_id'))
-  } else if (floor) selectPoint(projection.unproject(position, floorId), floor)
+  } else selectPoint(projection.unproject(position, floorId), client)
+}
+function changeFloor(next: string): void {
+  const wasStack = exploded || spread > 0
+  showView(next)
+  if (next === allFloors || wasStack) return
+  onpick?.(
+    { realm: 'interior', mapId: map.id, hash: map.hash, floorId: next, point: null },
+    buildingId,
+  )
 }
 </script>
 
@@ -426,8 +481,8 @@ function up(event: PointerEvent): void {
     aria-label={t('loading_floor_plan')}
   ></div>
 {:else}
-  <div class="relative">
-    <div class="bg-canvas relative h-[46dvh] min-h-64 overflow-hidden rounded-xl">
+  <div class="relative flex min-h-52 flex-1">
+    <div class="bg-surface relative min-h-52 flex-1 overflow-hidden rounded-xl">
       <!-- The role becomes a keyboard-operable button when pin placement is enabled. -->
       <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
       <svg
@@ -442,6 +497,7 @@ function up(event: PointerEvent): void {
         onpointercancel={event => {
           fingers.delete(event.pointerId)
           travelled = true
+          lastTap = null
         }}
         onkeydown={event => {
           if (
@@ -456,7 +512,7 @@ function up(event: PointerEvent): void {
               rooms.find(room =>
                 selectedUnits.has(value(room.properties, 'unit_id')),
               ) ?? floor
-            selectPoint(connectionAnchor(target), floor)
+            selectPoint(connectionAnchor(target), [0, 0])
           }
         }}
         viewBox={view.join(' ')}
@@ -490,14 +546,18 @@ function up(event: PointerEvent): void {
               {@const id = value(room.properties, 'unit_id')}
               <path
                 d={projection.path(room)}
-                fill={selectedUnits.has(id)
+                fill={(pin?.unitId ? pin.unitId === id : selectedUnits.has(id))
                   ? 'var(--station-accent)'
                   : assigned.has(id)
                     ? 'var(--station-connector)'
                     : stationFill(room)}
                 fill-rule="evenodd"
                 stroke="var(--station-edge)"
-                fill-opacity={transform ? (selectedUnits.has(id) ? 0.45 : 0.12) : 1}
+                fill-opacity={transform
+                  ? (pin?.unitId ? pin.unitId === id : selectedUnits.has(id))
+                    ? 0.45
+                    : 0.12
+                  : 1}
                 stroke-width="0.8"
                 vector-effect="non-scaling-stroke"
               />
@@ -584,15 +644,17 @@ function up(event: PointerEvent): void {
               </g>
             {/if}
             {#if spot && id === pin?.floorId}
-              <circle
-                cx={spot[0]}
-                cy={spot[1]}
-                r={margin * 0.8}
-                fill="#f43f5e"
-                stroke="white"
-                stroke-width="2"
-                vector-effect="non-scaling-stroke"
-              />
+              <svg
+                x={spot[0] - width * 0.021}
+                y={spot[1] - width * 0.021}
+                width={width * 0.042}
+                height={width * 0.042}
+                viewBox="0 0 20 20"
+                aria-hidden="true"
+              >
+                <path d="M2 2l16 16M18 2 2 18" stroke="white" stroke-width="5" />
+                <path d="M2 2l16 16M18 2 2 18" stroke="#dc2626" stroke-width="3" />
+              </svg>
             {/if}
           </g>
         {/each}
@@ -664,11 +726,14 @@ function up(event: PointerEvent): void {
       </label>
     </fieldset>
   {/if}
-  {#if exploded}
-    <p class="text-muted text-xs">{t('plan_stack_help')}</p>
+  {#if exploded || onpick}
+    <p class="text-muted text-xs">
+      {exploded ? t('plan_stack_help') : t('plan_tap_help')}
+    </p>
   {/if}
   <Selector
     label={t('floor')}
+    icon="layer"
     value={exploded ? allFloors : floorId}
     wheel
     options={[
@@ -681,12 +746,6 @@ function up(event: PointerEvent): void {
           value(row.properties, 'level_id'),
       })),
     ]}
-    onchange={showView}
+    onchange={changeFloor}
   />
-  {#if hint}
-    <p role="status">{hint}</p>
-  {/if}
-  {#if data.source}
-    <small class="text-muted">{data.source}</small>
-  {/if}
 {/if}

@@ -1,5 +1,6 @@
 <script lang="ts">
 // SVELTE
+import { page } from '$app/state'
 import { onDestroy, onMount } from 'svelte'
 // TAURI
 import { isTauri } from '@tauri-apps/api/core'
@@ -16,6 +17,7 @@ import '../app.css'
 let code = $state('')
 let busy = $state(false)
 let signedIn = $state(false)
+let retryAccount = $state(false)
 let account = $state<Awaited<ReturnType<typeof recorderAccount>>>(null)
 let message = $state('')
 let pending = $state<AbortController>()
@@ -24,15 +26,23 @@ onMount(() => {
   if (isTauri()) void restoreSession()
 })
 
-async function restoreSession(): Promise<void> {
+/** Loads the device's saved session, including one just issued by browser approval.
+ * @param justConnected Whether a successful exchange should have saved a session.
+ * @returns After updating the account or presenting a retry.
+ */
+async function restoreSession(justConnected = false): Promise<void> {
   busy = true
+  message = ''
   try {
     const identity = recorderAccount()
     await identity.refresh()
     account = await identity
     await setAssetAccount(account?.id ?? null)
     signedIn = Boolean(account)
+    retryAccount = false
+    if (justConnected && !account) message = t('could_not_verify_the_connected_account')
   } catch {
+    retryAccount = true
     message = connectionHint
   } finally {
     busy = false
@@ -52,15 +62,9 @@ async function signIn(): Promise<void> {
     await connect(value => {
       code = value
     }, attempt.signal)
-    const identity = recorderAccount()
-    await identity.refresh()
-    account = await identity
-    if (!account)
-      throw new Error(
-        t('could_not_verify_the_connected_account_sign_out_and_try_again'),
-      )
-    await setAssetAccount(account.id)
-    signedIn = true
+    pending = undefined
+    code = ''
+    await restoreSession(true)
   } catch (cause) {
     if (!attempt.signal.aborted)
       message = errorMessage(cause, 'could_not_connect_to_hype')
@@ -82,7 +86,14 @@ async function signOut(): Promise<void> {
 <svelte:head><title>{t('hype_recorder')}</title></svelte:head>
 {#if signedIn}
   <main
-    class="mx-auto flex min-h-svh max-w-lg flex-col gap-3 px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))]"
+    class={[
+      'mx-auto flex max-w-lg flex-col gap-3 px-4',
+      !page.state.recorder && 'pt-[max(0.6rem,env(safe-area-inset-top))]',
+      ['map', 'recordMap'].includes(page.state.recorder?.view ?? '')
+        ? 'h-dvh overflow-hidden'
+        : 'min-h-svh',
+      !page.state.recorder && 'pb-20',
+    ]}
   >
     <SessionWorkspace {message} {account} onSignOut={signOut} />
   </main>
@@ -128,9 +139,9 @@ async function signOut(): Promise<void> {
         <button
           type="button"
           class="bg-accent text-on-accent rounded-xl p-3 font-semibold"
-          onclick={signIn}
+          onclick={() => (retryAccount ? restoreSession() : signIn())}
         >
-          {t('sign_in_with_hype')}
+          {retryAccount ? t('try_again') : t('sign_in_with_hype')}
         </button>
       {/if}
       {#if message}

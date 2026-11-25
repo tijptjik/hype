@@ -8,7 +8,7 @@ let {
   onchange,
   disabled = false,
 }: {
-  value: SpatialRealm
+  value: SpatialRealm | null
   onchange: (realm: SpatialRealm) => void
   disabled?: boolean
 } = $props()

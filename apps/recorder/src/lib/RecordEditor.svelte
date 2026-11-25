@@ -1,59 +1,78 @@
 <script lang="ts">
 // SVELTE
-import { onDestroy, onMount, untrack } from 'svelte'
-import { scale } from 'svelte/transition'
+import type { Snippet } from 'svelte'
+import { onDestroy, untrack } from 'svelte'
 import { beforeNavigate } from '$app/navigation'
 // I18N
 import { t, errorMessage } from './i18n'
 // COMPONENTS
 import Choice from './Choice.svelte'
+import { optionLabel } from './optionLabel'
+import OptionIcon from './OptionIcon.svelte'
+import { propertyOptionIcon } from '../../../../src/lib/properties/optionIcons'
+import RecordPhotos from './RecordPhotos.svelte'
 import RecordField from './RecordField.svelte'
 import { rangeText } from '../../../../src/lib/properties/range'
 // API
 import { recorderEditor, saveRecorder } from './api/recorderEditor.remote'
+import { uploadRecorderPhoto } from './hype'
 // TYPES
+import type { PendingPhoto, RecordDraft } from './recordDraft'
 import type {
   RecorderEditor,
   RecorderStatus,
 } from '../../../../src/lib/fieldResearch/recorderEditor'
-type Draft = { record: RecorderEditor; saved: string }
 let {
   id,
   draft,
+  newRecord = false,
+  onsaved,
+  identity,
   onleave,
   ondirty,
 }: {
   id: string
-  draft?: Draft
-  onleave?: (id: string, draft: Draft | null) => void
+  identity: Snippet<[string]>
+  newRecord?: boolean
+  onsaved: (id: string) => void
+  draft?: RecordDraft
+  onleave?: (id: string, draft: RecordDraft | null) => void
   ondirty?: (dirty: boolean) => void
 } = $props()
 let record = $state<RecorderEditor | null>(null)
 let loading = $state(true)
 let busy = $state(false)
 let failure = $state('')
-let saveComplete = $state(false)
-let reducedMotion = $state(false)
 let saved = $state('')
 let statusOpen = $state(false)
 let fieldsOpen = $state(true)
+let photos = $state<PendingPhoto[]>([])
+let progress = $state('')
 let request = 0
-onMount(() => {
-  const media = window.matchMedia('(prefers-reduced-motion: reduce)')
-  const update = () => {
-    reducedMotion = media.matches
-  }
-  update()
-  media.addEventListener('change', update)
-  return () => media.removeEventListener('change', update)
-})
-let dirty = $derived(
-  record !== null &&
-    JSON.stringify({ status: record.status, values: record.values }) !== saved,
+function snapshot(record: RecorderEditor): string {
+  return JSON.stringify({
+    title: record.title,
+    description: record.description ?? '',
+    status: record.status,
+    values: record.values,
+  })
+}
+let savedText = $derived(
+  saved ? (JSON.parse(saved) as Pick<RecorderEditor, 'title' | 'description'>) : null,
 )
+let fieldsDirty = $derived(record !== null && snapshot(record) !== saved)
+let dirty = $derived(fieldsDirty || photos.length > 0)
+let canSave = $derived(newRecord || fieldsDirty || photos.some(photo => photo.selected))
 let selectedType = $derived(
   record?.types.find(type => type.id === record?.status.featureType),
 )
+function typeIcon(type?: { id: string; kind?: string; label: string }): string {
+  if (type?.id === 'sign' || type?.label.toLowerCase() === 'sign')
+    return 'M4 3v18M4 5h16v9H4m4-6h8m-8 3h5'
+  if (type?.kind === 'place')
+    return 'M12 21s7-7 7-12a7 7 0 1 0-14 0c0 5 7 12 7 12Zm0-15a3 3 0 1 1 0 6 3 3 0 0 1 0-6'
+  return 'm12 3 9 5v8l-9 5-9-5V8l9-5Zm0 9v9M3 8l9 4 9-4'
+}
 const booleanFields: {
   key: Exclude<keyof RecorderStatus, 'featureType'>
   label: string
@@ -73,7 +92,7 @@ const booleanFields: {
     label: t('tangibility'),
     yes: t('intangible'),
     no: t('tangible'),
-    icon: 'm12 3 9 5v8l-9 5-9-5V8l9-5Zm0 9v9M3 8l9 4 9-4',
+    icon: 'M3 14h3l4-3h5a2 2 0 0 1 0 4h-4m5 0 4-3a2 2 0 0 1 2 3l-7 5H9l-4-2H3zM10 3h7v6h-7z',
   },
   {
     key: 'isDraft',
@@ -91,16 +110,17 @@ const booleanFields: {
   },
 ]
 $effect(() => {
-  if (dirty) saveComplete = false
-})
-$effect(() => {
   ondirty?.(dirty || busy)
 })
 onDestroy(() => {
   onleave?.(
     record?.id ?? id,
     dirty && record
-      ? { record: structuredClone($state.snapshot(record)), saved }
+      ? {
+          record: structuredClone($state.snapshot(record)),
+          saved,
+          photos: $state.snapshot(photos),
+        }
       : null,
   )
   request++
@@ -119,6 +139,7 @@ $effect(() => {
 async function load(recordId: string): Promise<void> {
   if (draft && !record) {
     record = structuredClone(draft.record)
+    photos = draft.photos
     saved = draft.saved
     loading = false
     return
@@ -132,7 +153,7 @@ async function load(recordId: string): Promise<void> {
     const result = await query
     if (token !== request) return
     record = structuredClone(result)
-    saved = JSON.stringify({ status: result.status, values: result.values })
+    saved = snapshot(result)
   } catch {
     if (token === request)
       failure = t('could_not_open_this_record_check_your_connection_and_session_access')
@@ -145,24 +166,39 @@ async function save(event: SubmitEvent): Promise<void> {
   if (!record || busy || !record.editable) return
   busy = true
   failure = ''
-  saveComplete = false
   try {
-    record = await saveRecorder({
-      id: record.id,
-      revisionId: record.revisionId,
-      version: record.version,
-      modifiedAt: record.modifiedAt,
-      status: record.status,
-      values: record.values,
-    })
-    saved = JSON.stringify({ status: record.status, values: record.values })
-    saveComplete = true
+    if (fieldsDirty) {
+      record = await saveRecorder({
+        id: record.id,
+        revisionId: record.revisionId,
+        version: record.version,
+        modifiedAt: record.modifiedAt,
+        ...(record.title !== savedText?.title && { title: record.title }),
+        ...(record.description !== savedText?.description && {
+          description: record.description,
+        }),
+        status: record.status,
+        values: record.values,
+      })
+      saved = snapshot(record)
+    }
+    const selected = photos.filter(photo => photo.selected)
+    for (const [index, photo] of selected.entries()) {
+      progress = t('uploading_photo', { number: index + 1, total: selected.length })
+      record = await uploadRecorderPhoto(id, photo)
+      saved = snapshot(record)
+      photos = photos.filter(item => item.id !== photo.id)
+    }
+    onsaved(id)
   } catch (cause) {
     failure = errorMessage(
       cause,
-      'could_not_save_your_changes_are_still_here_try_again',
+      progress
+        ? 'photo_save_failed'
+        : 'could_not_save_your_changes_are_still_here_try_again',
     )
   } finally {
+    progress = ''
     busy = false
   }
 }
@@ -193,7 +229,7 @@ function summary(field: RecorderEditor['fields'][number]): string {
     return rangeText(field, String(value))
   const label = (id: string) => {
     const option = field.values?.find(item => item.id === id)
-    return option?.i18n?.en?.value || option?.value || id
+    return option ? optionLabel(option) : id
   }
   return Array.isArray(value) ? value.map(label).join(', ') : label(String(value))
 }
@@ -215,65 +251,54 @@ function summary(field: RecorderEditor['fields'][number]): string {
     <div class="bg-panel h-72 animate-pulse rounded-2xl"></div>
   </div>
 {:else if record}
-  <h1 class="text-2xl font-semibold break-words">{record.title}</h1>
+  <div class="px-1 py-2">
+    {@render identity(savedText?.title ?? record.title)}
+  </div>
   {#if !record.editable}
     <p class="text-muted">
       {t('this_record_is_read_only_published_or_linked_features_are_edited_in_hype')}
     </p>
   {/if}
-  <form onsubmit={save} class="grid gap-8">
-    <section class="border-line bg-panel rounded-2xl border p-4">
+  <form onsubmit={save} class="grid gap-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+    <section class="border-line bg-panel rounded-xl border px-3.5 py-3">
       <button
         type="button"
         aria-expanded={statusOpen}
         aria-controls="record-status"
         onclick={() => (statusOpen = !statusOpen)}
-        class="grid min-h-12 w-full gap-3 text-left"
+        class="grid min-h-11 w-full content-center gap-2 text-left"
       >
-        <span class="flex justify-between text-lg font-semibold"
+        <span class="flex items-center justify-between text-base font-semibold"
           >{t('status')} <span aria-hidden="true">{statusOpen ? '−' : '+'}</span></span
         >
         {#if !statusOpen}
-          <span class="flex flex-wrap gap-2 text-sm">
-            <span class="bg-surface rounded-lg px-2 py-1"
-              ><svg
-                aria-hidden="true"
-                class="mr-1 inline size-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.7"
-              >
-                <path
-                  d={selectedType?.kind === 'place'
-                    ? 'M12 22s8-8 8-14a8 8 0 0 0-16 0c0 6 8 14 8 14Zm0-17a3 3 0 1 0 0 6 3 3 0 0 0 0-6'
-                    : 'm12 3 9 5v8l-9 5-9-5V8l9-5Zm0 9v9M3 8l9 4 9-4'}
-                />
-              </svg> {selectedType?.label || record.status.featureType}</span
+          <span class="flex flex-wrap gap-1.5 text-xs">
+            <span
+              class="bg-surface inline-flex items-center gap-1 rounded-md px-2 py-1"
             >
+              <OptionIcon compact path={typeIcon(selectedType)} />
+              {selectedType?.label || record.status.featureType}
+            </span>
             {#each booleanFields as field (field.key)}
-              <span class="bg-surface rounded-lg px-2 py-1"
-                ><svg
-                  aria-hidden="true"
-                  class="mr-1 inline size-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.7"
-                >
-                  <path d={field.icon} />
-                </svg>
-                {record.status[field.key] ? field.yes : field.no}</span
+              <span
+                class="bg-surface inline-flex items-center gap-1 rounded-md px-2 py-1"
               >
+                <OptionIcon compact path={field.icon} />
+                {record.status[field.key] ? field.yes : field.no}
+              </span>
             {/each}
           </span>
         {/if}
       </button>
-      <div id="record-status" hidden={!statusOpen} class="mt-4 grid gap-5">
+      <div id="record-status" hidden={!statusOpen} class="mt-3 grid gap-4">
         <Choice
           label={t('feature_type')}
           value={record.status.featureType}
-          options={record.types.map(type => ({ value: type.id, label: type.label }))}
+          options={record.types.map(type => ({
+            value: type.id,
+            label: type.label,
+            path: typeIcon(type),
+          }))}
           disabled={busy || !record.editable}
           onchange={value => {
             if (record) record.status.featureType = value
@@ -286,10 +311,12 @@ function summary(field: RecorderEditor['fields'][number]): string {
             options={[
               {
                 value: 'true',
+                path: field.icon,
                 label: field.key === 'isIntangible' ? t('intangible') : t('yes'),
               },
               {
                 value: 'false',
+                path: field.icon,
                 label: field.key === 'isIntangible' ? t('tangible') : t('no'),
               },
             ]}
@@ -306,22 +333,41 @@ function summary(field: RecorderEditor['fields'][number]): string {
         </p>
       </div>
     </section>
-    <section class="border-line bg-panel rounded-2xl border p-4">
+    <section class="border-line bg-panel rounded-xl border px-3.5 py-3">
       <button
         type="button"
         aria-expanded={fieldsOpen}
         aria-controls="record-fields"
         onclick={() => (fieldsOpen = !fieldsOpen)}
-        class="grid min-h-12 w-full gap-3 text-left"
+        class="grid min-h-11 w-full content-center gap-2 text-left"
       >
-        <span class="flex justify-between text-lg font-semibold"
+        <span class="flex items-center justify-between text-base font-semibold"
           >{t('fields')} <span aria-hidden="true">{fieldsOpen ? '−' : '+'}</span></span
         >
         {#if !fieldsOpen}
-          <span class="flex flex-wrap gap-2 text-sm"
+          <span class="flex flex-wrap gap-1.5 text-xs"
             >{#each record.fields as field (field.id)}
               {@const text = summary(field)}
-              {#if text}
+              {@const value = record.values[field.id]}
+              {@const chosen =
+                field.values?.filter(option =>
+                  Array.isArray(value)
+                    ? value.includes(option.id)
+                    : value === option.id,
+                ) ?? []}
+              {#if chosen.length &&
+                chosen.every(option => propertyOptionIcon(option.icon))}
+                {#each chosen as option (option.id)}
+                  <span
+                    class="bg-surface inline-flex items-center gap-1.5 rounded-lg px-2 py-1"
+                    title={field.i18n?.en?.label || field.key}
+                  >
+                    <span class="sr-only">{field.i18n?.en?.label || field.key}: </span>
+                    <OptionIcon id={option.icon} compact />
+                    {optionLabel(option)}
+                  </span>
+                {/each}
+              {:else if text}
                 <span class="bg-surface rounded-lg px-2 py-1 break-words"
                   >{field.i18n?.en?.label || field.key}: {text}</span
                 >
@@ -330,16 +376,22 @@ function summary(field: RecorderEditor['fields'][number]): string {
           >
         {/if}
       </button>
-      <div id="record-fields" hidden={!fieldsOpen} class="mt-4 grid gap-5">
+      <div
+        id="record-fields"
+        hidden={!fieldsOpen}
+        class="divide-line mt-2 grid divide-y"
+      >
         {#each record.fields as field (field.id)}
-          <RecordField
-            {field}
-            value={record.values[field.id] ?? null}
-            disabled={busy || !record.editable}
-            onchange={value => {
-              if (record) record.values[field.id] = value
-            }}
-          />
+          <div class="min-w-0 py-4 first:pt-1 last:pb-1">
+            <RecordField
+              {field}
+              value={record.values[field.id] ?? null}
+              disabled={busy || !record.editable}
+              onchange={value => {
+                if (record) record.values[field.id] = value
+              }}
+            />
+          </div>
         {:else}
           <p class="text-muted">
             {t('no_fields_are_configured_for_this_recording_layer')}
@@ -347,36 +399,48 @@ function summary(field: RecorderEditor['fields'][number]): string {
         {/each}
       </div>
     </section>
+    <RecordPhotos
+      bind:photos
+      revisions={record.photoRevisions ?? []}
+      editable={record.editable}
+      {busy}
+    />
+    <section
+      aria-labelledby="record-details"
+      class="border-line bg-panel grid gap-3 rounded-xl border px-3.5 py-3"
+    >
+      <h2 id="record-details" class="text-base font-semibold">{t('details')}</h2>
+      <label class="grid gap-1 text-sm font-medium">
+        {t('record_title')}
+        <input
+          bind:value={record.title}
+          maxlength="128"
+          disabled={busy || !record.editable}
+          class="bg-surface border-line min-h-11 min-w-0 rounded-lg border px-3 text-base font-normal"
+        >
+      </label>
+      <label class="grid gap-1 text-sm font-medium">
+        {t('description')}
+        <textarea
+          bind:value={record.description}
+          rows="3"
+          maxlength="8192"
+          disabled={busy || !record.editable}
+          class="bg-surface border-line min-w-0 rounded-lg border px-3 py-2 text-base font-normal"
+        ></textarea>
+      </label>
+    </section>
+    {#if progress}
+      <p role="status">{progress}</p>
+    {/if}
     {#if record.editable}
       <button
         type="submit"
-        disabled={busy || !dirty}
+        disabled={busy || !canSave}
         aria-busy={busy}
         class="bg-accent text-on-accent flex min-h-14 items-center justify-center gap-2 rounded-xl px-4 font-semibold disabled:opacity-50"
       >
-        <span class="relative">
-          <span
-            class="absolute top-1/2 right-full mr-2 -translate-y-1/2"
-            aria-hidden="true"
-          >
-            {#if saveComplete && !dirty}
-              <svg
-                aria-hidden="true"
-                in:scale={{ duration: reducedMotion ? 0 : 220, start: 0.5 }}
-                class="size-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="m5 12 4 4L19 6" />
-              </svg>
-            {/if}
-          </span>
-          {t('save_changes')}
-        </span>
+        {t('save_changes')}
       </button>
     {/if}
   </form>
@@ -393,4 +457,3 @@ function summary(field: RecorderEditor['fields'][number]): string {
     </button>
   {/if}
 {/if}
-<p role="status" class="sr-only">{saveComplete && !dirty ? t('changes_saved') : ''}</p>

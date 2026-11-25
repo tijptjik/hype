@@ -27,6 +27,15 @@ Records lists the resulting Feature titles and reopens their editors. Each captu
 retains its session link and retry identity. Sessions with an older schema can be
 browsed while a manager reviews the upgrade in Field Sessions.
 
+On an editable record, tap **Take photo** to open the Android camera. Confirm the shot
+to return to Recorder, then tap again for the next photo. Review the previews, uncheck
+photos to keep them out of this upload, or remove them from the draft. **Save** sends
+the selected originals to the Feature gallery, including when only photos changed. If an
+upload stops, tap **Save** again to retry the remaining selection. Pending photos stay
+with the record while navigating within the session workspace. Reopening a record loads
+thumbnails of its saved photos. If a thumbnail fails, Recorder displays the original
+from the same saved revision.
+
 Apply `0265_field_research_record.sql` and `0266_field_research_features.sql` to the
 target development database before testing Feature creation. Apply
 `0267_field_research_record_placement.sql` for realm, Location and map pins.
@@ -42,8 +51,8 @@ street map, where you can place a geographic pin.
 Recorder caches each floor-plan release and its embedded artwork on first use. It also
 keeps each opened exterior model's geometry and textures on the device. Updated releases
 and model versions download under their own URLs. Reopening a model still needs a
-connection to check access. Account and session loading also require a connection.
-Signing out clears the contributor's asset cache.
+connection to check access and load the current facade alignment. Account and session
+loading also require a connection. Signing out clears the contributor's asset cache.
 
 A capture stores its selected realm and Location. Interior pins retain the map ID,
 immutable release hash, floor ID and source coordinates. Exterior pins retain longitude

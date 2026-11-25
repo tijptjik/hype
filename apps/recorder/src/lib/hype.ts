@@ -1,6 +1,10 @@
 // TAURI
 import { fetch as nativeFetch } from '@tauri-apps/plugin-http'
 import { openUrl } from '@tauri-apps/plugin-opener'
+// TYPES
+import type { RecorderEditor } from '../../../../src/lib/fieldResearch/recorderEditor'
+import { recorderPhotoThumbnailTransform } from '../../../../src/lib/fieldResearch/recorderPhotos'
+import type { PendingPhoto } from './recordDraft'
 // I18N
 import { t } from './i18n'
 
@@ -62,6 +66,56 @@ export function installRemoteTransport(): void {
   }
 }
 
+/** @param revision Immutable gallery image revision. @returns Target environment's thumbnail URL. */
+export function photoThumbnail(revision: string): string {
+  return (
+    origin +
+    '/api/images/revisions/' +
+    encodeURIComponent(revision) +
+    '?t=' +
+    recorderPhotoThumbnailTransform
+  )
+}
+
+/** Retry the same saved revision at original size if its thumbnail cannot be displayed.
+ * @param image Gallery image whose request failed. @returns After at most one fallback per revision.
+ */
+export function retryOriginal(image: Element): void {
+  if (!(image instanceof HTMLImageElement)) return
+  const source = new URL(image.src)
+  if (source.searchParams.has('t')) {
+    source.searchParams.delete('t')
+    image.src = source.href
+  }
+}
+
+/** @param recordId Editable record. @param photo Selected capture with a stable retry ID.
+ * @returns Editor with the acknowledged gallery revision.
+ */
+export async function uploadRecorderPhoto(
+  recordId: string,
+  photo: PendingPhoto,
+): Promise<RecorderEditor> {
+  const url = new URL(
+    '/api/recorder/records/' + encodeURIComponent(recordId) + '/photos/' + photo.id,
+    origin,
+  )
+  url.searchParams.set('filename', photo.file.name)
+  const response = await nativeFetch(url.href, {
+    method: 'PUT',
+    headers: {
+      origin,
+      'content-type': photo.file.type,
+      'x-photo-size': String(photo.file.size),
+    },
+    body: photo.file,
+    signal: AbortSignal.timeout(120000),
+    maxRedirections: 0,
+  })
+  if (!response.ok) throw new Error(t('photo_save_failed'))
+  return response.json()
+}
+
 async function authRequest(
   path: string,
   body: Record<string, string>,
@@ -107,10 +161,14 @@ export async function connect(
     origin + '/recorder/connect?user_code=' + encodeURIComponent(grant.user_code),
   )
 
-  // A pending grant and a polling slowdown are both retryable until expiry.
+  // Android can suspend WebView networking while the approval browser is in front.
+  // Wait for Recorder to be visible before consuming the single-use grant.
   while (Date.now() < expires) {
-    await new Promise(resolve => setTimeout(resolve, interval))
+    const delay = Math.min(interval, expires - Date.now())
+    await new Promise(resolve => setTimeout(resolve, delay))
     signal.throwIfAborted()
+    if (Date.now() >= expires) break
+    if (document.hidden) continue
     const result = await authRequest(
       'device/token',
       {
@@ -125,6 +183,7 @@ export async function connect(
       signal.throwIfAborted()
       return
     }
+    // A pending grant and a polling slowdown are both retryable until expiry.
     if (data.error === 'slow_down') interval += 5000
     else if (data.error !== 'authorization_pending') {
       throw new Error(
