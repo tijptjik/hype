@@ -130,6 +130,16 @@ $effect(() => {
   station.preserveFloorCamera = id => {
     clearTimeout(travelTimer)
     travel = null
+    // A fitted scan should refit the next crop; keep a reader's deliberate pan or zoom.
+    if (
+      data.sourceDataset?.startsWith('gbp:') &&
+      id !== station.floor &&
+      !retainedView &&
+      zoom === 1 &&
+      panX === 0 &&
+      panY === 0
+    )
+      return
     const current = (displayedViewBox || viewBox).split(' ').map(Number)
     const scale = Math.max(current[2] / width, current[3] / height)
     const visible = [
@@ -705,7 +715,10 @@ function chooseFloor(id: string): void {
           {reliefs}
           {connections}
           artworkOpacity={station.artworkOpacity}
-          artwork={data.coordinateSpace === 'image-pixels'
+          artwork={data.coordinateSpace === 'image-pixels' &&
+          value(level.properties, 'image_url') &&
+          Number(level.properties.image_width) > 0 &&
+          Number(level.properties.image_height) > 0
             ? {
                 src: value(level.properties, 'image_url'),
                 width: Number(level.properties.image_width),

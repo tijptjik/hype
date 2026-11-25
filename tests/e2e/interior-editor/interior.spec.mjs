@@ -23,7 +23,9 @@ test('service compartments remain distinct and uncovered space is flagged', asyn
   page,
 }) => {
   test.setTimeout(180000)
-  await page.goto('/admin/locations/IssVInhZb-Gd#interior')
+  const admin = await page.goto('/admin')
+  expect(admin.ok()).toBeTruthy()
+  await page.goto('/admin/locations/M-PbJh8oq9Sk?organisation=oDucgyH4H4Bm#interior')
   const session = await (await page.request.get('/api/auth/get-session')).json()
   expect(session.user.id).toBe('hype-local-agent-admin')
   await page.getByRole('button', { name: 'Edit', exact: true }).click()
@@ -73,13 +75,18 @@ test('service compartments remain distinct and uncovered space is flagged', asyn
     ++pollRequests === 1
       ? route.fulfill({ status: 503, body: 'Temporary outage' })
       : route.fulfill({
-          json: { status: 'needs-review', pages: ['page-1.png'], extraction },
+          json: {
+            status: 'needs-review',
+            pages: ['page-1.png'],
+            cleanedPages: ['clean-1.png'],
+            extraction,
+          },
         }),
   )
-  await page.route('**/interior/jobs/' + job + '/page-1.png', route =>
+  await page.route('**/interior/jobs/' + job + '/*-1.png', route =>
     route.fulfill({
       contentType: 'image/svg+xml',
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="white"/></svg>',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="white"/><path d="M10 10H85V85H10ZM50 10V85" fill="none" stroke="black"/></svg>',
     }),
   )
   await expect(page.locator('input[type=file]')).toBeEnabled({ timeout: 30000 })
@@ -169,6 +176,71 @@ test('service compartments remain distinct and uncovered space is flagged', asyn
   await expect(
     page.getByRole('button', { name: 'Back to review', exact: true }),
   ).toBeVisible()
+  const blend = page.getByRole('slider', { name: 'Floor plan blend' })
+  await expect(blend).toHaveValue('2')
+  await page.getByRole('button', { name: 'Original', exact: true }).click()
+  await expect(blend).toHaveValue('0')
+  const diagram = page.getByRole('img', { name: 'First floor floor plan comparison' })
+  await expect(diagram.locator('[data-layer="cleaned"]')).toHaveAttribute(
+    'opacity',
+    '0',
+  )
+  await page.getByRole('button', { name: 'Cleaned', exact: true }).click()
+  await expect(diagram.locator('[data-layer="cleaned"]')).toHaveAttribute(
+    'opacity',
+    '1',
+  )
+  await expect(diagram.locator('[data-layer="polygons"]')).toHaveAttribute(
+    'opacity',
+    '0',
+  )
+  await blend.focus()
+  await blend.press('End')
+  await expect(diagram.locator('[data-layer="polygons"]')).toHaveAttribute(
+    'opacity',
+    '1',
+  )
+  await expect(page.getByRole('region', { name: 'Building parts' })).toContainText(
+    'kitchen',
+  )
+  const parts = page.getByRole('region', { name: 'Building parts' })
+  for (const [theme, panel, canvas, ink] of [
+    ['hype-black', 'rgb(0, 0, 0)', 'rgb(0, 0, 0)', 'rgb(247, 231, 239)'],
+    ['hype-dark', 'rgb(16, 18, 27)', 'rgb(8, 9, 14)', 'rgb(244, 240, 250)'],
+    ['hype-light', 'rgb(255, 254, 254)', 'rgb(245, 243, 250)', 'rgb(41, 35, 56)'],
+  ]) {
+    await page.evaluate(
+      name => document.documentElement.setAttribute('data-theme', name),
+      theme,
+    )
+    await expect(parts).toHaveCSS('color', ink)
+    await expect(page.locator('.bg-panel').filter({ has: blend }).last()).toHaveCSS(
+      'background-color',
+      panel,
+    )
+    await expect(diagram.locator('..')).toHaveCSS('background-color', canvas)
+    await expect(diagram.locator('[data-layer="cleaned"] rect').first()).toHaveCSS(
+      'fill',
+      ink,
+    )
+    await expect(diagram.locator('[data-layer="cleaned"] rect').last()).toHaveCSS(
+      'fill',
+      canvas,
+    )
+    await page.screenshot({
+      path: join(process.env.DEV_RUNNER_ARTIFACTS, `interior-${theme}.png`),
+    })
+  }
+  await page.getByRole('button', { name: 'Indoor map', exact: true }).click()
+  await expect(blend).toHaveCount(0)
+  const levels = page.getByRole('navigation', { name: 'Indoor levels' })
+  await levels.getByRole('button', { name: 'All', exact: true }).click()
+  await expect(page.locator('[data-station-scene="exploded"]')).toBeVisible()
+  await levels.getByRole('button', { name: 'First floor', exact: true }).click()
+  await expect(page.locator('[data-station-scene="plan"]')).toBeVisible()
+  await expect(parts).toContainText('kitchen')
+  await page.getByRole('button', { name: 'Compare plans', exact: true }).click()
+  await expect(blend).toBeVisible()
   await page.getByRole('button', { name: 'Back to review', exact: true }).click()
   await page.screenshot({
     path: join(process.env.DEV_RUNNER_ARTIFACTS, 'interior-compartments.png'),

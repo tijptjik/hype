@@ -105,7 +105,9 @@ export const getLocationInterior = guardedQuery(identity, async (input, ctx) => 
     ctx.user.superAdmin && jobId
       ? await bucket.get(`interior-jobs/${input.locationId}/${jobId}/result.json`)
       : null
-  const job = jobObject ? await jobObject.json<{ pages: string[] }>() : null
+  const job = jobObject
+    ? await jobObject.json<{ pages: string[]; cleanedPages?: string[] }>()
+    : null
   const building = await ctx.db
     .select()
     .from(location)
@@ -138,6 +140,7 @@ export const getLocationInterior = guardedQuery(identity, async (input, ctx) => 
         ? {
             jobId,
             pages: job?.pages ?? [],
+            cleanedPages: job?.cleanedPages ?? [],
             extraction: floorplanExtractionSchema.parse(await reviewObject.json()),
           }
         : null,

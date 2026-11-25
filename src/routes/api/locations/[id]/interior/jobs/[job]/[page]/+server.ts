@@ -9,7 +9,7 @@ export const GET: RequestHandler = async event => {
   await interiorContext(event)
   if (
     !/^[a-f0-9-]{36}$/.test(event.params.job!) ||
-    (!/^page-\d+\.png$/.test(event.params.page!) &&
+    (!/^(?:page|clean)-\d+\.png$/.test(event.params.page!) &&
       event.params.page !== 'footprint.svg')
   )
     error(404)

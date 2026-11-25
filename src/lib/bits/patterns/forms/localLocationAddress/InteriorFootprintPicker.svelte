@@ -173,7 +173,7 @@ onDestroy(() => {
                 aria-pressed={selected === item.properties.csuid}
                 disabled={busy}
                 onclick={() => select(item.properties.csuid)}
-                class="hover:bg-muted w-full rounded border p-2 text-left text-sm aria-pressed:border-orange-600 aria-pressed:bg-orange-50"
+                class="hover:bg-muted aria-pressed:border-primary aria-pressed:bg-primary/10 w-full rounded border p-2 text-left text-sm"
               >
                 <span class="block break-words whitespace-normal"
                   >{item.properties.name ||

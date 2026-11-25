@@ -12,7 +12,8 @@ let { station }: { station: StationState } = $props()
 const rotationHeading = $derived(((-station.bearing % 360) + 360) % 360)
 </script>
 <div class="grid w-60 max-w-full gap-3 text-sm" oninput={() => station.stopFly()}>
-  {#if station.data?.coordinateSpace === 'image-pixels'}
+  {#if station.data?.coordinateSpace === 'image-pixels' &&
+    station.data.level_polygon.features.some(level => level.properties.image_url)}
     <label class="grid min-w-0 gap-1">
       Original plan opacity · {Math.round(station.artworkOpacity * 100)}%
       <input

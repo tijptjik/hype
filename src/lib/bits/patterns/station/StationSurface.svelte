@@ -176,7 +176,10 @@ $effect(() => {
     data-station-surface
   >
     <div
-      class="absolute inset-0"
+      class={[
+        'absolute inset-0',
+        station.data?.sourceDataset?.startsWith('gbp:') && 'md:right-56 md:left-40',
+      ]}
       data-station-venue-content
       style:opacity={venueOpacity}
       style:transition={prefersReducedMotion.current
@@ -258,7 +261,11 @@ $effect(() => {
     />
     <StationIdentity {station} />
     {#if station.data && (!resolving || hasCurrentScene) && !station.loading}
-      {#if station.data.coordinateSpace === 'image-pixels'}
+      {#if station.data.sourceDataset?.startsWith('gbp:')}
+        <span class="text-muted-foreground absolute right-2 bottom-1 z-10 text-[9px]"
+          >General building plan · Schematic, not to scale</span
+        >
+      {:else if station.data.coordinateSpace === 'image-pixels'}
         <a
           href={station.data.sourceUrl}
           target="_blank"

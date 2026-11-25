@@ -9,6 +9,7 @@ import {
 } from '#lib/api/locationInterior.remote.js'
 // DOMAIN
 import {
+  floorplanCategories,
   floorplanExtractionSchema,
   floorplanBundle,
   floorplanUnclassified,
@@ -24,7 +25,9 @@ import {
 } from '#lib/indoor/floorplans/review.js'
 import { StationState } from '#lib/indoor/station.svelte.js'
 // COMPONENTS
+import StationIndexes from '#lib/bits/patterns/station/StationIndexes.svelte'
 import StationScene from '#lib/bits/patterns/station/StationScene.svelte'
+import InteriorPlanComparison from './InteriorPlanComparison.svelte'
 import InteriorFootprintPicker from './InteriorFootprintPicker.svelte'
 import { Button } from '#lib/bits/core/index.js'
 // ICONS
@@ -39,6 +42,8 @@ let choosingFootprint = $state(false)
 let partOrganisationId = $state('')
 let creatingPart = $state(false)
 let pages = $state<string[]>([])
+let cleanedPages = $state<string[]>([])
+let showingMap = $state(false)
 let floorIndex = $state(0)
 let unitIndex = $state(-1)
 let drawing = $state(false)
@@ -83,6 +88,15 @@ const audit = $derived.by(() => {
   }
 })
 const unit = $derived(floor?.units[unitIndex])
+const viewingFloor = $derived(
+  (previewing ? extraction : current?.review?.extraction)?.floors.find(
+    f => f.id === scene?.floor,
+  ),
+)
+const evidence = $derived(previewing ? { jobId, pages, cleanedPages } : current?.review)
+const cleanedPage = $derived(
+  viewingFloor && evidence?.cleanedPages[viewingFloor.page - 1],
+)
 const base = $derived(
   '/api/locations/' + encodeURIComponent(locationId) + '/interior/jobs',
 )
@@ -102,6 +116,7 @@ async function refresh(): Promise<void> {
     )
     next.bearing = 0
     next.exploded = false
+    showingMap = Boolean(current.map?.publishedHash)
     scene = next
   }
 }
@@ -109,6 +124,7 @@ $effect(() => {
   if (isEditing && !extraction && !busy && current?.review) {
     extraction = structuredClone($state.snapshot(current.review.extraction))
     pages = current.review.pages
+    cleanedPages = current.review.cleanedPages
     jobId = current.review.jobId
     reviewed = false
   }
@@ -153,6 +169,7 @@ async function poll(): Promise<void> {
     if (result.status === 'needs-review') {
       extraction = floorplanExtractionSchema.parse(result.extraction)
       pages = result.pages
+      cleanedPages = result.cleanedPages ?? []
       busy = false
     } else if (result.status === 'failed') {
       failedJob = true
@@ -232,10 +249,14 @@ function edit(action: () => void): void {
 }
 /** Preview reviewed geometry with its explicit floor transforms in the shared viewer. @returns Nothing. */
 function preview(): void {
-  if (!extraction) return
+  const reviewedPlan = extraction
+  if (!reviewedPlan) return
   edit(() => {
     const next = new StationState(() => null, false)
-    next.loadDraft(floorplanBundle(extraction).data)
+    next.loadDraft(floorplanBundle(reviewedPlan).data)
+    next.floor = floor?.id ?? reviewedPlan.floors[0].id
+    next.exploded = false
+    showingMap = false
     scene = next
     previewing = true
   })
@@ -318,7 +339,7 @@ async function save(): Promise<void> {
 }
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col bg-white">
+<div class="bg-panel text-foreground flex min-h-0 flex-1 flex-col">
   {#if message}
     <p role="alert" class="text-error px-5 py-3 text-sm">{message}</p>
     {#if failedJob}
@@ -404,7 +425,7 @@ async function save(): Promise<void> {
     />
   {:else if extraction && floor && isEditing && !previewing}
     <div class="grid min-h-0 flex-1 lg:grid-cols-[minmax(0,1fr)_22rem]">
-      <div class="min-h-96 overflow-auto bg-slate-100 p-3">
+      <div class="bg-canvas min-h-96 overflow-auto p-3">
         <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
         <!-- biome-ignore lint/a11y/useKeyWithClickEvents: Exact source coordinates can also be entered using the keyboard controls. -->
         <svg
@@ -612,7 +633,7 @@ async function save(): Promise<void> {
         {#if audit}
           <p class="text-sm">Accounted area: {audit.coverage.toFixed(1)}%</p>
           {#each audit.issues as issue}
-            <p class="text-sm text-amber-800">{issue}</p>
+            <p class="text-warning text-sm">{issue}</p>
           {/each}
         {/if}
         <label class="grid gap-1 text-sm"
@@ -718,7 +739,7 @@ async function save(): Promise<void> {
           <p class="text-warning text-xs">{warning}</p>
         {/each}
         {#if residual.length}
-          <p class="text-sm text-amber-800">
+          <p class="text-warning text-sm">
             Amber areas remain unclassified. They may be walls or missing compartments;
             they are not corridors.
           </p>
@@ -876,18 +897,7 @@ async function save(): Promise<void> {
               bind:value={unit.category}
               onchange={() => (reviewed = false)}
             >
-              {#each [
-                'room',
-                'corridor',
-                'stairs',
-                'elevator',
-                'toilet',
-                'kitchen',
-                'lavatory',
-                'balcony',
-                'void',
-                'unknown',
-              ] as category}
+              {#each floorplanCategories as category}
                 <option value={category}>{category}</option>
               {/each}
             </select>
@@ -970,25 +980,18 @@ async function save(): Promise<void> {
       {#if previewing}
         <Button text="Back to review" onClick={() => (previewing = false)} />
       {/if}
-      <Button
-        text={scene.exploded ? 'Single floor' : 'Stack floors'}
-        onClick={() => {
-          if (scene) scene.exploded = !scene.exploded
-        }}
-      />
-      <select
-        aria-label="Interior floor"
-        bind:value={scene.floor}
-        class="rounded border p-2 text-sm"
-      >
-        {#each scene.data.level_polygon.features as level}
-          <option value={String(level.properties.level_id)}>
-            {String(level.properties.level_name_en)}
-          </option>
-        {/each}
-      </select>
+      {#if cleanedPage && !scene.exploded}
+        <Button
+          text={showingMap ? 'Compare plans' : 'Indoor map'}
+          onClick={() => (showingMap = !showingMap)}
+        />
+      {/if}
       {#if current?.map?.draftHash}
-        <span class="text-muted-foreground text-xs">Interior draft</span>
+        <span class="text-muted-foreground text-xs"
+          >{current.map.draftHash === current.map.publishedHash
+            ? 'Published interior'
+            : 'Interior draft'}</span
+        >
       {/if}
       {#if current?.canEdit && current.map}
         <a class="text-sm underline" href={'/admin/premises-maps?map=' + current.map.id}
@@ -996,13 +999,41 @@ async function save(): Promise<void> {
         >
       {/if}
     </div>
-    <div class="relative min-h-96 flex-1">
-      <StationScene
+    {@const comparing = Boolean(
+      viewingFloor && evidence && cleanedPage && !showingMap && !scene.exploded,
+    )}
+    <div
+      class="relative grid min-h-96 flex-1 grid-cols-2 grid-rows-[auto_minmax(24rem,1fr)] overflow-auto bg-[var(--station-canvas)] lg:grid-cols-[minmax(7rem,0.6fr)_minmax(0,4fr)_minmax(10rem,1fr)] lg:grid-rows-[minmax(24rem,1fr)]"
+    >
+      <StationIndexes
         station={scene}
-        data={scene.data}
-        allowSelection={false}
-        onSelect={() => {}}
+        embedded
+        compare={comparing}
+        legend={{
+          data: scene.data,
+          entries: scene.entries,
+          isBuilding: true,
+          floor: scene.floor,
+          exploded: scene.exploded,
+        }}
       />
+      <div
+        class="relative col-span-2 row-start-2 flex min-h-0 min-w-0 flex-col lg:col-span-1 lg:col-start-2 lg:row-start-1"
+      >
+        {#if comparing && viewingFloor && evidence && cleanedPage}
+          <InteriorPlanComparison
+            floor={viewingFloor}
+            original={base +
+              '/' +
+              evidence.jobId +
+              '/' +
+              evidence.pages[viewingFloor.page - 1]}
+            cleaned={base + '/' + evidence.jobId + '/' + cleanedPage}
+          />
+        {:else}
+          <StationScene station={scene} data={scene.data} onSelect={() => {}} />
+        {/if}
+      </div>
     </div>
   {:else}
     <div class="flex min-h-96 flex-1 items-center justify-center p-8">
