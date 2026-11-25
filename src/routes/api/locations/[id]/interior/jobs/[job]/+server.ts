@@ -2,14 +2,14 @@
 import { error, json, type RequestHandler } from '@sveltejs/kit'
 // DOMAIN
 import { interiorContext, floorplanWorker } from '#lib/indoor/floorplans/server.js'
-import { premisesMapBucket } from '#lib/indoor/server/storage.js'
+import { premisesMapStorage } from '#lib/indoor/server/storage.js'
 import { floorplanExtractionSchema } from '#lib/indoor/floorplans/extraction.js'
 
 /** Poll only a job associated with this authorized building. @param event Job route. @returns Review candidate and source-page names. */
 export const GET: RequestHandler = async event => {
   await interiorContext(event)
   if (!/^[a-f0-9-]{36}$/.test(event.params.job!)) error(404)
-  const bucket = premisesMapBucket(event.locals.platform)
+  const bucket = premisesMapStorage(event.locals.platform)
   const prefix = `interior-jobs/${event.params.id}/${event.params.job}`
   if (!(await bucket.get(prefix + '/receipt.json'))) error(404)
   const cached = await bucket.get(prefix + '/result.json')
@@ -59,7 +59,7 @@ export const GET: RequestHandler = async event => {
 export const POST: RequestHandler = async event => {
   await interiorContext(event)
   if (!/^[a-f0-9-]{36}$/.test(event.params.job ?? '')) error(404)
-  const bucket = premisesMapBucket(event.locals.platform)
+  const bucket = premisesMapStorage(event.locals.platform)
   const prefix = `interior-jobs/${event.params.id}/${event.params.job}`
   if (!(await bucket.get(prefix + '/receipt.json'))) error(404)
   if (await bucket.get(prefix + '/result.json'))

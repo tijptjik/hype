@@ -23,7 +23,7 @@ import {
   mapHash,
   mapReleaseKey,
 } from '#lib/indoor/releases.js'
-import { premisesMapBucket } from '#lib/indoor/server/storage.js'
+import { premisesMapStorage } from '#lib/indoor/server/storage.js'
 import {
   readMapBundle,
   saveMapDraft,
@@ -57,7 +57,7 @@ export const getPremisesMapDraft = guardedQuery(
       map,
       bundle: hash
         ? await readMapBundle(
-            premisesMapBucket(ctx.event.locals.platform),
+            premisesMapStorage(ctx.event.locals.platform),
             input.id,
             hash,
           )
@@ -93,7 +93,7 @@ export const savePremisesMapDraft = guardedCommand(
     try {
       return await saveMapConnectionCurations(
         ctx.db,
-        premisesMapBucket(ctx.event.locals.platform),
+        premisesMapStorage(ctx.event.locals.platform),
         { ...input, actorId: ctx.user.id },
       )
     } catch (cause) {
@@ -119,7 +119,7 @@ export const publishPremisesMapDraft = guardedCommand(
   }),
   async (input, ctx) => {
     authorize(ctx)
-    return publishMapDraft(ctx.db, premisesMapBucket(ctx.event.locals.platform), {
+    return publishMapDraft(ctx.db, premisesMapStorage(ctx.event.locals.platform), {
       ...input,
       actorId: ctx.user.id,
     })
@@ -139,7 +139,7 @@ export const restorePremisesMapDraft = guardedCommand(
       .from(premisesMapPublication)
       .where(eq(premisesMapPublication.mapId, input.id))
     if (!history.some(r => r.hash === input.hash)) error(400, 'UNKNOWN_PUBLICATION')
-    const bucket = premisesMapBucket(ctx.event.locals.platform)
+    const bucket = premisesMapStorage(ctx.event.locals.platform)
     return saveMapDraft(ctx.db, bucket, {
       id: input.id,
       expectedVersion: input.expectedVersion,
@@ -171,7 +171,7 @@ export const correctPremisesMapLabel = guardedCommand(
       .get()
     if (!map?.draftHash) error(404, 'MAP_NOT_FOUND')
     if (map.draftVersion !== input.expectedVersion) error(409, 'MAP_CONFLICT')
-    const bucket = premisesMapBucket(ctx.event.locals.platform)
+    const bucket = premisesMapStorage(ctx.event.locals.platform)
     const current = await readMapBundle(bucket, input.id, map.draftHash)
     const source = current.data.sourceSnapshotHash
       ? await readMapBundle(bucket, input.id, current.data.sourceSnapshotHash)
@@ -273,7 +273,7 @@ export const refreshPremisesMapSource = guardedCommand(
   }),
   async (input, ctx) => {
     authorize(ctx)
-    const bucket = premisesMapBucket(ctx.event.locals.platform)
+    const bucket = premisesMapStorage(ctx.event.locals.platform)
     const map = await ctx.db
       .select()
       .from(premisesMap)
@@ -312,7 +312,7 @@ export const removePremisesMapCorrection = guardedCommand(
       .get()
     if (!map?.draftHash || map.draftVersion !== input.expectedVersion)
       error(409, 'MAP_CONFLICT')
-    const bucket = premisesMapBucket(ctx.event.locals.platform)
+    const bucket = premisesMapStorage(ctx.event.locals.platform)
     const current = await readMapBundle(bucket, input.id, map.draftHash)
     if (!current.data.sourceSnapshotHash || !current.data.sourceDataset)
       error(409, 'SOURCE_SNAPSHOT_REQUIRED')
@@ -383,7 +383,7 @@ export const getPremisesMapPublicationChanges = guardedQuery(
       .orderBy(desc(premisesMapPublication.version))
     const index = history.findIndex(release => release.version === input.version)
     if (index < 0) error(404, 'MAP_PUBLICATION_NOT_FOUND')
-    const bucket = premisesMapBucket(ctx.event.locals.platform)
+    const bucket = premisesMapStorage(ctx.event.locals.platform)
     const current = await readMapBundle(bucket, input.id, history[index].hash)
     const previous = history[index + 1]
     const baseline = previous

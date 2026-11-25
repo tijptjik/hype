@@ -14,7 +14,7 @@ import { loadExteriorFootprints } from '#lib/locations/exterior/footprints.serve
 import { convertWGS84ToHK1980 } from '#lib/utils/geocoding.js'
 import { footprintFloorplan } from '#lib/indoor/floorplans/footprint.js'
 import { mapHash } from '#lib/indoor/releases.js'
-import { premisesMapBucket } from '#lib/indoor/server/storage.js'
+import { premisesMapStorage } from '#lib/indoor/server/storage.js'
 // TYPES
 import type { Database } from '#lib/types.js'
 
@@ -92,7 +92,7 @@ export const prepareLocationInteriorFootprint = guardedCommand(
       )
     }
     const id = crypto.randomUUID()
-    const bucket = premisesMapBucket(ctx.event.locals.platform)
+    const bucket = premisesMapStorage(ctx.event.locals.platform)
     const prefix = `interior-jobs/${input.locationId}/${id}`
     const floor = prepared.extraction.floors[0]
     const receipt = {

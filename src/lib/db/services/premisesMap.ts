@@ -19,10 +19,9 @@ import {
   type MapBundle,
 } from '#lib/indoor/releases.js'
 // TYPES
-import type { MapObjectReader } from '#lib/indoor/server/storage.js'
+import type { MapObjectReader, MapObjectStorage } from '#lib/indoor/server/storage.js'
 import type { BatchItem } from 'drizzle-orm/batch'
 import type { Database } from '#lib/types.js'
-import type { R2Bucket } from '@cloudflare/workers-types'
 
 // TOC: Immutable objects | Draft saves | Atomic publication
 
@@ -43,7 +42,7 @@ export async function readMapBundle(
 /** Save a draft without changing the published release. @param db Database. @param bucket Environment storage. @param input Optimistic version, content and actor. @returns New draft pointer. @remarks R2 writes precede the conditional database update; losing writers leave harmless unreferenced objects. */
 export async function saveMapDraft(
   db: Database,
-  bucket: R2Bucket,
+  bucket: MapObjectStorage,
   input: {
     id: string
     expectedVersion: number
@@ -120,7 +119,7 @@ export async function saveMapDraft(
 /** Publish a complete retained draft or roll back to a retained release. @param db Database. @param bucket Environment storage. @param input Exact reviewed draft and expected public version. @returns New public version. @remarks D1 batch atomically switches the pointer and records publication; stale editors cannot overwrite newer work. */
 export async function publishMapDraft(
   db: Database,
-  bucket: R2Bucket,
+  bucket: MapObjectStorage,
   input: {
     id: string
     hash: string

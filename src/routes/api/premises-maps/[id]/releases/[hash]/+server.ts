@@ -5,7 +5,7 @@ import type { RequestHandler } from './$types'
 import { getDatabaseWithoutAuth } from '#lib/api/index.js'
 // DOMAIN
 import { mapIdSchema, releaseHashSchema, mapReleaseKey } from '#lib/indoor/releases.js'
-import { publishedMapReader } from '#lib/indoor/server/storage.js'
+import { premisesMapStorage } from '#lib/indoor/server/storage.js'
 import { publishedMapRelease } from '#lib/db/services/premisesMap.js'
 
 /** Serve only published immutable R2 objects; hashes are not authorization for draft access. @param event Release request. @returns Cacheable exact bundle bytes. */
@@ -26,7 +26,7 @@ export const GET: RequestHandler = async ({ locals, params, request }) => {
   }
   if (request.headers.get('If-None-Match') === headers.ETag)
     return new Response(null, { status: 304, headers })
-  const object = await publishedMapReader(locals.platform).get(
+  const object = await premisesMapStorage(locals.platform).get(
     mapReleaseKey(params.id, params.hash),
   )
   if (!object) error(503, 'MAP_RELEASE_UNAVAILABLE')

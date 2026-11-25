@@ -2,7 +2,7 @@
 import { error, type RequestHandler } from '@sveltejs/kit'
 // DOMAIN
 import { interiorContext } from '#lib/indoor/floorplans/server.js'
-import { premisesMapBucket } from '#lib/indoor/server/storage.js'
+import { premisesMapStorage } from '#lib/indoor/server/storage.js'
 
 /** Serve retained source evidence only to the authorized building editor. @param event Source page route. @returns Original raster page or server-generated footprint diagram. */
 export const GET: RequestHandler = async event => {
@@ -13,7 +13,7 @@ export const GET: RequestHandler = async event => {
       event.params.page !== 'footprint.svg')
   )
     error(404)
-  const object = await premisesMapBucket(event.locals.platform).get(
+  const object = await premisesMapStorage(event.locals.platform).get(
     `interior-jobs/${event.params.id}/${event.params.job}/${event.params.page}`,
   )
   if (!object) error(404)

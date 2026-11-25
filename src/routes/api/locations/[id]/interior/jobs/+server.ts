@@ -2,7 +2,7 @@
 import { error, json, type RequestHandler } from '@sveltejs/kit'
 // DOMAIN
 import { interiorContext, floorplanWorker } from '#lib/indoor/floorplans/server.js'
-import { premisesMapBucket } from '#lib/indoor/server/storage.js'
+import { premisesMapStorage } from '#lib/indoor/server/storage.js'
 
 /** Submit a PDF/image for review-only extraction and retain its building association.
  * @param event Authenticated bounded source upload. @returns Opaque job identity.
@@ -43,7 +43,7 @@ export const POST: RequestHandler = async event => {
   const job = (await response.json()) as { id: string; sha256: string }
   if (!/^[a-f0-9-]{36}$/.test(job.id) || !/^[a-f0-9]{64}$/.test(job.sha256))
     error(502, 'Invalid extraction receipt.')
-  const bucket = premisesMapBucket(event.locals.platform)
+  const bucket = premisesMapStorage(event.locals.platform)
   await bucket.put(`interior-jobs/${event.params.id}/${job.id}/source`, body)
   await bucket.put(
     `interior-jobs/${event.params.id}/${job.id}/receipt.json`,
@@ -63,7 +63,7 @@ export const POST: RequestHandler = async event => {
 /** Recover the latest job after navigation or a browser restart. @param event Authorized building request. @returns Latest job identity. */
 export const GET: RequestHandler = async event => {
   await interiorContext(event)
-  const bucket = premisesMapBucket(event.locals.platform)
+  const bucket = premisesMapStorage(event.locals.platform)
   const active = await bucket.get(`interior-jobs/${event.params.id}/active.json`)
   return json(active ? await active.json() : { id: null })
 }

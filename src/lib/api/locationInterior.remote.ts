@@ -18,7 +18,7 @@ import { premisesMap } from '#lib/db/schema/premisesMap.js'
 import { readMapBundle, saveMapDraft } from '#lib/db/services/premisesMap.js'
 // DOMAIN
 import { mapHash } from '#lib/indoor/releases.js'
-import { premisesMapBucket } from '#lib/indoor/server/storage.js'
+import { premisesMapStorage } from '#lib/indoor/server/storage.js'
 import {
   floorplanExtractionSchema,
   floorplanBundle,
@@ -78,7 +78,7 @@ export const getBuildingInteriorPreview = guardedQuery(
         !(ctx.user.superAdmin && input.hash === map.draftHash))
     )
       error(404, 'Interior revision unavailable.')
-    const bucket = premisesMapBucket(ctx.event.locals.platform)
+    const bucket = premisesMapStorage(ctx.event.locals.platform)
     return (await readMapBundle(bucket, map.id, input.hash)).data
   },
 )
@@ -90,7 +90,7 @@ export const getLocationInterior = guardedQuery(identity, async (input, ctx) => 
   const hash = ctx.user.superAdmin
     ? (map?.draftHash ?? map?.publishedHash)
     : map?.publishedHash
-  const bucket = premisesMapBucket(ctx.event.locals.platform)
+  const bucket = premisesMapStorage(ctx.event.locals.platform)
   const bundle = hash && map ? await readMapBundle(bucket, map.id, hash) : null
   const jobId =
     bundle?.data.sourceDataset?.match(/^(?:gbp|footprint):([a-f0-9-]{36})$/)?.[1] ??
@@ -166,7 +166,7 @@ export const saveLocationInterior = guardedCommand(
   async (input, ctx) => {
     if (!ctx.user.superAdmin || ctx.user.isAnonymous) error(403, 'SUPER_ADMIN_REQUIRED')
     await authorizeExteriorLocation(ctx, input.locationId)
-    const bucket = premisesMapBucket(ctx.event.locals.platform)
+    const bucket = premisesMapStorage(ctx.event.locals.platform)
     const result = await bucket.get(
       `interior-jobs/${input.locationId}/${input.jobId}/result.json`,
     )

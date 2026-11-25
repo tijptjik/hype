@@ -18,7 +18,7 @@ import {
 } from '#lib/indoor/releases.js'
 // TYPES
 import type { Database } from '#lib/types.js'
-import type { R2Bucket } from '@cloudflare/workers-types'
+import type { MapObjectStorage } from '#lib/indoor/server/storage.js'
 import type { BatchItem } from 'drizzle-orm/batch'
 
 /** Save connection curations and their materialized draft under one optimistic version fence.
@@ -27,7 +27,7 @@ import type { BatchItem } from 'drizzle-orm/batch'
  */
 export async function saveMapConnectionCurations(
   db: Database,
-  bucket: R2Bucket,
+  bucket: MapObjectStorage,
   input: {
     id: string
     expectedVersion: number

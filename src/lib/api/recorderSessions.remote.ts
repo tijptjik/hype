@@ -5,7 +5,7 @@ import { error } from '@sveltejs/kit'
 import { z } from 'zod'
 // API
 import { mapIdSchema, releaseHashSchema } from '#lib/indoor/releases.js'
-import { publishedMapReader } from '#lib/indoor/server/storage.js'
+import { premisesMapStorage } from '#lib/indoor/server/storage.js'
 import { textureComparisonBucket } from '#lib/locations/exterior/textureComparison.server.js'
 import { setupRequestHandler } from '#lib/api/index.js'
 // SERVICES
@@ -109,7 +109,7 @@ export const recordFeature = command(
     const platform = getRequestEvent().locals.platform
     const bucket =
       pin?.realm === 'interior'
-        ? publishedMapReader(platform)
+        ? premisesMapStorage(platform)
         : pin && 'surface' in pin && pin.geometryId !== pin.assetId
           ? textureComparisonBucket(platform)
           : undefined

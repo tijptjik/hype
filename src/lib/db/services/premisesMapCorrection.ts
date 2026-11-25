@@ -19,7 +19,7 @@ import {
 import { readMapBundle } from './premisesMap'
 // TYPES
 import type { Database } from '#lib/types.js'
-import type { R2Bucket } from '@cloudflare/workers-types'
+import type { MapObjectStorage } from '#lib/indoor/server/storage.js'
 
 // TOC: Source retention | Correction replay | System issue projection
 
@@ -29,7 +29,7 @@ import type { R2Bucket } from '@cloudflare/workers-types'
  */
 export async function prepareCorrectedMap(
   db: Database,
-  bucket: R2Bucket,
+  bucket: MapObjectStorage,
   input: {
     id: string
     sourceDataset: string
