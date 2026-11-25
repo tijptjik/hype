@@ -19,7 +19,6 @@ let {
   organisationId,
   sessionId,
   revision,
-  onClose,
 }: {
   view: 'exterior' | 'interior' | 'map'
   title: string
@@ -27,7 +26,6 @@ let {
   organisationId: string
   sessionId: string
   revision: number
-  onClose: () => void
 } = $props()
 const query = $derived(getResearchLocations({ sessionId, revision }))
 const buildings = $derived(
@@ -71,17 +69,7 @@ const columns =
   class={view === 'map' ? 'flex min-h-0 flex-1 flex-col' : ''}
 >
   {#if view !== 'map'}
-    <SectionHeader {title} {icon}>
-      {#snippet right()}
-        <button
-          type="button"
-          class="text-muted-foreground hover:text-foreground rounded-md px-3 py-2 text-sm"
-          onclick={onClose}
-        >
-          Close gallery
-        </button>
-      {/snippet}
-    </SectionHeader>
+    <SectionHeader {title} {icon} />
   {/if}
   {#await query}
     {#if view === 'map'}

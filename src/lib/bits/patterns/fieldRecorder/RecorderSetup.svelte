@@ -425,7 +425,6 @@ async function create(): Promise<void> {
             organisationId={current.organisationId}
             sessionId={current.id}
             revision={current.revision}
-            onClose={() => selectModels(null)}
           />
         {:else if showLocations}
           <ResearchLocations

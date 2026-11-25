@@ -164,7 +164,6 @@ const comparisonFile = $derived(
 /** Recover the upstream model when comparison resources fail. @returns Nothing. */
 function useGovernmentModel(): void {
   failedComparison = model?.comparisonFile ?? ''
-  message = 'Facade comparison unavailable. Showing the government model.'
 }
 let analysisViewer = $state.raw<ModelViewerElement>()
 
