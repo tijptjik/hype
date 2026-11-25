@@ -201,6 +201,8 @@ $effect(() => {
 })
 // Allow a wider floor overview consistently across wheel, pinch, and keyboard input.
 const MIN_ZOOM = 0.25
+let lastWheelZoom = -Infinity
+let pinchCanExplode = false
 let zoom = $state(1),
   panX = $state(0),
   panY = $state(0)
@@ -473,26 +475,58 @@ const maskViewport = $derived([
   height * textScale,
 ])
 const maskId = $props.id()
+/** Apply zoom, returning a fitted building floor to the stack on a new outward gesture.
+ * @param next Requested zoom. @param fresh Whether this is a separate gesture at the limit.
+ * @returns Whether the exploded transition took over the camera.
+ */
+function changeZoom(next: number, fresh = false): boolean {
+  if (
+    fresh &&
+    station.isBuilding &&
+    !station.exploded &&
+    zoom <= MIN_ZOOM &&
+    next < zoom
+  ) {
+    station.selectLevel('all')
+    return true
+  }
+  zoom = Math.max(MIN_ZOOM, Math.min(12, next))
+  return false
+}
 function wheel(event: WheelEvent): void {
-  cameraAnimating = false
   event.preventDefault()
+  if (modeAnimating) return
+  cameraAnimating = false
   station.stopFly()
   if (event.altKey && event.ctrlKey)
     updateTilt(
       (station.exploded ? station.tilt : station.planTilt) - event.deltaY * 0.08,
     )
   else if (event.altKey) station.bearing += event.deltaY * 0.12
-  else zoom = Math.max(MIN_ZOOM, Math.min(12, zoom * Math.exp(-event.deltaY * 0.001)))
+  else {
+    const now = performance.now()
+    const fresh = now - lastWheelZoom > 250
+    lastWheelZoom = now
+    changeZoom(zoom * Math.exp(-event.deltaY * 0.001), fresh)
+  }
 }
 function move(event: PointerEvent): void {
   if (pointers.has(event.pointerId))
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
   if (pinch && pointers.size === 2) {
     const [a, b] = [...pointers.values()]
-    zoom = Math.max(
-      MIN_ZOOM,
-      Math.min(12, (pinch.zoom * Math.hypot(b.x - a.x, b.y - a.y)) / pinch.distance),
-    )
+    if (
+      changeZoom(
+        (pinch.zoom * Math.hypot(b.x - a.x, b.y - a.y)) / pinch.distance,
+        pinchCanExplode && Math.hypot(b.x - a.x, b.y - a.y) < pinch.distance * 0.94,
+      )
+    ) {
+      pinchCanExplode = false
+      pinch = null
+      dragged = true
+      return
+    }
+    if (zoom > MIN_ZOOM) pinchCanExplode = false
     station.bearing =
       pinch.bearing + ((Math.atan2(b.y - a.y, b.x - a.x) - pinch.angle) * 180) / Math.PI
     panX = pinch.px - ((a.x + b.x) / 2 - pinch.x) * pinch.scale
@@ -556,7 +590,7 @@ function chooseFloor(id: string): void {
   onkeydown={e => {
     station.stopFly()
     if (e.key === '+' || e.key === '=') zoom = Math.min(12, zoom * 1.3)
-    if (e.key === '-') zoom = Math.max(MIN_ZOOM, zoom / 1.3)
+    if (e.key === '-') changeZoom(zoom / 1.3, !e.repeat)
     if (e.key === 'ArrowLeft') {
       e.preventDefault()
       station.bearing -= 10
@@ -596,7 +630,7 @@ function chooseFloor(id: string): void {
     data-station-transition={modeAnimating ? 'moving' : 'settled'}
     role="application"
     aria-label={station.exploded
-      ? 'Exploded station levels. Select a floor to open its plan.'
+      ? 'Exploded station levels. Drag to rotate and tilt, Shift-drag to pan, scroll to zoom. Select a floor to open its plan.'
       : 'Station floor plan. Drag to pan, scroll to zoom.'}
     oncontextmenu={e => e.preventDefault()}
     ondragstart={e => e.preventDefault()}
@@ -607,13 +641,14 @@ function chooseFloor(id: string): void {
     data-tilt={station.tilt}
     onpointerdown={e => {
       cameraAnimating = false
-      if (e.button !== 0 && e.button !== 2) return
+      if (e.button !== 0 && e.button !== 1 && e.button !== 2) return
       // Own the gesture before native image dragging or SVG text selection can intercept it.
       e.preventDefault()
       svg.parentElement?.focus({ preventScroll: true })
       station.stopFly()
       pointers.set(e.pointerId, { x: e.clientX, y: e.clientY })
       if (pointers.size === 2) {
+        pinchCanExplode = zoom <= MIN_ZOOM
         const [a, b] = [...pointers.values()]
         pinch = {
           distance: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)),
@@ -635,13 +670,18 @@ function chooseFloor(id: string): void {
         return
       }
       dragged = false
-      const mode = e.altKey
-        ? 'tilt'
-        : e.ctrlKey || e.button === 2
-          ? 'orbit'
-          : e.shiftKey
-            ? 'spin'
-            : 'pan'
+      const mode =
+        e.button === 1 || (station.exploded && e.shiftKey)
+          ? 'pan'
+          : e.altKey
+            ? 'tilt'
+            : e.ctrlKey || e.button === 2
+              ? 'orbit'
+              : e.shiftKey
+                ? 'spin'
+                : station.exploded
+                  ? 'orbit'
+                  : 'pan'
       const center: [number, number] = [
         viewport[0] + viewport[2] / 2,
         viewport[1] + viewport[3] / 2,

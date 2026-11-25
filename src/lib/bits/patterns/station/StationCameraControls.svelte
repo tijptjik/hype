@@ -60,6 +60,7 @@ const rotationHeading = $derived(((-station.bearing % 360) + 360) % 360)
     ></label
   >
   {#if station.exploded}
+    <p>Drag to rotate and tilt. Shift-drag to pan. Scroll or pinch to zoom.</p>
     <label class="grid min-w-0 gap-1"
       >Floor spacing
       <input
