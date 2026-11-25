@@ -1,0 +1,965 @@
+{
+  "venue": {
+    "name": "17 Kai Tak Road",
+    "address": "17 Kai Tak Road"
+  },
+  "warnings": [
+    "This amended plan and occupation permit document the historical approved layout.",
+    "Wall thickness and minor fixtures remain in the source linework."
+  ],
+  "floors": [
+    {
+      "id": "ground",
+      "label": "G/F",
+      "page": 1,
+      "width": 282,
+      "height": 1049,
+      "boundary": [[41, 8], [240, 8], [240, 1001], [41, 1001], [41, 8]],
+      "alignment": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "shop-no-17",
+          "label": "Shop No. 17",
+          "category": "retail",
+          "unitReference": "17",
+          "showUnitReference": true,
+          "polygon": [
+            [44, 102],
+            [146, 102],
+            [146, 161],
+            [238, 161],
+            [238, 500],
+            [182, 500],
+            [182, 590],
+            [238, 590],
+            [238, 999],
+            [108, 999],
+            [108, 742],
+            [44, 742],
+            [44, 102]
+          ],
+          "confidence": 0.94,
+          "evidence": "SHOP (NON-DOMESTIC); No. 17 is printed at the frontage."
+        },
+        {
+          "id": "rear-yard",
+          "label": "Rear yard",
+          "category": "balcony",
+          "polygon": [
+            [145, 10],
+            [237, 10],
+            [237, 159],
+            [148, 159],
+            [148, 101],
+            [145, 101],
+            [145, 10]
+          ],
+          "confidence": 0.94,
+          "evidence": "YARD enclosure, labeled and accessed at rear."
+        },
+        {
+          "id": "rear-lavatory-1",
+          "label": "Rear lavatory 1",
+          "category": "lavatory",
+          "polygon": [[46, 11], [144, 11], [144, 67], [46, 67], [46, 11]],
+          "confidence": 0.94,
+          "evidence": "Rear LAV. compartment with sanitary fixture and a separate yard entrance."
+        },
+        {
+          "id": "rear-lavatory-2",
+          "label": "Rear lavatory 2",
+          "category": "lavatory",
+          "polygon": [[46, 67], [144, 67], [144, 101], [46, 101], [46, 67]],
+          "confidence": 0.94,
+          "evidence": "Second LAV. compartment south of the internal dividing wall."
+        },
+        {
+          "id": "front-entrance-stair",
+          "label": "Front entrance stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[48, 750], [102, 750]],
+              "last": [[48, 893], [102, 893]],
+              "count": 14,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[45, 743], [107, 743], [107, 999], [45, 999], [45, 743]],
+          "confidence": 0.94,
+          "evidence": "UP and treads at the separate street entrance."
+        },
+        {
+          "id": "shop-stair-to-cockloft",
+          "label": "Shop stair to cockloft",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[186, 510], [235, 510]],
+              "last": [[186, 581], [235, 581]],
+              "count": 8,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[183, 501], [238, 501], [238, 589], [183, 589], [183, 501]],
+          "confidence": 0.94,
+          "evidence": "UP and treads in the shop along the side wall."
+        },
+        {
+          "id": "interstitial-1",
+          "label": "Perimeter and partition walls",
+          "category": "structure",
+          "polygon": [[41, 1001], [240, 1001], [240, 8], [41, 8], [41, 1001]],
+          "holes": [
+            [
+              [144, 11],
+              [144, 67],
+              [144, 101],
+              [46, 101],
+              [46, 67],
+              [46, 11],
+              [144, 11]
+            ],
+            [
+              [148, 101],
+              [145, 101],
+              [145, 10],
+              [237, 10],
+              [237, 159],
+              [148, 159],
+              [148, 101]
+            ],
+            [[183, 589], [183, 501], [238, 501], [238, 589], [183, 589]],
+            [
+              [108, 742],
+              [44, 742],
+              [44, 102],
+              [146, 102],
+              [146, 161],
+              [238, 161],
+              [238, 500],
+              [182, 500],
+              [182, 590],
+              [238, 590],
+              [238, 999],
+              [108, 999],
+              [108, 742]
+            ],
+            [[107, 999], [45, 999], [45, 743], [107, 743], [107, 999]]
+          ],
+          "confidence": 0.82,
+          "evidence": "Remaining area between the traced space edges and exterior building outline. Narrow bands follow drawn walls and parapets."
+        }
+      ]
+    },
+    {
+      "id": "cockloft",
+      "label": "Cockloft",
+      "page": 2,
+      "width": 291,
+      "height": 1069,
+      "boundary": [[52, 48], [254, 48], [254, 1026], [52, 1026], [52, 48]],
+      "alignment": {
+        "x": 0,
+        "y": 17,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "rear-flat-roof",
+          "label": "Rear flat roof",
+          "category": "roof",
+          "polygon": [[56, 50], [249, 50], [249, 281], [56, 281], [56, 50]],
+          "confidence": 0.94,
+          "evidence": "FLAT ROOF, falls and concrete curb."
+        },
+        {
+          "id": "rear-common-stair",
+          "label": "Rear common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[111, 285], [111, 325]],
+              "last": [[146, 285], [146, 325]],
+              "count": 5
+            }
+          ],
+          "polygon": [[56, 282], [249, 282], [249, 350], [56, 350], [56, 282]],
+          "confidence": 0.94,
+          "evidence": "Stair and landing along the back of the cockloft."
+        },
+        {
+          "id": "common-approach-and-front-stair",
+          "label": "Common approach and front stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[58, 707], [115, 707]],
+              "last": [[58, 816], [115, 816]],
+              "count": 12,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[56, 351], [118, 351], [118, 1024], [56, 1024], [56, 351]],
+          "confidence": 0.94,
+          "evidence": "Narrow separate approach with treads near frontage and UP/DN labels."
+        },
+        {
+          "id": "cockloft-store",
+          "label": "Cockloft store",
+          "category": "room",
+          "polygon": [
+            [119, 351],
+            [250, 351],
+            [250, 516],
+            [193, 516],
+            [193, 699],
+            [250, 699],
+            [250, 950],
+            [119, 950],
+            [119, 351]
+          ],
+          "confidence": 0.94,
+          "evidence": "COCKLOFT (FOR STORAGE ONLY) and occupation permit."
+        },
+        {
+          "id": "shop-stair-from-ground",
+          "label": "Shop stair from ground",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[197, 548], [246, 548]],
+              "last": [[197, 691], [246, 691]],
+              "count": 14,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[194, 517], [250, 517], [250, 698], [194, 698], [194, 517]],
+          "confidence": 0.94,
+          "evidence": "DN at the cockloft landing."
+        },
+        {
+          "id": "upper-part-of-ground-floor",
+          "label": "Upper part of ground floor",
+          "category": "void",
+          "polygon": [[119, 951], [250, 951], [250, 1024], [119, 1024], [119, 951]],
+          "confidence": 0.94,
+          "evidence": "UPPER PART OF GRD FL. at the shopfront."
+        },
+        {
+          "id": "interstitial-1",
+          "label": "Perimeter and partition walls",
+          "category": "structure",
+          "polygon": [[52, 1026], [254, 1026], [254, 48], [52, 48], [52, 1026]],
+          "holes": [
+            [[56, 281], [56, 50], [249, 50], [249, 281], [56, 281]],
+            [[249, 350], [56, 350], [56, 282], [249, 282], [249, 350]],
+            [[250, 698], [194, 698], [194, 517], [250, 517], [250, 698]],
+            [
+              [119, 950],
+              [119, 351],
+              [250, 351],
+              [250, 516],
+              [193, 516],
+              [193, 699],
+              [250, 699],
+              [250, 950],
+              [119, 950]
+            ],
+            [[118, 1024], [56, 1024], [56, 351], [118, 351], [118, 1024]],
+            [[250, 1024], [119, 1024], [119, 951], [250, 951], [250, 1024]]
+          ],
+          "confidence": 0.82,
+          "evidence": "Remaining area between the traced space edges and exterior building outline. Narrow bands follow drawn walls and parapets."
+        }
+      ]
+    },
+    {
+      "id": "first",
+      "label": "1/F",
+      "page": 3,
+      "width": 266,
+      "height": 1158,
+      "boundary": [[34, 278], [228, 278], [228, 1133], [34, 1133], [34, 278]],
+      "alignment": {
+        "x": 0,
+        "y": 253,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "common-stair-and-landing",
+          "label": "Common stair and landing",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[46, 286], [46, 325]],
+              "last": [[98, 286], [98, 325]],
+              "count": 6,
+              "label": "UP"
+            },
+            {
+              "first": [[114, 286], [114, 325]],
+              "last": [[152, 286], [152, 325]],
+              "count": 5,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[34, 278], [201, 278], [201, 405], [34, 405], [34, 278]],
+          "confidence": 0.94,
+          "evidence": "UP and DN alongside the rear stair treads."
+        },
+        {
+          "id": "kitchen",
+          "label": "Kitchen",
+          "category": "kitchen",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[93, 405], [201, 405], [201, 517], [93, 517], [93, 405]],
+          "confidence": 0.94,
+          "evidence": "KIT. A=55 S.F. and euro stove."
+        },
+        {
+          "id": "lavatory",
+          "label": "Lavatory",
+          "category": "lavatory",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[94, 558], [152, 558], [152, 600], [94, 600], [94, 558]],
+          "confidence": 0.94,
+          "evidence": "LAV. in separate cubicle."
+        },
+        {
+          "id": "bathroom",
+          "label": "Bathroom",
+          "category": "lavatory",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[94, 600], [152, 600], [152, 696], [94, 696], [94, 600]],
+          "confidence": 0.94,
+          "evidence": "BATH and tub symbol."
+        },
+        {
+          "id": "domestic-tenement",
+          "label": "Domestic tenement",
+          "category": "room",
+          "unitReference": "17",
+          "showUnitReference": true,
+          "polygon": [
+            [34, 405],
+            [93, 405],
+            [93, 517],
+            [152, 517],
+            [152, 558],
+            [94, 558],
+            [94, 696],
+            [228, 696],
+            [228, 1018],
+            [34, 1018],
+            [34, 405]
+          ],
+          "confidence": 0.94,
+          "evidence": "DOMESTIC; one tenement per floor in OP NK 58/69. No flat letter appears."
+        },
+        {
+          "id": "front-balcony",
+          "label": "Front balcony",
+          "category": "balcony",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[34, 1018], [228, 1018], [228, 1133], [34, 1133], [34, 1018]],
+          "confidence": 0.94,
+          "evidence": "BALCONY at the street frontage."
+        },
+        {
+          "id": "first-floor-side-flat-roof",
+          "label": "First floor side flat roof",
+          "category": "roof",
+          "polygon": [
+            [201, 278],
+            [228, 278],
+            [228, 696],
+            [152, 696],
+            [152, 517],
+            [201, 517],
+            [201, 278]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT ROOF printed beside the lavatory."
+        }
+      ]
+    },
+    {
+      "id": "second",
+      "label": "2/F",
+      "page": 4,
+      "width": 266,
+      "height": 1145,
+      "boundary": [
+        [34, 260],
+        [198, 260],
+        [198, 500],
+        [152, 500],
+        [152, 684],
+        [228, 684],
+        [228, 1117],
+        [34, 1117],
+        [34, 260]
+      ],
+      "alignment": {
+        "x": 0,
+        "y": 252,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "common-stair-and-landing",
+          "label": "Common stair and landing",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[46, 268], [46, 307]],
+              "last": [[98, 268], [98, 307]],
+              "count": 6,
+              "label": "UP"
+            },
+            {
+              "first": [[114, 268], [114, 307]],
+              "last": [[152, 268], [152, 307]],
+              "count": 5,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[34, 260], [198, 260], [198, 396], [34, 396], [34, 260]],
+          "confidence": 0.94,
+          "evidence": "UP and DN alongside the rear stair treads."
+        },
+        {
+          "id": "kitchen",
+          "label": "Kitchen",
+          "category": "kitchen",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[93, 396], [198, 396], [198, 500], [93, 500], [93, 396]],
+          "confidence": 0.94,
+          "evidence": "KIT. A=55 S.F. and euro stove."
+        },
+        {
+          "id": "lavatory",
+          "label": "Lavatory",
+          "category": "lavatory",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[94, 550], [152, 550], [152, 582], [94, 582], [94, 550]],
+          "confidence": 0.94,
+          "evidence": "LAV. in separate cubicle."
+        },
+        {
+          "id": "bathroom",
+          "label": "Bathroom",
+          "category": "lavatory",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[94, 582], [152, 582], [152, 684], [94, 684], [94, 582]],
+          "confidence": 0.94,
+          "evidence": "BATH and tub symbol."
+        },
+        {
+          "id": "domestic-tenement",
+          "label": "Domestic tenement",
+          "category": "room",
+          "unitReference": "17",
+          "showUnitReference": true,
+          "polygon": [
+            [34, 396],
+            [93, 396],
+            [93, 500],
+            [152, 500],
+            [152, 550],
+            [94, 550],
+            [94, 684],
+            [228, 684],
+            [228, 1001],
+            [34, 1001],
+            [34, 396]
+          ],
+          "confidence": 0.94,
+          "evidence": "DOMESTIC; one tenement per floor in OP NK 58/69. No flat letter appears."
+        },
+        {
+          "id": "front-balcony",
+          "label": "Front balcony",
+          "category": "balcony",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[34, 1001], [228, 1001], [228, 1117], [34, 1117], [34, 1001]],
+          "confidence": 0.94,
+          "evidence": "BALCONY at the street frontage."
+        }
+      ]
+    },
+    {
+      "id": "third",
+      "label": "3/F",
+      "page": 4,
+      "width": 266,
+      "height": 1145,
+      "boundary": [
+        [34, 260],
+        [198, 260],
+        [198, 500],
+        [152, 500],
+        [152, 684],
+        [228, 684],
+        [228, 1117],
+        [34, 1117],
+        [34, 260]
+      ],
+      "sourceFloorId": "second",
+      "alignment": {
+        "x": 0,
+        "y": 252,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "common-stair-and-landing",
+          "label": "Common stair and landing",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[46, 268], [46, 307]],
+              "last": [[98, 268], [98, 307]],
+              "count": 6,
+              "label": "UP"
+            },
+            {
+              "first": [[114, 268], [114, 307]],
+              "last": [[152, 268], [152, 307]],
+              "count": 5,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[34, 260], [198, 260], [198, 396], [34, 396], [34, 260]],
+          "confidence": 0.94,
+          "evidence": "UP and DN alongside the rear stair treads."
+        },
+        {
+          "id": "kitchen",
+          "label": "Kitchen",
+          "category": "kitchen",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[93, 396], [198, 396], [198, 500], [93, 500], [93, 396]],
+          "confidence": 0.94,
+          "evidence": "KIT. A=55 S.F. and euro stove."
+        },
+        {
+          "id": "lavatory",
+          "label": "Lavatory",
+          "category": "lavatory",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[94, 550], [152, 550], [152, 582], [94, 582], [94, 550]],
+          "confidence": 0.94,
+          "evidence": "LAV. in separate cubicle."
+        },
+        {
+          "id": "bathroom",
+          "label": "Bathroom",
+          "category": "lavatory",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[94, 582], [152, 582], [152, 684], [94, 684], [94, 582]],
+          "confidence": 0.94,
+          "evidence": "BATH and tub symbol."
+        },
+        {
+          "id": "domestic-tenement",
+          "label": "Domestic tenement",
+          "category": "room",
+          "unitReference": "17",
+          "showUnitReference": true,
+          "polygon": [
+            [34, 396],
+            [93, 396],
+            [93, 500],
+            [152, 500],
+            [152, 550],
+            [94, 550],
+            [94, 684],
+            [228, 684],
+            [228, 1001],
+            [34, 1001],
+            [34, 396]
+          ],
+          "confidence": 0.94,
+          "evidence": "DOMESTIC; one tenement per floor in OP NK 58/69. No flat letter appears."
+        },
+        {
+          "id": "front-balcony",
+          "label": "Front balcony",
+          "category": "balcony",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[34, 1001], [228, 1001], [228, 1117], [34, 1117], [34, 1001]],
+          "confidence": 0.94,
+          "evidence": "BALCONY at the street frontage."
+        }
+      ]
+    },
+    {
+      "id": "fourth",
+      "label": "4/F",
+      "page": 4,
+      "width": 266,
+      "height": 1145,
+      "boundary": [
+        [34, 260],
+        [198, 260],
+        [198, 500],
+        [152, 500],
+        [152, 684],
+        [228, 684],
+        [228, 1117],
+        [34, 1117],
+        [34, 260]
+      ],
+      "sourceFloorId": "second",
+      "alignment": {
+        "x": 0,
+        "y": 252,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "common-stair-and-landing",
+          "label": "Common stair and landing",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[46, 268], [46, 307]],
+              "last": [[98, 268], [98, 307]],
+              "count": 6,
+              "label": "UP"
+            },
+            {
+              "first": [[114, 268], [114, 307]],
+              "last": [[152, 268], [152, 307]],
+              "count": 5,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[34, 260], [198, 260], [198, 396], [34, 396], [34, 260]],
+          "confidence": 0.94,
+          "evidence": "UP and DN alongside the rear stair treads."
+        },
+        {
+          "id": "kitchen",
+          "label": "Kitchen",
+          "category": "kitchen",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[93, 396], [198, 396], [198, 500], [93, 500], [93, 396]],
+          "confidence": 0.94,
+          "evidence": "KIT. A=55 S.F. and euro stove."
+        },
+        {
+          "id": "lavatory",
+          "label": "Lavatory",
+          "category": "lavatory",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[94, 550], [152, 550], [152, 582], [94, 582], [94, 550]],
+          "confidence": 0.94,
+          "evidence": "LAV. in separate cubicle."
+        },
+        {
+          "id": "bathroom",
+          "label": "Bathroom",
+          "category": "lavatory",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[94, 582], [152, 582], [152, 684], [94, 684], [94, 582]],
+          "confidence": 0.94,
+          "evidence": "BATH and tub symbol."
+        },
+        {
+          "id": "domestic-tenement",
+          "label": "Domestic tenement",
+          "category": "room",
+          "unitReference": "17",
+          "showUnitReference": true,
+          "polygon": [
+            [34, 396],
+            [93, 396],
+            [93, 500],
+            [152, 500],
+            [152, 550],
+            [94, 550],
+            [94, 684],
+            [228, 684],
+            [228, 1001],
+            [34, 1001],
+            [34, 396]
+          ],
+          "confidence": 0.94,
+          "evidence": "DOMESTIC; one tenement per floor in OP NK 58/69. No flat letter appears."
+        },
+        {
+          "id": "front-balcony",
+          "label": "Front balcony",
+          "category": "balcony",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[34, 1001], [228, 1001], [228, 1117], [34, 1117], [34, 1001]],
+          "confidence": 0.94,
+          "evidence": "BALCONY at the street frontage."
+        }
+      ]
+    },
+    {
+      "id": "fifth",
+      "label": "5/F",
+      "page": 4,
+      "width": 266,
+      "height": 1145,
+      "boundary": [
+        [34, 260],
+        [198, 260],
+        [198, 500],
+        [152, 500],
+        [152, 684],
+        [228, 684],
+        [228, 1117],
+        [34, 1117],
+        [34, 260]
+      ],
+      "sourceFloorId": "second",
+      "alignment": {
+        "x": 0,
+        "y": 252,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "common-stair-and-landing",
+          "label": "Common stair and landing",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[46, 268], [46, 307]],
+              "last": [[98, 268], [98, 307]],
+              "count": 6,
+              "label": "UP"
+            },
+            {
+              "first": [[114, 268], [114, 307]],
+              "last": [[152, 268], [152, 307]],
+              "count": 5,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[34, 260], [198, 260], [198, 396], [34, 396], [34, 260]],
+          "confidence": 0.94,
+          "evidence": "UP and DN alongside the rear stair treads."
+        },
+        {
+          "id": "kitchen",
+          "label": "Kitchen",
+          "category": "kitchen",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[93, 396], [198, 396], [198, 500], [93, 500], [93, 396]],
+          "confidence": 0.94,
+          "evidence": "KIT. A=55 S.F. and euro stove."
+        },
+        {
+          "id": "lavatory",
+          "label": "Lavatory",
+          "category": "lavatory",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[94, 550], [152, 550], [152, 582], [94, 582], [94, 550]],
+          "confidence": 0.94,
+          "evidence": "LAV. in separate cubicle."
+        },
+        {
+          "id": "bathroom",
+          "label": "Bathroom",
+          "category": "lavatory",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[94, 582], [152, 582], [152, 684], [94, 684], [94, 582]],
+          "confidence": 0.94,
+          "evidence": "BATH and tub symbol."
+        },
+        {
+          "id": "domestic-tenement",
+          "label": "Domestic tenement",
+          "category": "room",
+          "unitReference": "17",
+          "showUnitReference": true,
+          "polygon": [
+            [34, 396],
+            [93, 396],
+            [93, 500],
+            [152, 500],
+            [152, 550],
+            [94, 550],
+            [94, 684],
+            [228, 684],
+            [228, 1001],
+            [34, 1001],
+            [34, 396]
+          ],
+          "confidence": 0.94,
+          "evidence": "DOMESTIC; one tenement per floor in OP NK 58/69. No flat letter appears."
+        },
+        {
+          "id": "front-balcony",
+          "label": "Front balcony",
+          "category": "balcony",
+          "unitReference": "17",
+          "showUnitReference": false,
+          "polygon": [[34, 1001], [228, 1001], [228, 1117], [34, 1117], [34, 1001]],
+          "confidence": 0.94,
+          "evidence": "BALCONY at the street frontage."
+        }
+      ]
+    },
+    {
+      "id": "roof",
+      "label": "Roof",
+      "page": 5,
+      "width": 278,
+      "height": 939,
+      "boundary": [
+        [41, 48],
+        [207, 48],
+        [207, 299],
+        [159, 299],
+        [159, 472],
+        [239, 472],
+        [239, 905],
+        [41, 905],
+        [41, 48]
+      ],
+      "alignment": {
+        "x": 0,
+        "y": 246,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "stair-head",
+          "label": "Stair head",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[52, 61], [99, 61]],
+              "last": [[52, 92], [99, 92]],
+              "count": 4
+            },
+            {
+              "first": [[151, 73], [195, 73]],
+              "last": [[151, 180], [195, 180]],
+              "count": 10
+            }
+          ],
+          "polygon": [[44, 50], [205, 50], [205, 191], [44, 191], [44, 50]],
+          "confidence": 0.94,
+          "evidence": "Rear stair enclosure with horizontal treads and DN at the landing."
+        },
+        {
+          "id": "water-tank",
+          "label": "Water tank",
+          "category": "utility",
+          "polygon": [[115, 192], [204, 192], [204, 297], [115, 297], [115, 192]],
+          "confidence": 0.94,
+          "evidence": "400 gallon water tank (see section) leader."
+        },
+        {
+          "id": "flat-roof",
+          "label": "Flat roof",
+          "category": "roof",
+          "polygon": [
+            [44, 192],
+            [115, 192],
+            [115, 297],
+            [151, 297],
+            [151, 483],
+            [230, 483],
+            [230, 791],
+            [44, 791],
+            [44, 192]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT ROOF with falls and parapet callout."
+        },
+        {
+          "id": "front-canopy",
+          "label": "Front canopy",
+          "category": "canopy",
+          "polygon": [[47, 795], [234, 795], [234, 899], [47, 899], [47, 795]],
+          "confidence": 0.94,
+          "evidence": "CANOPY with concrete curb."
+        },
+        {
+          "id": "interstitial-1",
+          "label": "Perimeter and partition walls",
+          "category": "structure",
+          "polygon": [
+            [41, 905],
+            [239, 905],
+            [239, 472],
+            [159, 472],
+            [159, 299],
+            [207, 299],
+            [207, 48],
+            [41, 48],
+            [41, 905]
+          ],
+          "holes": [
+            [[44, 191], [44, 50], [205, 50], [205, 191], [44, 191]],
+            [
+              [151, 297],
+              [151, 483],
+              [230, 483],
+              [230, 791],
+              [44, 791],
+              [44, 192],
+              [115, 192],
+              [204, 192],
+              [204, 297],
+              [151, 297]
+            ],
+            [[47, 899], [47, 795], [234, 795], [234, 899], [47, 899]]
+          ],
+          "confidence": 0.82,
+          "evidence": "Remaining area between the traced space edges and exterior building outline. Narrow bands follow drawn walls and parapets."
+        }
+      ]
+    }
+  ]
+}

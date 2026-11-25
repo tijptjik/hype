@@ -1,0 +1,1333 @@
+{
+  "venue": {
+    "name": "South Mansion",
+    "nameZh": "南苑",
+    "address": "SOUTH MANSION, 30 NGA TSIN WAI ROAD, KOWLOON CITY DISTRICT, KLN"
+  },
+  "warnings": [
+    "Amended general building plan and occupation permit, 1983. Boundaries are interpreted at wall centre lines. Current occupation and alterations require field confirmation."
+  ],
+  "floors": [
+    {
+      "id": "ground",
+      "label": "G/F",
+      "page": 1,
+      "width": 1365,
+      "height": 450,
+      "boundary": [[72, 66], [1294, 72], [809, 360], [72, 355], [72, 66]],
+      "alignment": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "stairs",
+          "label": "Entrance stair and landing",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[159, 74], [159, 141]],
+              "last": [[302, 74], [302, 141]],
+              "count": 12,
+              "label": "UP"
+            }
+          ],
+          "polygon": [
+            [304, 146],
+            [304, 67.13911620294598],
+            [72, 66],
+            [72, 146],
+            [304, 146]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "UP 20R and parallel treads. The separate upper-flight detail belongs to this stair."
+        },
+        {
+          "id": "riser-c",
+          "label": "Service riser C",
+          "category": "utility",
+          "polygon": [[121, 146], [121, 179], [72, 179], [72, 146], [121, 146]],
+          "holes": [],
+          "confidence": 0.78,
+          "evidence": "Enclosed bay C. Leaders identify telephone and electrical risers as a pair; the assignment of each service to C or D is unclear."
+        },
+        {
+          "id": "riser-d",
+          "label": "Service riser D",
+          "category": "utility",
+          "polygon": [[161, 146], [161, 179], [121, 179], [121, 146], [161, 146]],
+          "holes": [],
+          "confidence": 0.78,
+          "evidence": "Enclosed bay D beside C, immediately below the landing. Individual service assignment needs review."
+        },
+        {
+          "id": "lavatory",
+          "label": "Shop lavatory",
+          "category": "lavatory",
+          "polygon": [[161, 179], [161, 245], [72, 245], [72, 179], [161, 179]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LAV. and sanitary fixtures inside the compartment opening to the shop."
+        },
+        {
+          "id": "shop",
+          "label": "Ground-floor shop",
+          "category": "retail",
+          "polygon": [
+            [72, 355],
+            [809, 360],
+            [1294, 72],
+            [304, 67.13911620294598],
+            [304, 146],
+            [161, 146],
+            [161, 179],
+            [161, 245],
+            [72, 245],
+            [72, 355]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "SHOP, shutter lines and the permit for non-domestic shop use. Wall centre lines bound this area."
+        }
+      ]
+    },
+    {
+      "id": "first",
+      "label": "1/F",
+      "page": 2,
+      "width": 1390,
+      "height": 575,
+      "boundary": [[49, 72], [1275, 72], [1328, 160], [816, 467], [49, 463], [49, 72]],
+      "alignment": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "stairs",
+          "label": "Common stair and landings",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[385, 156], [441, 156]],
+              "last": [[385, 263], [441, 263]],
+              "count": 9,
+              "label": "UP"
+            },
+            {
+              "first": [[457, 195], [510, 195]],
+              "last": [[457, 263], [510, 263]],
+              "count": 6,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[517, 72], [517, 332], [379, 332], [379, 72], [517, 72]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "UP/DN marks, treads and half-landing between the two flat entrances. Landings follow the enclosed stair footprint."
+        },
+        {
+          "id": "left-kitchen",
+          "label": "Flat A · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat A",
+          "polygon": [[262, 72], [262, 161], [138, 161], [138, 72], [262, 72]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "KIT. and kitchen fixtures. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-lavatory",
+          "label": "Flat A · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat A",
+          "polygon": [[216, 161], [216, 223], [138, 223], [138, 161], [216, 161]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LAV. and fittings within a separate enclosure. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-bedroom",
+          "label": "Flat A · Bedroom",
+          "category": "room",
+          "unitReference": "Flat A",
+          "polygon": [[262, 223], [262, 332], [138, 332], [138, 223], [262, 223]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "BED RM. and partition to the living/dining room. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-well",
+          "label": "Flat A · Recessed flat roof",
+          "category": "roof",
+          "unitReference": "Flat A",
+          "polygon": [[310, 72], [310, 161], [262, 161], [262, 72], [310, 72]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "FLAT ROOF with spot level below the flat. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-entrance",
+          "label": "Flat A · Entrance lobby",
+          "category": "corridor",
+          "unitReference": "Flat A",
+          "polygon": [[379, 72], [379, 161], [310, 161], [310, 72], [379, 72]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Two successive door swings between the common landing and living space. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-living",
+          "label": "Flat A · Living and dining room",
+          "category": "room",
+          "unitReference": "Flat A",
+          "showUnitReference": true,
+          "polygon": [
+            [379, 332],
+            [379, 161],
+            [310, 161],
+            [262, 161],
+            [216, 161],
+            [216, 223],
+            [262, 223],
+            [262, 332],
+            [379, 332]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LIV. & DIN. RM. Extends around the bedroom to the kitchen and lavatory doors."
+        },
+        {
+          "id": "right-kitchen",
+          "label": "Flat B · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat B",
+          "polygon": [[760, 72], [760, 161], [636, 161], [636, 72], [760, 72]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "KIT. and kitchen fixtures. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-lavatory",
+          "label": "Flat B · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat B",
+          "polygon": [[760, 161], [760, 223], [682, 223], [682, 161], [760, 161]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LAV. and fittings within a separate enclosure. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-bedroom",
+          "label": "Flat B · Bedroom",
+          "category": "room",
+          "unitReference": "Flat B",
+          "polygon": [[760, 223], [760, 332], [636, 332], [636, 223], [760, 223]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "BED RM. and partition to the living/dining room. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-well",
+          "label": "Flat B · Recessed flat roof",
+          "category": "roof",
+          "unitReference": "Flat B",
+          "polygon": [[636, 72], [636, 161], [586, 161], [586, 72], [636, 72]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "FLAT ROOF with spot level below the flat. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-entrance",
+          "label": "Flat B · Entrance lobby",
+          "category": "corridor",
+          "unitReference": "Flat B",
+          "polygon": [[586, 72], [586, 161], [517, 161], [517, 72], [586, 72]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Two successive door swings between the common landing and living space. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-living",
+          "label": "Flat B · Living and dining room",
+          "category": "room",
+          "unitReference": "Flat B",
+          "showUnitReference": true,
+          "polygon": [
+            [517, 332],
+            [636, 332],
+            [636, 223],
+            [682, 223],
+            [682, 161],
+            [636, 161],
+            [586, 161],
+            [517, 161],
+            [517, 332]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LIV. & DIN. RM. Extends around the bedroom to the kitchen and lavatory doors."
+        },
+        {
+          "id": "frontage",
+          "label": "Frontage projection",
+          "category": "structure",
+          "polygon": [[760, 332], [760, 359], [138, 359], [138, 332], [760, 332]],
+          "holes": [],
+          "confidence": 0.63,
+          "evidence": "Narrow outlined strip along the street-facing wall. Exact use is unlabelled, including the short sections beside the stair."
+        },
+        {
+          "id": "west-roof",
+          "label": "Flat roof beside Flat A",
+          "category": "roof",
+          "polygon": [[49, 359], [138, 359], [138, 72], [49, 72], [49, 359]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "FLAT ROOF and trench drain on the left side of the floor plan."
+        },
+        {
+          "id": "corner-roof",
+          "label": "Corner flat roof beside Flat B",
+          "category": "roof",
+          "polygon": [[1275, 72], [760, 72], [760, 359], [791, 359], [1275, 72]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Large wedge marked FLAT ROOF, bounded by the railing and the angled street frontage."
+        },
+        {
+          "id": "canopy",
+          "label": "Street canopy",
+          "category": "canopy",
+          "polygon": [
+            [49, 463],
+            [816, 467],
+            [1328, 160],
+            [1275, 72],
+            [791, 359],
+            [49, 359],
+            [49, 463]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "CANOPY with separate level +11.35, wrapping the straight and angled frontage."
+        }
+      ]
+    },
+    {
+      "id": "second",
+      "label": "2/F",
+      "page": 3,
+      "width": 845,
+      "height": 475,
+      "boundary": [[153, 75], [769, 75], [769, 366], [153, 366], [153, 75]],
+      "sourceFloorId": "typical-2-to-5",
+      "alignment": {
+        "x": 86,
+        "y": 0,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "cable-duct",
+          "label": "Electrical cable duct",
+          "category": "utility",
+          "polygon": [[393, 301], [428, 335], [393, 335], [393, 301]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Triangular enclosure at the landing. The leader is labelled cable duct for elec. riser."
+        },
+        {
+          "id": "stairs",
+          "label": "Common stair and landings",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[400, 159], [453, 159]],
+              "last": [[400, 268], [453, 268]],
+              "count": 9,
+              "label": "UP"
+            },
+            {
+              "first": [[468, 159], [520, 159]],
+              "last": [[468, 268], [520, 268]],
+              "count": 9,
+              "label": "DN"
+            }
+          ],
+          "polygon": [
+            [526, 335],
+            [526, 75],
+            [393, 75],
+            [393, 301],
+            [428, 335],
+            [526, 335]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "UP/DN marks, treads and half-landing between the two flat entrances. Landings follow the enclosed stair footprint."
+        },
+        {
+          "id": "left-kitchen",
+          "label": "Flat A · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat A",
+          "polygon": [[276, 75], [276, 165], [153, 165], [153, 75], [276, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "KIT. and kitchen fixtures. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-lavatory",
+          "label": "Flat A · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat A",
+          "polygon": [[231, 165], [231, 228], [153, 228], [153, 165], [231, 165]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LAV. and fittings within a separate enclosure. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-bedroom",
+          "label": "Flat A · Bedroom",
+          "category": "room",
+          "unitReference": "Flat A",
+          "polygon": [[276, 228], [276, 335], [153, 335], [153, 228], [276, 228]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "BED RM. and partition to the living/dining room. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-well",
+          "label": "Flat A · Light well",
+          "category": "void",
+          "unitReference": "Flat A",
+          "polygon": [[330, 75], [330, 165], [276, 165], [276, 75], [330, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Crossed recess explicitly marked VOID. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-entrance",
+          "label": "Flat A · Entrance lobby",
+          "category": "corridor",
+          "unitReference": "Flat A",
+          "polygon": [[393, 75], [393, 165], [330, 165], [330, 75], [393, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Two successive door swings between the common landing and living space. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-living",
+          "label": "Flat A · Living and dining room",
+          "category": "room",
+          "unitReference": "Flat A",
+          "showUnitReference": true,
+          "polygon": [
+            [393, 335],
+            [393, 165],
+            [330, 165],
+            [276, 165],
+            [231, 165],
+            [231, 228],
+            [276, 228],
+            [276, 335],
+            [393, 335]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LIV. & DIN. RM. Extends around the bedroom to the kitchen and lavatory doors."
+        },
+        {
+          "id": "right-kitchen",
+          "label": "Flat B · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat B",
+          "polygon": [[769, 75], [769, 165], [646, 165], [646, 75], [769, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "KIT. and kitchen fixtures. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-lavatory",
+          "label": "Flat B · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat B",
+          "polygon": [[769, 165], [769, 228], [691, 228], [691, 165], [769, 165]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LAV. and fittings within a separate enclosure. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-bedroom",
+          "label": "Flat B · Bedroom",
+          "category": "room",
+          "unitReference": "Flat B",
+          "polygon": [[769, 228], [769, 335], [646, 335], [646, 228], [769, 228]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "BED RM. and partition to the living/dining room. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-well",
+          "label": "Flat B · Light well",
+          "category": "void",
+          "unitReference": "Flat B",
+          "polygon": [[646, 75], [646, 165], [593, 165], [593, 75], [646, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Crossed recess explicitly marked VOID. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-entrance",
+          "label": "Flat B · Entrance lobby",
+          "category": "corridor",
+          "unitReference": "Flat B",
+          "polygon": [[593, 75], [593, 165], [526, 165], [526, 75], [593, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Two successive door swings between the common landing and living space. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-living",
+          "label": "Flat B · Living and dining room",
+          "category": "room",
+          "unitReference": "Flat B",
+          "showUnitReference": true,
+          "polygon": [
+            [526, 335],
+            [646, 335],
+            [646, 228],
+            [691, 228],
+            [691, 165],
+            [646, 165],
+            [593, 165],
+            [526, 165],
+            [526, 335]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LIV. & DIN. RM. Extends around the bedroom to the kitchen and lavatory doors."
+        },
+        {
+          "id": "frontage",
+          "label": "Frontage projection",
+          "category": "structure",
+          "polygon": [[769, 335], [769, 366], [153, 366], [153, 335], [769, 335]],
+          "holes": [],
+          "confidence": 0.63,
+          "evidence": "Narrow outlined strip along the street-facing wall. Exact use is unlabelled, including the short sections beside the stair."
+        }
+      ]
+    },
+    {
+      "id": "third",
+      "label": "3/F",
+      "page": 3,
+      "width": 845,
+      "height": 475,
+      "boundary": [[153, 75], [769, 75], [769, 366], [153, 366], [153, 75]],
+      "sourceFloorId": "typical-2-to-5",
+      "alignment": {
+        "x": 86,
+        "y": 0,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "cable-duct",
+          "label": "Electrical cable duct",
+          "category": "utility",
+          "polygon": [[393, 301], [428, 335], [393, 335], [393, 301]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Triangular enclosure at the landing. The leader is labelled cable duct for elec. riser."
+        },
+        {
+          "id": "stairs",
+          "label": "Common stair and landings",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[400, 159], [453, 159]],
+              "last": [[400, 268], [453, 268]],
+              "count": 9,
+              "label": "UP"
+            },
+            {
+              "first": [[468, 159], [520, 159]],
+              "last": [[468, 268], [520, 268]],
+              "count": 9,
+              "label": "DN"
+            }
+          ],
+          "polygon": [
+            [526, 335],
+            [526, 75],
+            [393, 75],
+            [393, 301],
+            [428, 335],
+            [526, 335]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "UP/DN marks, treads and half-landing between the two flat entrances. Landings follow the enclosed stair footprint."
+        },
+        {
+          "id": "left-kitchen",
+          "label": "Flat A · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat A",
+          "polygon": [[276, 75], [276, 165], [153, 165], [153, 75], [276, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "KIT. and kitchen fixtures. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-lavatory",
+          "label": "Flat A · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat A",
+          "polygon": [[231, 165], [231, 228], [153, 228], [153, 165], [231, 165]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LAV. and fittings within a separate enclosure. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-bedroom",
+          "label": "Flat A · Bedroom",
+          "category": "room",
+          "unitReference": "Flat A",
+          "polygon": [[276, 228], [276, 335], [153, 335], [153, 228], [276, 228]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "BED RM. and partition to the living/dining room. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-well",
+          "label": "Flat A · Light well",
+          "category": "void",
+          "unitReference": "Flat A",
+          "polygon": [[330, 75], [330, 165], [276, 165], [276, 75], [330, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Crossed recess explicitly marked VOID. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-entrance",
+          "label": "Flat A · Entrance lobby",
+          "category": "corridor",
+          "unitReference": "Flat A",
+          "polygon": [[393, 75], [393, 165], [330, 165], [330, 75], [393, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Two successive door swings between the common landing and living space. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-living",
+          "label": "Flat A · Living and dining room",
+          "category": "room",
+          "unitReference": "Flat A",
+          "showUnitReference": true,
+          "polygon": [
+            [393, 335],
+            [393, 165],
+            [330, 165],
+            [276, 165],
+            [231, 165],
+            [231, 228],
+            [276, 228],
+            [276, 335],
+            [393, 335]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LIV. & DIN. RM. Extends around the bedroom to the kitchen and lavatory doors."
+        },
+        {
+          "id": "right-kitchen",
+          "label": "Flat B · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat B",
+          "polygon": [[769, 75], [769, 165], [646, 165], [646, 75], [769, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "KIT. and kitchen fixtures. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-lavatory",
+          "label": "Flat B · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat B",
+          "polygon": [[769, 165], [769, 228], [691, 228], [691, 165], [769, 165]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LAV. and fittings within a separate enclosure. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-bedroom",
+          "label": "Flat B · Bedroom",
+          "category": "room",
+          "unitReference": "Flat B",
+          "polygon": [[769, 228], [769, 335], [646, 335], [646, 228], [769, 228]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "BED RM. and partition to the living/dining room. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-well",
+          "label": "Flat B · Light well",
+          "category": "void",
+          "unitReference": "Flat B",
+          "polygon": [[646, 75], [646, 165], [593, 165], [593, 75], [646, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Crossed recess explicitly marked VOID. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-entrance",
+          "label": "Flat B · Entrance lobby",
+          "category": "corridor",
+          "unitReference": "Flat B",
+          "polygon": [[593, 75], [593, 165], [526, 165], [526, 75], [593, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Two successive door swings between the common landing and living space. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-living",
+          "label": "Flat B · Living and dining room",
+          "category": "room",
+          "unitReference": "Flat B",
+          "showUnitReference": true,
+          "polygon": [
+            [526, 335],
+            [646, 335],
+            [646, 228],
+            [691, 228],
+            [691, 165],
+            [646, 165],
+            [593, 165],
+            [526, 165],
+            [526, 335]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LIV. & DIN. RM. Extends around the bedroom to the kitchen and lavatory doors."
+        },
+        {
+          "id": "frontage",
+          "label": "Frontage projection",
+          "category": "structure",
+          "polygon": [[769, 335], [769, 366], [153, 366], [153, 335], [769, 335]],
+          "holes": [],
+          "confidence": 0.63,
+          "evidence": "Narrow outlined strip along the street-facing wall. Exact use is unlabelled, including the short sections beside the stair."
+        }
+      ]
+    },
+    {
+      "id": "fourth",
+      "label": "4/F",
+      "page": 3,
+      "width": 845,
+      "height": 475,
+      "boundary": [[153, 75], [769, 75], [769, 366], [153, 366], [153, 75]],
+      "sourceFloorId": "typical-2-to-5",
+      "alignment": {
+        "x": 86,
+        "y": 0,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "cable-duct",
+          "label": "Electrical cable duct",
+          "category": "utility",
+          "polygon": [[393, 301], [428, 335], [393, 335], [393, 301]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Triangular enclosure at the landing. The leader is labelled cable duct for elec. riser."
+        },
+        {
+          "id": "stairs",
+          "label": "Common stair and landings",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[400, 159], [453, 159]],
+              "last": [[400, 268], [453, 268]],
+              "count": 9,
+              "label": "UP"
+            },
+            {
+              "first": [[468, 159], [520, 159]],
+              "last": [[468, 268], [520, 268]],
+              "count": 9,
+              "label": "DN"
+            }
+          ],
+          "polygon": [
+            [526, 335],
+            [526, 75],
+            [393, 75],
+            [393, 301],
+            [428, 335],
+            [526, 335]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "UP/DN marks, treads and half-landing between the two flat entrances. Landings follow the enclosed stair footprint."
+        },
+        {
+          "id": "left-kitchen",
+          "label": "Flat A · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat A",
+          "polygon": [[276, 75], [276, 165], [153, 165], [153, 75], [276, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "KIT. and kitchen fixtures. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-lavatory",
+          "label": "Flat A · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat A",
+          "polygon": [[231, 165], [231, 228], [153, 228], [153, 165], [231, 165]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LAV. and fittings within a separate enclosure. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-bedroom",
+          "label": "Flat A · Bedroom",
+          "category": "room",
+          "unitReference": "Flat A",
+          "polygon": [[276, 228], [276, 335], [153, 335], [153, 228], [276, 228]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "BED RM. and partition to the living/dining room. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-well",
+          "label": "Flat A · Light well",
+          "category": "void",
+          "unitReference": "Flat A",
+          "polygon": [[330, 75], [330, 165], [276, 165], [276, 75], [330, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Crossed recess explicitly marked VOID. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-entrance",
+          "label": "Flat A · Entrance lobby",
+          "category": "corridor",
+          "unitReference": "Flat A",
+          "polygon": [[393, 75], [393, 165], [330, 165], [330, 75], [393, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Two successive door swings between the common landing and living space. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-living",
+          "label": "Flat A · Living and dining room",
+          "category": "room",
+          "unitReference": "Flat A",
+          "showUnitReference": true,
+          "polygon": [
+            [393, 335],
+            [393, 165],
+            [330, 165],
+            [276, 165],
+            [231, 165],
+            [231, 228],
+            [276, 228],
+            [276, 335],
+            [393, 335]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LIV. & DIN. RM. Extends around the bedroom to the kitchen and lavatory doors."
+        },
+        {
+          "id": "right-kitchen",
+          "label": "Flat B · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat B",
+          "polygon": [[769, 75], [769, 165], [646, 165], [646, 75], [769, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "KIT. and kitchen fixtures. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-lavatory",
+          "label": "Flat B · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat B",
+          "polygon": [[769, 165], [769, 228], [691, 228], [691, 165], [769, 165]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LAV. and fittings within a separate enclosure. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-bedroom",
+          "label": "Flat B · Bedroom",
+          "category": "room",
+          "unitReference": "Flat B",
+          "polygon": [[769, 228], [769, 335], [646, 335], [646, 228], [769, 228]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "BED RM. and partition to the living/dining room. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-well",
+          "label": "Flat B · Light well",
+          "category": "void",
+          "unitReference": "Flat B",
+          "polygon": [[646, 75], [646, 165], [593, 165], [593, 75], [646, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Crossed recess explicitly marked VOID. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-entrance",
+          "label": "Flat B · Entrance lobby",
+          "category": "corridor",
+          "unitReference": "Flat B",
+          "polygon": [[593, 75], [593, 165], [526, 165], [526, 75], [593, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Two successive door swings between the common landing and living space. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-living",
+          "label": "Flat B · Living and dining room",
+          "category": "room",
+          "unitReference": "Flat B",
+          "showUnitReference": true,
+          "polygon": [
+            [526, 335],
+            [646, 335],
+            [646, 228],
+            [691, 228],
+            [691, 165],
+            [646, 165],
+            [593, 165],
+            [526, 165],
+            [526, 335]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LIV. & DIN. RM. Extends around the bedroom to the kitchen and lavatory doors."
+        },
+        {
+          "id": "frontage",
+          "label": "Frontage projection",
+          "category": "structure",
+          "polygon": [[769, 335], [769, 366], [153, 366], [153, 335], [769, 335]],
+          "holes": [],
+          "confidence": 0.63,
+          "evidence": "Narrow outlined strip along the street-facing wall. Exact use is unlabelled, including the short sections beside the stair."
+        }
+      ]
+    },
+    {
+      "id": "fifth",
+      "label": "5/F",
+      "page": 3,
+      "width": 845,
+      "height": 475,
+      "boundary": [[153, 75], [769, 75], [769, 366], [153, 366], [153, 75]],
+      "sourceFloorId": "typical-2-to-5",
+      "alignment": {
+        "x": 86,
+        "y": 0,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "cable-duct",
+          "label": "Electrical cable duct",
+          "category": "utility",
+          "polygon": [[393, 301], [428, 335], [393, 335], [393, 301]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Triangular enclosure at the landing. The leader is labelled cable duct for elec. riser."
+        },
+        {
+          "id": "stairs",
+          "label": "Common stair and landings",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[400, 159], [453, 159]],
+              "last": [[400, 268], [453, 268]],
+              "count": 9,
+              "label": "UP"
+            },
+            {
+              "first": [[468, 159], [520, 159]],
+              "last": [[468, 268], [520, 268]],
+              "count": 9,
+              "label": "DN"
+            }
+          ],
+          "polygon": [
+            [526, 335],
+            [526, 75],
+            [393, 75],
+            [393, 301],
+            [428, 335],
+            [526, 335]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "UP/DN marks, treads and half-landing between the two flat entrances. Landings follow the enclosed stair footprint."
+        },
+        {
+          "id": "left-kitchen",
+          "label": "Flat A · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat A",
+          "polygon": [[276, 75], [276, 165], [153, 165], [153, 75], [276, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "KIT. and kitchen fixtures. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-lavatory",
+          "label": "Flat A · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat A",
+          "polygon": [[231, 165], [231, 228], [153, 228], [153, 165], [231, 165]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LAV. and fittings within a separate enclosure. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-bedroom",
+          "label": "Flat A · Bedroom",
+          "category": "room",
+          "unitReference": "Flat A",
+          "polygon": [[276, 228], [276, 335], [153, 335], [153, 228], [276, 228]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "BED RM. and partition to the living/dining room. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-well",
+          "label": "Flat A · Light well",
+          "category": "void",
+          "unitReference": "Flat A",
+          "polygon": [[330, 75], [330, 165], [276, 165], [276, 75], [330, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Crossed recess explicitly marked VOID. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-entrance",
+          "label": "Flat A · Entrance lobby",
+          "category": "corridor",
+          "unitReference": "Flat A",
+          "polygon": [[393, 75], [393, 165], [330, 165], [330, 75], [393, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Two successive door swings between the common landing and living space. Flat A is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "left-living",
+          "label": "Flat A · Living and dining room",
+          "category": "room",
+          "unitReference": "Flat A",
+          "showUnitReference": true,
+          "polygon": [
+            [393, 335],
+            [393, 165],
+            [330, 165],
+            [276, 165],
+            [231, 165],
+            [231, 228],
+            [276, 228],
+            [276, 335],
+            [393, 335]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LIV. & DIN. RM. Extends around the bedroom to the kitchen and lavatory doors."
+        },
+        {
+          "id": "right-kitchen",
+          "label": "Flat B · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat B",
+          "polygon": [[769, 75], [769, 165], [646, 165], [646, 75], [769, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "KIT. and kitchen fixtures. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-lavatory",
+          "label": "Flat B · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat B",
+          "polygon": [[769, 165], [769, 228], [691, 228], [691, 165], [769, 165]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LAV. and fittings within a separate enclosure. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-bedroom",
+          "label": "Flat B · Bedroom",
+          "category": "room",
+          "unitReference": "Flat B",
+          "polygon": [[769, 228], [769, 335], [646, 335], [646, 228], [769, 228]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "BED RM. and partition to the living/dining room. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-well",
+          "label": "Flat B · Light well",
+          "category": "void",
+          "unitReference": "Flat B",
+          "polygon": [[646, 75], [646, 165], [593, 165], [593, 75], [646, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Crossed recess explicitly marked VOID. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-entrance",
+          "label": "Flat B · Entrance lobby",
+          "category": "corridor",
+          "unitReference": "Flat B",
+          "polygon": [[593, 75], [593, 165], [526, 165], [526, 75], [593, 75]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Two successive door swings between the common landing and living space. Flat B is identified on the usable floor area diagram, GBP page 2."
+        },
+        {
+          "id": "right-living",
+          "label": "Flat B · Living and dining room",
+          "category": "room",
+          "unitReference": "Flat B",
+          "showUnitReference": true,
+          "polygon": [
+            [526, 335],
+            [646, 335],
+            [646, 228],
+            [691, 228],
+            [691, 165],
+            [646, 165],
+            [593, 165],
+            [526, 165],
+            [526, 335]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "LIV. & DIN. RM. Extends around the bedroom to the kitchen and lavatory doors."
+        },
+        {
+          "id": "frontage",
+          "label": "Frontage projection",
+          "category": "structure",
+          "polygon": [[769, 335], [769, 366], [153, 366], [153, 335], [769, 335]],
+          "holes": [],
+          "confidence": 0.63,
+          "evidence": "Narrow outlined strip along the street-facing wall. Exact use is unlabelled, including the short sections beside the stair."
+        }
+      ]
+    },
+    {
+      "id": "roof",
+      "label": "Roof",
+      "page": 4,
+      "width": 775,
+      "height": 430,
+      "boundary": [[68, 76], [694, 76], [694, 369], [68, 369], [68, 76]],
+      "alignment": {
+        "x": 85,
+        "y": 0,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "left-well",
+          "label": "Left light well",
+          "category": "void",
+          "polygon": [[246, 76], [246, 165], [192, 165], [192, 76], [246, 76]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "VOID with crossed outline in the flat roof."
+        },
+        {
+          "id": "left-roof",
+          "label": "Left flat roof",
+          "category": "roof",
+          "polygon": [
+            [68, 76],
+            [68, 369],
+            [310, 369],
+            [310, 76],
+            [246, 76],
+            [246, 165],
+            [192, 165],
+            [192, 76],
+            [68, 76]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "FLAT ROOF +26.00 on this side of the stair enclosure. Edge finish follows the roof projection."
+        },
+        {
+          "id": "right-well",
+          "label": "Right light well",
+          "category": "void",
+          "polygon": [[567, 76], [567, 165], [515, 165], [515, 76], [567, 76]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "VOID with crossed outline in the flat roof."
+        },
+        {
+          "id": "right-roof",
+          "label": "Right flat roof",
+          "category": "roof",
+          "polygon": [
+            [450, 76],
+            [450, 369],
+            [694, 369],
+            [694, 76],
+            [567, 76],
+            [567, 165],
+            [515, 165],
+            [515, 76],
+            [450, 76]
+          ],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "FLAT ROOF +26.00 on this side of the stair enclosure. Edge finish follows the roof projection."
+        },
+        {
+          "id": "stairs",
+          "label": "Roof stair enclosure",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[319, 160], [373, 160]],
+              "last": [[319, 268], [373, 268]],
+              "count": 9
+            },
+            {
+              "first": [[386, 160], [443, 160]],
+              "last": [[386, 268], [443, 268]],
+              "count": 9,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[450, 76], [450, 342], [310, 342], [310, 76], [450, 76]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "DN, treads, louvres and two doors opening onto the roof."
+        },
+        {
+          "id": "frontage",
+          "label": "Roof frontage strip",
+          "category": "roof",
+          "polygon": [[450, 342], [450, 369], [310, 369], [310, 342], [450, 342]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Narrow roof-edge strip outside the louvred stair enclosure."
+        }
+      ]
+    },
+    {
+      "id": "upper-roof",
+      "label": "Upper roof",
+      "page": 5,
+      "width": 330,
+      "height": 420,
+      "boundary": [
+        [80, 83],
+        [263, 83],
+        [263, 151],
+        [242, 151],
+        [242, 346],
+        [96, 346],
+        [96, 151],
+        [80, 151],
+        [80, 83]
+      ],
+      "alignment": {
+        "x": 310,
+        "y": 0,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "left-canopy",
+          "label": "Left canopy",
+          "category": "canopy",
+          "polygon": [[96, 83], [96, 151], [80, 151], [80, 83], [96, 83]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "CANOPY and 300 mm projection at the left of the roof head."
+        },
+        {
+          "id": "right-canopy",
+          "label": "Right canopy",
+          "category": "canopy",
+          "polygon": [[263, 83], [263, 151], [242, 151], [242, 83], [263, 83]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "CANOPY and 300 mm projection at the right of the roof head."
+        },
+        {
+          "id": "trap",
+          "label": "Roof access hatch",
+          "category": "utility",
+          "polygon": [[192, 91], [192, 138], [144, 138], [144, 91], [192, 91]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "METAL TRAP DR. points to the crossed hatch inside the raised curb."
+        },
+        {
+          "id": "tank",
+          "label": "Roof above flushing-water tank",
+          "category": "roof",
+          "polygon": [[242, 285], [242, 346], [96, 346], [96, 285], [242, 285]],
+          "holes": [],
+          "confidence": 0.92,
+          "evidence": "Dashed line and note “water tank (under) for flushing”. Polygon identifies the roof over the tank."
+        },
+        {
+          "id": "flat-roof",
+          "label": "Upper flat roof",
+          "category": "roof",
+          "polygon": [[242, 83], [96, 83], [96, 285], [242, 285], [242, 83]],
+          "holes": [[[192, 91], [192, 138], [144, 138], [144, 91], [192, 91]]],
+          "confidence": 0.92,
+          "evidence": "FLAT ROOF +28.80 with cement rendering and waterproof compound."
+        }
+      ]
+    }
+  ]
+}

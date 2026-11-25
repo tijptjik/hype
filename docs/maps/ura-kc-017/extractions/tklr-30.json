@@ -1,0 +1,1164 @@
+{
+  "venue": {
+    "name": "30 Tak Ku Ling Road",
+    "address": "30 Tak Ku Ling Road"
+  },
+  "warnings": [
+    "Historical approved building plans. Polygons follow interpreted wall centre lines; current arrangements require field verification."
+  ],
+  "floors": [
+    {
+      "id": "ground",
+      "label": "G/F",
+      "page": 1,
+      "width": 198,
+      "height": 723,
+      "boundary": [[39, 23], [177, 20], [190, 699], [50, 700], [39, 23]],
+      "alignment": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "wc-west",
+          "label": "West WC",
+          "category": "toilet",
+          "polygon": [
+            [99, 21.695652173913043],
+            [39, 23],
+            [40.33234859675037, 105],
+            [99, 105],
+            [99, 21.695652173913043]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Western sanitary compartment, WC fixture, basin and dividing wall in the yard."
+        },
+        {
+          "id": "wc-east",
+          "label": "East WC",
+          "category": "toilet",
+          "polygon": [
+            [143, 105],
+            [143, 20.73913043478261],
+            [99, 21.695652173913043],
+            [99, 105],
+            [143, 105]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Eastern sanitary compartment and fixtures in the yard."
+        },
+        {
+          "id": "yard",
+          "label": "Rear yard",
+          "category": "room",
+          "polygon": [
+            [177, 20],
+            [117.85714285714286, 21.285714285714285],
+            [143, 20.73913043478261],
+            [143, 105],
+            [40.33234859675037, 105],
+            [39, 23],
+            [42.92132406397673, 264.3396719374773],
+            [181.63722025912838, 262.2055812267826],
+            [177, 20]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "YARD between shop rear door, washrooms and lot boundary."
+        },
+        {
+          "id": "shop-stair",
+          "label": "Shop stair to cockloft",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[49, 305], [78, 305]],
+              "last": [[49, 356], [78, 356]],
+              "count": 9,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[81, 359], [80, 300], [44, 301], [45, 361], [81, 359]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "UP and solid parallel treads at rear of shop; dashed treads are overhead."
+        },
+        {
+          "id": "entrance-stair",
+          "label": "Residential entrance stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[151, 589], [179, 589]],
+              "last": [[151, 642], [179, 642]],
+              "count": 9,
+              "label": "UP"
+            }
+          ],
+          "polygon": [
+            [146.99397552947022, 699.3071858890752],
+            [190, 699],
+            [187.79832462935053, 584.0048017945393],
+            [146, 585],
+            [146.99397552947022, 699.3071858890752]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Separate residential entrance and UP flight at street frontage."
+        },
+        {
+          "id": "shop",
+          "label": "Ground-floor shop",
+          "category": "retail",
+          "polygon": [
+            [146.99397552947022, 699.3071858890752],
+            [146, 585],
+            [187.79832462935053, 584.0048017945393],
+            [181.63722025912838, 262.2055812267826],
+            [42.92132406397673, 264.3396719374773],
+            [50, 700],
+            [146.99397552947022, 699.3071858890752]
+          ],
+          "holes": [[[45, 361], [44, 301], [80, 300], [81, 359], [45, 361]]],
+          "confidence": 0.91,
+          "evidence": "SHOP, front shutter and separate residential stair entrance. Permit records a shop with cockloft."
+        }
+      ]
+    },
+    {
+      "id": "cockloft",
+      "label": "Cockloft",
+      "page": 2,
+      "width": 192,
+      "height": 717,
+      "boundary": [[13, 19], [155, 17], [167, 693], [24, 695], [13, 19]],
+      "alignment": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "wc-roof",
+          "label": "Flat roof over yard WCs",
+          "category": "roof",
+          "polygon": [
+            [114, 17.577464788732396],
+            [13, 19],
+            [14.220414201183432, 94],
+            [114, 94],
+            [114, 17.577464788732396]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "FLAT ROOF above G/F washrooms."
+        },
+        {
+          "id": "yard-void",
+          "label": "Open air above rear yard",
+          "category": "void",
+          "polygon": [
+            [155, 17],
+            [13, 19],
+            [16.90532544378698, 259],
+            [159.2958579881657, 259],
+            [155, 17]
+          ],
+          "holes": [
+            [
+              [114, 17.577464788732396],
+              [114, 94],
+              [14.220414201183432, 94],
+              [13, 19],
+              [114, 17.577464788732396]
+            ]
+          ],
+          "confidence": 0.91,
+          "evidence": "Rear yard below the cockloft wall line. Yard and rear roof identified on G/F."
+        },
+        {
+          "id": "shop-stair",
+          "label": "Shop stair and landing",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[26, 355], [52, 355]],
+              "last": [[26, 399], [52, 399]],
+              "count": 7,
+              "label": "DN"
+            }
+          ],
+          "polygon": [
+            [55, 308],
+            [17.702662721893493, 308],
+            [19.264792899408285, 404],
+            [55, 404],
+            [55, 308]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "DN and treads at rear of storage floor."
+        },
+        {
+          "id": "domestic-stair",
+          "label": "Residential entrance stair and landings",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[122, 340], [148, 340]],
+              "last": [[122, 373], [148, 373]],
+              "count": 5,
+              "label": "UP"
+            },
+            {
+              "first": [[127, 542], [154, 542]],
+              "last": [[127, 580], [154, 580]],
+              "count": 7,
+              "label": "DN"
+            }
+          ],
+          "polygon": [
+            [111, 297],
+            [79, 297],
+            [79, 345],
+            [118, 345],
+            [121.87367930391548, 693.6311373523928],
+            [167, 693],
+            [159.29585798816566, 259],
+            [111, 259],
+            [111, 297]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Separate common stair, UP, DN and treads; only solid flights are traced."
+        },
+        {
+          "id": "front-void",
+          "label": "Void over shop entrance",
+          "category": "void",
+          "polygon": [
+            [23.13757396449704, 642],
+            [24, 695],
+            [122, 693.6293706293707],
+            [121.87367930391548, 693.6311373523928],
+            [121.30000000000001, 642],
+            [23.13757396449704, 642]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Front bay explicitly marked VOID."
+        },
+        {
+          "id": "store",
+          "label": "Shop cockloft storage",
+          "category": "retail",
+          "polygon": [
+            [17.702662721893493, 308],
+            [55, 308],
+            [55, 404],
+            [19.264792899408285, 404],
+            [23.13757396449704, 642],
+            [121.30000000000001, 642],
+            [118, 345],
+            [79, 345],
+            [79, 297],
+            [111, 297],
+            [111, 259],
+            [16.90532544378698, 259],
+            [17.702662721893493, 308]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "STORAGE, bounded by stair enclosures, rear wall and edge of the front void."
+        }
+      ]
+    },
+    {
+      "id": "first",
+      "label": "1/F",
+      "page": 3,
+      "width": 192,
+      "height": 714,
+      "boundary": [[16, 260], [156, 258], [165, 696], [23, 697], [16, 260]],
+      "alignment": {
+        "x": 0,
+        "y": 240,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "rear-roof",
+          "label": "Rear flat roof",
+          "category": "roof",
+          "polygon": [
+            [156, 258],
+            [16, 260],
+            [16.62471395881007, 299],
+            [156.84246575342465, 299],
+            [156, 258]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "FLAT ROOF behind the kitchen and common stair."
+        },
+        {
+          "id": "wc",
+          "label": "Flat · WC",
+          "category": "toilet",
+          "unitReference": "30 Tak Ku Ling Road",
+          "polygon": [[46, 345], [80, 345], [80, 299], [46, 299], [46, 345]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "W.C., sanitary fixture and bathroom partition."
+        },
+        {
+          "id": "kitchen",
+          "label": "Flat · Kitchen",
+          "category": "kitchen",
+          "unitReference": "30 Tak Ku Ling Road",
+          "polygon": [
+            [80, 345],
+            [46, 345],
+            [46, 299],
+            [16.62471395881007, 299],
+            [18.775906920899917, 433.29590349046623],
+            [80, 431],
+            [80, 345]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "KIT. beside the washroom and rear external wall."
+        },
+        {
+          "id": "stairs",
+          "label": "Common stair and half landing",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[84, 341], [110, 341]],
+              "last": [[84, 393], [110, 393]],
+              "count": 9,
+              "label": "DN"
+            },
+            {
+              "first": [[120, 341], [147, 341]],
+              "last": [[120, 393], [147, 393]],
+              "count": 9,
+              "label": "UP"
+            }
+          ],
+          "polygon": [
+            [80, 299],
+            [80, 398],
+            [158.87671232876713, 398],
+            [156.84246575342465, 299],
+            [80, 299]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Two tread runs with legible DN on left, UP on right."
+        },
+        {
+          "id": "lobby",
+          "label": "Common stair lobby",
+          "category": "corridor",
+          "polygon": [
+            [80, 398],
+            [80, 432],
+            [117, 432],
+            [119, 467],
+            [160.2945205479452, 467],
+            [158.87671232876713, 398],
+            [80, 398]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LOBBY at head of stair, flat entrance swings into the living and dining space."
+        },
+        {
+          "id": "well",
+          "label": "Recessed flat roof",
+          "category": "roof",
+          "polygon": [
+            [101, 519],
+            [161.36301369863014, 519],
+            [160.2945205479452, 467],
+            [101, 467],
+            [101, 519]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "FLAT ROOF on first floor; matching L.W. service opening above."
+        },
+        {
+          "id": "bed",
+          "label": "Flat · Bedroom",
+          "category": "room",
+          "unitReference": "30 Tak Ku Ling Road",
+          "polygon": [
+            [91.65270474187206, 696.5165302482967],
+            [165, 696],
+            [162.91535269709544, 594.5471645919779],
+            [91, 596],
+            [91.65270474187206, 696.5165302482967]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "BED RM. and enclosing partition to living/dining room."
+        },
+        {
+          "id": "living",
+          "label": "Flat · Living and dining room",
+          "category": "room",
+          "unitReference": "30 Tak Ku Ling Road",
+          "showUnitReference": true,
+          "polygon": [
+            [23, 697],
+            [91.65270474187206, 696.5165302482967],
+            [91, 596],
+            [162.91535269709544, 594.5471645919779],
+            [161.36301369863014, 519],
+            [101, 519],
+            [101, 467],
+            [119, 467],
+            [117, 432],
+            [80, 432],
+            [80, 431],
+            [18.775906920899917, 433.29590349046623],
+            [23, 697]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LIV. & DIN. RM.; occupation permit records one domestic flat on each floor. No flat letter is printed."
+        }
+      ]
+    },
+    {
+      "id": "second",
+      "label": "2/F",
+      "page": 4,
+      "width": 189,
+      "height": 744,
+      "boundary": [[13, 291], [151, 289], [160, 729], [20, 730], [13, 291]],
+      "sourceFloorId": "typical-2-5",
+      "alignment": {
+        "x": 0,
+        "y": 279,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "wc",
+          "label": "Flat · WC",
+          "category": "toilet",
+          "unitReference": "30 Tak Ku Ling Road",
+          "polygon": [[43, 339], [79, 339], [79, 292], [43, 292], [43, 339]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "W.C., sanitary fixture and bathroom partition."
+        },
+        {
+          "id": "kitchen",
+          "label": "Flat · Kitchen",
+          "category": "kitchen",
+          "unitReference": "30 Tak Ku Ling Road",
+          "polygon": [
+            [80, 290.0289855072464],
+            [13, 291],
+            [15.117715717254534, 423.8110285535343],
+            [80, 423],
+            [80, 290.0289855072464]
+          ],
+          "holes": [[[43, 292], [79, 292], [79, 339], [43, 339], [43, 292]]],
+          "confidence": 0.91,
+          "evidence": "KIT. beside the washroom and rear external wall."
+        },
+        {
+          "id": "stairs",
+          "label": "Common stair and half landing",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[84, 333], [110, 333]],
+              "last": [[84, 383], [110, 383]],
+              "count": 9,
+              "label": "DN"
+            },
+            {
+              "first": [[120, 333], [147, 333]],
+              "last": [[120, 383], [147, 383]],
+              "count": 9,
+              "label": "UP"
+            }
+          ],
+          "polygon": [
+            [153.025, 388],
+            [151, 289],
+            [80, 290.0289855072464],
+            [80, 388],
+            [153.025, 388]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Two tread runs with legible DN on left, UP on right."
+        },
+        {
+          "id": "lobby",
+          "label": "Common stair lobby",
+          "category": "corridor",
+          "polygon": [
+            [80, 417],
+            [117, 417],
+            [119, 452],
+            [154.33409090909092, 452],
+            [153.025, 388],
+            [80, 388],
+            [80, 417]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LOBBY at head of stair, flat entrance swings into the living and dining space."
+        },
+        {
+          "id": "well",
+          "label": "Light well",
+          "category": "void",
+          "polygon": [
+            [99, 507],
+            [155.45909090909092, 507],
+            [154.33409090909092, 452],
+            [99, 452],
+            [99, 507]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "FLAT ROOF on first floor; matching L.W. service opening above."
+        },
+        {
+          "id": "bed",
+          "label": "Flat · Bedroom",
+          "category": "room",
+          "unitReference": "30 Tak Ku Ling Road",
+          "polygon": [
+            [88.87192536047498, 729.5080576759966],
+            [160, 729],
+            [157.1290926099158, 588.644527595884],
+            [88, 590],
+            [88.87192536047498, 729.5080576759966]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "BED RM. and enclosing partition to living/dining room."
+        },
+        {
+          "id": "living",
+          "label": "Flat · Living and dining room",
+          "category": "room",
+          "unitReference": "30 Tak Ku Ling Road",
+          "showUnitReference": true,
+          "polygon": [
+            [20, 730],
+            [88.87192536047498, 729.5080576759966],
+            [88, 590],
+            [157.1290926099158, 588.644527595884],
+            [160, 729],
+            [155.45909090909092, 507],
+            [99, 507],
+            [99, 452],
+            [119, 452],
+            [117, 417],
+            [80, 417],
+            [80, 423],
+            [15.117715717254534, 423.8110285535343],
+            [13, 291],
+            [20, 730]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LIV. & DIN. RM.; occupation permit records one domestic flat on each floor. No flat letter is printed."
+        }
+      ]
+    },
+    {
+      "id": "floor-3",
+      "label": "3/F",
+      "page": 4,
+      "width": 189,
+      "height": 744,
+      "boundary": [[13, 291], [151, 289], [160, 729], [20, 730], [13, 291]],
+      "sourceFloorId": "typical-2-5",
+      "alignment": {
+        "x": 0,
+        "y": 279,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "wc",
+          "label": "Flat · WC",
+          "category": "toilet",
+          "unitReference": "30 Tak Ku Ling Road",
+          "polygon": [[43, 339], [79, 339], [79, 292], [43, 292], [43, 339]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "W.C., sanitary fixture and bathroom partition."
+        },
+        {
+          "id": "kitchen",
+          "label": "Flat · Kitchen",
+          "category": "kitchen",
+          "unitReference": "30 Tak Ku Ling Road",
+          "polygon": [
+            [80, 290.0289855072464],
+            [13, 291],
+            [15.117715717254534, 423.8110285535343],
+            [80, 423],
+            [80, 290.0289855072464]
+          ],
+          "holes": [[[43, 292], [79, 292], [79, 339], [43, 339], [43, 292]]],
+          "confidence": 0.91,
+          "evidence": "KIT. beside the washroom and rear external wall."
+        },
+        {
+          "id": "stairs",
+          "label": "Common stair and half landing",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[84, 333], [110, 333]],
+              "last": [[84, 383], [110, 383]],
+              "count": 9,
+              "label": "DN"
+            },
+            {
+              "first": [[120, 333], [147, 333]],
+              "last": [[120, 383], [147, 383]],
+              "count": 9,
+              "label": "UP"
+            }
+          ],
+          "polygon": [
+            [153.025, 388],
+            [151, 289],
+            [80, 290.0289855072464],
+            [80, 388],
+            [153.025, 388]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Two tread runs with legible DN on left, UP on right."
+        },
+        {
+          "id": "lobby",
+          "label": "Common stair lobby",
+          "category": "corridor",
+          "polygon": [
+            [80, 417],
+            [117, 417],
+            [119, 452],
+            [154.33409090909092, 452],
+            [153.025, 388],
+            [80, 388],
+            [80, 417]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LOBBY at head of stair, flat entrance swings into the living and dining space."
+        },
+        {
+          "id": "well",
+          "label": "Light well",
+          "category": "void",
+          "polygon": [
+            [99, 507],
+            [155.45909090909092, 507],
+            [154.33409090909092, 452],
+            [99, 452],
+            [99, 507]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "FLAT ROOF on first floor; matching L.W. service opening above."
+        },
+        {
+          "id": "bed",
+          "label": "Flat · Bedroom",
+          "category": "room",
+          "unitReference": "30 Tak Ku Ling Road",
+          "polygon": [
+            [88.87192536047498, 729.5080576759966],
+            [160, 729],
+            [157.1290926099158, 588.644527595884],
+            [88, 590],
+            [88.87192536047498, 729.5080576759966]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "BED RM. and enclosing partition to living/dining room."
+        },
+        {
+          "id": "living",
+          "label": "Flat · Living and dining room",
+          "category": "room",
+          "unitReference": "30 Tak Ku Ling Road",
+          "showUnitReference": true,
+          "polygon": [
+            [20, 730],
+            [88.87192536047498, 729.5080576759966],
+            [88, 590],
+            [157.1290926099158, 588.644527595884],
+            [160, 729],
+            [155.45909090909092, 507],
+            [99, 507],
+            [99, 452],
+            [119, 452],
+            [117, 417],
+            [80, 417],
+            [80, 423],
+            [15.117715717254534, 423.8110285535343],
+            [13, 291],
+            [20, 730]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LIV. & DIN. RM.; occupation permit records one domestic flat on each floor. No flat letter is printed."
+        }
+      ]
+    },
+    {
+      "id": "floor-4",
+      "label": "4/F",
+      "page": 4,
+      "width": 189,
+      "height": 744,
+      "boundary": [[13, 291], [151, 289], [160, 729], [20, 730], [13, 291]],
+      "sourceFloorId": "typical-2-5",
+      "alignment": {
+        "x": 0,
+        "y": 279,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "wc",
+          "label": "Flat · WC",
+          "category": "toilet",
+          "unitReference": "30 Tak Ku Ling Road",
+          "polygon": [[43, 339], [79, 339], [79, 292], [43, 292], [43, 339]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "W.C., sanitary fixture and bathroom partition."
+        },
+        {
+          "id": "kitchen",
+          "label": "Flat · Kitchen",
+          "category": "kitchen",
+          "unitReference": "30 Tak Ku Ling Road",
+          "polygon": [
+            [80, 290.0289855072464],
+            [13, 291],
+            [15.117715717254534, 423.8110285535343],
+            [80, 423],
+            [80, 290.0289855072464]
+          ],
+          "holes": [[[43, 292], [79, 292], [79, 339], [43, 339], [43, 292]]],
+          "confidence": 0.91,
+          "evidence": "KIT. beside the washroom and rear external wall."
+        },
+        {
+          "id": "stairs",
+          "label": "Common stair and half landing",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[84, 333], [110, 333]],
+              "last": [[84, 383], [110, 383]],
+              "count": 9,
+              "label": "DN"
+            },
+            {
+              "first": [[120, 333], [147, 333]],
+              "last": [[120, 383], [147, 383]],
+              "count": 9,
+              "label": "UP"
+            }
+          ],
+          "polygon": [
+            [153.025, 388],
+            [151, 289],
+            [80, 290.0289855072464],
+            [80, 388],
+            [153.025, 388]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Two tread runs with legible DN on left, UP on right."
+        },
+        {
+          "id": "lobby",
+          "label": "Common stair lobby",
+          "category": "corridor",
+          "polygon": [
+            [80, 417],
+            [117, 417],
+            [119, 452],
+            [154.33409090909092, 452],
+            [153.025, 388],
+            [80, 388],
+            [80, 417]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LOBBY at head of stair, flat entrance swings into the living and dining space."
+        },
+        {
+          "id": "well",
+          "label": "Light well",
+          "category": "void",
+          "polygon": [
+            [99, 507],
+            [155.45909090909092, 507],
+            [154.33409090909092, 452],
+            [99, 452],
+            [99, 507]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "FLAT ROOF on first floor; matching L.W. service opening above."
+        },
+        {
+          "id": "bed",
+          "label": "Flat · Bedroom",
+          "category": "room",
+          "unitReference": "30 Tak Ku Ling Road",
+          "polygon": [
+            [88.87192536047498, 729.5080576759966],
+            [160, 729],
+            [157.1290926099158, 588.644527595884],
+            [88, 590],
+            [88.87192536047498, 729.5080576759966]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "BED RM. and enclosing partition to living/dining room."
+        },
+        {
+          "id": "living",
+          "label": "Flat · Living and dining room",
+          "category": "room",
+          "unitReference": "30 Tak Ku Ling Road",
+          "showUnitReference": true,
+          "polygon": [
+            [20, 730],
+            [88.87192536047498, 729.5080576759966],
+            [88, 590],
+            [157.1290926099158, 588.644527595884],
+            [160, 729],
+            [155.45909090909092, 507],
+            [99, 507],
+            [99, 452],
+            [119, 452],
+            [117, 417],
+            [80, 417],
+            [80, 423],
+            [15.117715717254534, 423.8110285535343],
+            [13, 291],
+            [20, 730]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LIV. & DIN. RM.; occupation permit records one domestic flat on each floor. No flat letter is printed."
+        }
+      ]
+    },
+    {
+      "id": "floor-5",
+      "label": "5/F",
+      "page": 4,
+      "width": 189,
+      "height": 744,
+      "boundary": [[13, 291], [151, 289], [160, 729], [20, 730], [13, 291]],
+      "sourceFloorId": "typical-2-5",
+      "alignment": {
+        "x": 0,
+        "y": 279,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "wc",
+          "label": "Flat · WC",
+          "category": "toilet",
+          "unitReference": "30 Tak Ku Ling Road",
+          "polygon": [[43, 339], [79, 339], [79, 292], [43, 292], [43, 339]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "W.C., sanitary fixture and bathroom partition."
+        },
+        {
+          "id": "kitchen",
+          "label": "Flat · Kitchen",
+          "category": "kitchen",
+          "unitReference": "30 Tak Ku Ling Road",
+          "polygon": [
+            [80, 290.0289855072464],
+            [13, 291],
+            [15.117715717254534, 423.8110285535343],
+            [80, 423],
+            [80, 290.0289855072464]
+          ],
+          "holes": [[[43, 292], [79, 292], [79, 339], [43, 339], [43, 292]]],
+          "confidence": 0.91,
+          "evidence": "KIT. beside the washroom and rear external wall."
+        },
+        {
+          "id": "stairs",
+          "label": "Common stair and half landing",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[84, 333], [110, 333]],
+              "last": [[84, 383], [110, 383]],
+              "count": 9,
+              "label": "DN"
+            },
+            {
+              "first": [[120, 333], [147, 333]],
+              "last": [[120, 383], [147, 383]],
+              "count": 9,
+              "label": "UP"
+            }
+          ],
+          "polygon": [
+            [153.025, 388],
+            [151, 289],
+            [80, 290.0289855072464],
+            [80, 388],
+            [153.025, 388]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Two tread runs with legible DN on left, UP on right."
+        },
+        {
+          "id": "lobby",
+          "label": "Common stair lobby",
+          "category": "corridor",
+          "polygon": [
+            [80, 417],
+            [117, 417],
+            [119, 452],
+            [154.33409090909092, 452],
+            [153.025, 388],
+            [80, 388],
+            [80, 417]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LOBBY at head of stair, flat entrance swings into the living and dining space."
+        },
+        {
+          "id": "well",
+          "label": "Light well",
+          "category": "void",
+          "polygon": [
+            [99, 507],
+            [155.45909090909092, 507],
+            [154.33409090909092, 452],
+            [99, 452],
+            [99, 507]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "FLAT ROOF on first floor; matching L.W. service opening above."
+        },
+        {
+          "id": "bed",
+          "label": "Flat · Bedroom",
+          "category": "room",
+          "unitReference": "30 Tak Ku Ling Road",
+          "polygon": [
+            [88.87192536047498, 729.5080576759966],
+            [160, 729],
+            [157.1290926099158, 588.644527595884],
+            [88, 590],
+            [88.87192536047498, 729.5080576759966]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "BED RM. and enclosing partition to living/dining room."
+        },
+        {
+          "id": "living",
+          "label": "Flat · Living and dining room",
+          "category": "room",
+          "unitReference": "30 Tak Ku Ling Road",
+          "showUnitReference": true,
+          "polygon": [
+            [20, 730],
+            [88.87192536047498, 729.5080576759966],
+            [88, 590],
+            [157.1290926099158, 588.644527595884],
+            [160, 729],
+            [155.45909090909092, 507],
+            [99, 507],
+            [99, 452],
+            [119, 452],
+            [117, 417],
+            [80, 417],
+            [80, 423],
+            [15.117715717254534, 423.8110285535343],
+            [13, 291],
+            [20, 730]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LIV. & DIN. RM.; occupation permit records one domestic flat on each floor. No flat letter is printed."
+        }
+      ]
+    },
+    {
+      "id": "roof",
+      "label": "Roof",
+      "page": 5,
+      "width": 174,
+      "height": 474,
+      "boundary": [[9, 15], [151, 12], [159, 451], [15, 454], [9, 15]],
+      "alignment": {
+        "x": 0,
+        "y": 279,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "stairs",
+          "label": "Roof stair and landing",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[80, 60], [109, 60]],
+              "last": [[80, 109], [109, 109]],
+              "count": 8,
+              "label": "DN"
+            }
+          ],
+          "polygon": [
+            [153.49658314350796, 149],
+            [151, 12],
+            [75, 13.605633802816902],
+            [75, 149],
+            [153.49658314350796, 149]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "DN on left-hand stair leading to the flat roof."
+        },
+        {
+          "id": "well",
+          "label": "Light well",
+          "category": "void",
+          "polygon": [
+            [100, 235],
+            [155.0637813211845, 235],
+            [154.11617312072892, 183],
+            [100, 183],
+            [100, 235]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "L.W. printed inside raised edge of shaft."
+        },
+        {
+          "id": "canopy",
+          "label": "Front canopy",
+          "category": "canopy",
+          "polygon": [
+            [15, 454],
+            [159, 451],
+            [158.25284738041003, 410],
+            [14.398633257403189, 410],
+            [15, 454]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "CANOPY below the street-facing edge of flat roof."
+        },
+        {
+          "id": "roof",
+          "label": "Flat roof",
+          "category": "roof",
+          "polygon": [
+            [14.398633257403189, 410],
+            [158.25284738041003, 410],
+            [151, 12],
+            [9, 15],
+            [14.398633257403189, 410]
+          ],
+          "holes": [
+            [
+              [153.49658314350796, 149],
+              [75, 149],
+              [75, 13.605633802816902],
+              [151, 12],
+              [153.49658314350796, 149]
+            ],
+            [
+              [155.0637813211845, 235],
+              [100, 235],
+              [100, 183],
+              [154.11617312072892, 183],
+              [155.0637813211845, 235]
+            ]
+          ],
+          "confidence": 0.91,
+          "evidence": "FLAT ROOF and drainage arrows around common stair and light well."
+        }
+      ]
+    },
+    {
+      "id": "upper-roof",
+      "label": "Upper roof",
+      "page": 6,
+      "width": 126,
+      "height": 171,
+      "boundary": [[9, 16], [102, 15], [106, 147], [13, 150], [9, 16]],
+      "alignment": {
+        "x": 67,
+        "y": 279,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "roof",
+          "label": "Upper flat roof",
+          "category": "roof",
+          "polygon": [[13, 150], [106, 147], [102, 15], [9, 16], [13, 150]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "FLAT ROOF and surface channel at the stair head; no separately identifiable room above."
+        }
+      ]
+    }
+  ]
+}

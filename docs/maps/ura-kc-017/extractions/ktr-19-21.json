@@ -1,0 +1,3132 @@
+{
+  "venue": {
+    "name": "Wing Shing House",
+    "nameZh": "永勝樓",
+    "address": "19 Kai Tak Road"
+  },
+  "warnings": [
+    "Historical approved plan. Wall thickness and edges left unresolved by the drawing are identified as interstitial areas."
+  ],
+  "floors": [
+    {
+      "id": "ground",
+      "label": "G/F",
+      "page": 1,
+      "width": 467,
+      "height": 1040,
+      "boundary": [[23, 44], [432, 44], [453, 1018], [39, 1018], [23, 44]],
+      "alignment": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "no-19-rear-wc-1",
+          "label": "No. 19 rear WC 1",
+          "category": "toilet",
+          "unitReference": "19",
+          "showUnitReference": false,
+          "polygon": [[33, 49], [110, 49], [110, 99], [33, 99], [33, 49]],
+          "confidence": 0.94,
+          "evidence": "W.C. within the rear yard."
+        },
+        {
+          "id": "no-19-rear-wc-2",
+          "label": "No. 19 rear WC 2",
+          "category": "toilet",
+          "unitReference": "19",
+          "showUnitReference": false,
+          "polygon": [[33, 99], [110, 99], [110, 146], [33, 146], [33, 99]],
+          "confidence": 0.94,
+          "evidence": "W.C. within the rear yard."
+        },
+        {
+          "id": "rear-yard-no-19",
+          "label": "Rear yard No. 19",
+          "category": "balcony",
+          "unitReference": "19",
+          "showUnitReference": false,
+          "polygon": [[110, 49], [200, 49], [200, 146], [110, 146], [110, 49]],
+          "confidence": 0.94,
+          "evidence": "YARD and open gully."
+        },
+        {
+          "id": "shop-stair-no-19",
+          "label": "Shop stair No. 19",
+          "category": "stairs",
+          "unitReference": "19",
+          "showUnitReference": false,
+          "stairFlights": [
+            {
+              "first": [[37, 203], [88, 203]],
+              "last": [[37, 298], [88, 298]],
+              "count": 11,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[35, 199], [90, 199], [90, 310], [35, 310], [35, 199]],
+          "confidence": 0.94,
+          "evidence": "UP and treads lead from shop to its cockloft."
+        },
+        {
+          "id": "no-21-rear-wc-1",
+          "label": "No. 21 rear WC 1",
+          "category": "toilet",
+          "unitReference": "21",
+          "showUnitReference": false,
+          "polygon": [[351, 49], [428, 49], [428, 99], [351, 99], [351, 49]],
+          "confidence": 0.94,
+          "evidence": "W.C. within the rear yard."
+        },
+        {
+          "id": "no-21-rear-wc-2",
+          "label": "No. 21 rear WC 2",
+          "category": "toilet",
+          "unitReference": "21",
+          "showUnitReference": false,
+          "polygon": [[351, 99], [428, 99], [428, 146], [351, 146], [351, 99]],
+          "confidence": 0.94,
+          "evidence": "W.C. within the rear yard."
+        },
+        {
+          "id": "rear-yard-no-21",
+          "label": "Rear yard No. 21",
+          "category": "balcony",
+          "unitReference": "21",
+          "showUnitReference": false,
+          "polygon": [[254, 49], [351, 49], [351, 146], [254, 146], [254, 49]],
+          "confidence": 0.94,
+          "evidence": "YARD and open gully."
+        },
+        {
+          "id": "shop-stair-no-21",
+          "label": "Shop stair No. 21",
+          "category": "stairs",
+          "unitReference": "21",
+          "showUnitReference": false,
+          "stairFlights": [
+            {
+              "first": [[376, 203], [428, 203]],
+              "last": [[376, 298], [428, 298]],
+              "count": 11,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[374, 199], [430, 199], [430, 310], [374, 310], [374, 199]],
+          "confidence": 0.94,
+          "evidence": "UP and treads lead from shop to its cockloft."
+        },
+        {
+          "id": "rear-entrance",
+          "label": "Rear entrance",
+          "category": "corridor",
+          "polygon": [[200, 45], [254, 45], [254, 146], [200, 146], [200, 45]],
+          "confidence": 0.94,
+          "evidence": "External approach above rear stair."
+        },
+        {
+          "id": "rear-common-stair",
+          "label": "Rear common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[204, 151], [255, 151]],
+              "last": [[204, 248], [255, 248]],
+              "count": 10,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[201, 147], [261, 147], [261, 261], [201, 261], [201, 147]],
+          "confidence": 0.94,
+          "evidence": "UP and treads on centreline."
+        },
+        {
+          "id": "front-common-stair",
+          "label": "Front common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[219, 856], [265, 856]],
+              "last": [[219, 965], [265, 965]],
+              "count": 10,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[214, 849], [271, 849], [271, 1012], [214, 1012], [214, 849]],
+          "confidence": 0.94,
+          "evidence": "Main street access stair with treads and UP."
+        },
+        {
+          "id": "shop-no-19",
+          "label": "Shop No. 19",
+          "category": "retail",
+          "unitReference": "19",
+          "showUnitReference": true,
+          "polygon": [
+            [28, 146],
+            [40, 1016],
+            [241, 1016],
+            [240.95402298850576, 1012],
+            [214, 1012],
+            [214, 849],
+            [239.08045977011494, 849],
+            [232.32183908045977, 261],
+            [201, 261],
+            [201, 147],
+            [231.01149425287358, 147],
+            [231, 146],
+            [200, 146],
+            [110, 146],
+            [33, 146],
+            [28, 146]
+          ],
+          "holes": [[[90, 310], [35, 310], [35, 199], [90, 199], [90, 310]]],
+          "confidence": 0.94,
+          "evidence": "SHOP No.19 printed on left frontage."
+        },
+        {
+          "id": "shop-no-21",
+          "label": "Shop No. 21",
+          "category": "retail",
+          "unitReference": "21",
+          "showUnitReference": true,
+          "polygon": [
+            [231, 146],
+            [231.01149425287358, 147],
+            [261, 147],
+            [261, 261],
+            [232.32183908045977, 261],
+            [239.08045977011494, 849],
+            [271, 849],
+            [271, 1012],
+            [240.95402298850576, 1012],
+            [241, 1016],
+            [452, 1016],
+            [432, 146],
+            [428, 146],
+            [351, 146],
+            [254, 146],
+            [231, 146]
+          ],
+          "holes": [[[430, 199], [430, 310], [374, 310], [374, 199], [430, 199]]],
+          "confidence": 0.94,
+          "evidence": "SHOP No.21 printed on right frontage."
+        },
+        {
+          "id": "interstitial-1",
+          "label": "Unclassified interstitial area",
+          "category": "unknown",
+          "polygon": [[39, 1018], [453, 1018], [432, 44], [23, 44], [39, 1018]],
+          "holes": [
+            [
+              [33, 99],
+              [33, 49],
+              [110, 49],
+              [200, 49],
+              [200, 45],
+              [254, 45],
+              [254, 49],
+              [351, 49],
+              [428, 49],
+              [428, 99],
+              [428, 146],
+              [432, 146],
+              [452, 1016],
+              [241, 1016],
+              [40, 1016],
+              [28, 146],
+              [33, 146],
+              [33, 99]
+            ]
+          ],
+          "confidence": 0.45,
+          "evidence": "Remaining area between the traced space edges and exterior building outline. Includes wall thickness and unresolved lines. No independent use is confirmed."
+        }
+      ]
+    },
+    {
+      "id": "cockloft",
+      "label": "Cockloft",
+      "page": 2,
+      "width": 458,
+      "height": 1036,
+      "boundary": [[23, 33], [430, 31], [454, 1004], [41, 1005], [23, 33]],
+      "alignment": {
+        "x": 0,
+        "y": 1,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "cockloft-wc-no-19",
+          "label": "Cockloft WC No. 19",
+          "category": "toilet",
+          "unitReference": "19",
+          "showUnitReference": false,
+          "polygon": [[31, 40], [101, 40], [101, 132], [31, 132], [31, 40]],
+          "confidence": 0.94,
+          "evidence": "W.C. compartment in rear corner, accessed from store."
+        },
+        {
+          "id": "shop-stair-no-19",
+          "label": "Shop stair No. 19",
+          "category": "stairs",
+          "unitReference": "19",
+          "showUnitReference": false,
+          "stairFlights": [
+            {
+              "first": [[40, 205], [89, 205]],
+              "last": [[40, 348], [89, 348]],
+              "count": 14,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[38, 201], [91, 201], [91, 355], [38, 355], [38, 201]],
+          "confidence": 0.94,
+          "evidence": "DN on stair leading to shop."
+        },
+        {
+          "id": "cockloft-wc-no-21",
+          "label": "Cockloft WC No. 21",
+          "category": "toilet",
+          "unitReference": "21",
+          "showUnitReference": false,
+          "polygon": [[351, 40], [428, 40], [428, 132], [351, 132], [351, 40]],
+          "confidence": 0.94,
+          "evidence": "W.C. compartment in rear corner, accessed from store."
+        },
+        {
+          "id": "shop-stair-no-21",
+          "label": "Shop stair No. 21",
+          "category": "stairs",
+          "unitReference": "21",
+          "showUnitReference": false,
+          "stairFlights": [
+            {
+              "first": [[376, 205], [421, 205]],
+              "last": [[376, 348], [421, 348]],
+              "count": 14,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[374, 201], [423, 201], [423, 355], [374, 355], [374, 201]],
+          "confidence": 0.94,
+          "evidence": "DN on stair leading to shop."
+        },
+        {
+          "id": "rear-open-area",
+          "label": "Rear open area",
+          "category": "void",
+          "polygon": [[102, 39], [349, 39], [349, 136], [102, 136], [102, 39]],
+          "confidence": 0.94,
+          "evidence": "Thin linework over the two yards and approach on the ground plan."
+        },
+        {
+          "id": "common-stair-and-landings",
+          "label": "Common stair and landings",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[205, 142], [251, 142]],
+              "last": [[205, 292], [251, 292]],
+              "count": 16
+            },
+            {
+              "first": [[214, 803], [260, 803]],
+              "last": [[214, 952], [260, 952]],
+              "count": 14,
+              "label": "DN"
+            }
+          ],
+          "polygon": [
+            [201, 137],
+            [257, 137],
+            [260, 458],
+            [317, 458],
+            [317, 589],
+            [263, 589],
+            [267, 1000],
+            [209, 1000],
+            [204, 466],
+            [151, 466],
+            [151, 405],
+            [201, 405],
+            [201, 137]
+          ],
+          "confidence": 0.94,
+          "evidence": "Central access joining the common front and rear flights, with offset middle landing."
+        },
+        {
+          "id": "cockloft-store-no-19",
+          "label": "Cockloft store No. 19",
+          "category": "room",
+          "unitReference": "19",
+          "showUnitReference": true,
+          "polygon": [
+            [32, 134],
+            [43, 1000],
+            [209, 1000],
+            [204, 466],
+            [151, 466],
+            [151, 405],
+            [201, 405],
+            [201, 137],
+            [229.02771362586606, 137],
+            [229.01847575057738, 136],
+            [102, 136],
+            [102, 134],
+            [32, 134]
+          ],
+          "holes": [[[38, 355], [38, 201], [91, 201], [91, 355], [38, 355]]],
+          "confidence": 0.94,
+          "evidence": "STORE; OP confirms one cockloft per shop."
+        },
+        {
+          "id": "cockloft-store-no-21",
+          "label": "Cockloft store No. 21",
+          "category": "room",
+          "unitReference": "21",
+          "showUnitReference": true,
+          "polygon": [
+            [451, 1000],
+            [430, 134],
+            [349, 134],
+            [349, 136],
+            [229.01847575057738, 136],
+            [229.02771362586606, 137],
+            [257, 137],
+            [260, 458],
+            [317, 458],
+            [317, 589],
+            [263, 589],
+            [267, 1000],
+            [451, 1000]
+          ],
+          "holes": [[[423, 355], [374, 355], [374, 201], [423, 201], [423, 355]]],
+          "confidence": 0.94,
+          "evidence": "STORE; OP confirms one cockloft per shop."
+        },
+        {
+          "id": "interstitial-1",
+          "label": "Unclassified interstitial area",
+          "category": "unknown",
+          "polygon": [[41, 1005], [454, 1004], [430, 31], [23, 33], [41, 1005]],
+          "holes": [
+            [[101, 132], [31, 132], [31, 40], [101, 40], [101, 132]],
+            [[428, 132], [351, 132], [351, 40], [428, 40], [428, 132]],
+            [
+              [349, 134],
+              [430, 134],
+              [451, 1000],
+              [267, 1000],
+              [209, 1000],
+              [43, 1000],
+              [32, 134],
+              [102, 134],
+              [102, 39],
+              [349, 39],
+              [349, 134]
+            ]
+          ],
+          "confidence": 0.45,
+          "evidence": "Remaining area between the traced space edges and exterior building outline. Includes wall thickness and unresolved lines. No independent use is confirmed."
+        }
+      ]
+    },
+    {
+      "id": "first",
+      "label": "1/F",
+      "page": 3,
+      "width": 455,
+      "height": 1150,
+      "boundary": [[23, 43], [425, 43], [439, 1123], [31, 1123], [23, 43]],
+      "alignment": {
+        "x": 0,
+        "y": 10,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "left-and-rear-first-floor-flat-roof",
+          "label": "Left and rear first-floor flat roof",
+          "category": "roof",
+          "polygon": [
+            [28, 47],
+            [417, 47],
+            [417, 139],
+            [101, 139],
+            [101, 793],
+            [42, 793],
+            [28, 47]
+          ],
+          "confidence": 0.94,
+          "evidence": "Flat roof surrounds C on 1/F and adjoins Flat A."
+        },
+        {
+          "id": "right-first-floor-flat-roof",
+          "label": "Right first-floor flat roof",
+          "category": "roof",
+          "polygon": [
+            [353, 139],
+            [417, 139],
+            [429, 793],
+            [356, 793],
+            [356, 407],
+            [353, 407],
+            [353, 139]
+          ],
+          "confidence": 0.94,
+          "evidence": "Roof adjoining both the right stair and Flat B."
+        },
+        {
+          "id": "flat-c-kitchen",
+          "label": "Flat C kitchen",
+          "category": "kitchen",
+          "unitReference": "C",
+          "showUnitReference": false,
+          "polygon": [[255, 328], [353, 328], [353, 407], [255, 407], [255, 328]],
+          "confidence": 0.94,
+          "evidence": "KIT. and stove in the rear flat."
+        },
+        {
+          "id": "flat-c-wc",
+          "label": "Flat C WC",
+          "category": "toilet",
+          "unitReference": "C",
+          "showUnitReference": false,
+          "polygon": [[101, 362], [148, 362], [148, 407], [101, 407], [101, 362]],
+          "confidence": 0.94,
+          "evidence": "W.C. opens from Flat C."
+        },
+        {
+          "id": "rear-landing",
+          "label": "Rear landing",
+          "category": "corridor",
+          "polygon": [[148, 362], [255, 362], [255, 407], [148, 407], [148, 362]],
+          "confidence": 0.94,
+          "evidence": "Access from common stairs into Flat C."
+        },
+        {
+          "id": "flat-c",
+          "label": "Flat C",
+          "category": "room",
+          "unitReference": "C",
+          "showUnitReference": true,
+          "polygon": [
+            [101, 139],
+            [353, 139],
+            [353, 328],
+            [255, 328],
+            [255, 362],
+            [101, 362],
+            [101, 139]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (C) printed in the rear tenement."
+        },
+        {
+          "id": "left-common-stair",
+          "label": "Left common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[105, 447], [150, 447]],
+              "last": [[105, 549], [150, 549]],
+              "count": 10,
+              "label": "DN"
+            },
+            {
+              "first": [[154, 447], [200, 447]],
+              "last": [[154, 549], [200, 549]],
+              "count": 10,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[102, 407], [203, 407], [203, 599], [102, 599], [102, 407]],
+          "confidence": 0.94,
+          "evidence": "Paired flight with UP and DN on opposite sides of its landing."
+        },
+        {
+          "id": "right-common-stair",
+          "label": "Right common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[258, 447], [303, 447]],
+              "last": [[258, 549], [303, 549]],
+              "count": 10,
+              "label": "UP"
+            },
+            {
+              "first": [[307, 447], [353, 447]],
+              "last": [[307, 549], [353, 549]],
+              "count": 10,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[255, 407], [356, 407], [356, 599], [255, 599], [255, 407]],
+          "confidence": 0.94,
+          "evidence": "Paired flight with UP and DN on opposite sides of its landing."
+        },
+        {
+          "id": "common-corridor",
+          "label": "Common corridor",
+          "category": "corridor",
+          "polygon": [[203, 407], [255, 407], [255, 677], [203, 677], [203, 407]],
+          "confidence": 0.94,
+          "evidence": "Central corridor and access to the stair landings."
+        },
+        {
+          "id": "flat-a-kitchen",
+          "label": "Flat A kitchen",
+          "category": "kitchen",
+          "unitReference": "A",
+          "showUnitReference": false,
+          "polygon": [[102, 677], [181, 677], [181, 793], [102, 793], [102, 677]],
+          "confidence": 0.94,
+          "evidence": "KIT. with stove in left frontage flat."
+        },
+        {
+          "id": "flat-b-kitchen",
+          "label": "Flat B kitchen",
+          "category": "kitchen",
+          "unitReference": "B",
+          "showUnitReference": false,
+          "polygon": [[284, 677], [356, 677], [356, 793], [284, 793], [284, 677]],
+          "confidence": 0.94,
+          "evidence": "KIT. with stove in right frontage flat."
+        },
+        {
+          "id": "left-rear-wc",
+          "label": "Left rear WC",
+          "category": "toilet",
+          "polygon": [[102, 599], [203, 599], [203, 645], [102, 645], [102, 599]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed immediately below the left common stair."
+        },
+        {
+          "id": "left-front-wc",
+          "label": "Left front WC",
+          "category": "toilet",
+          "polygon": [[149, 645], [203, 645], [203, 677], [149, 677], [149, 645]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed in the lower left sanitary compartment."
+        },
+        {
+          "id": "left-light-duct",
+          "label": "Left light duct",
+          "category": "utility",
+          "polygon": [[102, 645], [149, 645], [149, 677], [102, 677], [102, 645]],
+          "confidence": 0.94,
+          "evidence": "Small boxed shaft beside the left WC."
+        },
+        {
+          "id": "right-rear-wc",
+          "label": "Right rear WC",
+          "category": "toilet",
+          "polygon": [[304, 599], [356, 599], [356, 645], [304, 645], [304, 599]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed below right stair."
+        },
+        {
+          "id": "right-front-wc",
+          "label": "Right front WC",
+          "category": "toilet",
+          "polygon": [[255, 645], [304, 645], [304, 677], [255, 677], [255, 645]],
+          "confidence": 0.94,
+          "evidence": "W.C. in right front sanitary compartment."
+        },
+        {
+          "id": "right-light-duct",
+          "label": "Right light duct",
+          "category": "utility",
+          "polygon": [[304, 645], [356, 645], [356, 677], [304, 677], [304, 645]],
+          "confidence": 0.94,
+          "evidence": "Small boxed shaft next to right WC."
+        },
+        {
+          "id": "wc-approach",
+          "label": "WC approach",
+          "category": "corridor",
+          "polygon": [[255, 599], [304, 599], [304, 645], [255, 645], [255, 599]],
+          "confidence": 0.94,
+          "evidence": "Passage to right rear WC."
+        },
+        {
+          "id": "flat-a",
+          "label": "Flat A",
+          "category": "room",
+          "unitReference": "A",
+          "showUnitReference": true,
+          "polygon": [
+            [181, 677],
+            [238, 677],
+            [238, 1007],
+            [41, 1007],
+            [41, 803],
+            [102, 803],
+            [102, 793],
+            [181, 793],
+            [181, 677]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (A) printed in left frontage tenement."
+        },
+        {
+          "id": "flat-b",
+          "label": "Flat B",
+          "category": "room",
+          "unitReference": "B",
+          "showUnitReference": true,
+          "polygon": [
+            [238, 677],
+            [284, 677],
+            [284, 793],
+            [356, 793],
+            [356, 803],
+            [434, 803],
+            [434, 1007],
+            [238, 1007],
+            [238, 677]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (B) printed in right frontage tenement."
+        },
+        {
+          "id": "flat-a-balcony",
+          "label": "Flat A balcony",
+          "category": "balcony",
+          "unitReference": "A",
+          "showUnitReference": false,
+          "polygon": [[41, 1007], [238, 1007], [238, 1120], [41, 1120], [41, 1007]],
+          "confidence": 0.94,
+          "evidence": "BAL. beyond frontage windows."
+        },
+        {
+          "id": "flat-b-balcony",
+          "label": "Flat B balcony",
+          "category": "balcony",
+          "unitReference": "B",
+          "showUnitReference": false,
+          "polygon": [[238, 1007], [434, 1007], [434, 1120], [238, 1120], [238, 1007]],
+          "confidence": 0.94,
+          "evidence": "BAL. beyond frontage windows."
+        },
+        {
+          "id": "interstitial-1",
+          "label": "Unclassified interstitial area",
+          "category": "unknown",
+          "polygon": [[31, 1123], [439, 1123], [425, 43], [23, 43], [31, 1123]],
+          "holes": [
+            [
+              [417, 139],
+              [429, 793],
+              [356, 793],
+              [356, 803],
+              [434, 803],
+              [434, 1007],
+              [434, 1120],
+              [238, 1120],
+              [41, 1120],
+              [41, 1007],
+              [41, 803],
+              [102, 803],
+              [102, 793],
+              [102, 677],
+              [102, 645],
+              [102, 599],
+              [102, 407],
+              [101, 407],
+              [101, 793],
+              [42, 793],
+              [28, 47],
+              [417, 47],
+              [417, 139]
+            ]
+          ],
+          "confidence": 0.45,
+          "evidence": "Remaining area between the traced space edges and exterior building outline. Includes wall thickness and unresolved lines. No independent use is confirmed."
+        }
+      ]
+    },
+    {
+      "id": "2f",
+      "label": "2/F",
+      "page": 4,
+      "width": 463,
+      "height": 1061,
+      "boundary": [
+        [87, 47],
+        [354, 47],
+        [356, 317],
+        [364, 317],
+        [364, 509],
+        [357, 509],
+        [357, 710],
+        [435, 710],
+        [436, 1034],
+        [29, 1034],
+        [29, 709],
+        [89, 710],
+        [89, 509],
+        [84, 509],
+        [84, 346],
+        [88, 346],
+        [87, 47]
+      ],
+      "alignment": {
+        "x": 0,
+        "y": 104,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "flat-c-kitchen",
+          "label": "Flat C kitchen",
+          "category": "kitchen",
+          "unitReference": "C",
+          "showUnitReference": false,
+          "polygon": [[250, 239], [352, 239], [352, 322], [250, 322], [250, 239]],
+          "confidence": 0.94,
+          "evidence": "KIT. and stove in the rear flat."
+        },
+        {
+          "id": "flat-c-wc",
+          "label": "Flat C WC",
+          "category": "toilet",
+          "unitReference": "C",
+          "showUnitReference": false,
+          "polygon": [[90, 271], [137, 271], [137, 322], [90, 322], [90, 271]],
+          "confidence": 0.94,
+          "evidence": "W.C. opens from Flat C."
+        },
+        {
+          "id": "rear-landing",
+          "label": "Rear landing",
+          "category": "corridor",
+          "polygon": [[137, 271], [250, 271], [250, 322], [137, 322], [137, 271]],
+          "confidence": 0.94,
+          "evidence": "Access from common stairs into Flat C."
+        },
+        {
+          "id": "flat-c",
+          "label": "Flat C",
+          "category": "room",
+          "unitReference": "C",
+          "showUnitReference": true,
+          "polygon": [
+            [90, 50],
+            [352, 50],
+            [352, 239],
+            [250, 239],
+            [250, 271],
+            [90, 271],
+            [90, 50]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (C) printed in the rear tenement."
+        },
+        {
+          "id": "left-common-stair",
+          "label": "Left common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[92, 363], [142, 363]],
+              "last": [[92, 448], [142, 448]],
+              "count": 10,
+              "label": "DN"
+            },
+            {
+              "first": [[146, 363], [196, 363]],
+              "last": [[146, 448], [196, 448]],
+              "count": 10,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[89, 322], [199, 322], [199, 502], [89, 502], [89, 322]],
+          "confidence": 0.94,
+          "evidence": "Paired flight with UP and DN on opposite sides of its landing."
+        },
+        {
+          "id": "right-common-stair",
+          "label": "Right common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[253, 363], [301, 363]],
+              "last": [[253, 448], [301, 448]],
+              "count": 10,
+              "label": "UP"
+            },
+            {
+              "first": [[305, 363], [353, 363]],
+              "last": [[305, 448], [353, 448]],
+              "count": 10,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[250, 322], [356, 322], [356, 502], [250, 502], [250, 322]],
+          "confidence": 0.94,
+          "evidence": "Paired flight with UP and DN on opposite sides of its landing."
+        },
+        {
+          "id": "common-corridor",
+          "label": "Common corridor",
+          "category": "corridor",
+          "polygon": [[199, 322], [250, 322], [250, 589], [199, 589], [199, 322]],
+          "confidence": 0.94,
+          "evidence": "Central corridor and access to the stair landings."
+        },
+        {
+          "id": "flat-a-kitchen",
+          "label": "Flat A kitchen",
+          "category": "kitchen",
+          "unitReference": "A",
+          "showUnitReference": false,
+          "polygon": [[89, 589], [177, 589], [177, 701], [89, 701], [89, 589]],
+          "confidence": 0.94,
+          "evidence": "KIT. with stove in left frontage flat."
+        },
+        {
+          "id": "flat-b-kitchen",
+          "label": "Flat B kitchen",
+          "category": "kitchen",
+          "unitReference": "B",
+          "showUnitReference": false,
+          "polygon": [[279, 589], [356, 589], [356, 701], [279, 701], [279, 589]],
+          "confidence": 0.94,
+          "evidence": "KIT. with stove in right frontage flat."
+        },
+        {
+          "id": "left-rear-wc",
+          "label": "Left rear WC",
+          "category": "toilet",
+          "polygon": [[89, 502], [199, 502], [199, 551], [89, 551], [89, 502]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed immediately below the left common stair."
+        },
+        {
+          "id": "left-front-wc",
+          "label": "Left front WC",
+          "category": "toilet",
+          "polygon": [[136, 551], [199, 551], [199, 589], [136, 589], [136, 551]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed in the lower left sanitary compartment."
+        },
+        {
+          "id": "left-light-duct",
+          "label": "Left light duct",
+          "category": "utility",
+          "polygon": [[89, 551], [136, 551], [136, 589], [89, 589], [89, 551]],
+          "confidence": 0.94,
+          "evidence": "Small boxed shaft beside the left WC."
+        },
+        {
+          "id": "right-rear-wc",
+          "label": "Right rear WC",
+          "category": "toilet",
+          "polygon": [[299, 502], [356, 502], [356, 551], [299, 551], [299, 502]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed below right stair."
+        },
+        {
+          "id": "right-front-wc",
+          "label": "Right front WC",
+          "category": "toilet",
+          "polygon": [[250, 551], [299, 551], [299, 589], [250, 589], [250, 551]],
+          "confidence": 0.94,
+          "evidence": "W.C. in right front sanitary compartment."
+        },
+        {
+          "id": "right-light-duct",
+          "label": "Right light duct",
+          "category": "utility",
+          "polygon": [[299, 551], [356, 551], [356, 589], [299, 589], [299, 551]],
+          "confidence": 0.94,
+          "evidence": "Small boxed shaft next to right WC."
+        },
+        {
+          "id": "wc-approach",
+          "label": "WC approach",
+          "category": "corridor",
+          "polygon": [[250, 502], [299, 502], [299, 551], [250, 551], [250, 502]],
+          "confidence": 0.94,
+          "evidence": "Passage to right rear WC."
+        },
+        {
+          "id": "flat-a",
+          "label": "Flat A",
+          "category": "room",
+          "unitReference": "A",
+          "showUnitReference": true,
+          "polygon": [
+            [177, 589],
+            [231, 589],
+            [231, 917],
+            [32, 917],
+            [32, 711],
+            [89, 711],
+            [89, 701],
+            [177, 701],
+            [177, 589]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (A) printed in left frontage tenement."
+        },
+        {
+          "id": "flat-b",
+          "label": "Flat B",
+          "category": "room",
+          "unitReference": "B",
+          "showUnitReference": true,
+          "polygon": [
+            [231, 589],
+            [279, 589],
+            [279, 701],
+            [356, 701],
+            [356, 711],
+            [434, 711],
+            [434, 917],
+            [231, 917],
+            [231, 589]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (B) printed in right frontage tenement."
+        },
+        {
+          "id": "flat-a-balcony",
+          "label": "Flat A balcony",
+          "category": "balcony",
+          "unitReference": "A",
+          "showUnitReference": false,
+          "polygon": [[32, 917], [231, 917], [231, 1029], [32, 1029], [32, 917]],
+          "confidence": 0.94,
+          "evidence": "BAL. beyond frontage windows."
+        },
+        {
+          "id": "flat-b-balcony",
+          "label": "Flat B balcony",
+          "category": "balcony",
+          "unitReference": "B",
+          "showUnitReference": false,
+          "polygon": [[231, 917], [434, 917], [434, 1029], [231, 1029], [231, 917]],
+          "confidence": 0.94,
+          "evidence": "BAL. beyond frontage windows."
+        },
+        {
+          "id": "interstitial-1",
+          "label": "Unclassified interstitial area",
+          "category": "unknown",
+          "polygon": [
+            [29, 709],
+            [29, 1034],
+            [436, 1034],
+            [435, 710],
+            [357, 710],
+            [357, 509],
+            [364, 509],
+            [364, 317],
+            [356, 317],
+            [354, 47],
+            [87, 47],
+            [88, 346],
+            [84, 346],
+            [84, 509],
+            [89, 509],
+            [89, 502],
+            [89, 322],
+            [90, 322],
+            [90, 271],
+            [90, 50],
+            [352, 50],
+            [352, 239],
+            [352, 322],
+            [356, 322],
+            [356, 502],
+            [356, 551],
+            [356, 589],
+            [356, 701],
+            [356, 711],
+            [434, 711],
+            [434, 917],
+            [434, 1029],
+            [231, 1029],
+            [32, 1029],
+            [32, 917],
+            [32, 711],
+            [89, 711],
+            [89, 710],
+            [29, 709]
+          ],
+          "confidence": 0.45,
+          "evidence": "Remaining area between the traced space edges and exterior building outline. Includes wall thickness and unresolved lines. No independent use is confirmed."
+        }
+      ]
+    },
+    {
+      "id": "3f",
+      "label": "3/F",
+      "page": 4,
+      "width": 463,
+      "height": 1061,
+      "boundary": [
+        [87, 47],
+        [354, 47],
+        [356, 317],
+        [364, 317],
+        [364, 509],
+        [357, 509],
+        [357, 710],
+        [435, 710],
+        [436, 1034],
+        [29, 1034],
+        [29, 709],
+        [89, 710],
+        [89, 509],
+        [84, 509],
+        [84, 346],
+        [88, 346],
+        [87, 47]
+      ],
+      "sourceFloorId": "2f",
+      "alignment": {
+        "x": 0,
+        "y": 104,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "flat-c-kitchen",
+          "label": "Flat C kitchen",
+          "category": "kitchen",
+          "unitReference": "C",
+          "showUnitReference": false,
+          "polygon": [[250, 239], [352, 239], [352, 322], [250, 322], [250, 239]],
+          "confidence": 0.94,
+          "evidence": "KIT. and stove in the rear flat."
+        },
+        {
+          "id": "flat-c-wc",
+          "label": "Flat C WC",
+          "category": "toilet",
+          "unitReference": "C",
+          "showUnitReference": false,
+          "polygon": [[90, 271], [137, 271], [137, 322], [90, 322], [90, 271]],
+          "confidence": 0.94,
+          "evidence": "W.C. opens from Flat C."
+        },
+        {
+          "id": "rear-landing",
+          "label": "Rear landing",
+          "category": "corridor",
+          "polygon": [[137, 271], [250, 271], [250, 322], [137, 322], [137, 271]],
+          "confidence": 0.94,
+          "evidence": "Access from common stairs into Flat C."
+        },
+        {
+          "id": "flat-c",
+          "label": "Flat C",
+          "category": "room",
+          "unitReference": "C",
+          "showUnitReference": true,
+          "polygon": [
+            [90, 50],
+            [352, 50],
+            [352, 239],
+            [250, 239],
+            [250, 271],
+            [90, 271],
+            [90, 50]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (C) printed in the rear tenement."
+        },
+        {
+          "id": "left-common-stair",
+          "label": "Left common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[92, 363], [142, 363]],
+              "last": [[92, 448], [142, 448]],
+              "count": 10,
+              "label": "DN"
+            },
+            {
+              "first": [[146, 363], [196, 363]],
+              "last": [[146, 448], [196, 448]],
+              "count": 10,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[89, 322], [199, 322], [199, 502], [89, 502], [89, 322]],
+          "confidence": 0.94,
+          "evidence": "Paired flight with UP and DN on opposite sides of its landing."
+        },
+        {
+          "id": "right-common-stair",
+          "label": "Right common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[253, 363], [301, 363]],
+              "last": [[253, 448], [301, 448]],
+              "count": 10,
+              "label": "UP"
+            },
+            {
+              "first": [[305, 363], [353, 363]],
+              "last": [[305, 448], [353, 448]],
+              "count": 10,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[250, 322], [356, 322], [356, 502], [250, 502], [250, 322]],
+          "confidence": 0.94,
+          "evidence": "Paired flight with UP and DN on opposite sides of its landing."
+        },
+        {
+          "id": "common-corridor",
+          "label": "Common corridor",
+          "category": "corridor",
+          "polygon": [[199, 322], [250, 322], [250, 589], [199, 589], [199, 322]],
+          "confidence": 0.94,
+          "evidence": "Central corridor and access to the stair landings."
+        },
+        {
+          "id": "flat-a-kitchen",
+          "label": "Flat A kitchen",
+          "category": "kitchen",
+          "unitReference": "A",
+          "showUnitReference": false,
+          "polygon": [[89, 589], [177, 589], [177, 701], [89, 701], [89, 589]],
+          "confidence": 0.94,
+          "evidence": "KIT. with stove in left frontage flat."
+        },
+        {
+          "id": "flat-b-kitchen",
+          "label": "Flat B kitchen",
+          "category": "kitchen",
+          "unitReference": "B",
+          "showUnitReference": false,
+          "polygon": [[279, 589], [356, 589], [356, 701], [279, 701], [279, 589]],
+          "confidence": 0.94,
+          "evidence": "KIT. with stove in right frontage flat."
+        },
+        {
+          "id": "left-rear-wc",
+          "label": "Left rear WC",
+          "category": "toilet",
+          "polygon": [[89, 502], [199, 502], [199, 551], [89, 551], [89, 502]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed immediately below the left common stair."
+        },
+        {
+          "id": "left-front-wc",
+          "label": "Left front WC",
+          "category": "toilet",
+          "polygon": [[136, 551], [199, 551], [199, 589], [136, 589], [136, 551]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed in the lower left sanitary compartment."
+        },
+        {
+          "id": "left-light-duct",
+          "label": "Left light duct",
+          "category": "utility",
+          "polygon": [[89, 551], [136, 551], [136, 589], [89, 589], [89, 551]],
+          "confidence": 0.94,
+          "evidence": "Small boxed shaft beside the left WC."
+        },
+        {
+          "id": "right-rear-wc",
+          "label": "Right rear WC",
+          "category": "toilet",
+          "polygon": [[299, 502], [356, 502], [356, 551], [299, 551], [299, 502]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed below right stair."
+        },
+        {
+          "id": "right-front-wc",
+          "label": "Right front WC",
+          "category": "toilet",
+          "polygon": [[250, 551], [299, 551], [299, 589], [250, 589], [250, 551]],
+          "confidence": 0.94,
+          "evidence": "W.C. in right front sanitary compartment."
+        },
+        {
+          "id": "right-light-duct",
+          "label": "Right light duct",
+          "category": "utility",
+          "polygon": [[299, 551], [356, 551], [356, 589], [299, 589], [299, 551]],
+          "confidence": 0.94,
+          "evidence": "Small boxed shaft next to right WC."
+        },
+        {
+          "id": "wc-approach",
+          "label": "WC approach",
+          "category": "corridor",
+          "polygon": [[250, 502], [299, 502], [299, 551], [250, 551], [250, 502]],
+          "confidence": 0.94,
+          "evidence": "Passage to right rear WC."
+        },
+        {
+          "id": "flat-a",
+          "label": "Flat A",
+          "category": "room",
+          "unitReference": "A",
+          "showUnitReference": true,
+          "polygon": [
+            [177, 589],
+            [231, 589],
+            [231, 917],
+            [32, 917],
+            [32, 711],
+            [89, 711],
+            [89, 701],
+            [177, 701],
+            [177, 589]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (A) printed in left frontage tenement."
+        },
+        {
+          "id": "flat-b",
+          "label": "Flat B",
+          "category": "room",
+          "unitReference": "B",
+          "showUnitReference": true,
+          "polygon": [
+            [231, 589],
+            [279, 589],
+            [279, 701],
+            [356, 701],
+            [356, 711],
+            [434, 711],
+            [434, 917],
+            [231, 917],
+            [231, 589]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (B) printed in right frontage tenement."
+        },
+        {
+          "id": "flat-a-balcony",
+          "label": "Flat A balcony",
+          "category": "balcony",
+          "unitReference": "A",
+          "showUnitReference": false,
+          "polygon": [[32, 917], [231, 917], [231, 1029], [32, 1029], [32, 917]],
+          "confidence": 0.94,
+          "evidence": "BAL. beyond frontage windows."
+        },
+        {
+          "id": "flat-b-balcony",
+          "label": "Flat B balcony",
+          "category": "balcony",
+          "unitReference": "B",
+          "showUnitReference": false,
+          "polygon": [[231, 917], [434, 917], [434, 1029], [231, 1029], [231, 917]],
+          "confidence": 0.94,
+          "evidence": "BAL. beyond frontage windows."
+        },
+        {
+          "id": "interstitial-1",
+          "label": "Unclassified interstitial area",
+          "category": "unknown",
+          "polygon": [
+            [29, 709],
+            [29, 1034],
+            [436, 1034],
+            [435, 710],
+            [357, 710],
+            [357, 509],
+            [364, 509],
+            [364, 317],
+            [356, 317],
+            [354, 47],
+            [87, 47],
+            [88, 346],
+            [84, 346],
+            [84, 509],
+            [89, 509],
+            [89, 502],
+            [89, 322],
+            [90, 322],
+            [90, 271],
+            [90, 50],
+            [352, 50],
+            [352, 239],
+            [352, 322],
+            [356, 322],
+            [356, 502],
+            [356, 551],
+            [356, 589],
+            [356, 701],
+            [356, 711],
+            [434, 711],
+            [434, 917],
+            [434, 1029],
+            [231, 1029],
+            [32, 1029],
+            [32, 917],
+            [32, 711],
+            [89, 711],
+            [89, 710],
+            [29, 709]
+          ],
+          "confidence": 0.45,
+          "evidence": "Remaining area between the traced space edges and exterior building outline. Includes wall thickness and unresolved lines. No independent use is confirmed."
+        }
+      ]
+    },
+    {
+      "id": "4f",
+      "label": "4/F",
+      "page": 4,
+      "width": 463,
+      "height": 1061,
+      "boundary": [
+        [87, 47],
+        [354, 47],
+        [356, 317],
+        [364, 317],
+        [364, 509],
+        [357, 509],
+        [357, 710],
+        [435, 710],
+        [436, 1034],
+        [29, 1034],
+        [29, 709],
+        [89, 710],
+        [89, 509],
+        [84, 509],
+        [84, 346],
+        [88, 346],
+        [87, 47]
+      ],
+      "sourceFloorId": "2f",
+      "alignment": {
+        "x": 0,
+        "y": 104,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "flat-c-kitchen",
+          "label": "Flat C kitchen",
+          "category": "kitchen",
+          "unitReference": "C",
+          "showUnitReference": false,
+          "polygon": [[250, 239], [352, 239], [352, 322], [250, 322], [250, 239]],
+          "confidence": 0.94,
+          "evidence": "KIT. and stove in the rear flat."
+        },
+        {
+          "id": "flat-c-wc",
+          "label": "Flat C WC",
+          "category": "toilet",
+          "unitReference": "C",
+          "showUnitReference": false,
+          "polygon": [[90, 271], [137, 271], [137, 322], [90, 322], [90, 271]],
+          "confidence": 0.94,
+          "evidence": "W.C. opens from Flat C."
+        },
+        {
+          "id": "rear-landing",
+          "label": "Rear landing",
+          "category": "corridor",
+          "polygon": [[137, 271], [250, 271], [250, 322], [137, 322], [137, 271]],
+          "confidence": 0.94,
+          "evidence": "Access from common stairs into Flat C."
+        },
+        {
+          "id": "flat-c",
+          "label": "Flat C",
+          "category": "room",
+          "unitReference": "C",
+          "showUnitReference": true,
+          "polygon": [
+            [90, 50],
+            [352, 50],
+            [352, 239],
+            [250, 239],
+            [250, 271],
+            [90, 271],
+            [90, 50]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (C) printed in the rear tenement."
+        },
+        {
+          "id": "left-common-stair",
+          "label": "Left common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[92, 363], [142, 363]],
+              "last": [[92, 448], [142, 448]],
+              "count": 10,
+              "label": "DN"
+            },
+            {
+              "first": [[146, 363], [196, 363]],
+              "last": [[146, 448], [196, 448]],
+              "count": 10,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[89, 322], [199, 322], [199, 502], [89, 502], [89, 322]],
+          "confidence": 0.94,
+          "evidence": "Paired flight with UP and DN on opposite sides of its landing."
+        },
+        {
+          "id": "right-common-stair",
+          "label": "Right common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[253, 363], [301, 363]],
+              "last": [[253, 448], [301, 448]],
+              "count": 10,
+              "label": "UP"
+            },
+            {
+              "first": [[305, 363], [353, 363]],
+              "last": [[305, 448], [353, 448]],
+              "count": 10,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[250, 322], [356, 322], [356, 502], [250, 502], [250, 322]],
+          "confidence": 0.94,
+          "evidence": "Paired flight with UP and DN on opposite sides of its landing."
+        },
+        {
+          "id": "common-corridor",
+          "label": "Common corridor",
+          "category": "corridor",
+          "polygon": [[199, 322], [250, 322], [250, 589], [199, 589], [199, 322]],
+          "confidence": 0.94,
+          "evidence": "Central corridor and access to the stair landings."
+        },
+        {
+          "id": "flat-a-kitchen",
+          "label": "Flat A kitchen",
+          "category": "kitchen",
+          "unitReference": "A",
+          "showUnitReference": false,
+          "polygon": [[89, 589], [177, 589], [177, 701], [89, 701], [89, 589]],
+          "confidence": 0.94,
+          "evidence": "KIT. with stove in left frontage flat."
+        },
+        {
+          "id": "flat-b-kitchen",
+          "label": "Flat B kitchen",
+          "category": "kitchen",
+          "unitReference": "B",
+          "showUnitReference": false,
+          "polygon": [[279, 589], [356, 589], [356, 701], [279, 701], [279, 589]],
+          "confidence": 0.94,
+          "evidence": "KIT. with stove in right frontage flat."
+        },
+        {
+          "id": "left-rear-wc",
+          "label": "Left rear WC",
+          "category": "toilet",
+          "polygon": [[89, 502], [199, 502], [199, 551], [89, 551], [89, 502]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed immediately below the left common stair."
+        },
+        {
+          "id": "left-front-wc",
+          "label": "Left front WC",
+          "category": "toilet",
+          "polygon": [[136, 551], [199, 551], [199, 589], [136, 589], [136, 551]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed in the lower left sanitary compartment."
+        },
+        {
+          "id": "left-light-duct",
+          "label": "Left light duct",
+          "category": "utility",
+          "polygon": [[89, 551], [136, 551], [136, 589], [89, 589], [89, 551]],
+          "confidence": 0.94,
+          "evidence": "Small boxed shaft beside the left WC."
+        },
+        {
+          "id": "right-rear-wc",
+          "label": "Right rear WC",
+          "category": "toilet",
+          "polygon": [[299, 502], [356, 502], [356, 551], [299, 551], [299, 502]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed below right stair."
+        },
+        {
+          "id": "right-front-wc",
+          "label": "Right front WC",
+          "category": "toilet",
+          "polygon": [[250, 551], [299, 551], [299, 589], [250, 589], [250, 551]],
+          "confidence": 0.94,
+          "evidence": "W.C. in right front sanitary compartment."
+        },
+        {
+          "id": "right-light-duct",
+          "label": "Right light duct",
+          "category": "utility",
+          "polygon": [[299, 551], [356, 551], [356, 589], [299, 589], [299, 551]],
+          "confidence": 0.94,
+          "evidence": "Small boxed shaft next to right WC."
+        },
+        {
+          "id": "wc-approach",
+          "label": "WC approach",
+          "category": "corridor",
+          "polygon": [[250, 502], [299, 502], [299, 551], [250, 551], [250, 502]],
+          "confidence": 0.94,
+          "evidence": "Passage to right rear WC."
+        },
+        {
+          "id": "flat-a",
+          "label": "Flat A",
+          "category": "room",
+          "unitReference": "A",
+          "showUnitReference": true,
+          "polygon": [
+            [177, 589],
+            [231, 589],
+            [231, 917],
+            [32, 917],
+            [32, 711],
+            [89, 711],
+            [89, 701],
+            [177, 701],
+            [177, 589]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (A) printed in left frontage tenement."
+        },
+        {
+          "id": "flat-b",
+          "label": "Flat B",
+          "category": "room",
+          "unitReference": "B",
+          "showUnitReference": true,
+          "polygon": [
+            [231, 589],
+            [279, 589],
+            [279, 701],
+            [356, 701],
+            [356, 711],
+            [434, 711],
+            [434, 917],
+            [231, 917],
+            [231, 589]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (B) printed in right frontage tenement."
+        },
+        {
+          "id": "flat-a-balcony",
+          "label": "Flat A balcony",
+          "category": "balcony",
+          "unitReference": "A",
+          "showUnitReference": false,
+          "polygon": [[32, 917], [231, 917], [231, 1029], [32, 1029], [32, 917]],
+          "confidence": 0.94,
+          "evidence": "BAL. beyond frontage windows."
+        },
+        {
+          "id": "flat-b-balcony",
+          "label": "Flat B balcony",
+          "category": "balcony",
+          "unitReference": "B",
+          "showUnitReference": false,
+          "polygon": [[231, 917], [434, 917], [434, 1029], [231, 1029], [231, 917]],
+          "confidence": 0.94,
+          "evidence": "BAL. beyond frontage windows."
+        },
+        {
+          "id": "interstitial-1",
+          "label": "Unclassified interstitial area",
+          "category": "unknown",
+          "polygon": [
+            [29, 709],
+            [29, 1034],
+            [436, 1034],
+            [435, 710],
+            [357, 710],
+            [357, 509],
+            [364, 509],
+            [364, 317],
+            [356, 317],
+            [354, 47],
+            [87, 47],
+            [88, 346],
+            [84, 346],
+            [84, 509],
+            [89, 509],
+            [89, 502],
+            [89, 322],
+            [90, 322],
+            [90, 271],
+            [90, 50],
+            [352, 50],
+            [352, 239],
+            [352, 322],
+            [356, 322],
+            [356, 502],
+            [356, 551],
+            [356, 589],
+            [356, 701],
+            [356, 711],
+            [434, 711],
+            [434, 917],
+            [434, 1029],
+            [231, 1029],
+            [32, 1029],
+            [32, 917],
+            [32, 711],
+            [89, 711],
+            [89, 710],
+            [29, 709]
+          ],
+          "confidence": 0.45,
+          "evidence": "Remaining area between the traced space edges and exterior building outline. Includes wall thickness and unresolved lines. No independent use is confirmed."
+        }
+      ]
+    },
+    {
+      "id": "5f",
+      "label": "5/F",
+      "page": 4,
+      "width": 463,
+      "height": 1061,
+      "boundary": [
+        [87, 47],
+        [354, 47],
+        [356, 317],
+        [364, 317],
+        [364, 509],
+        [357, 509],
+        [357, 710],
+        [435, 710],
+        [436, 1034],
+        [29, 1034],
+        [29, 709],
+        [89, 710],
+        [89, 509],
+        [84, 509],
+        [84, 346],
+        [88, 346],
+        [87, 47]
+      ],
+      "sourceFloorId": "2f",
+      "alignment": {
+        "x": 0,
+        "y": 104,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "flat-c-kitchen",
+          "label": "Flat C kitchen",
+          "category": "kitchen",
+          "unitReference": "C",
+          "showUnitReference": false,
+          "polygon": [[250, 239], [352, 239], [352, 322], [250, 322], [250, 239]],
+          "confidence": 0.94,
+          "evidence": "KIT. and stove in the rear flat."
+        },
+        {
+          "id": "flat-c-wc",
+          "label": "Flat C WC",
+          "category": "toilet",
+          "unitReference": "C",
+          "showUnitReference": false,
+          "polygon": [[90, 271], [137, 271], [137, 322], [90, 322], [90, 271]],
+          "confidence": 0.94,
+          "evidence": "W.C. opens from Flat C."
+        },
+        {
+          "id": "rear-landing",
+          "label": "Rear landing",
+          "category": "corridor",
+          "polygon": [[137, 271], [250, 271], [250, 322], [137, 322], [137, 271]],
+          "confidence": 0.94,
+          "evidence": "Access from common stairs into Flat C."
+        },
+        {
+          "id": "flat-c",
+          "label": "Flat C",
+          "category": "room",
+          "unitReference": "C",
+          "showUnitReference": true,
+          "polygon": [
+            [90, 50],
+            [352, 50],
+            [352, 239],
+            [250, 239],
+            [250, 271],
+            [90, 271],
+            [90, 50]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (C) printed in the rear tenement."
+        },
+        {
+          "id": "left-common-stair",
+          "label": "Left common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[92, 363], [142, 363]],
+              "last": [[92, 448], [142, 448]],
+              "count": 10,
+              "label": "DN"
+            },
+            {
+              "first": [[146, 363], [196, 363]],
+              "last": [[146, 448], [196, 448]],
+              "count": 10,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[89, 322], [199, 322], [199, 502], [89, 502], [89, 322]],
+          "confidence": 0.94,
+          "evidence": "Paired flight with UP and DN on opposite sides of its landing."
+        },
+        {
+          "id": "right-common-stair",
+          "label": "Right common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[253, 363], [301, 363]],
+              "last": [[253, 448], [301, 448]],
+              "count": 10,
+              "label": "UP"
+            },
+            {
+              "first": [[305, 363], [353, 363]],
+              "last": [[305, 448], [353, 448]],
+              "count": 10,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[250, 322], [356, 322], [356, 502], [250, 502], [250, 322]],
+          "confidence": 0.94,
+          "evidence": "Paired flight with UP and DN on opposite sides of its landing."
+        },
+        {
+          "id": "common-corridor",
+          "label": "Common corridor",
+          "category": "corridor",
+          "polygon": [[199, 322], [250, 322], [250, 589], [199, 589], [199, 322]],
+          "confidence": 0.94,
+          "evidence": "Central corridor and access to the stair landings."
+        },
+        {
+          "id": "flat-a-kitchen",
+          "label": "Flat A kitchen",
+          "category": "kitchen",
+          "unitReference": "A",
+          "showUnitReference": false,
+          "polygon": [[89, 589], [177, 589], [177, 701], [89, 701], [89, 589]],
+          "confidence": 0.94,
+          "evidence": "KIT. with stove in left frontage flat."
+        },
+        {
+          "id": "flat-b-kitchen",
+          "label": "Flat B kitchen",
+          "category": "kitchen",
+          "unitReference": "B",
+          "showUnitReference": false,
+          "polygon": [[279, 589], [356, 589], [356, 701], [279, 701], [279, 589]],
+          "confidence": 0.94,
+          "evidence": "KIT. with stove in right frontage flat."
+        },
+        {
+          "id": "left-rear-wc",
+          "label": "Left rear WC",
+          "category": "toilet",
+          "polygon": [[89, 502], [199, 502], [199, 551], [89, 551], [89, 502]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed immediately below the left common stair."
+        },
+        {
+          "id": "left-front-wc",
+          "label": "Left front WC",
+          "category": "toilet",
+          "polygon": [[136, 551], [199, 551], [199, 589], [136, 589], [136, 551]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed in the lower left sanitary compartment."
+        },
+        {
+          "id": "left-light-duct",
+          "label": "Left light duct",
+          "category": "utility",
+          "polygon": [[89, 551], [136, 551], [136, 589], [89, 589], [89, 551]],
+          "confidence": 0.94,
+          "evidence": "Small boxed shaft beside the left WC."
+        },
+        {
+          "id": "right-rear-wc",
+          "label": "Right rear WC",
+          "category": "toilet",
+          "polygon": [[299, 502], [356, 502], [356, 551], [299, 551], [299, 502]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed below right stair."
+        },
+        {
+          "id": "right-front-wc",
+          "label": "Right front WC",
+          "category": "toilet",
+          "polygon": [[250, 551], [299, 551], [299, 589], [250, 589], [250, 551]],
+          "confidence": 0.94,
+          "evidence": "W.C. in right front sanitary compartment."
+        },
+        {
+          "id": "right-light-duct",
+          "label": "Right light duct",
+          "category": "utility",
+          "polygon": [[299, 551], [356, 551], [356, 589], [299, 589], [299, 551]],
+          "confidence": 0.94,
+          "evidence": "Small boxed shaft next to right WC."
+        },
+        {
+          "id": "wc-approach",
+          "label": "WC approach",
+          "category": "corridor",
+          "polygon": [[250, 502], [299, 502], [299, 551], [250, 551], [250, 502]],
+          "confidence": 0.94,
+          "evidence": "Passage to right rear WC."
+        },
+        {
+          "id": "flat-a",
+          "label": "Flat A",
+          "category": "room",
+          "unitReference": "A",
+          "showUnitReference": true,
+          "polygon": [
+            [177, 589],
+            [231, 589],
+            [231, 917],
+            [32, 917],
+            [32, 711],
+            [89, 711],
+            [89, 701],
+            [177, 701],
+            [177, 589]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (A) printed in left frontage tenement."
+        },
+        {
+          "id": "flat-b",
+          "label": "Flat B",
+          "category": "room",
+          "unitReference": "B",
+          "showUnitReference": true,
+          "polygon": [
+            [231, 589],
+            [279, 589],
+            [279, 701],
+            [356, 701],
+            [356, 711],
+            [434, 711],
+            [434, 917],
+            [231, 917],
+            [231, 589]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (B) printed in right frontage tenement."
+        },
+        {
+          "id": "flat-a-balcony",
+          "label": "Flat A balcony",
+          "category": "balcony",
+          "unitReference": "A",
+          "showUnitReference": false,
+          "polygon": [[32, 917], [231, 917], [231, 1029], [32, 1029], [32, 917]],
+          "confidence": 0.94,
+          "evidence": "BAL. beyond frontage windows."
+        },
+        {
+          "id": "flat-b-balcony",
+          "label": "Flat B balcony",
+          "category": "balcony",
+          "unitReference": "B",
+          "showUnitReference": false,
+          "polygon": [[231, 917], [434, 917], [434, 1029], [231, 1029], [231, 917]],
+          "confidence": 0.94,
+          "evidence": "BAL. beyond frontage windows."
+        },
+        {
+          "id": "interstitial-1",
+          "label": "Unclassified interstitial area",
+          "category": "unknown",
+          "polygon": [
+            [29, 709],
+            [29, 1034],
+            [436, 1034],
+            [435, 710],
+            [357, 710],
+            [357, 509],
+            [364, 509],
+            [364, 317],
+            [356, 317],
+            [354, 47],
+            [87, 47],
+            [88, 346],
+            [84, 346],
+            [84, 509],
+            [89, 509],
+            [89, 502],
+            [89, 322],
+            [90, 322],
+            [90, 271],
+            [90, 50],
+            [352, 50],
+            [352, 239],
+            [352, 322],
+            [356, 322],
+            [356, 502],
+            [356, 551],
+            [356, 589],
+            [356, 701],
+            [356, 711],
+            [434, 711],
+            [434, 917],
+            [434, 1029],
+            [231, 1029],
+            [32, 1029],
+            [32, 917],
+            [32, 711],
+            [89, 711],
+            [89, 710],
+            [29, 709]
+          ],
+          "confidence": 0.45,
+          "evidence": "Remaining area between the traced space edges and exterior building outline. Includes wall thickness and unresolved lines. No independent use is confirmed."
+        }
+      ]
+    },
+    {
+      "id": "6f",
+      "label": "6/F",
+      "page": 4,
+      "width": 463,
+      "height": 1061,
+      "boundary": [
+        [87, 47],
+        [354, 47],
+        [356, 317],
+        [364, 317],
+        [364, 509],
+        [357, 509],
+        [357, 710],
+        [435, 710],
+        [436, 1034],
+        [29, 1034],
+        [29, 709],
+        [89, 710],
+        [89, 509],
+        [84, 509],
+        [84, 346],
+        [88, 346],
+        [87, 47]
+      ],
+      "sourceFloorId": "2f",
+      "alignment": {
+        "x": 0,
+        "y": 104,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "flat-c-kitchen",
+          "label": "Flat C kitchen",
+          "category": "kitchen",
+          "unitReference": "C",
+          "showUnitReference": false,
+          "polygon": [[250, 239], [352, 239], [352, 322], [250, 322], [250, 239]],
+          "confidence": 0.94,
+          "evidence": "KIT. and stove in the rear flat."
+        },
+        {
+          "id": "flat-c-wc",
+          "label": "Flat C WC",
+          "category": "toilet",
+          "unitReference": "C",
+          "showUnitReference": false,
+          "polygon": [[90, 271], [137, 271], [137, 322], [90, 322], [90, 271]],
+          "confidence": 0.94,
+          "evidence": "W.C. opens from Flat C."
+        },
+        {
+          "id": "rear-landing",
+          "label": "Rear landing",
+          "category": "corridor",
+          "polygon": [[137, 271], [250, 271], [250, 322], [137, 322], [137, 271]],
+          "confidence": 0.94,
+          "evidence": "Access from common stairs into Flat C."
+        },
+        {
+          "id": "flat-c",
+          "label": "Flat C",
+          "category": "room",
+          "unitReference": "C",
+          "showUnitReference": true,
+          "polygon": [
+            [90, 50],
+            [352, 50],
+            [352, 239],
+            [250, 239],
+            [250, 271],
+            [90, 271],
+            [90, 50]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (C) printed in the rear tenement."
+        },
+        {
+          "id": "left-common-stair",
+          "label": "Left common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[92, 363], [142, 363]],
+              "last": [[92, 448], [142, 448]],
+              "count": 10,
+              "label": "DN"
+            },
+            {
+              "first": [[146, 363], [196, 363]],
+              "last": [[146, 448], [196, 448]],
+              "count": 10,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[89, 322], [199, 322], [199, 502], [89, 502], [89, 322]],
+          "confidence": 0.94,
+          "evidence": "Paired flight with UP and DN on opposite sides of its landing."
+        },
+        {
+          "id": "right-common-stair",
+          "label": "Right common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[253, 363], [301, 363]],
+              "last": [[253, 448], [301, 448]],
+              "count": 10,
+              "label": "UP"
+            },
+            {
+              "first": [[305, 363], [353, 363]],
+              "last": [[305, 448], [353, 448]],
+              "count": 10,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[250, 322], [356, 322], [356, 502], [250, 502], [250, 322]],
+          "confidence": 0.94,
+          "evidence": "Paired flight with UP and DN on opposite sides of its landing."
+        },
+        {
+          "id": "common-corridor",
+          "label": "Common corridor",
+          "category": "corridor",
+          "polygon": [[199, 322], [250, 322], [250, 589], [199, 589], [199, 322]],
+          "confidence": 0.94,
+          "evidence": "Central corridor and access to the stair landings."
+        },
+        {
+          "id": "flat-a-kitchen",
+          "label": "Flat A kitchen",
+          "category": "kitchen",
+          "unitReference": "A",
+          "showUnitReference": false,
+          "polygon": [[89, 589], [177, 589], [177, 701], [89, 701], [89, 589]],
+          "confidence": 0.94,
+          "evidence": "KIT. with stove in left frontage flat."
+        },
+        {
+          "id": "flat-b-kitchen",
+          "label": "Flat B kitchen",
+          "category": "kitchen",
+          "unitReference": "B",
+          "showUnitReference": false,
+          "polygon": [[279, 589], [356, 589], [356, 701], [279, 701], [279, 589]],
+          "confidence": 0.94,
+          "evidence": "KIT. with stove in right frontage flat."
+        },
+        {
+          "id": "left-rear-wc",
+          "label": "Left rear WC",
+          "category": "toilet",
+          "polygon": [[89, 502], [199, 502], [199, 551], [89, 551], [89, 502]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed immediately below the left common stair."
+        },
+        {
+          "id": "left-front-wc",
+          "label": "Left front WC",
+          "category": "toilet",
+          "polygon": [[136, 551], [199, 551], [199, 589], [136, 589], [136, 551]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed in the lower left sanitary compartment."
+        },
+        {
+          "id": "left-light-duct",
+          "label": "Left light duct",
+          "category": "utility",
+          "polygon": [[89, 551], [136, 551], [136, 589], [89, 589], [89, 551]],
+          "confidence": 0.94,
+          "evidence": "Small boxed shaft beside the left WC."
+        },
+        {
+          "id": "right-rear-wc",
+          "label": "Right rear WC",
+          "category": "toilet",
+          "polygon": [[299, 502], [356, 502], [356, 551], [299, 551], [299, 502]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed below right stair."
+        },
+        {
+          "id": "right-front-wc",
+          "label": "Right front WC",
+          "category": "toilet",
+          "polygon": [[250, 551], [299, 551], [299, 589], [250, 589], [250, 551]],
+          "confidence": 0.94,
+          "evidence": "W.C. in right front sanitary compartment."
+        },
+        {
+          "id": "right-light-duct",
+          "label": "Right light duct",
+          "category": "utility",
+          "polygon": [[299, 551], [356, 551], [356, 589], [299, 589], [299, 551]],
+          "confidence": 0.94,
+          "evidence": "Small boxed shaft next to right WC."
+        },
+        {
+          "id": "wc-approach",
+          "label": "WC approach",
+          "category": "corridor",
+          "polygon": [[250, 502], [299, 502], [299, 551], [250, 551], [250, 502]],
+          "confidence": 0.94,
+          "evidence": "Passage to right rear WC."
+        },
+        {
+          "id": "flat-a",
+          "label": "Flat A",
+          "category": "room",
+          "unitReference": "A",
+          "showUnitReference": true,
+          "polygon": [
+            [177, 589],
+            [231, 589],
+            [231, 917],
+            [32, 917],
+            [32, 711],
+            [89, 711],
+            [89, 701],
+            [177, 701],
+            [177, 589]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (A) printed in left frontage tenement."
+        },
+        {
+          "id": "flat-b",
+          "label": "Flat B",
+          "category": "room",
+          "unitReference": "B",
+          "showUnitReference": true,
+          "polygon": [
+            [231, 589],
+            [279, 589],
+            [279, 701],
+            [356, 701],
+            [356, 711],
+            [434, 711],
+            [434, 917],
+            [231, 917],
+            [231, 589]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (B) printed in right frontage tenement."
+        },
+        {
+          "id": "flat-a-balcony",
+          "label": "Flat A balcony",
+          "category": "balcony",
+          "unitReference": "A",
+          "showUnitReference": false,
+          "polygon": [[32, 917], [231, 917], [231, 1029], [32, 1029], [32, 917]],
+          "confidence": 0.94,
+          "evidence": "BAL. beyond frontage windows."
+        },
+        {
+          "id": "flat-b-balcony",
+          "label": "Flat B balcony",
+          "category": "balcony",
+          "unitReference": "B",
+          "showUnitReference": false,
+          "polygon": [[231, 917], [434, 917], [434, 1029], [231, 1029], [231, 917]],
+          "confidence": 0.94,
+          "evidence": "BAL. beyond frontage windows."
+        },
+        {
+          "id": "interstitial-1",
+          "label": "Unclassified interstitial area",
+          "category": "unknown",
+          "polygon": [
+            [29, 709],
+            [29, 1034],
+            [436, 1034],
+            [435, 710],
+            [357, 710],
+            [357, 509],
+            [364, 509],
+            [364, 317],
+            [356, 317],
+            [354, 47],
+            [87, 47],
+            [88, 346],
+            [84, 346],
+            [84, 509],
+            [89, 509],
+            [89, 502],
+            [89, 322],
+            [90, 322],
+            [90, 271],
+            [90, 50],
+            [352, 50],
+            [352, 239],
+            [352, 322],
+            [356, 322],
+            [356, 502],
+            [356, 551],
+            [356, 589],
+            [356, 701],
+            [356, 711],
+            [434, 711],
+            [434, 917],
+            [434, 1029],
+            [231, 1029],
+            [32, 1029],
+            [32, 917],
+            [32, 711],
+            [89, 711],
+            [89, 710],
+            [29, 709]
+          ],
+          "confidence": 0.45,
+          "evidence": "Remaining area between the traced space edges and exterior building outline. Includes wall thickness and unresolved lines. No independent use is confirmed."
+        }
+      ]
+    },
+    {
+      "id": "7f",
+      "label": "7/F",
+      "page": 4,
+      "width": 463,
+      "height": 1061,
+      "boundary": [
+        [87, 47],
+        [354, 47],
+        [356, 317],
+        [364, 317],
+        [364, 509],
+        [357, 509],
+        [357, 710],
+        [435, 710],
+        [436, 1034],
+        [29, 1034],
+        [29, 709],
+        [89, 710],
+        [89, 509],
+        [84, 509],
+        [84, 346],
+        [88, 346],
+        [87, 47]
+      ],
+      "sourceFloorId": "2f",
+      "alignment": {
+        "x": 0,
+        "y": 104,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "flat-c-kitchen",
+          "label": "Flat C kitchen",
+          "category": "kitchen",
+          "unitReference": "C",
+          "showUnitReference": false,
+          "polygon": [[250, 239], [352, 239], [352, 322], [250, 322], [250, 239]],
+          "confidence": 0.94,
+          "evidence": "KIT. and stove in the rear flat."
+        },
+        {
+          "id": "flat-c-wc",
+          "label": "Flat C WC",
+          "category": "toilet",
+          "unitReference": "C",
+          "showUnitReference": false,
+          "polygon": [[90, 271], [137, 271], [137, 322], [90, 322], [90, 271]],
+          "confidence": 0.94,
+          "evidence": "W.C. opens from Flat C."
+        },
+        {
+          "id": "rear-landing",
+          "label": "Rear landing",
+          "category": "corridor",
+          "polygon": [[137, 271], [250, 271], [250, 322], [137, 322], [137, 271]],
+          "confidence": 0.94,
+          "evidence": "Access from common stairs into Flat C."
+        },
+        {
+          "id": "flat-c",
+          "label": "Flat C",
+          "category": "room",
+          "unitReference": "C",
+          "showUnitReference": true,
+          "polygon": [
+            [90, 50],
+            [352, 50],
+            [352, 239],
+            [250, 239],
+            [250, 271],
+            [90, 271],
+            [90, 50]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (C) printed in the rear tenement."
+        },
+        {
+          "id": "left-common-stair",
+          "label": "Left common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[92, 363], [142, 363]],
+              "last": [[92, 448], [142, 448]],
+              "count": 10,
+              "label": "DN"
+            },
+            {
+              "first": [[146, 363], [196, 363]],
+              "last": [[146, 448], [196, 448]],
+              "count": 10,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[89, 322], [199, 322], [199, 502], [89, 502], [89, 322]],
+          "confidence": 0.94,
+          "evidence": "Paired flight with UP and DN on opposite sides of its landing."
+        },
+        {
+          "id": "right-common-stair",
+          "label": "Right common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[253, 363], [301, 363]],
+              "last": [[253, 448], [301, 448]],
+              "count": 10,
+              "label": "UP"
+            },
+            {
+              "first": [[305, 363], [353, 363]],
+              "last": [[305, 448], [353, 448]],
+              "count": 10,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[250, 322], [356, 322], [356, 502], [250, 502], [250, 322]],
+          "confidence": 0.94,
+          "evidence": "Paired flight with UP and DN on opposite sides of its landing."
+        },
+        {
+          "id": "common-corridor",
+          "label": "Common corridor",
+          "category": "corridor",
+          "polygon": [[199, 322], [250, 322], [250, 589], [199, 589], [199, 322]],
+          "confidence": 0.94,
+          "evidence": "Central corridor and access to the stair landings."
+        },
+        {
+          "id": "flat-a-kitchen",
+          "label": "Flat A kitchen",
+          "category": "kitchen",
+          "unitReference": "A",
+          "showUnitReference": false,
+          "polygon": [[89, 589], [177, 589], [177, 701], [89, 701], [89, 589]],
+          "confidence": 0.94,
+          "evidence": "KIT. with stove in left frontage flat."
+        },
+        {
+          "id": "flat-b-kitchen",
+          "label": "Flat B kitchen",
+          "category": "kitchen",
+          "unitReference": "B",
+          "showUnitReference": false,
+          "polygon": [[279, 589], [356, 589], [356, 701], [279, 701], [279, 589]],
+          "confidence": 0.94,
+          "evidence": "KIT. with stove in right frontage flat."
+        },
+        {
+          "id": "left-rear-wc",
+          "label": "Left rear WC",
+          "category": "toilet",
+          "polygon": [[89, 502], [199, 502], [199, 551], [89, 551], [89, 502]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed immediately below the left common stair."
+        },
+        {
+          "id": "left-front-wc",
+          "label": "Left front WC",
+          "category": "toilet",
+          "polygon": [[136, 551], [199, 551], [199, 589], [136, 589], [136, 551]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed in the lower left sanitary compartment."
+        },
+        {
+          "id": "left-light-duct",
+          "label": "Left light duct",
+          "category": "utility",
+          "polygon": [[89, 551], [136, 551], [136, 589], [89, 589], [89, 551]],
+          "confidence": 0.94,
+          "evidence": "Small boxed shaft beside the left WC."
+        },
+        {
+          "id": "right-rear-wc",
+          "label": "Right rear WC",
+          "category": "toilet",
+          "polygon": [[299, 502], [356, 502], [356, 551], [299, 551], [299, 502]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed below right stair."
+        },
+        {
+          "id": "right-front-wc",
+          "label": "Right front WC",
+          "category": "toilet",
+          "polygon": [[250, 551], [299, 551], [299, 589], [250, 589], [250, 551]],
+          "confidence": 0.94,
+          "evidence": "W.C. in right front sanitary compartment."
+        },
+        {
+          "id": "right-light-duct",
+          "label": "Right light duct",
+          "category": "utility",
+          "polygon": [[299, 551], [356, 551], [356, 589], [299, 589], [299, 551]],
+          "confidence": 0.94,
+          "evidence": "Small boxed shaft next to right WC."
+        },
+        {
+          "id": "wc-approach",
+          "label": "WC approach",
+          "category": "corridor",
+          "polygon": [[250, 502], [299, 502], [299, 551], [250, 551], [250, 502]],
+          "confidence": 0.94,
+          "evidence": "Passage to right rear WC."
+        },
+        {
+          "id": "flat-a",
+          "label": "Flat A",
+          "category": "room",
+          "unitReference": "A",
+          "showUnitReference": true,
+          "polygon": [
+            [177, 589],
+            [231, 589],
+            [231, 917],
+            [32, 917],
+            [32, 711],
+            [89, 711],
+            [89, 701],
+            [177, 701],
+            [177, 589]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (A) printed in left frontage tenement."
+        },
+        {
+          "id": "flat-b",
+          "label": "Flat B",
+          "category": "room",
+          "unitReference": "B",
+          "showUnitReference": true,
+          "polygon": [
+            [231, 589],
+            [279, 589],
+            [279, 701],
+            [356, 701],
+            [356, 711],
+            [434, 711],
+            [434, 917],
+            [231, 917],
+            [231, 589]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (B) printed in right frontage tenement."
+        },
+        {
+          "id": "flat-a-balcony",
+          "label": "Flat A balcony",
+          "category": "balcony",
+          "unitReference": "A",
+          "showUnitReference": false,
+          "polygon": [[32, 917], [231, 917], [231, 1029], [32, 1029], [32, 917]],
+          "confidence": 0.94,
+          "evidence": "BAL. beyond frontage windows."
+        },
+        {
+          "id": "flat-b-balcony",
+          "label": "Flat B balcony",
+          "category": "balcony",
+          "unitReference": "B",
+          "showUnitReference": false,
+          "polygon": [[231, 917], [434, 917], [434, 1029], [231, 1029], [231, 917]],
+          "confidence": 0.94,
+          "evidence": "BAL. beyond frontage windows."
+        },
+        {
+          "id": "interstitial-1",
+          "label": "Unclassified interstitial area",
+          "category": "unknown",
+          "polygon": [
+            [29, 709],
+            [29, 1034],
+            [436, 1034],
+            [435, 710],
+            [357, 710],
+            [357, 509],
+            [364, 509],
+            [364, 317],
+            [356, 317],
+            [354, 47],
+            [87, 47],
+            [88, 346],
+            [84, 346],
+            [84, 509],
+            [89, 509],
+            [89, 502],
+            [89, 322],
+            [90, 322],
+            [90, 271],
+            [90, 50],
+            [352, 50],
+            [352, 239],
+            [352, 322],
+            [356, 322],
+            [356, 502],
+            [356, 551],
+            [356, 589],
+            [356, 701],
+            [356, 711],
+            [434, 711],
+            [434, 917],
+            [434, 1029],
+            [231, 1029],
+            [32, 1029],
+            [32, 917],
+            [32, 711],
+            [89, 711],
+            [89, 710],
+            [29, 709]
+          ],
+          "confidence": 0.45,
+          "evidence": "Remaining area between the traced space edges and exterior building outline. Includes wall thickness and unresolved lines. No independent use is confirmed."
+        }
+      ]
+    },
+    {
+      "id": "8f",
+      "label": "8/F",
+      "page": 4,
+      "width": 463,
+      "height": 1061,
+      "boundary": [
+        [87, 47],
+        [354, 47],
+        [356, 317],
+        [364, 317],
+        [364, 509],
+        [357, 509],
+        [357, 710],
+        [435, 710],
+        [436, 1034],
+        [29, 1034],
+        [29, 709],
+        [89, 710],
+        [89, 509],
+        [84, 509],
+        [84, 346],
+        [88, 346],
+        [87, 47]
+      ],
+      "sourceFloorId": "2f",
+      "alignment": {
+        "x": 0,
+        "y": 104,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "flat-c-kitchen",
+          "label": "Flat C kitchen",
+          "category": "kitchen",
+          "unitReference": "C",
+          "showUnitReference": false,
+          "polygon": [[250, 239], [352, 239], [352, 322], [250, 322], [250, 239]],
+          "confidence": 0.94,
+          "evidence": "KIT. and stove in the rear flat."
+        },
+        {
+          "id": "flat-c-wc",
+          "label": "Flat C WC",
+          "category": "toilet",
+          "unitReference": "C",
+          "showUnitReference": false,
+          "polygon": [[90, 271], [137, 271], [137, 322], [90, 322], [90, 271]],
+          "confidence": 0.94,
+          "evidence": "W.C. opens from Flat C."
+        },
+        {
+          "id": "rear-landing",
+          "label": "Rear landing",
+          "category": "corridor",
+          "polygon": [[137, 271], [250, 271], [250, 322], [137, 322], [137, 271]],
+          "confidence": 0.94,
+          "evidence": "Access from common stairs into Flat C."
+        },
+        {
+          "id": "flat-c",
+          "label": "Flat C",
+          "category": "room",
+          "unitReference": "C",
+          "showUnitReference": true,
+          "polygon": [
+            [90, 50],
+            [352, 50],
+            [352, 239],
+            [250, 239],
+            [250, 271],
+            [90, 271],
+            [90, 50]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (C) printed in the rear tenement."
+        },
+        {
+          "id": "left-common-stair",
+          "label": "Left common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[92, 363], [142, 363]],
+              "last": [[92, 448], [142, 448]],
+              "count": 10,
+              "label": "DN"
+            },
+            {
+              "first": [[146, 363], [196, 363]],
+              "last": [[146, 448], [196, 448]],
+              "count": 10,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[89, 322], [199, 322], [199, 502], [89, 502], [89, 322]],
+          "confidence": 0.94,
+          "evidence": "Paired flight with UP and DN on opposite sides of its landing."
+        },
+        {
+          "id": "right-common-stair",
+          "label": "Right common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[253, 363], [301, 363]],
+              "last": [[253, 448], [301, 448]],
+              "count": 10,
+              "label": "UP"
+            },
+            {
+              "first": [[305, 363], [353, 363]],
+              "last": [[305, 448], [353, 448]],
+              "count": 10,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[250, 322], [356, 322], [356, 502], [250, 502], [250, 322]],
+          "confidence": 0.94,
+          "evidence": "Paired flight with UP and DN on opposite sides of its landing."
+        },
+        {
+          "id": "common-corridor",
+          "label": "Common corridor",
+          "category": "corridor",
+          "polygon": [[199, 322], [250, 322], [250, 589], [199, 589], [199, 322]],
+          "confidence": 0.94,
+          "evidence": "Central corridor and access to the stair landings."
+        },
+        {
+          "id": "flat-a-kitchen",
+          "label": "Flat A kitchen",
+          "category": "kitchen",
+          "unitReference": "A",
+          "showUnitReference": false,
+          "polygon": [[89, 589], [177, 589], [177, 701], [89, 701], [89, 589]],
+          "confidence": 0.94,
+          "evidence": "KIT. with stove in left frontage flat."
+        },
+        {
+          "id": "flat-b-kitchen",
+          "label": "Flat B kitchen",
+          "category": "kitchen",
+          "unitReference": "B",
+          "showUnitReference": false,
+          "polygon": [[279, 589], [356, 589], [356, 701], [279, 701], [279, 589]],
+          "confidence": 0.94,
+          "evidence": "KIT. with stove in right frontage flat."
+        },
+        {
+          "id": "left-rear-wc",
+          "label": "Left rear WC",
+          "category": "toilet",
+          "polygon": [[89, 502], [199, 502], [199, 551], [89, 551], [89, 502]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed immediately below the left common stair."
+        },
+        {
+          "id": "left-front-wc",
+          "label": "Left front WC",
+          "category": "toilet",
+          "polygon": [[136, 551], [199, 551], [199, 589], [136, 589], [136, 551]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed in the lower left sanitary compartment."
+        },
+        {
+          "id": "left-light-duct",
+          "label": "Left light duct",
+          "category": "utility",
+          "polygon": [[89, 551], [136, 551], [136, 589], [89, 589], [89, 551]],
+          "confidence": 0.94,
+          "evidence": "Small boxed shaft beside the left WC."
+        },
+        {
+          "id": "right-rear-wc",
+          "label": "Right rear WC",
+          "category": "toilet",
+          "polygon": [[299, 502], [356, 502], [356, 551], [299, 551], [299, 502]],
+          "confidence": 0.94,
+          "evidence": "W.C. printed below right stair."
+        },
+        {
+          "id": "right-front-wc",
+          "label": "Right front WC",
+          "category": "toilet",
+          "polygon": [[250, 551], [299, 551], [299, 589], [250, 589], [250, 551]],
+          "confidence": 0.94,
+          "evidence": "W.C. in right front sanitary compartment."
+        },
+        {
+          "id": "right-light-duct",
+          "label": "Right light duct",
+          "category": "utility",
+          "polygon": [[299, 551], [356, 551], [356, 589], [299, 589], [299, 551]],
+          "confidence": 0.94,
+          "evidence": "Small boxed shaft next to right WC."
+        },
+        {
+          "id": "wc-approach",
+          "label": "WC approach",
+          "category": "corridor",
+          "polygon": [[250, 502], [299, 502], [299, 551], [250, 551], [250, 502]],
+          "confidence": 0.94,
+          "evidence": "Passage to right rear WC."
+        },
+        {
+          "id": "flat-a",
+          "label": "Flat A",
+          "category": "room",
+          "unitReference": "A",
+          "showUnitReference": true,
+          "polygon": [
+            [177, 589],
+            [231, 589],
+            [231, 917],
+            [32, 917],
+            [32, 711],
+            [89, 711],
+            [89, 701],
+            [177, 701],
+            [177, 589]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (A) printed in left frontage tenement."
+        },
+        {
+          "id": "flat-b",
+          "label": "Flat B",
+          "category": "room",
+          "unitReference": "B",
+          "showUnitReference": true,
+          "polygon": [
+            [231, 589],
+            [279, 589],
+            [279, 701],
+            [356, 701],
+            [356, 711],
+            [434, 711],
+            [434, 917],
+            [231, 917],
+            [231, 589]
+          ],
+          "confidence": 0.94,
+          "evidence": "FLAT (B) printed in right frontage tenement."
+        },
+        {
+          "id": "flat-a-balcony",
+          "label": "Flat A balcony",
+          "category": "balcony",
+          "unitReference": "A",
+          "showUnitReference": false,
+          "polygon": [[32, 917], [231, 917], [231, 1029], [32, 1029], [32, 917]],
+          "confidence": 0.94,
+          "evidence": "BAL. beyond frontage windows."
+        },
+        {
+          "id": "flat-b-balcony",
+          "label": "Flat B balcony",
+          "category": "balcony",
+          "unitReference": "B",
+          "showUnitReference": false,
+          "polygon": [[231, 917], [434, 917], [434, 1029], [231, 1029], [231, 917]],
+          "confidence": 0.94,
+          "evidence": "BAL. beyond frontage windows."
+        },
+        {
+          "id": "interstitial-1",
+          "label": "Unclassified interstitial area",
+          "category": "unknown",
+          "polygon": [
+            [29, 709],
+            [29, 1034],
+            [436, 1034],
+            [435, 710],
+            [357, 710],
+            [357, 509],
+            [364, 509],
+            [364, 317],
+            [356, 317],
+            [354, 47],
+            [87, 47],
+            [88, 346],
+            [84, 346],
+            [84, 509],
+            [89, 509],
+            [89, 502],
+            [89, 322],
+            [90, 322],
+            [90, 271],
+            [90, 50],
+            [352, 50],
+            [352, 239],
+            [352, 322],
+            [356, 322],
+            [356, 502],
+            [356, 551],
+            [356, 589],
+            [356, 701],
+            [356, 711],
+            [434, 711],
+            [434, 917],
+            [434, 1029],
+            [231, 1029],
+            [32, 1029],
+            [32, 917],
+            [32, 711],
+            [89, 711],
+            [89, 710],
+            [29, 709]
+          ],
+          "confidence": 0.45,
+          "evidence": "Remaining area between the traced space edges and exterior building outline. Includes wall thickness and unresolved lines. No independent use is confirmed."
+        }
+      ]
+    },
+    {
+      "id": "roof",
+      "label": "Roof",
+      "page": 5,
+      "width": 455,
+      "height": 1011,
+      "boundary": [
+        [86, 23],
+        [354, 22],
+        [354, 296],
+        [362, 296],
+        [362, 477],
+        [352, 477],
+        [352, 682],
+        [429, 682],
+        [431, 986],
+        [24, 987],
+        [23, 687],
+        [95, 687],
+        [95, 485],
+        [83, 485],
+        [83, 298],
+        [86, 298],
+        [86, 23]
+      ],
+      "alignment": {
+        "x": 0,
+        "y": 97,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "left-roof-stair",
+          "label": "Left roof stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[97, 349], [145, 349]],
+              "last": [[97, 427], [145, 427]],
+              "count": 8,
+              "label": "DN"
+            },
+            {
+              "first": [[149, 349], [197, 349]],
+              "last": [[149, 427], [197, 427]],
+              "count": 8
+            }
+          ],
+          "polygon": [[93, 340], [201, 340], [201, 483], [93, 483], [93, 340]],
+          "confidence": 0.94,
+          "evidence": "DN is printed on the roof stair and treads run across paired flights."
+        },
+        {
+          "id": "right-roof-stair",
+          "label": "Right roof stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[244, 309], [293, 309]],
+              "last": [[244, 387], [293, 387]],
+              "count": 8
+            },
+            {
+              "first": [[297, 309], [347, 309]],
+              "last": [[297, 387], [347, 387]],
+              "count": 8,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[240, 300], [351, 300], [351, 477], [240, 477], [240, 300]],
+          "confidence": 0.94,
+          "evidence": "DN is printed on the roof stair and treads run across paired flights."
+        },
+        {
+          "id": "rear-flushing-water-tank",
+          "label": "Rear flushing water tank",
+          "category": "utility",
+          "polygon": [[245, 211], [350, 211], [350, 295], [245, 295], [245, 211]],
+          "confidence": 0.94,
+          "evidence": "Crossed tank outline and flushing water tank leader."
+        },
+        {
+          "id": "left-water-tank",
+          "label": "Left water tank",
+          "category": "utility",
+          "polygon": [[97, 485], [177, 485], [177, 574], [97, 574], [97, 485]],
+          "confidence": 0.94,
+          "evidence": "Crossed rectangular tank with water tank leader."
+        },
+        {
+          "id": "right-water-tank",
+          "label": "Right water tank",
+          "category": "utility",
+          "polygon": [[273, 478], [350, 478], [350, 572], [273, 572], [273, 478]],
+          "confidence": 0.94,
+          "evidence": "Crossed rectangular tank with water tank leader."
+        },
+        {
+          "id": "canopy",
+          "label": "Canopy",
+          "category": "canopy",
+          "polygon": [[25, 899], [429, 896], [431, 985], [25, 986], [25, 899]],
+          "confidence": 0.94,
+          "evidence": "CANOPY at street frontage."
+        },
+        {
+          "id": "flat-roof",
+          "label": "Flat roof",
+          "category": "roof",
+          "polygon": [
+            [429, 682],
+            [352, 682],
+            [352, 477],
+            [362, 477],
+            [362, 296],
+            [354, 296],
+            [354, 22],
+            [86, 23],
+            [86, 298],
+            [83, 298],
+            [83, 485],
+            [95, 485],
+            [95, 687],
+            [23, 687],
+            [24, 987],
+            [431, 986],
+            [430.99342115923713, 985.0000162040413],
+            [25, 986],
+            [25, 899],
+            [429, 896],
+            [430.9906976744186, 984.586046511628],
+            [429, 682]
+          ],
+          "holes": [
+            [[245, 295], [245, 211], [350, 211], [350, 295], [245, 295]],
+            [[351, 477], [240, 477], [240, 300], [351, 300], [351, 477]],
+            [[201, 483], [93, 483], [93, 340], [201, 340], [201, 483]],
+            [[273, 572], [273, 478], [350, 478], [350, 572], [273, 572]],
+            [[177, 574], [97, 574], [97, 485], [177, 485], [177, 574]]
+          ],
+          "confidence": 0.94,
+          "evidence": "Roof falls, curb and parapet trace around stair heads, tanks and the canopy."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1852 @@
+{
+  "venue": {
+    "name": "Tat Tak Building",
+    "nameZh": "達德樓",
+    "address": "32-34A Tak Ku Ling Road"
+  },
+  "warnings": [
+    "Historical approved building plans. Polygons follow interpreted wall centre lines; current arrangements require field verification.",
+    "Occupation permit confirms two shops, two first-floor offices, four tenements on 2/F through 4/F, and two tenements on 5/F. The street numbers 34 and 32 are printed on the ground-floor shopfronts."
+  ],
+  "floors": [
+    {
+      "id": "ground",
+      "label": "G/F",
+      "page": 1,
+      "width": 312,
+      "height": 708,
+      "boundary": [[15, 15], [299, 15], [298, 687], [13, 688], [15, 15]],
+      "alignment": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "west-lav-1",
+          "label": "Shop A · Lavatory 1",
+          "category": "lavatory",
+          "unitReference": "Shop A",
+          "polygon": [[46, 15], [15, 15], [14.830609212481427, 72], [46, 72], [46, 15]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Separate cubicle, sanitary fitting and LAV. on rear wall."
+        },
+        {
+          "id": "west-lav-2",
+          "label": "Shop A · Lavatory 2",
+          "category": "lavatory",
+          "unitReference": "Shop A",
+          "polygon": [[77, 72], [77, 15], [46, 15], [46, 72], [77, 72]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Separate cubicle, sanitary fitting and LAV. on rear wall."
+        },
+        {
+          "id": "west-lav-3",
+          "label": "Shop A · Lavatory 3",
+          "category": "lavatory",
+          "unitReference": "Shop A",
+          "polygon": [[107, 72], [107, 15], [77, 15], [77, 72], [107, 72]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Separate cubicle, sanitary fitting and LAV. on rear wall."
+        },
+        {
+          "id": "east-lav-1",
+          "label": "Shop B · Lavatory 1",
+          "category": "lavatory",
+          "unitReference": "Shop B",
+          "polygon": [[243, 72], [243, 15], [211, 15], [211, 72], [243, 72]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Separate cubicle, sanitary fitting and LAV. on rear wall."
+        },
+        {
+          "id": "east-lav-2",
+          "label": "Shop B · Lavatory 2",
+          "category": "lavatory",
+          "unitReference": "Shop B",
+          "polygon": [[271, 72], [271, 15], [243, 15], [243, 72], [271, 72]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Separate cubicle, sanitary fitting and LAV. on rear wall."
+        },
+        {
+          "id": "east-lav-3",
+          "label": "Shop B · Lavatory 3",
+          "category": "lavatory",
+          "unitReference": "Shop B",
+          "polygon": [
+            [298.91517857142856, 72],
+            [299, 15],
+            [271, 15],
+            [271, 72],
+            [298.91517857142856, 72]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Separate cubicle, sanitary fitting and LAV. on rear wall."
+        },
+        {
+          "id": "yard-a",
+          "label": "Shop A · Rear yard",
+          "category": "room",
+          "unitReference": "Shop A",
+          "polygon": [[157, 15], [107, 15], [107, 72], [157, 72], [157, 15]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "YARD and door from Shop A."
+        },
+        {
+          "id": "yard-b",
+          "label": "Shop B · Rear yard",
+          "category": "room",
+          "unitReference": "Shop B",
+          "polygon": [[211, 72], [211, 15], [157, 15], [157, 72], [211, 72]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "YARD and door from Shop B."
+        },
+        {
+          "id": "a-stairs",
+          "label": "Shop A · Cockloft stair",
+          "category": "stairs",
+          "unitReference": "Shop A",
+          "stairFlights": [
+            {
+              "first": [[125, 381], [155, 381]],
+              "last": [[125, 431], [155, 431]],
+              "count": 8,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[123, 438], [157, 438], [157, 326], [123, 326], [123, 438]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "UP and separate stair to corresponding cockloft."
+        },
+        {
+          "id": "b-stairs",
+          "label": "Shop B · Cockloft stair",
+          "category": "stairs",
+          "unitReference": "Shop B",
+          "stairFlights": [
+            {
+              "first": [[159, 381], [192, 381]],
+              "last": [[159, 431], [192, 431]],
+              "count": 8,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[157, 438], [194, 438], [194, 326], [157, 326], [157, 438]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "UP and separate stair to corresponding cockloft."
+        },
+        {
+          "id": "stairs",
+          "label": "Common entrance stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[141, 577], [173, 577]],
+              "last": [[141, 651], [173, 651]],
+              "count": 11,
+              "label": "UP"
+            }
+          ],
+          "polygon": [
+            [137, 539],
+            [137, 687.5649122807017],
+            [177, 687.4245614035087],
+            [177, 539],
+            [137, 539]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "UP and separate residential/office entrance between the shops."
+        },
+        {
+          "id": "shop-a",
+          "label": "Shop A · No. 34",
+          "category": "retail",
+          "unitReference": "No. 34",
+          "showUnitReference": true,
+          "polygon": [
+            [13, 688],
+            [158, 687.4912280701755],
+            [137, 687.5649122807017],
+            [137, 539],
+            [158, 539],
+            [158, 438],
+            [123, 438],
+            [123, 326],
+            [158, 326],
+            [158, 72],
+            [14.830609212481427, 72],
+            [15, 15],
+            [13, 688]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "SHOP (NON-DOMESTIC) A and NO. 34 at street entrance."
+        },
+        {
+          "id": "shop-b",
+          "label": "Shop B · No. 32",
+          "category": "retail",
+          "unitReference": "No. 32",
+          "showUnitReference": true,
+          "polygon": [
+            [298, 687],
+            [299, 15],
+            [298.91517857142856, 72],
+            [158, 72],
+            [158, 326],
+            [194, 326],
+            [194, 438],
+            [158, 438],
+            [158, 539],
+            [177, 539],
+            [177, 687.4245614035087],
+            [137, 687.5649122807017],
+            [298, 687]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "SHOP (NON-DOMESTIC) B and NO. 32 at street entrance."
+        }
+      ]
+    },
+    {
+      "id": "cockloft",
+      "label": "Cockloft",
+      "page": 2,
+      "width": 312,
+      "height": 714,
+      "boundary": [[15, 26], [300, 23], [302, 693], [15, 695], [15, 26]],
+      "alignment": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "west-lav",
+          "label": "Store A · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Store A",
+          "polygon": [
+            [47, 25.66315789473684],
+            [15, 26],
+            [15, 82],
+            [47, 82],
+            [47, 25.66315789473684]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. and WC on external yard wall."
+        },
+        {
+          "id": "east-lav",
+          "label": "Store B · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Store B",
+          "polygon": [
+            [300.1761194029851, 82],
+            [300, 23],
+            [273, 23.28421052631579],
+            [273, 82],
+            [300.1761194029851, 82]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. and WC on external yard wall."
+        },
+        {
+          "id": "a-well",
+          "label": "Store A · Rear void",
+          "category": "void",
+          "unitReference": "Store A",
+          "polygon": [
+            [159, 82],
+            [159, 24.48421052631579],
+            [107, 25.03157894736842],
+            [107, 82],
+            [159, 82]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "VOID labelled in crossed bay above ground-floor yard."
+        },
+        {
+          "id": "b-well",
+          "label": "Store B · Rear void",
+          "category": "void",
+          "unitReference": "Store B",
+          "polygon": [
+            [212, 82],
+            [212, 23.926315789473684],
+            [159, 24.48421052631579],
+            [159, 82],
+            [212, 82]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "VOID labelled in crossed bay above ground-floor yard."
+        },
+        {
+          "id": "a-stair",
+          "label": "Store A · Shop stair",
+          "category": "stairs",
+          "unitReference": "Store A",
+          "stairFlights": [
+            {
+              "first": [[125, 342], [157, 342]],
+              "last": [[125, 381], [157, 381]],
+              "count": 7,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[123, 388], [159, 388], [159, 337], [123, 337], [123, 388]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Treads and DN at top of shop stair."
+        },
+        {
+          "id": "b-stair",
+          "label": "Store B · Shop stair",
+          "category": "stairs",
+          "unitReference": "Store B",
+          "stairFlights": [
+            {
+              "first": [[161, 342], [193, 342]],
+              "last": [[161, 381], [193, 381]],
+              "count": 7,
+              "label": "DN"
+            }
+          ],
+          "polygon": [[159, 388], [195, 388], [195, 337], [159, 337], [159, 388]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Treads and DN at top of shop stair."
+        },
+        {
+          "id": "stairs",
+          "label": "Common stair and landing",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[125, 426], [155, 426]],
+              "last": [[125, 450], [155, 450]],
+              "count": 5
+            },
+            {
+              "first": [[161, 428], [189, 428]],
+              "last": [[161, 458], [189, 458]],
+              "count": 6
+            },
+            {
+              "first": [[145, 581], [173, 581]],
+              "last": [[145, 631], [173, 631]],
+              "count": 8
+            }
+          ],
+          "polygon": [
+            [195, 558],
+            [195, 388],
+            [120, 388],
+            [120, 506],
+            [140, 506],
+            [140, 694.1289198606272],
+            [178, 693.8641114982578],
+            [178, 558],
+            [195, 558]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Common stair serving upper floors; drawn flights and landings."
+        },
+        {
+          "id": "b-void",
+          "label": "Opening over Shop B",
+          "category": "void",
+          "polygon": [
+            [195, 337],
+            [195, 558],
+            [178, 558],
+            [178, 693.8641114982578],
+            [302, 693],
+            [300.9373134328358, 337],
+            [195, 337]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Large VOID with diagonal strokes and R.C. beam above shop."
+        },
+        {
+          "id": "a-void",
+          "label": "Opening over Shop A",
+          "category": "void",
+          "polygon": [
+            [15, 640],
+            [15, 695],
+            [140, 694.1289198606272],
+            [140, 640],
+            [15, 640]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "VOID crossed bay at front over shop."
+        },
+        {
+          "id": "store-a",
+          "label": "Cockloft store A",
+          "category": "retail",
+          "unitReference": "Store A",
+          "showUnitReference": true,
+          "polygon": [
+            [47, 25.66315789473684],
+            [47, 82],
+            [15, 82],
+            [15, 640],
+            [140, 640],
+            [140, 506],
+            [120, 506],
+            [120, 388],
+            [123, 388],
+            [123, 337],
+            [159, 337],
+            [159, 82],
+            [107, 82],
+            [107, 25.03157894736842],
+            [47, 25.66315789473684]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "STORAGE (NON-DOMESTIC) A; extends down left of central common stair."
+        },
+        {
+          "id": "store-b",
+          "label": "Cockloft store B",
+          "category": "retail",
+          "unitReference": "Store B",
+          "showUnitReference": true,
+          "polygon": [
+            [300.1761194029851, 82],
+            [273, 82],
+            [273, 23.28421052631579],
+            [212, 23.926315789473684],
+            [212, 82],
+            [159, 82],
+            [159, 337],
+            [300.9373134328358, 337],
+            [300.1761194029851, 82]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "STORAGE (NON-DOMESTIC) B on east side."
+        }
+      ]
+    },
+    {
+      "id": "first",
+      "label": "1/F",
+      "page": 3,
+      "width": 324,
+      "height": 717,
+      "boundary": [
+        [21, 25],
+        [112, 25],
+        [112, 85],
+        [217, 85],
+        [217, 25],
+        [304, 23],
+        [307, 696],
+        [22, 697],
+        [21, 25]
+      ],
+      "alignment": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "west-lav-1",
+          "label": "Office A · Lavatory 1",
+          "category": "lavatory",
+          "unitReference": "Office A",
+          "polygon": [[50, 25], [21, 25], [21.089285714285715, 85], [50, 85], [50, 25]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. and its own door/fixture at rear of office."
+        },
+        {
+          "id": "west-lav-2",
+          "label": "Office A · Lavatory 2",
+          "category": "lavatory",
+          "unitReference": "Office A",
+          "polygon": [[81, 85], [81, 25], [50, 25], [50, 85], [81, 85]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. and its own door/fixture at rear of office."
+        },
+        {
+          "id": "east-lav-1",
+          "label": "Office B · Lavatory 1",
+          "category": "lavatory",
+          "unitReference": "Office B",
+          "polygon": [
+            [278, 85],
+            [278, 23.597701149425287],
+            [247, 24.310344827586206],
+            [247, 85],
+            [278, 85]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. and its own door/fixture at rear of office."
+        },
+        {
+          "id": "east-lav-2",
+          "label": "Office B · Lavatory 2",
+          "category": "lavatory",
+          "unitReference": "Office B",
+          "polygon": [
+            [304.27637444279344, 85],
+            [304, 23],
+            [278, 23.597701149425287],
+            [278, 85],
+            [304.27637444279344, 85]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. and its own door/fixture at rear of office."
+        },
+        {
+          "id": "west-roof",
+          "label": "West recessed flat roof",
+          "category": "roof",
+          "polygon": [[78, 435], [129, 435], [129, 387], [78, 387], [78, 435]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "FLAT ROOF and lower level +40.00."
+        },
+        {
+          "id": "east-roof",
+          "label": "East recessed flat roof",
+          "category": "roof",
+          "polygon": [[199, 435], [248, 435], [248, 387], [199, 387], [199, 435]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "FLAT ROOF and lower level +40.00."
+        },
+        {
+          "id": "stairs",
+          "label": "Common stair and lobby",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[134, 420], [160, 420]],
+              "last": [[134, 470], [160, 470]],
+              "count": 8,
+              "label": "DN"
+            },
+            {
+              "first": [[168, 418], [194, 418]],
+              "last": [[168, 467], [194, 467]],
+              "count": 8,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[129, 387], [129, 580], [199, 580], [199, 387], [129, 387]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Two flights and exit doors to offices A/B. UP at right-hand run."
+        },
+        {
+          "id": "office-a",
+          "label": "Office A",
+          "category": "room",
+          "unitReference": "Office A",
+          "showUnitReference": true,
+          "polygon": [
+            [112, 85],
+            [112, 25],
+            [81, 25],
+            [81, 85],
+            [21.089285714285715, 85],
+            [21, 25],
+            [22, 697],
+            [164, 696.5017543859649],
+            [164, 580],
+            [129, 580],
+            [129, 435],
+            [78, 435],
+            [78, 387],
+            [164, 387],
+            [164, 85],
+            [112, 85]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "OFFICE (NON-DOMESTIC) A, divided from B by continuous party wall."
+        },
+        {
+          "id": "office-b",
+          "label": "Office B",
+          "category": "room",
+          "unitReference": "Office B",
+          "showUnitReference": true,
+          "polygon": [
+            [307, 696],
+            [304, 23],
+            [304.27637444279344, 85],
+            [247, 85],
+            [247, 24.310344827586206],
+            [217, 25],
+            [217, 85],
+            [164, 85],
+            [164, 387],
+            [248, 387],
+            [248, 435],
+            [199, 435],
+            [199, 580],
+            [164, 580],
+            [164, 696.5017543859649],
+            [22, 697],
+            [307, 696]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "OFFICE (NON-DOMESTIC) B and office entrance door."
+        }
+      ]
+    },
+    {
+      "id": "second",
+      "label": "2/F",
+      "page": 4,
+      "width": 321,
+      "height": 765,
+      "boundary": [
+        [11, 18],
+        [100, 18],
+        [100, 73],
+        [205, 73],
+        [205, 18],
+        [296, 16],
+        [302, 747],
+        [17, 747],
+        [11, 18]
+      ],
+      "alignment": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "rear-roof",
+          "label": "Rear flat roof",
+          "category": "roof",
+          "polygon": [
+            [296, 16],
+            [205, 18],
+            [205, 73],
+            [100, 73],
+            [100, 18],
+            [11, 18],
+            [12.448559670781894, 194],
+            [297.4610123119015, 194],
+            [296, 16]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "R.C.C. FLAT ROOF and drainage/railing notes at rear."
+        },
+        {
+          "id": "c-kitchen",
+          "label": "Flat C · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat C",
+          "polygon": [
+            [67, 265],
+            [13.03292181069959, 265],
+            [13.691358024691358, 345],
+            [67, 345],
+            [67, 265]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "KIT. and entrance from rear flat."
+        },
+        {
+          "id": "c-lav",
+          "label": "Flat C · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat C",
+          "polygon": [[67, 345], [98, 345], [98, 294], [67, 294], [67, 345]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. and WC fixture behind separate partition."
+        },
+        {
+          "id": "c-domestic",
+          "label": "Flat C · Domestic living space",
+          "category": "room",
+          "unitReference": "Flat C",
+          "showUnitReference": true,
+          "polygon": [
+            [157, 194],
+            [12.448559670781894, 194],
+            [13.691358024691358, 345],
+            [13.03292181069959, 265],
+            [67, 265],
+            [67, 294],
+            [98, 294],
+            [98, 345],
+            [157, 345],
+            [157, 194]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Tenement C identified by letter and permit. Open living space marked with letter."
+        },
+        {
+          "id": "d-kitchen",
+          "label": "Flat D · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat D",
+          "polygon": [
+            [249, 345],
+            [298.70041039671685, 345],
+            [298.0437756497948, 265],
+            [249, 265],
+            [249, 345]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "KIT. and entrance from rear flat."
+        },
+        {
+          "id": "d-lav",
+          "label": "Flat D · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat D",
+          "polygon": [[219, 345], [249, 345], [249, 294], [219, 294], [219, 345]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. and WC fixture behind separate partition."
+        },
+        {
+          "id": "d-domestic",
+          "label": "Flat D · Domestic living space",
+          "category": "room",
+          "unitReference": "Flat D",
+          "showUnitReference": true,
+          "polygon": [
+            [157, 345],
+            [219, 345],
+            [219, 294],
+            [249, 294],
+            [249, 265],
+            [298.0437756497948, 265],
+            [298.70041039671685, 345],
+            [297.4610123119015, 194],
+            [157, 194],
+            [157, 345]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Tenement D identified by letter and permit. Open living space marked with letter."
+        },
+        {
+          "id": "west-well",
+          "label": "West shaft opening",
+          "category": "void",
+          "polygon": [[72, 422], [121, 422], [121, 375], [72, 375], [72, 422]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Crossed opening in R.C.C. flat roof."
+        },
+        {
+          "id": "west-recess",
+          "label": "West flat roof",
+          "category": "roof",
+          "polygon": [
+            [121, 422],
+            [72, 422],
+            [72, 375],
+            [121, 375],
+            [121, 345],
+            [13.691358024691358, 345],
+            [15.337448559670781, 545],
+            [121, 545],
+            [121, 422]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "R.C.C. FLAT ROOF is printed on 2/F. Upper plan shows the open setback above this roof."
+        },
+        {
+          "id": "east-well",
+          "label": "East shaft opening",
+          "category": "void",
+          "polygon": [[192, 422], [239, 422], [239, 375], [192, 375], [192, 422]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Crossed opening in R.C.C. flat roof."
+        },
+        {
+          "id": "east-recess",
+          "label": "East flat roof",
+          "category": "roof",
+          "polygon": [
+            [192, 375],
+            [239, 375],
+            [239, 422],
+            [192, 422],
+            [192, 545],
+            [300.34199726402187, 545],
+            [298.70041039671685, 345],
+            [192, 345],
+            [192, 375]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "R.C.C. FLAT ROOF is printed on 2/F. Upper plan shows the open setback above this roof."
+        },
+        {
+          "id": "rear-lobby",
+          "label": "Rear common landing",
+          "category": "corridor",
+          "polygon": [[121, 345], [121, 378], [192, 378], [192, 345], [121, 345]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LOBBY at outer stair door."
+        },
+        {
+          "id": "stairs",
+          "label": "Common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[126, 419], [153, 419]],
+              "last": [[126, 476], [153, 476]],
+              "count": 7,
+              "label": "DN"
+            },
+            {
+              "first": [[163, 418], [187, 418]],
+              "last": [[163, 477], [187, 477]],
+              "count": 7,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[121, 378], [121, 499], [192, 499], [192, 378], [121, 378]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Paired stair flights with tread lines, UP and DN annotations."
+        },
+        {
+          "id": "front-lobby",
+          "label": "Front common landing",
+          "category": "corridor",
+          "polygon": [[121, 545], [192, 545], [192, 499], [121, 499], [121, 545]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LOBBY and paired entrance doors to A/B."
+        },
+        {
+          "id": "a-kitchen",
+          "label": "Flat A · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat A",
+          "polygon": [
+            [69, 545],
+            [15.337448559670781, 545],
+            [16.004115226337447, 626],
+            [69, 626],
+            [69, 545]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "KIT. and fixture beside outer wall."
+        },
+        {
+          "id": "a-lav",
+          "label": "Flat A · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat A",
+          "polygon": [[69, 598], [99, 598], [99, 545], [69, 545], [69, 598]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. beside kitchen, with separate WC/fixture."
+        },
+        {
+          "id": "a-domestic",
+          "label": "Flat A · Domestic living space",
+          "category": "room",
+          "unitReference": "Flat A",
+          "showUnitReference": true,
+          "polygon": [
+            [157, 545],
+            [99, 545],
+            [99, 598],
+            [69, 598],
+            [69, 626],
+            [16.004115226337447, 626],
+            [17, 747],
+            [157, 747],
+            [157, 545]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Tenement A printed in front room; no separate compartment is identified along street wall."
+        },
+        {
+          "id": "b-kitchen",
+          "label": "Flat B · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat B",
+          "polygon": [
+            [251, 626],
+            [301.00683994528043, 626],
+            [300.34199726402187, 545],
+            [251, 545],
+            [251, 626]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "KIT. and fixture beside outer wall."
+        },
+        {
+          "id": "b-lav",
+          "label": "Flat B · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat B",
+          "polygon": [[221, 598], [251, 598], [251, 545], [221, 545], [221, 598]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. beside kitchen, with separate WC/fixture."
+        },
+        {
+          "id": "b-domestic",
+          "label": "Flat B · Domestic living space",
+          "category": "room",
+          "unitReference": "Flat B",
+          "showUnitReference": true,
+          "polygon": [
+            [157, 747],
+            [302, 747],
+            [301.00683994528043, 626],
+            [251, 626],
+            [251, 598],
+            [221, 598],
+            [221, 545],
+            [157, 545],
+            [157, 747]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Tenement B printed in front room; no separate compartment is identified along street wall."
+        }
+      ]
+    },
+    {
+      "id": "third",
+      "label": "3/F",
+      "page": 5,
+      "width": 312,
+      "height": 582,
+      "boundary": [[16, 16], [300, 14], [305, 567], [18, 569], [16, 16]],
+      "sourceFloorId": "typical-3-4",
+      "alignment": {
+        "x": 0,
+        "y": 177,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "c-kitchen",
+          "label": "Flat C · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat C",
+          "polygon": [
+            [67, 87],
+            [16.256781193490053, 87],
+            [16.549728752260396, 168],
+            [67, 168],
+            [67, 87]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "KIT. and entrance from rear flat."
+        },
+        {
+          "id": "c-lav",
+          "label": "Flat C · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat C",
+          "polygon": [[67, 168], [98, 168], [98, 116], [67, 116], [67, 168]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. and WC fixture behind separate partition."
+        },
+        {
+          "id": "c-domestic",
+          "label": "Flat C · Domestic living space",
+          "category": "room",
+          "unitReference": "Flat C",
+          "showUnitReference": true,
+          "polygon": [
+            [159, 14.992957746478874],
+            [16, 16],
+            [16.256781193490053, 87],
+            [67, 87],
+            [67, 116],
+            [98, 116],
+            [98, 168],
+            [159, 168],
+            [159, 14.992957746478874]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Tenement C identified by letter and permit. Open living space marked with letter."
+        },
+        {
+          "id": "d-kitchen",
+          "label": "Flat D · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat D",
+          "polygon": [
+            [249, 168],
+            [301.39240506329116, 168],
+            [300.6600361663653, 87],
+            [249, 87],
+            [249, 168]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "KIT. and entrance from rear flat."
+        },
+        {
+          "id": "d-lav",
+          "label": "Flat D · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat D",
+          "polygon": [[219, 168], [249, 168], [249, 116], [219, 116], [219, 168]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. and WC fixture behind separate partition."
+        },
+        {
+          "id": "d-domestic",
+          "label": "Flat D · Domestic living space",
+          "category": "room",
+          "unitReference": "Flat D",
+          "showUnitReference": true,
+          "polygon": [
+            [219, 168],
+            [219, 116],
+            [249, 116],
+            [249, 87],
+            [300.6600361663653, 87],
+            [301.39240506329116, 168],
+            [300, 14],
+            [159, 14.992957746478874],
+            [159, 168],
+            [219, 168]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Tenement D identified by letter and permit. Open living space marked with letter."
+        },
+        {
+          "id": "west-recess",
+          "label": "West light well",
+          "category": "void",
+          "polygon": [
+            [124, 168],
+            [16.549728752260396, 168],
+            [17.265822784810126, 366],
+            [124, 366],
+            [124, 168]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "R.C.C. FLAT ROOF is printed on 2/F. Upper plan shows the open setback above this roof."
+        },
+        {
+          "id": "east-recess",
+          "label": "East light well",
+          "category": "void",
+          "polygon": [
+            [198, 366],
+            [303.18264014466547, 366],
+            [301.39240506329116, 168],
+            [198, 168],
+            [198, 366]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "R.C.C. FLAT ROOF is printed on 2/F. Upper plan shows the open setback above this roof."
+        },
+        {
+          "id": "rear-lobby",
+          "label": "Rear common landing",
+          "category": "corridor",
+          "polygon": [[124, 201], [198, 201], [198, 168], [124, 168], [124, 201]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LOBBY at outer stair door."
+        },
+        {
+          "id": "stairs",
+          "label": "Common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[129, 242], [155, 242]],
+              "last": [[129, 297], [155, 297]],
+              "count": 7,
+              "label": "DN"
+            },
+            {
+              "first": [[165, 241], [193, 241]],
+              "last": [[165, 298], [193, 298]],
+              "count": 7,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[124, 320], [198, 320], [198, 201], [124, 201], [124, 320]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Paired stair flights with tread lines, UP and DN annotations."
+        },
+        {
+          "id": "front-lobby",
+          "label": "Front common landing",
+          "category": "corridor",
+          "polygon": [[124, 366], [198, 366], [198, 320], [124, 320], [124, 366]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LOBBY and paired entrance doors to A/B."
+        },
+        {
+          "id": "a-kitchen",
+          "label": "Flat A · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat A",
+          "polygon": [
+            [69, 366],
+            [17.265822784810126, 366],
+            [17.55877034358047, 447],
+            [69, 447],
+            [69, 366]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "KIT. and fixture beside outer wall."
+        },
+        {
+          "id": "a-lav",
+          "label": "Flat A · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat A",
+          "polygon": [[69, 419], [99, 419], [99, 366], [69, 366], [69, 419]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. beside kitchen, with separate WC/fixture."
+        },
+        {
+          "id": "a-domestic",
+          "label": "Flat A · Domestic living space",
+          "category": "room",
+          "unitReference": "Flat A",
+          "showUnitReference": true,
+          "polygon": [
+            [159, 366],
+            [99, 366],
+            [99, 419],
+            [69, 419],
+            [69, 447],
+            [17.55877034358047, 447],
+            [18, 569],
+            [159, 568.0174216027874],
+            [159, 366]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Tenement A printed in front room; no separate compartment is identified along street wall."
+        },
+        {
+          "id": "b-kitchen",
+          "label": "Flat B · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat B",
+          "polygon": [
+            [251, 447],
+            [303.9150090415913, 447],
+            [303.18264014466547, 366],
+            [251, 366],
+            [251, 447]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "KIT. and fixture beside outer wall."
+        },
+        {
+          "id": "b-lav",
+          "label": "Flat B · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat B",
+          "polygon": [[221, 419], [251, 419], [251, 366], [221, 366], [221, 419]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. beside kitchen, with separate WC/fixture."
+        },
+        {
+          "id": "b-domestic",
+          "label": "Flat B · Domestic living space",
+          "category": "room",
+          "unitReference": "Flat B",
+          "showUnitReference": true,
+          "polygon": [
+            [159, 568.0174216027874],
+            [305, 567],
+            [303.18264014466547, 366],
+            [303.9150090415913, 447],
+            [251, 447],
+            [251, 419],
+            [221, 419],
+            [221, 366],
+            [159, 366],
+            [159, 568.0174216027874]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Tenement B printed in front room; no separate compartment is identified along street wall."
+        }
+      ]
+    },
+    {
+      "id": "floor-4",
+      "label": "4/F",
+      "page": 5,
+      "width": 312,
+      "height": 582,
+      "boundary": [[16, 16], [300, 14], [305, 567], [18, 569], [16, 16]],
+      "sourceFloorId": "typical-3-4",
+      "alignment": {
+        "x": 0,
+        "y": 177,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "c-kitchen",
+          "label": "Flat C · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat C",
+          "polygon": [
+            [67, 87],
+            [16.256781193490053, 87],
+            [16.549728752260396, 168],
+            [67, 168],
+            [67, 87]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "KIT. and entrance from rear flat."
+        },
+        {
+          "id": "c-lav",
+          "label": "Flat C · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat C",
+          "polygon": [[67, 168], [98, 168], [98, 116], [67, 116], [67, 168]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. and WC fixture behind separate partition."
+        },
+        {
+          "id": "c-domestic",
+          "label": "Flat C · Domestic living space",
+          "category": "room",
+          "unitReference": "Flat C",
+          "showUnitReference": true,
+          "polygon": [
+            [159, 14.992957746478874],
+            [16, 16],
+            [16.256781193490053, 87],
+            [67, 87],
+            [67, 116],
+            [98, 116],
+            [98, 168],
+            [159, 168],
+            [159, 14.992957746478874]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Tenement C identified by letter and permit. Open living space marked with letter."
+        },
+        {
+          "id": "d-kitchen",
+          "label": "Flat D · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat D",
+          "polygon": [
+            [249, 168],
+            [301.39240506329116, 168],
+            [300.6600361663653, 87],
+            [249, 87],
+            [249, 168]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "KIT. and entrance from rear flat."
+        },
+        {
+          "id": "d-lav",
+          "label": "Flat D · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat D",
+          "polygon": [[219, 168], [249, 168], [249, 116], [219, 116], [219, 168]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. and WC fixture behind separate partition."
+        },
+        {
+          "id": "d-domestic",
+          "label": "Flat D · Domestic living space",
+          "category": "room",
+          "unitReference": "Flat D",
+          "showUnitReference": true,
+          "polygon": [
+            [219, 168],
+            [219, 116],
+            [249, 116],
+            [249, 87],
+            [300.6600361663653, 87],
+            [301.39240506329116, 168],
+            [300, 14],
+            [159, 14.992957746478874],
+            [159, 168],
+            [219, 168]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Tenement D identified by letter and permit. Open living space marked with letter."
+        },
+        {
+          "id": "west-recess",
+          "label": "West light well",
+          "category": "void",
+          "polygon": [
+            [124, 168],
+            [16.549728752260396, 168],
+            [17.265822784810126, 366],
+            [124, 366],
+            [124, 168]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "R.C.C. FLAT ROOF is printed on 2/F. Upper plan shows the open setback above this roof."
+        },
+        {
+          "id": "east-recess",
+          "label": "East light well",
+          "category": "void",
+          "polygon": [
+            [198, 366],
+            [303.18264014466547, 366],
+            [301.39240506329116, 168],
+            [198, 168],
+            [198, 366]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "R.C.C. FLAT ROOF is printed on 2/F. Upper plan shows the open setback above this roof."
+        },
+        {
+          "id": "rear-lobby",
+          "label": "Rear common landing",
+          "category": "corridor",
+          "polygon": [[124, 201], [198, 201], [198, 168], [124, 168], [124, 201]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LOBBY at outer stair door."
+        },
+        {
+          "id": "stairs",
+          "label": "Common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[129, 242], [155, 242]],
+              "last": [[129, 297], [155, 297]],
+              "count": 7,
+              "label": "DN"
+            },
+            {
+              "first": [[165, 241], [193, 241]],
+              "last": [[165, 298], [193, 298]],
+              "count": 7,
+              "label": "UP"
+            }
+          ],
+          "polygon": [[124, 320], [198, 320], [198, 201], [124, 201], [124, 320]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Paired stair flights with tread lines, UP and DN annotations."
+        },
+        {
+          "id": "front-lobby",
+          "label": "Front common landing",
+          "category": "corridor",
+          "polygon": [[124, 366], [198, 366], [198, 320], [124, 320], [124, 366]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LOBBY and paired entrance doors to A/B."
+        },
+        {
+          "id": "a-kitchen",
+          "label": "Flat A · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat A",
+          "polygon": [
+            [69, 366],
+            [17.265822784810126, 366],
+            [17.55877034358047, 447],
+            [69, 447],
+            [69, 366]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "KIT. and fixture beside outer wall."
+        },
+        {
+          "id": "a-lav",
+          "label": "Flat A · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat A",
+          "polygon": [[69, 419], [99, 419], [99, 366], [69, 366], [69, 419]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. beside kitchen, with separate WC/fixture."
+        },
+        {
+          "id": "a-domestic",
+          "label": "Flat A · Domestic living space",
+          "category": "room",
+          "unitReference": "Flat A",
+          "showUnitReference": true,
+          "polygon": [
+            [159, 366],
+            [99, 366],
+            [99, 419],
+            [69, 419],
+            [69, 447],
+            [17.55877034358047, 447],
+            [18, 569],
+            [159, 568.0174216027874],
+            [159, 366]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Tenement A printed in front room; no separate compartment is identified along street wall."
+        },
+        {
+          "id": "b-kitchen",
+          "label": "Flat B · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat B",
+          "polygon": [
+            [251, 447],
+            [303.9150090415913, 447],
+            [303.18264014466547, 366],
+            [251, 366],
+            [251, 447]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "KIT. and fixture beside outer wall."
+        },
+        {
+          "id": "b-lav",
+          "label": "Flat B · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat B",
+          "polygon": [[221, 419], [251, 419], [251, 366], [221, 366], [221, 419]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. beside kitchen, with separate WC/fixture."
+        },
+        {
+          "id": "b-domestic",
+          "label": "Flat B · Domestic living space",
+          "category": "room",
+          "unitReference": "Flat B",
+          "showUnitReference": true,
+          "polygon": [
+            [159, 568.0174216027874],
+            [305, 567],
+            [303.18264014466547, 366],
+            [303.9150090415913, 447],
+            [251, 447],
+            [251, 419],
+            [221, 419],
+            [221, 366],
+            [159, 366],
+            [159, 568.0174216027874]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Tenement B printed in front room; no separate compartment is identified along street wall."
+        }
+      ]
+    },
+    {
+      "id": "fifth",
+      "label": "5/F",
+      "page": 6,
+      "width": 318,
+      "height": 588,
+      "boundary": [
+        [15, 16],
+        [301, 14],
+        [301, 165],
+        [192, 165],
+        [194, 366],
+        [303, 366],
+        [306, 566],
+        [18, 568],
+        [16, 365],
+        [123, 365],
+        [123, 166],
+        [15, 166],
+        [15, 16]
+      ],
+      "alignment": {
+        "x": 0,
+        "y": 177,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "rear-roof",
+          "label": "Rear flat roof",
+          "category": "roof",
+          "polygon": [
+            [192, 165],
+            [301, 165],
+            [301, 14],
+            [15, 16],
+            [15, 166],
+            [123, 166],
+            [123, 209],
+            [192.43781094527364, 209],
+            [192, 165]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "R.C.C. FLAT ROOF and drainage/railing notes at rear."
+        },
+        {
+          "id": "stairs",
+          "label": "Common stair",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[128, 250], [157, 250]],
+              "last": [[128, 297], [157, 297]],
+              "count": 7,
+              "label": "DN"
+            },
+            {
+              "first": [[167, 249], [190, 249]],
+              "last": [[167, 298], [190, 298]],
+              "count": 7,
+              "label": "UP"
+            }
+          ],
+          "polygon": [
+            [192.43781094527364, 209],
+            [123, 209],
+            [123, 320],
+            [193.54228855721394, 320],
+            [192.43781094527364, 209]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Paired stair flights with tread lines, UP and DN annotations."
+        },
+        {
+          "id": "front-lobby",
+          "label": "Front common landing",
+          "category": "corridor",
+          "polygon": [
+            [193.54228855721394, 320],
+            [123, 320],
+            [123, 365],
+            [16, 365],
+            [16.00985221674877, 366],
+            [194, 366],
+            [193.54228855721394, 320]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LOBBY and paired entrance doors to A/B."
+        },
+        {
+          "id": "a-kitchen",
+          "label": "Flat A · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat A",
+          "polygon": [
+            [69, 366],
+            [16.00985221674877, 366],
+            [16.807881773399014, 447],
+            [69, 447],
+            [69, 366]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "KIT. and fixture beside outer wall."
+        },
+        {
+          "id": "a-lav",
+          "label": "Flat A · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat A",
+          "polygon": [[69, 419], [99, 419], [99, 366], [69, 366], [69, 419]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. beside kitchen, with separate WC/fixture."
+        },
+        {
+          "id": "a-domestic",
+          "label": "Flat A · Domestic living space",
+          "category": "room",
+          "unitReference": "Flat A",
+          "showUnitReference": true,
+          "polygon": [
+            [99, 366],
+            [99, 419],
+            [69, 419],
+            [69, 447],
+            [16.807881773399014, 447],
+            [18, 568],
+            [161, 567.0069444444445],
+            [161, 366],
+            [99, 366]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Tenement A printed in front room; no separate compartment is identified along street wall."
+        },
+        {
+          "id": "b-kitchen",
+          "label": "Flat B · Kitchen",
+          "category": "kitchen",
+          "unitReference": "Flat B",
+          "polygon": [
+            [304.215, 447],
+            [303, 366],
+            [251, 366],
+            [251, 447],
+            [304.215, 447]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "KIT. and fixture beside outer wall."
+        },
+        {
+          "id": "b-lav",
+          "label": "Flat B · Lavatory",
+          "category": "lavatory",
+          "unitReference": "Flat B",
+          "polygon": [[251, 419], [251, 366], [221, 366], [221, 419], [251, 419]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "LAV. beside kitchen, with separate WC/fixture."
+        },
+        {
+          "id": "b-domestic",
+          "label": "Flat B · Domestic living space",
+          "category": "room",
+          "unitReference": "Flat B",
+          "showUnitReference": true,
+          "polygon": [
+            [161, 567.0069444444445],
+            [306, 566],
+            [303, 366],
+            [304.215, 447],
+            [251, 447],
+            [251, 419],
+            [221, 419],
+            [221, 366],
+            [161, 366],
+            [161, 567.0069444444445]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Tenement B printed in front room; no separate compartment is identified along street wall."
+        }
+      ]
+    },
+    {
+      "id": "roof",
+      "label": "Roof",
+      "page": 7,
+      "width": 312,
+      "height": 438,
+      "boundary": [
+        [115, 49],
+        [189, 49],
+        [188, 212],
+        [295, 212],
+        [297, 414],
+        [10, 414],
+        [9, 213],
+        [116, 213],
+        [115, 49]
+      ],
+      "alignment": {
+        "x": 0,
+        "y": 365,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "hatch",
+          "label": "Roof hatch and raised cover",
+          "category": "utility",
+          "polygon": [
+            [189, 49],
+            [115, 49],
+            [115.32317073170732, 102],
+            [188.67484662576686, 102],
+            [189, 49]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Sloping R.C.C. slab and trap called out at roof head."
+        },
+        {
+          "id": "stairs",
+          "label": "Roof stair and landing",
+          "category": "stairs",
+          "stairFlights": [
+            {
+              "first": [[120, 107], [148, 107]],
+              "last": [[120, 141], [148, 141]],
+              "count": 7,
+              "label": "DN"
+            }
+          ],
+          "polygon": [
+            [189, 212],
+            [188, 212],
+            [188.67484662576686, 102],
+            [115.32317073170732, 102],
+            [116, 213],
+            [189, 213],
+            [189, 212]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "DN flight and entrance door on roof."
+        },
+        {
+          "id": "canopy",
+          "label": "Street canopy",
+          "category": "canopy",
+          "polygon": [
+            [10, 414],
+            [297, 414],
+            [296.41584158415844, 355],
+            [9.706467661691542, 355],
+            [10, 414]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "R.C.C. CANOPY at street end."
+        },
+        {
+          "id": "roof",
+          "label": "Flat roof",
+          "category": "roof",
+          "polygon": [
+            [9, 213],
+            [10, 414],
+            [9.706467661691542, 355],
+            [296.41584158415844, 355],
+            [295, 212],
+            [189, 212],
+            [189, 213],
+            [9, 213]
+          ],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "R.C.C. FLAT ROOF between stair and canopy."
+        }
+      ]
+    },
+    {
+      "id": "top-roof",
+      "label": "Top roof",
+      "page": 8,
+      "width": 117,
+      "height": 192,
+      "boundary": [[22, 39], [100, 38], [99, 168], [22, 169], [22, 39]],
+      "alignment": {
+        "x": 106,
+        "y": 365,
+        "rotation": 0,
+        "scale": 1
+      },
+      "warnings": [],
+      "units": [
+        {
+          "id": "hatch",
+          "label": "Roof access trap",
+          "category": "utility",
+          "polygon": [[49, 75], [73, 75], [73, 61], [49, 61], [49, 75]],
+          "holes": [],
+          "confidence": 0.91,
+          "evidence": "Small central trap in sloping slab."
+        },
+        {
+          "id": "roof",
+          "label": "Top roof over stair",
+          "category": "roof",
+          "polygon": [[22, 169], [99, 168], [100, 38], [22, 39], [22, 169]],
+          "holes": [[[49, 61], [73, 61], [73, 75], [49, 75], [49, 61]]],
+          "confidence": 0.91,
+          "evidence": "R.C.C. CURB and perimeter of upper roof slab."
+        }
+      ]
+    }
+  ]
+}

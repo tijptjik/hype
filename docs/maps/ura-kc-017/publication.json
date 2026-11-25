@@ -1,0 +1,112 @@
+[
+  {
+    "id": "building-building-4e231fde35f89c933f80a1b2d633816983af72027b0b512a6cf419ad8c998-2de61e50",
+    "name": "17 Kai Tak Road",
+    "publishedAt": "2026-11-25T00:57:11.676Z",
+    "hash": "3e1604d38c15bb18dfd91a84596d606e56975798481229fab4d19d522b21e8b1",
+    "levels": 8,
+    "areas": 50,
+    "viewer": "https://hype.hk/buildings/building-building-4e231fde35f89c933f80a1b2d633816983af72027b0b512a6cf419ad8c998-2de61e50",
+    "api": "https://hype.hk/api/premises-maps/building-building-4e231fde35f89c933f80a1b2d633816983af72027b0b512a6cf419ad8c998-2de61e50",
+    "extraction": "extractions/ktr-17.json"
+  },
+  {
+    "id": "building-building-33416288e9a3ec8d6459b9d3c85f64e80cb847a37c4f9fb75fe25264a5954-6f62bbf0",
+    "name": "Wing Shing House",
+    "publishedAt": "2026-11-25T00:57:29.914Z",
+    "hash": "7e00dcb51a481f5dc8f7f3e89f5227dc3d5260c53ba1741849cf3466fd148ee6",
+    "levels": 11,
+    "areas": 200,
+    "viewer": "https://hype.hk/buildings/building-building-33416288e9a3ec8d6459b9d3c85f64e80cb847a37c4f9fb75fe25264a5954-6f62bbf0",
+    "api": "https://hype.hk/api/premises-maps/building-building-33416288e9a3ec8d6459b9d3c85f64e80cb847a37c4f9fb75fe25264a5954-6f62bbf0",
+    "extraction": "extractions/ktr-19-21.json"
+  },
+  {
+    "id": "building-ea6qom6lemvr-9d5dd3d8",
+    "name": "25–31A Kai Tak Road",
+    "publishedAt": "2026-11-25T00:57:58.226Z",
+    "hash": "94432899689e1e8909df505d7f1ca9c15f2629ada21aa58f32339a3691a0660d",
+    "levels": 10,
+    "areas": 322,
+    "viewer": "https://hype.hk/buildings/building-ea6qom6lemvr-9d5dd3d8",
+    "api": "https://hype.hk/api/premises-maps/building-ea6qom6lemvr-9d5dd3d8",
+    "extraction": "extractions/ktr-23-29.json"
+  },
+  {
+    "id": "building-0wzvoltsnvg8-fe6294fc",
+    "name": "31-41 Kai Tak Road",
+    "publishedAt": "2026-11-25T00:58:33.857Z",
+    "hash": "70c8c574414d1c4678251c4133774f9c493c3bedf3207d9272b678d81e6d87f0",
+    "levels": 13,
+    "areas": 524,
+    "viewer": "https://hype.hk/buildings/building-0wzvoltsnvg8-fe6294fc",
+    "api": "https://hype.hk/api/premises-maps/building-0wzvoltsnvg8-fe6294fc",
+    "extraction": "extractions/ktr-31-41.json"
+  },
+  {
+    "id": "building-building-5ae946e9fd041cbe0d7bccb43b668180039afa8fbd8f0e62f03d2832fc611-bf64f2d0",
+    "name": "Nga Tsin Wai Building",
+    "publishedAt": "2026-11-25T00:59:04.364Z",
+    "hash": "4e35d95270d8afd66895367d966cfcf698f69eeabc763091cbbeb0f13910bf19",
+    "levels": 10,
+    "areas": 343,
+    "viewer": "https://hype.hk/buildings/building-building-5ae946e9fd041cbe0d7bccb43b668180039afa8fbd8f0e62f03d2832fc611-bf64f2d0",
+    "api": "https://hype.hk/api/premises-maps/building-building-5ae946e9fd041cbe0d7bccb43b668180039afa8fbd8f0e62f03d2832fc611-bf64f2d0",
+    "extraction": "extractions/ntwr-32-38.json"
+  },
+  {
+    "id": "building-building-47caf70cb2f33863436d5d5c0082c1988457fa63385bc17d29a561b797da3-f29ec656",
+    "name": "Luen Fat Building",
+    "publishedAt": "2026-11-25T00:59:17.644Z",
+    "hash": "a7bc029b37b3b973d85a239f35cb983fd6813d3c734cb23d3006b87cb851aeff",
+    "levels": 9,
+    "areas": 133,
+    "viewer": "https://hype.hk/buildings/building-building-47caf70cb2f33863436d5d5c0082c1988457fa63385bc17d29a561b797da3-f29ec656",
+    "api": "https://hype.hk/api/premises-maps/building-building-47caf70cb2f33863436d5d5c0082c1988457fa63385bc17d29a561b797da3-f29ec656",
+    "extraction": "extractions/tklr-26-28.json"
+  },
+  {
+    "id": "building-building-aae68b97ccfcac0a2ecf3c0cbbbcaa58f6ef5169659b13adb2987811d2108-646eaba1",
+    "name": "30 Tak Ku Ling Road",
+    "publishedAt": "2026-11-25T00:59:25.567Z",
+    "hash": "5deb80a4c726f3da7f48ef04e2746765c2b9cb8c83d294633ee1d3abcc42e10a",
+    "levels": 9,
+    "areas": 53,
+    "viewer": "https://hype.hk/buildings/building-building-aae68b97ccfcac0a2ecf3c0cbbbcaa58f6ef5169659b13adb2987811d2108-646eaba1",
+    "api": "https://hype.hk/api/premises-maps/building-building-aae68b97ccfcac0a2ecf3c0cbbbcaa58f6ef5169659b13adb2987811d2108-646eaba1",
+    "extraction": "extractions/tklr-30.json"
+  },
+  {
+    "id": "building-building-64b6bf79777a8eca00646a058d7286120ce2714e1e21805306468a59f97a1-2d051a82",
+    "name": "Tat Tak Building",
+    "publishedAt": "2026-11-25T00:59:38.274Z",
+    "hash": "e773707bda557cd945eeb3d0914edb9c27c2432105005d9350c8b2feefdc9b24",
+    "levels": 9,
+    "areas": 102,
+    "viewer": "https://hype.hk/buildings/building-building-64b6bf79777a8eca00646a058d7286120ce2714e1e21805306468a59f97a1-2d051a82",
+    "api": "https://hype.hk/api/premises-maps/building-building-64b6bf79777a8eca00646a058d7286120ce2714e1e21805306468a59f97a1-2d051a82",
+    "extraction": "extractions/tklr-32-34a.json"
+  },
+  {
+    "id": "building-t6qibrppuk0w-420336b8",
+    "name": "36–38 Tak Ku Ling Road",
+    "publishedAt": "2026-11-25T00:59:53.978Z",
+    "hash": "751611223fdb595d01e0eb5e4bbbb128f90fe299dfab1f619ee620874f973555",
+    "levels": 9,
+    "areas": 135,
+    "viewer": "https://hype.hk/buildings/building-t6qibrppuk0w-420336b8",
+    "api": "https://hype.hk/api/premises-maps/building-t6qibrppuk0w-420336b8",
+    "extraction": "extractions/tklr-36-38.json"
+  },
+  {
+    "id": "building-building-b9d25941b52020c0e9a8ecd4771ff342d1e1cd0dfa5d66c6a68596bfae23b-5b0dfe9b",
+    "name": "South Mansion",
+    "publishedAt": "2026-11-25T01:00:04.572Z",
+    "hash": "dfec0472a190d141af0077d63cbafaeb6212181a36bbdef5c282e4aa3ebc77ee",
+    "levels": 8,
+    "areas": 93,
+    "viewer": "https://hype.hk/buildings/building-building-b9d25941b52020c0e9a8ecd4771ff342d1e1cd0dfa5d66c6a68596bfae23b-5b0dfe9b",
+    "api": "https://hype.hk/api/premises-maps/building-building-b9d25941b52020c0e9a8ecd4771ff342d1e1cd0dfa5d66c6a68596bfae23b-5b0dfe9b",
+    "extraction": "extractions/south-mansion.json"
+  }
+]
