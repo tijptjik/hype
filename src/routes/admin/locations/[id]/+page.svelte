@@ -25,6 +25,7 @@ import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 import { getAdminCtx } from '#lib/context/admin.svelte.js'
 // I18N
 import { buildingNameLabel } from '#lib/locations/kinds.i18n.js'
+import { buildingProfileNames } from '#lib/locations/addressIdentity.js'
 import { getLocale, m } from '#lib/i18n.js'
 // ICONS
 import MapPin from 'virtual:icons/proicons/location'
@@ -160,7 +161,7 @@ $effect(() => {
     place?.state === 'manual' ? place.facts : (place?.sharedFacts ?? place?.facts)
   const title =
     place?.kind === 'building'
-      ? buildingNameLabel(facts?.names ?? {}, facts?.confirmedUnnamed, locale)
+      ? buildingNameLabel(buildingProfileNames(place), facts?.confirmedUnnamed, locale)
       : facts?.names[locale] ||
         facts?.names.en ||
         Object.values(facts?.names ?? {}).find(Boolean) ||

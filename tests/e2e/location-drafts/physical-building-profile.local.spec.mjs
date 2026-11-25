@@ -58,3 +58,51 @@ test('shows Kai King Mansion’s reviewed outlines and constituent profile', asy
     page.getByRole('tabpanel', { name: 'Location views', exact: true }),
   ).toMatchAriaSnapshot('- text: /57[–-]59 Lung Kong Road/')
 })
+
+test('reviews each Tat Tak address independently on its physical parent', async ({
+  page,
+}) => {
+  await page.goto(
+    '/admin/locations/Wnw2IkAkr9_t?organisation=oDucgyH4H4Bm&edit=true#relationships',
+    { waitUntil: 'domcontentloaded' },
+  )
+  await searchConstituents(page, '34 Tak Ku Ling')
+  const result = page.getByRole('region', { name: 'Constituent building search' })
+  await expect(result.getByText('Constituent added', { exact: true })).toBeVisible({
+    timeout: 180_000,
+  })
+  await result
+    .getByRole('button', { name: 'Link addresses to physical building' })
+    .click()
+  const review = result.getByRole('region', { name: 'Link building addresses' })
+  await expect(review.getByRole('checkbox')).toHaveCount(3)
+  // Use the parent's saved relationships so the check still works after an editor links an address.
+  const saved = await page
+    .locator('[data-address-order] [data-address-id]')
+    .allTextContents()
+  let selected = 0
+  for (const number of ['34', '34A', '32']) {
+    const name = new RegExp(`\\b${number} TAK KU LING ROAD\\b`, 'i')
+    const address = review.getByRole('checkbox', { name })
+    if (saved.some(label => name.test(label))) {
+      await expect(address).toBeChecked()
+      await expect(address).toBeDisabled()
+    } else {
+      await expect(address).toBeEnabled()
+      await expect(address).not.toBeChecked()
+      if (selected < 2) {
+        await address.check()
+        selected++
+      }
+    }
+  }
+  await expect(
+    review.getByRole('button', { name: `Link selected addresses (${selected})` }),
+  ).toBeEnabled({ enabled: selected > 0 })
+  if (process.env.DEV_RUNNER_ARTIFACTS)
+    await result.screenshot({
+      path: join(process.env.DEV_RUNNER_ARTIFACTS, 'tat-tak-address-choices.png'),
+    })
+  await review.getByRole('button', { name: 'Cancel' }).click()
+  await expect(review).toHaveCount(0)
+})

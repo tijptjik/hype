@@ -8,6 +8,7 @@ import { prefersReducedMotion } from 'svelte/motion'
 import LocationSearchRadius from './LocationSearchRadius.svelte'
 import { locationSyncMode } from '#lib/locations/associationSync.js'
 import LocationSyncSelect from './LocationSyncSelect.svelte'
+import { buildingSourceHref } from '#lib/locations/buildingSource.js'
 import { locationKindLabel } from '#lib/locations/kinds.i18n.js'
 import {
   searchBuildingNames,
@@ -399,7 +400,7 @@ const selectedLocationHref = $derived(
     : onReviewDraft
       ? '/admin/locations/new'
       : selected?.buildingSource
-        ? `/admin/locations/building/${encodeURIComponent(selected.buildingSource.id)}?${new URLSearchParams({ release: selected.buildingSource.release, ...(selected.buildingSource.addressId ? { address: selected.buildingSource.addressId } : {}) })}`
+        ? buildingSourceHref(selected.buildingSource, true)
         : null,
 )
 let linked = $state(false)

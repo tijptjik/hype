@@ -19,6 +19,7 @@ import {
   linkBuildingAddressRevisions,
 } from '#lib/db/services/buildingAddressLinks.js'
 import { canonicalLocationSQL } from '#lib/db/services/locationRedirect.js'
+import { physicalBuildingMembers } from '#lib/db/services/physicalBuilding.js'
 import { retainPublishedAddress } from '#lib/db/services/addressCanonical.js'
 // VALIDATION
 import { z } from 'zod'
@@ -39,6 +40,7 @@ import {
 } from '#lib/db/services/locationRelationships.js'
 // TYPES
 import type { GuardedBaseContext } from '#lib/api/guarded.types.js'
+import type { PhysicalBuildingMember } from '#lib/locations/physicalBuilding.js'
 
 /** Require account access and current authority over an explicit correction scope.
  * @param ctx Current request. @param scope Organisation or authoritative shared scope.
@@ -190,11 +192,12 @@ async function reviewedBuilding(
   return row.source ? BuildingSourceSchema.parse(JSON.parse(row.source)) : null
 }
 
-/** Load the footprint reference and identifiers already linked to this building.
- * @param input Building and scope. @returns Published footprint choices and currently linked publisher address IDs.
+/** Review address candidates independently of footprint membership.
+ * @param input Building, scope and optional constituent footprint to review.
+ * @returns Distinct publisher addresses and the IDs already linked to the target Location.
  */
 export const getBuildingAddressReview = guardedQuery(
-  buildingScope,
+  buildingScope.extend({ constituentId: z.string().min(1).max(200).optional() }),
   async (input, ctx) => {
     await authorizeScope(ctx, input.organisationId, true)
     const source = await reviewedBuilding(ctx, input)
@@ -203,10 +206,23 @@ export const getBuildingAddressReview = guardedQuery(
     }>(sql`SELECT (SELECT json_extract(a.sourceKey,'$.id') FROM address a WHERE a.id=ar.addressId) id
     ${currentAddressLinks(input.organisationId)} AND ${canonicalLocationSQL(sql`r.locationId`)}=${input.locationId}
     AND EXISTS (SELECT 1 FROM address a WHERE a.id=ar.addressId AND json_extract(a.sourceKey,'$.provider')='saanseoi' AND json_extract(a.sourceKey,'$.family')='addresses')`)
-    const choices = source
-      ? (await loadBuildingDetails(source.id, source.release)).addresses
-      : []
-    return { choices, linked: rows.map(row => row.id) }
+    const ownAddresses =
+      source && !input.constituentId
+        ? (await loadBuildingDetails(source.id, source.release)).addresses
+        : []
+    // Use the addresses pinned when each effective constituent was reviewed.
+    const retained = await ctx.db.get<{ members: string }>(
+      sql`SELECT ${physicalBuildingMembers(sql`${input.locationId}`, input.organisationId)} members`,
+    )
+    const members: PhysicalBuildingMember[] = JSON.parse(retained?.members ?? '[]')
+    const choices = new Map(ownAddresses.map(address => [address.id, address]))
+    for (const member of members) {
+      if (input.constituentId && input.constituentId !== member.source.id) continue
+      for (const address of member.addresses) {
+        if (!choices.has(address.id)) choices.set(address.id, address)
+      }
+    }
+    return { choices: [...choices.values()], linked: rows.map(row => row.id) }
   },
 )
 

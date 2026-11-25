@@ -107,6 +107,7 @@ test('creates from a constituent, reopens the physical parent and adds a sibling
     return reply(route, { count: 1 })
   })
   await page.goto(session, { waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: 'Edit Locations', exact: true }).click()
   const button = name => page.getByRole('button', { name, exact: true })
   await button('Start from a constituent').click({ timeout: 90_000 })
   const search = page
@@ -150,6 +151,7 @@ test('opens the saved parent from the session and continues the constituent edit
     return route.abort()
   })
   await page.goto(session, { waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: 'Edit Locations', exact: true }).click()
   const included = page.getByRole('complementary', { name: 'Included Locations' })
   // The session is edited during field work. Resolve both identities from one current, editable parent.
   const card = included

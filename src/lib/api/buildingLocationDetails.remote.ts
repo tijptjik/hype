@@ -1,5 +1,7 @@
 // SVELTE
 import { error } from '@sveltejs/kit'
+// VALIDATION
+import { z } from 'zod'
 // REMOTE
 import { guardedQuery } from '#lib/api/server/guarded.js'
 // DRIZZLE
@@ -19,48 +21,63 @@ import { location } from '#lib/db/schema/location.js'
  * @remarks Requires an account. Private manual records cannot be discovered by catalogue ID.
  */
 export const getBuildingLocationDetails = guardedQuery(
-  BuildingSourceSchema,
+  BuildingSourceSchema.extend({ preferImported: z.boolean().optional() }),
   async (source, ctx) => {
     if (ctx.user.isAnonymous) error(403, 'ACCOUNT_REQUIRED')
-    const id = await sharedBuildingImportId(ctx.db, source.id)
-    // Prefer the existing shared record, preserving its retained corrections and stable identity.
-    const existing = await ctx.db
-      .select({ id: location.id })
-      .from(location)
-      .where(
-        and(
-          eq(location.id, id),
-          ne(location.state, 'manual'),
-          or(ne(location.state, 'redirect'), isNotNull(location.redirectTargetId)),
-        ),
-      )
-      .get()
-    if (existing) return { type: 'location' as const, locationId: existing.id }
+    if (source.preferImported) {
+      const id = await sharedBuildingImportId(ctx.db, source.id)
+      // Prefer the existing shared record, preserving its retained corrections and stable identity.
+      const existing = await ctx.db
+        .select({ id: location.id })
+        .from(location)
+        .where(
+          and(
+            eq(location.id, id),
+            ne(location.state, 'manual'),
+            or(ne(location.state, 'redirect'), isNotNull(location.redirectTargetId)),
+          ),
+        )
+        .get()
+      if (existing) return { type: 'location' as const, locationId: existing.id }
+    }
 
     // Validate the selected release and address before exposing a catalogue-only preview.
     const bundle = await loadBuildingNames()
     if (bundle.release !== source.release) error(409, 'BUILDING_PUBLICATION_CHANGED')
     const record = bundle.records.find(row => row.id === source.id)
-    if (!record) error(404, 'BUILDING_NOT_FOUND')
     const details = await loadBuildingDetails(source.id, source.release)
     const candidate = source.addressId
       ? details.addresses.find(row => row.id === source.addressId)
-      : details.addresses[0]
+      : details.addresses.length === 1
+        ? details.addresses[0]
+        : undefined
     if (source.addressId && !candidate) error(404, 'BUILDING_ADDRESS_NOT_FOUND')
     const names = Object.fromEntries(
-      Object.entries(record.names).filter((entry): entry is [string, string] =>
+      Object.entries(record?.names ?? {}).filter((entry): entry is [string, string] =>
         Boolean(entry[1]),
       ),
     )
-    if (!Object.keys(names).length && record.name) names.und = record.name
+    if (!Object.keys(names).length && record?.name) names.und = record.name
     const address = fillBuildingDetails(
       emptyFeatureAddress(),
-      { ...record, names, release: bundle.release },
+      {
+        id: source.id,
+        name: record?.name,
+        divisionCodes: record?.divisionCodes ?? [],
+        names,
+        release: bundle.release,
+      },
       details,
       candidate,
       false,
       'en',
     )
-    return { type: 'preview' as const, names, address }
+    return {
+      type: 'preview' as const,
+      names,
+      address,
+      candidates: details.addresses,
+      selectedId: candidate?.id ?? null,
+    }
   },
 )

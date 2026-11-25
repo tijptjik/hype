@@ -70,7 +70,10 @@ import { canonicalFacilityLabel } from '#lib/indoor/facilityLabels.js'
 import type { LocationKind } from '#lib/locations/kinds.js'
 import type { LocationDiscoveryType } from '#lib/locations/kinds.js'
 // DOMAIN
-import { addressBuildingNames } from '#lib/locations/addressIdentity.js'
+import {
+  addressBuildingNames,
+  buildingProfileNames,
+} from '#lib/locations/addressIdentity.js'
 import { buildingPreviewTerms } from '#lib/locations/buildingPreview.js'
 import { buildingPartDisplay } from '#lib/locations/buildingPartDisplay.js'
 import {
@@ -641,7 +644,7 @@ async function save(): Promise<void> {
 const title = $derived(
   activeKind === 'building'
     ? buildingNameLabel(
-        editing ? names : (place.facts?.names ?? {}),
+        editing ? names : buildingProfileNames(place),
         editing ? confirmedUnnamed : place.facts?.confirmedUnnamed,
       )
     : place.facts?.names[

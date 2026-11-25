@@ -82,6 +82,22 @@ const canContain = $derived(
   kind === 'building' || kind === 'building_part' || kind === 'premises',
 )
 
+/** Refresh the parent's address list after linking reviewed publisher addresses.
+ * @returns Once both the relationship list and its address presentation have refreshed.
+ */
+async function addressesSaved(): Promise<void> {
+  await getRelationshipPage({
+    locationId,
+    organisationId,
+    table: 'locationAddress',
+    history: false,
+    afterId: undefined,
+  }).refresh()
+  await onAddressChanged?.()
+  linkingAddresses = false
+  refreshVersion++
+}
+
 /** Append a new episode or complete correction without modifying a prior assertion.
  * @param previous Existing assertion to correct.
  * @param suppress Hide the assertion in the selected scope.
@@ -276,10 +292,11 @@ async function save(
             organisationId &&
             kind === 'building'}
             <BuildingComposition
-              continueAdding={continueAddingFor === locationId}
               {previewTerms}
+              continueAdding={continueAddingFor === locationId}
               {locationId}
               {organisationId}
+              onAddressesSaved={addressesSaved}
               onSaved={async adding => {
                 continueAddingFor = adding ? locationId : null
                 await getRelationshipPage({
@@ -302,18 +319,7 @@ async function save(
               {locationId}
               {organisationId}
               onCancel={() => (linkingAddresses = false)}
-              onSaved={async () => {
-                await getRelationshipPage({
-                  locationId,
-                  organisationId,
-                  table: 'locationAddress',
-                  history: false,
-                  afterId: undefined,
-                }).refresh()
-                await onAddressChanged?.()
-                linkingAddresses = false
-                refreshVersion++
-              }}
+              onSaved={addressesSaved}
             />
           {/if}
           {#if adding &&

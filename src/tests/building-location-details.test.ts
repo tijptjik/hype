@@ -61,10 +61,12 @@ it('rejects anonymous reads before any database or catalogue access', async () =
 })
 it('opens an existing shared record without reimporting or fetching catalogue facts', async () => {
   mocks.get.mockResolvedValue({ id: 'existing' })
-  expect(await getBuildingLocationDetails(source)).toEqual({
-    type: 'location',
-    locationId: 'existing',
-  })
+  expect(await getBuildingLocationDetails({ ...source, preferImported: true })).toEqual(
+    {
+      type: 'location',
+      locationId: 'existing',
+    },
+  )
   expect(mocks.names).not.toHaveBeenCalled()
   const query = new SQLiteSyncDialect().sqlToQuery(mocks.where.mock.calls[0][0])
   expect(query.sql).toContain('"location"."state" <>')
@@ -75,6 +77,8 @@ it('shows a read-only preview using the selected release and address alternative
     type: 'preview',
     names: { en: 'Garden Bakery' },
     address: { coordinates: [114, 22] },
+    candidates: [{ id: 'first' }, { id: 'second' }],
+    selectedId: 'second',
   })
   expect(mocks.details).toHaveBeenCalledWith(source.id, 'r1')
   expect(mocks.fill).toHaveBeenCalledWith(
@@ -85,6 +89,32 @@ it('shows a read-only preview using the selected release and address alternative
     false,
     'en',
   )
+})
+it('shows every candidate without choosing the first on an unqualified building link', async () => {
+  mocks.get.mockResolvedValue({ id: 'existing' })
+  const result = await getBuildingLocationDetails({
+    id: source.id,
+    release: source.release,
+  })
+  expect(result).toMatchObject({
+    type: 'preview',
+    candidates: [{ id: 'first' }, { id: 'second' }],
+    selectedId: null,
+  })
+  expect(mocks.get).not.toHaveBeenCalled()
+  expect(mocks.fill.mock.calls[0][3]).toBeUndefined()
+})
+it('opens an unnamed footprint without assigning an address', async () => {
+  mocks.names.mockResolvedValueOnce({ release: source.release, records: [] })
+  mocks.details.mockResolvedValueOnce({ addresses: [] })
+  expect(
+    await getBuildingLocationDetails({ id: source.id, release: source.release }),
+  ).toMatchObject({
+    type: 'preview',
+    names: {},
+    candidates: [],
+    selectedId: null,
+  })
 })
 it('rejects changed releases and missing address alternatives', async () => {
   mocks.names.mockResolvedValueOnce({ release: 'r2', records: [] })

@@ -1,6 +1,7 @@
 // ADDRESS
 import {
   ADDRESS_LOCALES,
+  emptyFeatureAddress,
   getAddressDisplay,
   getAddressLocale,
   type FeatureAddress,
@@ -13,6 +14,8 @@ import { normalizeContentLocale } from '#lib/content-locales/model.js'
 import { contentStorageTag } from '#lib/i18n/contentRecords.js'
 // VALIDATION
 import { LocalLocationInputSchema, type LocalLocationInput } from './local.js'
+// TYPES
+import type { LocationResource } from './resource'
 
 /** Read building names without treating a premises or estate name as a building identity.
  * @param address Accepted address evidence.
@@ -59,6 +62,27 @@ export function addressBuildingNames(
     if (typeof value === 'string' && value.trim()) names[key] = value
   }
   return names
+}
+
+/** Read the standalone building profile, including address names saved before profile autofill.
+ * @param place Location and its community or private profile.
+ * @returns Recorded translations with available building names in missing languages.
+ */
+export function buildingProfileNames(
+  place: Pick<LocationResource, 'state' | 'facts' | 'sharedFacts' | 'communityLocks'>,
+): Record<string, string> {
+  const community = place.state === 'linked' || place.state === 'unresolved'
+  const facts = community ? (place.sharedFacts ?? place.facts) : place.facts
+  if (!facts) return {}
+  if (
+    facts.confirmedUnnamed ||
+    (community && place.communityLocks?.openFields.names === false)
+  )
+    return facts.names
+  return addressBuildingNames(
+    { ...emptyFeatureAddress(), source: facts.location.address },
+    facts.names,
+  )
 }
 
 /** Label an address-only Location from its effective localized address, without inventing a venue name.

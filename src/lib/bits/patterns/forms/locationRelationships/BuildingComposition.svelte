@@ -11,6 +11,7 @@ import {
   refreshPhysicalBuildingProfile,
 } from '#lib/api/buildingEvidence.remote.js'
 // COMPONENTS
+import BuildingAddressLinks from './BuildingAddressLinks.svelte'
 import PhysicalParentPicker from './PhysicalParentPicker.svelte'
 // DOMAIN
 import { submissionErrorMessage } from '#lib/forms/submissionError.js'
@@ -27,12 +28,14 @@ let {
   previewTerms,
   continueAdding,
   onSaved,
+  onAddressesSaved,
 }: {
   locationId: string
   organisationId: string
   continueAdding: boolean
   previewTerms: string[]
   onSaved: (adding?: boolean) => Promise<void>
+  onAddressesSaved: () => Promise<void>
 } = $props()
 const role = $derived(getBuildingCompositionRole({ locationId, organisationId }))
 let mode = $state<'preview' | 'add' | null>(
@@ -41,6 +44,7 @@ let mode = $state<'preview' | 'add' | null>(
     : null,
 )
 let placing = $state(false)
+let reviewingAddresses = $state<string | null>(null)
 let query = $state('')
 let rows = $state<BuildingSearchResult[]>([])
 const candidates = $derived.by(() => {
@@ -71,6 +75,7 @@ async function search(more = false): Promise<void> {
   busy = true
   failure = ''
   if (!more) {
+    reviewingAddresses = null
     rows = []
     cursor = null
   }
@@ -129,6 +134,7 @@ async function save(row?: BuildingSearchResult, parentId?: string): Promise<void
  */
 async function toggleSearch(next: 'add' | 'preview'): Promise<void> {
   mode = mode === next ? null : next
+  reviewingAddresses = null
   rows = []
   cursor = null
   searched = false
@@ -304,6 +310,18 @@ onDestroy(() => {
                   ? ` · ${attached.outlineRole}`
                   : ''}
               </span>
+              {#if row.buildingSource.addressId}
+                <button
+                  type="button"
+                  class={control}
+                  aria-expanded={reviewingAddresses === attached.id}
+                  onclick={() =>
+                    (reviewingAddresses =
+                      reviewingAddresses === attached.id ? null : attached.id)}
+                >
+                  Link addresses to physical building
+                </button>
+              {/if}
             {:else}
               <button
                 type="button"
@@ -318,6 +336,15 @@ onDestroy(() => {
             <span class="text-muted-foreground text-sm">Constituent added</span>
           {/if}
         </div>
+        {#if mode === 'add' && attached && reviewingAddresses === attached.id}
+          <BuildingAddressLinks
+            {locationId}
+            {organisationId}
+            constituentId={attached.id}
+            onSaved={onAddressesSaved}
+            onCancel={() => (reviewingAddresses = null)}
+          />
+        {/if}
       {:else}
         {#if searched && !busy}
           <p>No matching buildings.</p>

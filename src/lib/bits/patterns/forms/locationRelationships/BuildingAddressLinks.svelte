@@ -13,11 +13,13 @@ type Choice = { id: string; snapshotId: string; label: string }
 let {
   locationId,
   organisationId,
+  constituentId,
   onSaved,
   onCancel,
 }: {
   locationId: string
   organisationId: string | null
+  constituentId?: string
   onSaved: () => Promise<void>
   onCancel: () => void
 } = $props()
@@ -38,7 +40,7 @@ async function open(): Promise<void> {
   busy = true
   try {
     const review = await refreshRemoteQuery(
-      getBuildingAddressReview({ locationId, organisationId }),
+      getBuildingAddressReview({ locationId, organisationId, constituentId }),
     )
     linked = review.linked
     rows = review.choices.map(item => ({

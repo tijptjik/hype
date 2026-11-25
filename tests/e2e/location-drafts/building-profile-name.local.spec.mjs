@@ -36,6 +36,12 @@ for (const state of ['manual', 'unresolved']) {
               snapshotId: null,
               rawSource: {},
               fallbackDisplay: {},
+              authored: {
+                scope: 'building',
+                i18n: { 'zh-hant': { formattedAddress: '', buildingName: '舊樓名' } },
+                unit: null,
+                unitI18n: {},
+              },
             },
           },
         },
@@ -47,6 +53,9 @@ for (const state of ['manual', 'unresolved']) {
       })
       const banner = page.getByRole('banner')
       const edit = banner.getByRole('button', { name: 'Edit', exact: true })
+      // Older revisions can have an address name in just one language and no profile name.
+      await expect(banner).toContainText('舊樓名', { timeout: 60_000 })
+      await expect(page.locator('[data-location-record]')).toContainText('舊樓名')
       await edit.click({ timeout: 60_000 })
       const profile = page.locator('[data-draft-location-name]')
       await expect(

@@ -46,7 +46,7 @@ export function physicalBuildingMembers(
     SELECT json_set(v.rawSource->'$.member','$.outlineRole',json_extract(r.provenance,'$.outlineRole'),'$.names',json(${pinnedNames(sql`json_extract(root.provenance,'$.childRevisionId')`)}),'$.childLocationId',${canonicalLocationSQL(sql`r.childLocationId`)},'$.childRevisionId',json_extract(root.provenance,'$.childRevisionId')) member
     FROM locationMembershipHead r JOIN locationMembership root ON root.id=r.relationshipId
     JOIN locationRevision v ON v.id=json_extract(root.provenance,'$.parentRevisionId')
-    WHERE ${canonicalLocationSQL(sql`r.parentLocationId`)}=${locationId} AND r.assertionState='asserted' AND r.membershipState='current'
+    WHERE r.parentLocationId IN ${locationAliasIds(sql`${locationId}`)} AND r.assertionState='asserted' AND r.membershipState='current'
     AND ${relationshipScopeSql('locationMembership', scope)}
     AND (r.effectiveFrom IS NULL OR r.effectiveFrom<=date('now')) AND (r.effectiveTo IS NULL OR r.effectiveTo>date('now'))
     ORDER BY v.version))`

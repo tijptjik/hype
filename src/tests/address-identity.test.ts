@@ -12,6 +12,7 @@ import {
 import {
   addressBuildingNames,
   addressLocationNames,
+  buildingProfileNames,
   localIdentityFromAddress,
 } from '#lib/locations/addressIdentity.js'
 
@@ -71,6 +72,32 @@ it('fills only missing building names from exact address languages', () => {
   })
   value.overrides.en.buildingName = null
   expect(addressBuildingNames(value, explicit)).not.toHaveProperty('en')
+})
+it('reads a legacy community building name from its corrected address and honors naming decisions', () => {
+  const sharedFacts = localIdentityFromAddress('building', {}, address()).facts
+  sharedFacts.names = { 'zh-hant': '自訂名稱' }
+  const place = {
+    state: 'unresolved' as const,
+    facts: { ...sharedFacts, names: { en: 'Organisation name' } },
+    sharedFacts,
+  }
+  expect(buildingProfileNames(place)).toEqual({
+    en: 'C Wisdom Centre',
+    'zh-hant': '自訂名稱',
+  })
+  expect(sharedFacts.names).toEqual({ 'zh-hant': '自訂名稱' })
+  expect(
+    buildingProfileNames({
+      ...place,
+      communityLocks: { revision: null, available: true, openFields: { names: false } },
+    }),
+  ).toEqual(sharedFacts.names)
+  expect(
+    buildingProfileNames({
+      ...place,
+      sharedFacts: { ...sharedFacts, names: {}, confirmedUnnamed: true },
+    }),
+  ).toEqual({})
 })
 it('composes building support addresses while retaining estate context and full source components', () => {
   const value = address()

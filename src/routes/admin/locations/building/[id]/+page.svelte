@@ -5,6 +5,9 @@ import { goto } from '$app/navigation'
 import { untrack } from 'svelte'
 // API
 import { getBuildingLocationDetails } from '#lib/api/buildingLocationDetails.remote.js'
+// DOMAIN
+import { buildingSourceHref } from '#lib/locations/buildingSource.js'
+import { ADDRESS_LOCALES } from '#lib/addresses/featureAddress.js'
 // CONTEXT
 import { getHeaderCtrl } from '#lib/context/header.svelte.js'
 // COMPONENTS
@@ -18,13 +21,17 @@ import BuildingIcon from 'virtual:icons/lucide/building-2'
 // BITS COMPONENTS
 
 const header = getHeaderCtrl()
+const source = $derived({
+  id: page.params.id ?? '',
+  release: page.url.searchParams.get('release') ?? '',
+  ...(page.url.searchParams.get('address')
+    ? { addressId: page.url.searchParams.get('address')! }
+    : {}),
+})
 const request = $derived(
   getBuildingLocationDetails({
-    id: page.params.id ?? '',
-    release: page.url.searchParams.get('release') ?? '',
-    ...(page.url.searchParams.get('address')
-      ? { addressId: page.url.searchParams.get('address')! }
-      : {}),
+    ...source,
+    preferImported: page.url.searchParams.get('view') === 'location',
   }),
 )
 $effect(() => {
@@ -75,11 +82,33 @@ import AddressEditorSkeleton from '#lib/bits/patterns/forms/localLocationAddress
       <div class="text-muted-foreground flex items-center gap-2 text-sm">
         <BuildingIcon class="size-5" />{m.location_building_catalogue_preview()}
       </div>
-      <AddressDetails
-        address={result.address}
-        locationKind="building"
-        onChange={() => {}}
-      />
+      {#if result.candidates.length > 1}
+        <nav aria-label={m.building_choose_address()} class="space-y-2">
+          <h2 class="font-semibold">{m.building_choose_address()}</h2>
+          <ul class="space-y-1">
+            {#each result.candidates as candidate (candidate.id)}
+              <li>
+                <a
+                  href={buildingSourceHref({ ...source, addressId: candidate.id })}
+                  aria-current={candidate.id === result.selectedId ? 'page' : undefined}
+                  class="break-words underline aria-[current=page]:font-semibold"
+                  >{candidate.display[ADDRESS_LOCALES[getLocaleKey()]] ||
+                    candidate.display.en ||
+                    Object.values(candidate.display)[0] ||
+                    candidate.id}</a
+                >
+              </li>
+            {/each}
+          </ul>
+        </nav>
+      {/if}
+      {#if result.selectedId || !result.candidates.length}
+        <AddressDetails
+          address={result.address}
+          locationKind="building"
+          onChange={() => {}}
+        />
+      {/if}
       {#if result.address.coordinates}
         <AddressDivisions
           address={result.address}
