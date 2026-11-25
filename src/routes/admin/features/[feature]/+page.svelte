@@ -665,6 +665,7 @@ bindAdminFacetHistorySync({
 
 // Delegate feature-ref transitions to the shared editor controller so load/reset behavior stays centralized.
 $effect(() => {
+  featureLoadAttempt
   const ref = featureRef
   // Creation hydrates the saved record before changing the URL, so keep its form intact.
   if (untrack(() => settledFeatureRef === ref && committedFeature?.data?.id === ref))
@@ -675,6 +676,7 @@ $effect(() => {
     resetFormActionsSignature: () => {
       lastFormActionsSignature = ''
       suppressFormLevelIssues = true
+      failedFeatureRef = null
       settledFeatureRef = null
     },
     setFacetForRef: nextRef => {
@@ -692,8 +694,18 @@ $effect(() => {
         adminCtx.setFacet(nextFacet as never, nextRef, FirstClassResource.feature)
       })
     },
-    load: refreshFeature,
-    commit: commitSettledFeatureState,
+    load: async requestedRef => {
+      try {
+        return await refreshFeature(requestedRef)
+      } catch (error) {
+        console.error('Could not load Feature detail', error)
+        return null
+      }
+    },
+    commit: result => {
+      commitSettledFeatureState(result)
+      if (ref !== NEW_REF && !result?.data) failedFeatureRef = ref
+    },
   })
 })
 
@@ -1628,6 +1640,8 @@ let feature = $state<FeaturePageState>(null)
 
 let committedFeature = $state<FeaturePageState>(null)
 let settledFeatureRef = $state<string | null>(null)
+let failedFeatureRef = $state<string | null>(null)
+let featureLoadAttempt = $state(0)
 
 /********************
  *  SET NAVIGATION STATE
@@ -4763,37 +4777,54 @@ async function refreshLocationSource(): Promise<void> {
     class={`${FEATURE_EDITOR_FORM_CLASS} relative h-full min-h-0 ${setupVisible ? 'flex flex-col overflow-hidden' : ''}`}
   >
     {#snippet fallback()}
-      <div
-        class="bits-theme bg-panel flex h-full min-h-0 w-full flex-col overflow-hidden"
-        role="status"
-        aria-busy="true"
-        aria-label={m.resource_loading()}
-      >
-        <FeatureVisualSkeleton
-          expandedHeight={isLocationFacet ? 320 : profileVisualHeight}
-          showImage={!isLocationFacet}
-          showControls={!isLocationFacet}
-        />
-        <FormSurface class={`${FEATURE_EDITOR_CONTENT_PAD_CLASS} pt-7! pb-12`}>
-          <FeatureProfileEditor
-            loading
-            showToolbar
-            localeState={profileLocaleState}
-            onLocaleStateChange={() => {}}
-            values={{}}
-            contextKey={profileScope}
-            allowDescriptions={featurePresentationPolicy.allowDescriptions}
-            translate={async () => ({ status: 'translated', text: '' })}
-            onTranslated={() => {}}
+      {#if failedFeatureRef === featureRef}
+        <div role="alert" class="p-6">
+          <p class="text-muted-foreground text-sm">
+            {m.admin__forms_profile_load_failed()}
+          </p>
+          <button
+            type="button"
+            class="border-border hover:bg-raised mt-4 rounded-lg border px-4 py-2 text-sm"
+            onclick={() => featureLoadAttempt++}
           >
-            {#snippet children(field)}
-              <div
-                class={field === 'description' ? 'min-h-32 w-full' : 'min-h-10 w-full'}
-              ></div>
-            {/snippet}
-          </FeatureProfileEditor>
-        </FormSurface>
-      </div>
+            {m.retry()}
+          </button>
+        </div>
+      {:else}
+        <div
+          class="bits-theme bg-panel flex h-full min-h-0 w-full flex-col overflow-hidden"
+          role="status"
+          aria-busy="true"
+          aria-label={m.resource_loading()}
+        >
+          <FeatureVisualSkeleton
+            expandedHeight={isLocationFacet ? 320 : profileVisualHeight}
+            showImage={!isLocationFacet}
+            showControls={!isLocationFacet}
+          />
+          <FormSurface class={`${FEATURE_EDITOR_CONTENT_PAD_CLASS} pt-7! pb-12`}>
+            <FeatureProfileEditor
+              loading
+              showToolbar
+              localeState={profileLocaleState}
+              onLocaleStateChange={() => {}}
+              values={{}}
+              contextKey={profileScope}
+              allowDescriptions={featurePresentationPolicy.allowDescriptions}
+              translate={async () => ({ status: 'translated', text: '' })}
+              onTranslated={() => {}}
+            >
+              {#snippet children(field)}
+                <div
+                  class={field === 'description'
+                    ? 'min-h-32 w-full'
+                    : 'min-h-10 w-full'}
+                ></div>
+              {/snippet}
+            </FeatureProfileEditor>
+          </FormSurface>
+        </div>
+      {/if}
     {/snippet}
     <HiddenInputs inputs={programmaticFeatureInputEntries} />
     {#if !setupQuestionsPending &&

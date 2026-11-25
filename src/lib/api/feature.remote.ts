@@ -382,7 +382,7 @@ export const getFeatures = getFeaturesQuery as unknown as <
  * requested profile or `null` when no persisted row matches `params.ref`.
  * @remarks
  * Performs a minimal probe first (`id`, `organisationId`, `projectId`, `layerId`,
- * `resourceHubId`, `isPublished`, `isArchived`) so authorization can run on persisted
+ * `resourceHubId`, `isPublished`, `isArchived`, `isDraft`) so authorization can run on persisted
  * state before loading the full relation graph for the requested profile.
  */
 const getFeatureQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) => {
@@ -408,12 +408,21 @@ const getFeatureQuery = guardedQuery(GetQueryParamsSchema, async (params, ctx) =
     throw error(403, toAuthMessage(readDecision.code ?? 'INSUFFICIENT_ROLE'))
   }
 
+  // Only a scoped editor can open a saved draft by ID. Public and preview reads keep their visibility rules.
+  const readDraft = isAdminRequest && profile === 'admin' && probe.isDraft
+  if (readDraft) {
+    const decision = authorizeFeatureAdminReadForProbe({ user, userRoles, probe })
+    if (!decision.allowed)
+      throw error(403, toAuthMessage(decision.code ?? 'INSUFFICIENT_ROLE'))
+  }
+
   const queryParams = validateQueryParams<FeatureDB>(
     feature,
     toLookupConditions(normalizedParams),
     {
       isPublished: probe.isPublished,
       isArchived: probe.isArchived,
+      isDraft: readDraft,
     } as Partial<FeatureDB>,
   )
   const { conditions } = params.meta?.publicationPreview

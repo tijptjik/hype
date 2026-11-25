@@ -150,7 +150,10 @@ const {
   mockUpdateProperties: vi.fn(async () => undefined),
   mockPublishAllFeatureImagesExceptResearch: vi.fn(async () => true),
   mockPublishAllImagesWithPublicIntent: vi.fn(async () => undefined),
-  mockToQueryConditions: vi.fn(() => ({ conditions: [], filtersToApply: {} })),
+  mockToQueryConditions: vi.fn((..._args: unknown[]) => ({
+    conditions: [],
+    filtersToApply: {},
+  })),
   mockToLookupConditions: vi.fn((params: unknown) => params),
   mockToRequestedListState: vi.fn(() => ({ isPublished: true, isArchived: false })),
   mockToFeatureProfile: vi.fn((value: unknown, fallback: string) =>
@@ -248,7 +251,10 @@ vi.mock('@sveltejs/kit', () => ({
 }))
 
 vi.mock('#lib/api/index.js', () => ({
-  getValidQueryParams: (_table: unknown, params: unknown) => params,
+  getValidQueryParams: (_table: unknown, params: object, defaults?: object) => ({
+    ...defaults,
+    ...params,
+  }),
 }))
 
 vi.mock('#lib/api/services/index.js', () => ({
@@ -627,6 +633,39 @@ describe('feature.remote authz matrix', () => {
       code: 'INSUFFICIENT_ROLE',
     })
     expect(mockLoadFeature).not.toHaveBeenCalled()
+  })
+
+  it('matches persisted drafts only for scoped admin detail reads', async () => {
+    const ref = 'feature-1'
+    mockProbeFeatureQuery.mockResolvedValue({
+      id: ref,
+      isDraft: true,
+      isArchived: false,
+      isPublished: false,
+    })
+    const admin = { ref, meta: { isAdminRequest: true, profile: 'admin' as const } }
+    mockAuthorizeFeatureAdminReadForProbe.mockReturnValueOnce({
+      allowed: false,
+      code: 'INSUFFICIENT_ROLE',
+    })
+    await expect(remote.getFeature(admin)).rejects.toMatchObject({ status: 403 })
+    expect(mockLoadFeature).not.toHaveBeenCalled()
+    await remote.getFeature(admin)
+    expect(mockToQueryConditions.mock.calls.at(-1)?.[3]).toMatchObject({
+      isDraft: true,
+    })
+    await remote.getFeature({ ref, meta: { profile: 'detail' } })
+    expect(mockToQueryConditions.mock.calls.at(-1)?.[3]).toMatchObject({
+      isDraft: false,
+    })
+    mockGuardedContext.mockResolvedValue({
+      ...(await mockGuardedContext()),
+      isAdminRequest: false,
+    })
+    await remote.getFeature({ ref, meta: { profile: 'admin' } })
+    expect(mockToQueryConditions.mock.calls.at(-1)?.[3]).toMatchObject({
+      isDraft: false,
+    })
   })
 
   it('rejects import hydration without explicit admin intent', async () => {

@@ -583,6 +583,7 @@ export const probeFeatureQuery = async (
           projectId: feature.projectId,
           layerId: feature.layerId,
           resourceHubId: organisation.hubId,
+          isDraft: feature.isDraft,
           isPublished: feature.isPublished,
           isArchived: feature.isArchived,
         })
