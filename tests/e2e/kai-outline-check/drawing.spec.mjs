@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { join } from 'node:path'
+import { build } from 'vite'
+import { svelte } from '@sveltejs/vite-plugin-svelte'
 test('selects all seven Kai King floors and records a floor-relative XY pin without a unit', async ({
   page,
 }) => {
@@ -29,20 +31,25 @@ test('selects all seven Kai King floors and records a floor-relative XY pin with
     hash: matches[0].publishedHash,
     unitId: null,
   }
-  // The web fixture uses same-origin HTTP for the real release. Native transport is device-only.
-  await page.route('**/apps/recorder/src/lib/hype.ts*', route =>
-    route.fulfill({
-      contentType: 'text/javascript',
-      body: 'export const recorderOrigin = location.origin',
-    }),
-  )
-  await page.evaluate(
-    async ({ pointer, building }) => {
-      const { openDrawing } = await import(
-        '/src/tests/fixtures/kaiKingRecorderDrawing.svelte.ts'
-      )
-      openDrawing(pointer, building)
+  // Compile the Recorder component on the test runner, which owns the mobile dependencies.
+  const bundle = await build({
+    configFile: false,
+    plugins: [svelte({ configFile: false })],
+    build: {
+      write: false,
+      lib: {
+        entry: 'src/tests/fixtures/kaiKingRecorderDrawing.svelte.ts',
+        name: 'kaiKingRecorder',
+        formats: ['iife'],
+      },
     },
+  })
+  const script = (Array.isArray(bundle) ? bundle[0] : bundle).output.find(
+    chunk => chunk.type === 'chunk' && chunk.isEntry,
+  )
+  await page.addScriptTag({ content: script.code })
+  await page.evaluate(
+    ({ pointer, building }) => window.kaiKingRecorder.openDrawing(pointer, building),
     { pointer, building },
   )
   const host = page.locator('#kai-drawing')
