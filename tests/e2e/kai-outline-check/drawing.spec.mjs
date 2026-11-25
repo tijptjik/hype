@@ -29,6 +29,13 @@ test('selects all seven Kai King floors and records a floor-relative XY pin with
     hash: matches[0].publishedHash,
     unitId: null,
   }
+  // The web fixture uses same-origin HTTP for the real release. Native transport is device-only.
+  await page.route('**/apps/recorder/src/lib/hype.ts*', route =>
+    route.fulfill({
+      contentType: 'text/javascript',
+      body: 'export const recorderOrigin = location.origin',
+    }),
+  )
   await page.evaluate(
     async ({ pointer, building }) => {
       const { openDrawing } = await import(
