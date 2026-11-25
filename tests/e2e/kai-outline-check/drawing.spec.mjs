@@ -20,16 +20,19 @@ test('selects all seven Kai King floors and records a floor-relative XY pin with
   })
   const building =
     'building:cbab3d4d32f73b706b05fb7836f120f3d695277bdd5ecba28894dc7c0aedce26'
-  const pointer = await (
-    await page.request.get(
-      '/api/premises-maps/building-building-cbab3d4d32f73b706b05fb7836f120f3d695277bdd5ecba28894dc7c0aedc-4d5fcbef',
-    )
-  ).json()
-  expect(pointer.name).toBe('Kai King Mansion')
+  const catalogue = await (await page.request.get('/api/premises-maps')).json()
+  const matches = catalogue.filter(map => map.name === 'Kai King Mansion')
+  expect(matches).toHaveLength(1)
+  const pointer = {
+    id: matches[0].id,
+    name: matches[0].name,
+    hash: matches[0].publishedHash,
+    unitId: null,
+  }
   await page.evaluate(
     async ({ pointer, building }) => {
       const { openDrawing } = await import(
-        '/tests/e2e/kai-outline-check/mount.svelte.ts'
+        '/src/tests/fixtures/kaiKingRecorderDrawing.svelte.ts'
       )
       openDrawing(pointer, building)
     },
