@@ -11,6 +11,7 @@ import { authorizeExteriorLocation } from '#lib/locations/exterior/authorize.ser
 import { location, locationRevision } from '#lib/db/schema/location.js'
 import { organisation } from '#lib/db/schema/organisation.js'
 import { createLocalLocation } from '#lib/db/services/locationLocal.js'
+import { relationshipScopeSql } from '#lib/db/services/locationRelationships.js'
 import type { Database } from '#lib/types.js'
 import { locationPremisesMap } from '#lib/db/schema/operator.js'
 import { premisesMap } from '#lib/db/schema/premisesMap.js'
@@ -233,13 +234,14 @@ export const saveLocationInterior = guardedCommand(
       input.locationId,
       building?.ownerOrganisationId ?? null,
     )
+    const partsById = new Map(parts.map(part => [part.id, part]))
     // Every polygon association must stay inside this building and its explicitly selected floor.
     for (const floor of input.extraction.floors) {
-      if (floor.locationId && !parts.some(part => part.id === floor.locationId))
+      if (floor.locationId && !partsById.has(floor.locationId))
         error(400, 'Floor must belong to this building.')
       for (const unit of floor.units)
         if (unit.locationId) {
-          const part = parts.find(part => part.id === unit.locationId)
+          const part = partsById.get(unit.locationId)
           if (
             !floor.locationId ||
             unit.locationId === floor.locationId ||
@@ -290,17 +292,40 @@ async function interiorParts(
   buildingId: string,
   scope: string | null,
 ): Promise<{ id: string; name: string; parents: string[] }[]> {
-  const rows = await db.all<{ id: string; name: string; parents: string }>(sql`
-    SELECT l.id, COALESCE((SELECT COALESCE(json_extract(r.facts,'$.i18n.en.name'),json_extract(r.facts,'$.names.en')) FROM locationRevisionContent r WHERE r.locationId=l.id ORDER BY r.version DESC LIMIT 1),l.id) name,
-    (SELECT json_group_array(m.parentLocationId) FROM locationMembershipHead m WHERE m.childLocationId=l.id AND m.assertionState='asserted' AND m.membershipState='current' AND (m.scopeOrganisationId IS NULL OR m.scopeOrganisationId IS ${scope})) parents
-    FROM location l WHERE l.class='building_part' AND l.state!='redirect' AND (l.state!='manual' OR l.ownerOrganisationId IS ${scope})
-    AND EXISTS(SELECT 1 FROM locationMembershipHead m WHERE m.childLocationId=l.id AND m.parentLocationId=${buildingId} AND m.assertionState='asserted' AND m.membershipState='current' AND (m.scopeOrganisationId IS NULL OR m.scopeOrganisationId IS ${scope})) LIMIT 501`)
-  if (rows.length > 500)
-    error(
-      400,
-      'This building requires a paginated part selector before editing associations.',
-    )
-  return rows.map(row => ({ ...row, parents: JSON.parse(row.parents) }))
+  const pageSize = 250
+  const parts = new Map<string, { id: string; name: string; parents: string[] }>()
+  const membership = sql`r.assertionState='asserted' AND r.membershipState='current'
+    AND (r.effectiveFrom IS NULL OR r.effectiveFrom<=date('now'))
+    AND (r.effectiveTo IS NULL OR r.effectiveTo>date('now'))
+    AND ${relationshipScopeSql('locationMembership', scope)}`
+  let after: string | undefined
+  // The parent/relationship index orders scoped heads. Independent assertions may describe the same part.
+  for (;;) {
+    const rows = await db.all<{
+      relationshipId: string
+      id: string
+      name: string
+      parents: string
+    }>(sql`
+      SELECT r.relationshipId, l.id,
+        coalesce((SELECT coalesce(json_extract(c.facts,'$.i18n.en.name'), json_extract(c.facts,'$.names.en'))
+          FROM locationRevisionContent c WHERE c.locationId=l.id ORDER BY c.version DESC LIMIT 1), l.id) name,
+        (SELECT json_group_array(parentLocationId) FROM (
+          SELECT DISTINCT r.parentLocationId FROM locationMembershipHead r
+          WHERE r.childLocationId=l.id AND ${membership} ORDER BY r.parentLocationId
+        )) parents
+      FROM locationMembershipHead r JOIN location l ON l.id=r.childLocationId
+      WHERE r.parentLocationId=${buildingId} AND ${membership}
+        AND l.class='building_part' AND l.state!='redirect'
+        AND (l.state!='manual' OR l.ownerOrganisationId IS ${scope})
+        ${after === undefined ? sql`` : sql`AND r.relationshipId>${after}`}
+      ORDER BY r.relationshipId LIMIT ${pageSize}`)
+    for (const { id, name, parents } of rows) {
+      parts.set(id, { id, name, parents: JSON.parse(parents) })
+    }
+    if (rows.length < pageSize) return [...parts.values()]
+    after = rows[rows.length - 1].relationshipId
+  }
 }
 
 /** Explicitly create a physical Floor or Unit identity; extraction never creates identities automatically.
