@@ -75,6 +75,51 @@ From `apps/recorder`, use `bun run tauri android dev` with an attached device, o
 APK. The Svelte frontend and Rust mobile entry point are shared with a future iOS
 target.
 
+### Update both phones on a phone hotspot
+
+Turn on the first phone’s hotspot, then connect Li and the second phone to it. From the
+Hype checkout on Li, run:
+
+```sh
+python3 apps/recorder/scripts/update-phones.py share
+```
+
+Scan the terminal QR code or open its URL on **both phones**, including the hotspot
+host. Open the downloaded `Recorder.apk` and tap **Update** (or **Install** on a new
+phone). If Android prompts, allow the browser to install this app. Keep the command
+running until both downloads finish, then press Ctrl-C. Start it again after changing
+hotspots or preparing another build. Li serves a fixed copy of the APK on its current
+Wi-Fi address. If only the second phone cannot reach Li, check whether the hotspot
+isolates connected devices.
+
+For subsequent builds produced on Fi, run the following from the Hype root on Fi, then
+restart the sharing command on Li. Build with the same signing key to update existing
+installations and retain recordings.
+
+```sh
+(cd apps/recorder && bun run android:fi)
+rsync -aR -e 'tjikup ssh' ./apps/recorder/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk li:/home/io/code/hype/
+```
+
+Both sharing and ADB accept `--apk /path/to/Recorder.apk` for a build already on Li.
+Installing an update preserves the server address selected when the APK was built.
+
+**Direct Wi-Fi push.** On phones that offer **Developer options → Wireless debugging**,
+select **Pair device with pairing code** and run `adb pair IP:PAIR_PORT` on Li. Enter
+the displayed code at the prompt. Repeat for the other phone. Use the **IP address &
+port** from each phone’s main Wireless debugging screen for updates. The connection
+ports can change after reconnecting. Once both phones are paired:
+
+```sh
+python3 apps/recorder/scripts/update-phones.py push PHONE1_IP:PORT PHONE2_IP:PORT
+```
+
+Add `--check` to test both connections before installing. The command verifies that the
+two addresses identify different phones, uses Android’s in-place update, and compares
+the installed APK checksum on each phone with the selected build. Rerunning skips phones
+already on that build. The hotspot download works on a phone whose Wireless debugging
+option is unavailable while it hosts the network.
+
 ## Authentication and remote functions
 
 Build Fi’s Android client with `bun run android:fi` from `apps/recorder`. Connect the
