@@ -87,6 +87,7 @@ export const floorplanExtractionSchema = z
           holes: z.array(ring).max(100).optional(),
           locationId: z.string().min(1).max(200).optional(),
           sourceFloorId: z.string().max(100).optional(),
+          outlineOnly: z.literal(true).optional(),
           alignment: z
             .object({
               x: z.number().finite().min(-10000).max(10000),
@@ -269,7 +270,9 @@ export function floorplanBundle(input: unknown): MapBundle {
         },
       })
     // Retain uncovered space explicitly, rather than letting the floor background imply circulation.
-    const residual = floorplanUnclassified(floor)
+    // An explicitly empty footprint is a coordinate surface without a selectable unit.
+    const residual =
+      floor.outlineOnly && !floor.units.length ? [] : floorplanUnclassified(floor)
     if (residual.length)
       data.unit_polygon.features.push({
         type: 'Feature',
