@@ -144,7 +144,11 @@ onMount(() => {
 </script>
 
 <div class="relative h-full w-full">
-  <div bind:this={host} class="absolute inset-0"></div>
+  <div
+    bind:this={host}
+    class="absolute inset-0"
+    class:pointer-events-none={interior}
+  ></div>
   {#if failed}
     <p
       role="status"
